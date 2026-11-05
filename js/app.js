@@ -1164,6 +1164,28 @@
             };
         }
 
+        // File Download Handler ("Download .JSX")
+        const btnDownloadJSX = document.getElementById('btn-download-jsx');
+        if (btnDownloadJSX) {
+            btnDownloadJSX.onclick = () => {
+                const code = codeTextarea.value || '';
+                let filename = (currentFilenameEl && currentFilenameEl.textContent.trim()) || 'script.jsx';
+                if (!filename.toLowerCase().endsWith('.jsx') && !filename.toLowerCase().endsWith('.js')) {
+                    filename += '.jsx';
+                }
+                const blob = new Blob([code], { type: 'text/javascript;charset=utf-8' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                setTimeout(() => URL.revokeObjectURL(url), 1000);
+                appendConsole(`Downloaded "${filename}" (${blob.size} bytes).`);
+            };
+        }
+
         // Drag and Drop Support for .JSX files
         const dropTarget = document.querySelector('.ae-editor-panel');
         if (dropTarget) {
