@@ -1,0 +1,478 @@
+/**
+ * ae-renderer.js
+ * 3D/2D Viewport Renderer, Interactive Camera (Orbit/Pan/Zoom), and SVG Shape Generator
+ */
+
+(function(global) {
+    'use strict';
+
+    class AERenderer {
+        constructor(comp, containerId) {
+            this.comp = comp;
+            this.container = document.getElementById(containerId);
+            if (!this.container) {
+                console.error('Container not found:', containerId);
+                return;
+            }
+
+            // Camera Settings (Default matching AE 3D camera)
+            this.camera = {
+                orbitX: -35,      // Azimuth (degrees)
+                orbitY: 25,       // Elevation (degrees)
+                distance: 1800,   // Dolly distance (px, ~67% zoom to fit standard viewports)
+                targetX: comp.width / 2,
+                targetY: comp.height / 2,
+                targetZ: 0,
+                fov: 50,          // Perspective (px = 1200)
+                isDragging: false,
+                isPanning: false,
+                lastMouseX: 0,
+                lastMouseY: 0
+            };
+
+            this.isPlaying = true;
+            this.startTime = performance.now();
+            this.lastFrameTime = performance.now();
+
+            this.initDOM();
+            this.initEvents();
+            this.updateCameraTransform();
+            this.startLoop();
+        }
+
+        initDOM() {
+            this.container.innerHTML = `
+                <div class="ae-viewport">
+                    <div class="ae-viewport-overlay">
+                        <div class="ae-cam-info">
+                            <span id="cam-view-name">Custom View 1</span> | 
+                            Orbit: <span id="cam-orbit-vals">-35°, 25°</span> | 
+                            Zoom: <span id="cam-zoom-val">100%</span>
+                        </div>
+                        <div class="ae-viewport-controls">
+                            <button id="btn-reset-cam" title="Reset Camera">Reset Cam</button>
+                            <button id="btn-cam-active" title="Active Camera">Active Camera</button>
+                            <button id="btn-cam-front" title="Front View">Front</button>
+                            <button id="btn-cam-top" title="Top View">Top</button>
+                            <button id="btn-cam-right" title="Right View">Right</button>
+                        </div>
+                    </div>
+                    <div class="ae-world-scene" id="ae-world-scene">
+                        <div class="ae-camera-rig" id="ae-camera-rig">
+                            <div class="ae-comp-canvas" id="ae-comp-canvas" style="width: ${this.comp.width}px; height: ${this.comp.height}px;">
+                                <div class="ae-comp-guide"></div>
+                                <div class="ae-comp-center-mark"></div>
+                                <div class="ae-layers-container" id="ae-layers-container"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- AE 3D Orientation Axis Gizmo (Left Bottom Corner) -->
+                    <div class="ae-axis-gizmo" id="ae-axis-gizmo" title="3D World Orientation (X: Red, Y: Green, Z: Blue)">
+                        <div class="ae-axis-gizmo-rig" id="ae-axis-gizmo-rig">
+                            <!-- Origin: Blue cube with red center dot -->
+                            <div class="ae-gizmo-origin">
+                                <div class="ae-gizmo-origin-cube">
+                                    <div class="ae-cube-face front"></div>
+                                    <div class="ae-cube-face back"></div>
+                                    <div class="ae-cube-face left"></div>
+                                    <div class="ae-cube-face right"></div>
+                                    <div class="ae-cube-face top"></div>
+                                    <div class="ae-cube-face bottom"></div>
+                                </div>
+                                <div class="ae-gizmo-dot"></div>
+                            </div>
+
+                            <!-- X Axis (Red) -->
+                            <div class="ae-gizmo-axis ae-axis-x">
+                                <div class="ae-axis-stem"></div>
+                                <div class="ae-axis-arrow"></div>
+                                <div class="ae-axis-arrow cross"></div>
+                                <span class="ae-axis-label">X</span>
+                            </div>
+
+                            <!-- Y Axis (Green) -->
+                            <div class="ae-gizmo-axis ae-axis-y">
+                                <div class="ae-axis-stem"></div>
+                                <div class="ae-axis-arrow"></div>
+                                <div class="ae-axis-arrow cross"></div>
+                                <span class="ae-axis-label">Y</span>
+                            </div>
+
+                            <!-- Z Axis (Blue) -->
+                            <div class="ae-gizmo-axis ae-axis-z">
+                                <div class="ae-axis-stem"></div>
+                                <div class="ae-axis-arrow"></div>
+                                <div class="ae-axis-arrow cross"></div>
+                                <span class="ae-axis-label">Z</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            this.worldScene = document.getElementById('ae-world-scene');
+            this.cameraRig = document.getElementById('ae-camera-rig');
+            this.layersContainer = document.getElementById('ae-layers-container');
+            this.orbitValsEl = document.getElementById('cam-orbit-vals');
+            this.zoomValEl = document.getElementById('cam-zoom-val');
+            this.viewNameEl = document.getElementById('cam-view-name');
+            this.gizmoRig = document.getElementById('ae-axis-gizmo-rig');
+            this.gizmoLabelX = this.container.querySelector('.ae-axis-x .ae-axis-label');
+            this.gizmoLabelY = this.container.querySelector('.ae-axis-y .ae-axis-label');
+            this.gizmoLabelZ = this.container.querySelector('.ae-axis-z .ae-axis-label');
+        }
+
+        initEvents() {
+            const vp = this.container.querySelector('.ae-viewport');
+
+            // Mouse wheel zoom
+            vp.addEventListener('wheel', (e) => {
+                e.preventDefault();
+                const delta = e.deltaY;
+                const factor = delta > 0 ? 1.08 : 0.92;
+                this.camera.distance = Math.max(150, Math.min(6000, this.camera.distance * factor));
+                this.updateCameraTransform();
+            }, { passive: false });
+
+            // Mouse down for orbit or pan
+            vp.addEventListener('mousedown', (e) => {
+                if (e.target.closest('.ae-viewport-controls')) return;
+
+                if (e.button === 0 && !e.altKey) {
+                    // Left click: Orbit
+                    this.camera.isDragging = true;
+                    this.camera.isPanning = false;
+                } else if (e.button === 1 || (e.button === 0 && e.altKey)) {
+                    // Middle click or Alt+Left click: Pan
+                    this.camera.isPanning = true;
+                    this.camera.isDragging = false;
+                }
+                this.camera.lastMouseX = e.clientX;
+                this.camera.lastMouseY = e.clientY;
+            });
+
+            window.addEventListener('mousemove', (e) => {
+                if (!this.camera.isDragging && !this.camera.isPanning) return;
+
+                const dx = e.clientX - this.camera.lastMouseX;
+                const dy = e.clientY - this.camera.lastMouseY;
+                this.camera.lastMouseX = e.clientX;
+                this.camera.lastMouseY = e.clientY;
+
+                if (this.camera.isDragging) {
+                    this.camera.orbitX += dx * 0.45;
+                    this.camera.orbitY -= dy * 0.45;
+                    // Clamp elevation to avoid gimbal flip
+                    this.camera.orbitY = Math.max(-89.9, Math.min(89.9, this.camera.orbitY));
+                    this.viewNameEl.textContent = 'Custom View';
+                } else if (this.camera.isPanning) {
+                    // Pan relative to distance
+                    const panSpeed = this.camera.distance * 0.0012;
+                    this.camera.targetX -= dx * panSpeed * 1.5;
+                    this.camera.targetY -= dy * panSpeed * 1.5;
+                }
+
+                this.updateCameraTransform();
+            });
+
+            window.addEventListener('mouseup', () => {
+                this.camera.isDragging = false;
+                this.camera.isPanning = false;
+            });
+
+            // Camera buttons
+            document.getElementById('btn-reset-cam').onclick = () => this.setCameraView('custom');
+            document.getElementById('btn-cam-active').onclick = () => this.setCameraView('active');
+            document.getElementById('btn-cam-front').onclick = () => this.setCameraView('front');
+            document.getElementById('btn-cam-top').onclick = () => this.setCameraView('top');
+            document.getElementById('btn-cam-right').onclick = () => this.setCameraView('right');
+
+            // Recalculate on comp change
+            this.comp._onChanged = () => {
+                this.renderLayers(this.comp.time);
+            };
+        }
+
+        setCameraView(preset) {
+            this.camera.targetX = this.comp.width / 2;
+            this.camera.targetY = this.comp.height / 2;
+            this.camera.targetZ = 0;
+
+            const defaultDist = 1800;
+            switch (preset) {
+                case 'active':
+                    this.camera.orbitX = 0;
+                    this.camera.orbitY = 0;
+                    this.camera.distance = defaultDist;
+                    this.viewNameEl.textContent = 'Active Camera';
+                    break;
+                case 'front':
+                    this.camera.orbitX = 0;
+                    this.camera.orbitY = 0;
+                    this.camera.distance = defaultDist;
+                    this.viewNameEl.textContent = 'Front';
+                    break;
+                case 'top':
+                    this.camera.orbitX = 0;
+                    this.camera.orbitY = 89.9;
+                    this.camera.distance = defaultDist;
+                    this.viewNameEl.textContent = 'Top';
+                    break;
+                case 'right':
+                    this.camera.orbitX = -90;
+                    this.camera.orbitY = 0;
+                    this.camera.distance = defaultDist;
+                    this.viewNameEl.textContent = 'Right';
+                    break;
+                case 'custom':
+                default:
+                    this.camera.orbitX = -35;
+                    this.camera.orbitY = 25;
+                    this.camera.distance = defaultDist;
+                    this.viewNameEl.textContent = 'Custom View 1';
+                    break;
+            }
+            this.updateCameraTransform();
+        }
+
+        updateCameraTransform() {
+            if (!this.cameraRig) return;
+
+            // Update UI readout
+            if (this.orbitValsEl) {
+                this.orbitValsEl.textContent = `${Math.round(this.camera.orbitX)}°, ${Math.round(this.camera.orbitY)}°`;
+            }
+            if (this.zoomValEl) {
+                const zoomPct = Math.round((1200 / this.camera.distance) * 100);
+                this.zoomValEl.textContent = `${zoomPct}%`;
+            }
+
+            // AE 3D Camera Rig Transform:
+            // Move scene so target is at (0, 0, 0), rotate around it, and position along Z relative to 1200px perspective
+            const zTarget = 1200 - this.camera.distance;
+            const transformStr = `translateZ(${zTarget}px) rotateX(${this.camera.orbitY}deg) rotateY(${this.camera.orbitX}deg) translate3d(${-this.camera.targetX}px, ${-this.camera.targetY}px, ${-this.camera.targetZ}px)`;
+            this.cameraRig.style.transform = transformStr;
+
+            // Synchronize AE 3D Axis Orientation Gizmo with Camera Orbit
+            if (this.gizmoRig) {
+                this.gizmoRig.style.transform = `rotateX(${this.camera.orbitY}deg) rotateY(${this.camera.orbitX}deg)`;
+                // Billboard orientation for axis labels so they always face viewer legibly
+                const billboard = `rotateY(${-this.camera.orbitX}deg) rotateX(${-this.camera.orbitY}deg)`;
+                if (this.gizmoLabelX) this.gizmoLabelX.style.transform = billboard;
+                if (this.gizmoLabelY) this.gizmoLabelY.style.transform = `rotateZ(90deg) ${billboard}`;
+                if (this.gizmoLabelZ) this.gizmoLabelZ.style.transform = `rotateY(90deg) ${billboard}`;
+            }
+        }
+
+        startLoop() {
+            const loop = (now) => {
+                if (this.isPlaying) {
+                    const dt = (now - this.lastFrameTime) / 1000;
+                    this.comp.time += dt;
+                    if (this.comp.time > this.comp.duration) {
+                        this.comp.time = 0;
+                    }
+                }
+                this.lastFrameTime = now;
+
+                this.renderLayers(this.comp.time);
+                requestAnimationFrame(loop);
+            };
+            this.updateCameraTransform();
+            requestAnimationFrame(loop);
+        }
+
+        // -------------------------------------------------------------
+        // SVG Vector Rendering for AE Shape Layers
+        // -------------------------------------------------------------
+        renderShapeContents(contentsGroup, time) {
+            let svgChildren = '';
+
+            const traverseGroup = (group, parentFill = null, parentStroke = null) => {
+                let localFill = parentFill;
+                let localStroke = parentStroke;
+
+                // Collect fills and strokes in this group first
+                for (const prop of group.properties) {
+                    if (prop instanceof VectorGraphicFill) {
+                        const col = prop.color.getValueAtTime(time);
+                        const rawOp = prop.opacity.getValueAtTime(time);
+                        const op = (rawOp !== undefined && rawOp !== null && !isNaN(rawOp)) ? Math.max(0, Math.min(1, rawOp / 100)) : 1;
+                        const r = Math.round((col[0] || 0) * 255);
+                        const g = Math.round((col[1] || 0) * 255);
+                        const b = Math.round((col[2] || 0) * 255);
+                        localFill = { color: `rgba(${r}, ${g}, ${b}, ${op})`, opacity: op };
+                    } else if (prop instanceof VectorGraphicStroke) {
+                        const col = prop.color.getValueAtTime(time);
+                        const rawOp = prop.opacity.getValueAtTime(time);
+                        const op = (rawOp !== undefined && rawOp !== null && !isNaN(rawOp)) ? Math.max(0, Math.min(1, rawOp / 100)) : 1;
+                        const sw = prop.strokeWidth.getValueAtTime(time) || 1;
+                        const r = Math.round((col[0] || 0) * 255);
+                        const g = Math.round((col[1] || 0) * 255);
+                        const b = Math.round((col[2] || 0) * 255);
+                        localStroke = { color: `rgba(${r}, ${g}, ${b}, ${op})`, width: sw, opacity: op };
+                    }
+                }
+
+                // Render shapes
+                for (const prop of group.properties) {
+                    if (prop instanceof VectorShapeRect) {
+                        const size = prop.size.getValueAtTime(time) || [100, 100];
+                        const pos = prop.position.getValueAtTime(time) || [0, 0];
+                        const round = prop.roundness.getValueAtTime(time) || 0;
+                        const w = size[0], h = size[1];
+                        const x = pos[0] - w / 2;
+                        const y = pos[1] - h / 2;
+
+                        const fillAttr = localFill ? `fill="${localFill.color}"` : 'fill="none"';
+                        const strokeAttr = localStroke ? `stroke="${localStroke.color}" stroke-width="${localStroke.width}"` : 'stroke="none"';
+
+                        svgChildren += `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${round}" ry="${round}" ${fillAttr} ${strokeAttr} />`;
+                    } else if (prop instanceof VectorShapeEllipse) {
+                        const size = prop.size.getValueAtTime(time) || [100, 100];
+                        const pos = prop.position.getValueAtTime(time) || [0, 0];
+                        const rx = (size[0] || 100) / 2;
+                        const ry = (size[1] || 100) / 2;
+
+                        const fillAttr = localFill ? `fill="${localFill.color}"` : 'fill="none"';
+                        const strokeAttr = localStroke ? `stroke="${localStroke.color}" stroke-width="${localStroke.width}"` : 'stroke="none"';
+
+                        svgChildren += `<ellipse cx="${pos[0]}" cy="${pos[1]}" rx="${rx}" ry="${ry}" ${fillAttr} ${strokeAttr} />`;
+                    } else if (prop instanceof VectorShapePath) {
+                        const shapeData = prop.path.getValueAtTime(time);
+                        if (shapeData && shapeData.vertices && shapeData.vertices.length > 0) {
+                            const d = this.generateSVGPathData(shapeData);
+                            const fillAttr = localFill ? `fill="${localFill.color}"` : 'fill="none"';
+                            const strokeAttr = localStroke ? `stroke="${localStroke.color}" stroke-width="${localStroke.width}"` : 'stroke="none"';
+                            svgChildren += `<path d="${d}" ${fillAttr} ${strokeAttr} />`;
+                        }
+                    } else if (prop instanceof VectorGroup) {
+                        // Recursively process nested group
+                        const subContents = prop.property('Contents');
+                        if (subContents) traverseGroup(subContents, localFill, localStroke);
+                    } else if (prop instanceof PropertyGroup) {
+                        traverseGroup(prop, localFill, localStroke);
+                    }
+                }
+            };
+
+            if (contentsGroup) {
+                traverseGroup(contentsGroup);
+            }
+
+            return svgChildren;
+        }
+
+        generateSVGPathData(shape) {
+            const v = shape.vertices;
+            const inT = shape.inTangents || [];
+            const outT = shape.outTangents || [];
+            if (!v || v.length === 0) return '';
+
+            let d = `M ${v[0][0]},${v[0][1]} `;
+
+            for (let i = 1; i < v.length; i++) {
+                const prevV = v[i - 1];
+                const prevOut = outT[i - 1] || [0, 0];
+                const cp1x = prevV[0] + prevOut[0];
+                const cp1y = prevV[1] + prevOut[1];
+
+                const currV = v[i];
+                const currIn = inT[i] || [0, 0];
+                const cp2x = currV[0] + currIn[0];
+                const cp2y = currV[1] + currIn[1];
+
+                d += `C ${cp1x},${cp1y} ${cp2x},${cp2y} ${currV[0]},${currV[1]} `;
+            }
+
+            if (shape.closed) {
+                const lastIdx = v.length - 1;
+                const prevV = v[lastIdx];
+                const prevOut = outT[lastIdx] || [0, 0];
+                const cp1x = prevV[0] + prevOut[0];
+                const cp1y = prevV[1] + prevOut[1];
+
+                const firstV = v[0];
+                const firstIn = inT[0] || [0, 0];
+                const cp2x = firstV[0] + firstIn[0];
+                const cp2y = firstV[1] + firstIn[1];
+
+                d += `C ${cp1x},${cp1y} ${cp2x},${cp2y} ${firstV[0]},${firstV[1]} Z`;
+            }
+
+            return d;
+        }
+
+        renderLayers(time) {
+            if (!this.layersContainer) return;
+
+            // Sync layer DOM elements with comp.layers
+            const layers = this.comp.layers;
+            const currentIds = new Set();
+
+            for (let i = 0; i < layers.length; i++) {
+                const layer = layers[i];
+                if (!layer.enabled) continue;
+
+                const layerId = `ae-layer-${i}`;
+                currentIds.add(layerId);
+
+                let layerEl = document.getElementById(layerId);
+                if (!layerEl) {
+                    layerEl = document.createElement('div');
+                    layerEl.id = layerId;
+                    layerEl.className = 'ae-layer';
+                    this.layersContainer.appendChild(layerEl);
+                }
+
+                // 3D Matrix & CSS Transformation
+                const worldMat = layer.getWorldMatrix(time);
+                const cssMat = Mat4.toCSS(worldMat);
+                const opacity = layer.getWorldOpacity(time);
+
+                layerEl.style.transform = cssMat;
+                layerEl.style.opacity = opacity;
+                layerEl.style.transformStyle = layer.threeDLayer ? 'preserve-3d' : 'flat';
+
+                // Precomposition or Shape Layer SVG Render
+                if (layer.source && layer.source.layers) {
+                    let subHtml = '';
+                    for (let s = 0; s < layer.source.layers.length; s++) {
+                        const subLayer = layer.source.layers[s];
+                        if (!subLayer.enabled) continue;
+                        const subMat = subLayer.getWorldMatrix(time);
+                        const subCss = Mat4.toCSS(subMat);
+                        const subShapes = this.renderShapeContents(subLayer.contents, time);
+                        if (subShapes) {
+                            subHtml += `
+                                <div class="ae-sublayer" style="position: absolute; left: 0; top: 0; width: 0; height: 0; transform-origin: 0 0 0; backface-visibility: visible; transform: ${subCss}; transform-style: preserve-3d;">
+                                    <svg class="ae-layer-svg" style="overflow: visible;">${subShapes}</svg>
+                                </div>
+                            `;
+                        }
+                    }
+                    layerEl.innerHTML = subHtml;
+                } else if (layer instanceof ShapeLayer) {
+                    const svgContent = this.renderShapeContents(layer.contents, time);
+                    layerEl.innerHTML = `
+                        <svg class="ae-layer-svg" style="overflow: visible;">
+                            ${svgContent}
+                        </svg>
+                    `;
+                }
+            }
+
+            // Remove destroyed top-level comp layers only (do not delete nested sublayers)
+            const existingEls = this.layersContainer.querySelectorAll(':scope > .ae-layer');
+            existingEls.forEach(el => {
+                if (!currentIds.has(el.id)) {
+                    el.remove();
+                }
+            });
+        }
+    }
+
+    global.AERenderer = AERenderer;
+
+})(typeof window !== 'undefined' ? window : global);

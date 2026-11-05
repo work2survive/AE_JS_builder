@@ -1,0 +1,1404 @@
+/* =========================================================
+   After Effects Dark Theme CSS & 3D Comp Viewport Styling
+   ========================================================= */
+
+:root {
+    --bg-darkest: #181818;
+    --bg-darker: #202020;
+    --bg-panel: #262626;
+    --bg-row-even: #252525;
+    --bg-row-odd: #2a2a2a;
+    --bg-header: #2f2f2f;
+    --border-color: #383838;
+    --border-light: #484848;
+    --text-primary: #d6d6d6;
+    --text-muted: #888888;
+    --ae-blue: #2c8cff;
+    --ae-blue-hover: #54a3ff;
+    --ae-gold: #ffbe26;
+    --ae-red: #ff4757;
+    --ae-green: #2ed573;
+    --accent: #1473e6;
+    --font-ui: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --font-mono: "Cascadia Code", "Fira Code", Consolas, Monaco, monospace;
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    user-select: none;
+}
+
+body {
+    background-color: var(--bg-darkest);
+    color: var(--text-primary);
+    font-family: var(--font-ui);
+    font-size: 12px;
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+/* -------------------------------------------------------------
+   Top Navigation Bar
+   ------------------------------------------------------------- */
+.ae-topbar {
+    height: 42px;
+    background-color: var(--bg-header);
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 14px;
+    flex-shrink: 0;
+}
+
+.ae-brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 600;
+    font-size: 13px;
+    letter-spacing: 0.5px;
+}
+
+.ae-badge {
+    background-color: #9999ff;
+    color: #100030;
+    font-weight: 900;
+    font-size: 11px;
+    padding: 2px 6px;
+    border-radius: 3px;
+}
+
+.ae-topbar-center {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.ae-preset-select {
+    background-color: var(--bg-darker);
+    color: var(--text-primary);
+    border: 1px solid var(--border-light);
+    border-radius: 4px;
+    padding: 4px 8px;
+    font-size: 12px;
+    outline: none;
+    cursor: pointer;
+}
+
+.ae-topbar-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.ae-btn {
+    background-color: #3a3a3a;
+    color: var(--text-primary);
+    border: 1px solid var(--border-light);
+    border-radius: 3px;
+    padding: 5px 12px;
+    font-size: 12px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: background 0.15s, border-color 0.15s;
+}
+
+.ae-btn:hover {
+    background-color: #484848;
+    border-color: #666;
+}
+
+.ae-btn-primary {
+    background-color: var(--accent);
+    color: #fff;
+    border-color: #166cd7;
+    font-weight: 600;
+}
+
+.ae-btn-primary:hover {
+    background-color: #1880ff;
+}
+
+/* -------------------------------------------------------------
+   Main Workspace Layout (Two-Column Split with Resizers)
+   ------------------------------------------------------------- */
+.ae-workspace {
+    flex: 1;
+    display: flex;
+    flex-direction: row;
+    overflow: hidden;
+    min-height: 0;
+    position: relative;
+}
+
+/* Left Column: Camera Preview (Top) + Properties Timeline (Bottom) */
+.ae-left-column {
+    display: flex;
+    flex-direction: column;
+    width: 58%;
+    min-width: 320px;
+    max-width: calc(100% - 280px);
+    min-height: 0;
+    overflow: hidden;
+    flex-shrink: 0;
+}
+
+/* 3D Viewport / Camera Preview */
+.ae-viewport-panel {
+    display: flex;
+    flex-direction: column;
+    background-color: #1a1a1a;
+    position: relative;
+    overflow: hidden;
+    min-height: 140px;
+    height: 56%;
+    flex-shrink: 0;
+}
+
+/* Right Column: Code Editor & ScriptUI Preview (Full Available Height) */
+.ae-editor-panel {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    background-color: var(--bg-darker);
+    min-width: 280px;
+    min-height: 0;
+    height: 100%;
+    overflow: hidden;
+}
+
+/* -------------------------------------------------------------
+   Panel Resizers / Splitters (Horizontal & Vertical)
+   ------------------------------------------------------------- */
+.ae-resizer {
+    background-color: var(--border-color);
+    flex-shrink: 0;
+    position: relative;
+    z-index: 30;
+    transition: background-color 0.15s ease;
+}
+
+.ae-resizer:hover,
+.ae-resizer.is-dragging {
+    background-color: var(--ae-blue);
+}
+
+.ae-resizer-v {
+    width: 6px;
+    cursor: col-resize;
+    height: 100%;
+}
+
+.ae-resizer-v::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 2px;
+    height: 28px;
+    background: rgba(255, 255, 255, 0.25);
+    border-radius: 1px;
+}
+
+.ae-resizer-h {
+    height: 6px;
+    cursor: row-resize;
+    width: 100%;
+}
+
+.ae-resizer-h::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 28px;
+    height: 2px;
+    background: rgba(255, 255, 255, 0.25);
+    border-radius: 1px;
+}
+
+body.is-resizing-v {
+    cursor: col-resize !important;
+    user-select: none !important;
+}
+
+body.is-resizing-h {
+    cursor: row-resize !important;
+    user-select: none !important;
+}
+
+body.is-resizing-v *,
+body.is-resizing-h * {
+    user-select: none !important;
+    pointer-events: none !important;
+}
+
+body.is-resizing-v .ae-resizer-v,
+body.is-resizing-h .ae-resizer-h {
+    pointer-events: auto !important;
+}
+
+/* Tabs */
+.ae-panel-tabs {
+    height: 30px;
+    background-color: var(--bg-header);
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    align-items: center;
+    padding: 0 10px;
+    gap: 4px;
+}
+
+.ae-tab {
+    padding: 5px 12px;
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    font-size: 11px;
+    font-weight: 500;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+}
+
+.ae-tab.active {
+    color: #fff;
+    border-bottom-color: var(--ae-blue);
+    background-color: var(--bg-panel);
+}
+
+.ae-file-status {
+    margin-left: auto;
+    font-size: 11px;
+    color: var(--ae-blue);
+    background: rgba(44, 140, 255, 0.1);
+    border: 1px solid rgba(44, 140, 255, 0.25);
+    padding: 2px 8px;
+    border-radius: 3px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 180px;
+}
+
+.ae-drag-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(20, 115, 230, 0.35);
+    backdrop-filter: blur(2px);
+    border: 2px dashed var(--ae-blue);
+    z-index: 50;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    font-weight: 600;
+    color: #fff;
+    pointer-events: none;
+}
+
+/* -------------------------------------------------------------
+   3D Viewport & Interactive Camera
+   ------------------------------------------------------------- */
+.ae-viewport {
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+    perspective: 1200px;
+    perspective-origin: 50% 50%;
+    cursor: grab;
+}
+
+.ae-viewport:active {
+    cursor: grabbing;
+}
+
+.ae-viewport-overlay {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    right: 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    z-index: 100;
+    pointer-events: none;
+}
+
+.ae-cam-info {
+    background: rgba(20, 20, 20, 0.75);
+    backdrop-filter: blur(4px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+    padding: 4px 10px;
+    font-size: 11px;
+    color: #bbb;
+}
+
+.ae-viewport-controls {
+    pointer-events: auto;
+    display: flex;
+    gap: 4px;
+}
+
+.ae-viewport-controls button {
+    background: rgba(35, 35, 35, 0.85);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    color: #ccc;
+    font-size: 11px;
+    padding: 3px 8px;
+    border-radius: 3px;
+    cursor: pointer;
+}
+
+.ae-viewport-controls button:hover {
+    background: rgba(60, 60, 60, 0.95);
+    color: #fff;
+}
+
+.ae-world-scene {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform-style: preserve-3d;
+}
+
+.ae-camera-rig {
+    position: absolute;
+    left: 0;
+    top: 0;
+    transform-style: preserve-3d;
+    transition: none;
+}
+
+.ae-comp-canvas {
+    position: absolute;
+    left: 0;
+    top: 0;
+    transform-style: preserve-3d;
+    background-color: rgba(25, 25, 30, 0.20); /* Semitransparent camera/comp plane (20% opacity) */
+    background-image: linear-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+    background-size: 80px 80px;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    box-shadow: 0 0 50px rgba(0, 0, 0, 0.3);
+}
+
+.ae-comp-guide {
+    position: absolute;
+    inset: 0;
+    border: 1px dashed rgba(255, 255, 255, 0.15);
+    pointer-events: none;
+    transform-style: preserve-3d;
+}
+
+.ae-comp-center-mark {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 14px;
+    height: 14px;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+}
+.ae-comp-center-mark::before {
+    content: '';
+    position: absolute;
+    left: 6px;
+    top: 0;
+    width: 2px;
+    height: 14px;
+    background: rgba(255, 255, 255, 0.2);
+}
+.ae-comp-center-mark::after {
+    content: '';
+    position: absolute;
+    top: 6px;
+    left: 0;
+    width: 14px;
+    height: 2px;
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.ae-layers-container {
+    position: absolute;
+    inset: 0;
+    transform-style: preserve-3d;
+}
+
+.ae-layer,
+.ae-sublayer {
+    position: absolute;
+    left: 0;
+    top: 0;
+    transform-origin: 0 0 0;
+    backface-visibility: visible;
+}
+
+.ae-layer-svg {
+    position: absolute;
+    left: 0;
+    top: 0;
+    overflow: visible;
+}
+
+/* -------------------------------------------------------------
+   Script Editor & ScriptUI Dock Panel
+   ------------------------------------------------------------- */
+.ae-editor-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    position: relative;
+}
+
+.ae-code-textarea {
+    flex: 1;
+    background-color: #1c1c1c;
+    color: #e0e0e0;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    line-height: 1.5;
+    padding: 10px;
+    border: none;
+    resize: none;
+    outline: none;
+    user-select: text;
+    white-space: pre;
+    tab-size: 4;
+}
+
+.ae-console-drawer {
+    height: 80px;
+    background-color: #141414;
+    border-top: 1px solid var(--border-color);
+    padding: 6px 10px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    overflow-y: auto;
+    user-select: text;
+    color: #9cdcfe;
+}
+
+.ae-console-line {
+    margin-bottom: 2px;
+}
+
+.ae-console-line.error {
+    color: #ff6b6b;
+}
+
+/* -------------------------------------------------------------
+   ScriptUI Emulator Styling (Real Adobe UI Look & Feel)
+   ------------------------------------------------------------- */
+.scriptui-dock {
+    flex: 1;
+    padding: 14px;
+    overflow-y: auto;
+    background-color: #232323;
+}
+
+.scriptui-window-container {
+    background: #2b2b2b;
+    border: 1px solid #444;
+    border-radius: 5px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+    overflow: hidden;
+    max-width: 450px;
+    margin: 0 auto;
+}
+
+.scriptui-window-header {
+    background: #333333;
+    padding: 7px 12px;
+    border-bottom: 1px solid #444;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-weight: 600;
+    font-size: 12px;
+}
+
+.scriptui-close-btn {
+    font-size: 16px;
+    cursor: pointer;
+    color: #aaa;
+}
+.scriptui-close-btn:hover {
+    color: #fff;
+}
+
+.scriptui-window-body {
+    padding: 12px;
+}
+
+.scriptui-panel {
+    border: 1px solid #404040;
+    border-radius: 4px;
+    padding: 10px;
+    margin-bottom: 8px;
+}
+
+.scriptui-panel legend {
+    padding: 0 6px;
+    color: #bbb;
+    font-size: 11px;
+}
+
+/* ScriptUI TabbedPanel & Tabs */
+.scriptui-tabbedpanel {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    margin-top: 4px;
+    margin-bottom: 8px;
+    border: 1px solid #383838;
+    border-radius: 5px;
+    background: #1e1e1e;
+    overflow: hidden;
+}
+
+.scriptui-tab-bar {
+    display: flex;
+    background: #181818;
+    border-bottom: 1px solid #333333;
+    padding: 5px 6px 0 6px;
+    gap: 4px;
+}
+
+.scriptui-tab-btn {
+    background: #252525;
+    color: #888888;
+    border: 1px solid #333333;
+    border-bottom: none;
+    border-top-left-radius: 4px;
+    border-top-right-radius: 4px;
+    padding: 6px 14px;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    user-select: none;
+}
+
+.scriptui-tab-btn:hover {
+    background: #2e2e2e;
+    color: #cccccc;
+}
+
+.scriptui-tab-btn.active {
+    background: #262626;
+    color: #ffffff;
+    border-color: #4a4a4a #4a4a4a transparent #4a4a4a;
+    font-weight: 700;
+    position: relative;
+    top: 1px;
+    box-shadow: 0 -2px 4px rgba(0,0,0,0.4);
+}
+
+.scriptui-tab-body {
+    padding: 10px;
+    background: #262626;
+}
+
+.scriptui-tab-content {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.scriptui-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+}
+
+.scriptui-button {
+    background: #383838;
+    color: #eee;
+    border: 1px solid #555;
+    border-radius: 3px;
+    padding: 6px 14px;
+    font-size: 12px;
+    cursor: pointer;
+}
+.scriptui-button:hover {
+    background: #484848;
+}
+
+.scriptui-edittext {
+    background: #1a1a1a;
+    color: #fff;
+    border: 1px solid #555;
+    border-radius: 3px;
+    padding: 4px 8px;
+    font-size: 12px;
+    outline: none;
+    user-select: text;
+}
+.scriptui-edittext:focus {
+    border-color: var(--ae-blue);
+}
+
+.scriptui-slider-container {
+    display: flex;
+    align-items: center;
+    width: 100%;
+}
+
+.scriptui-slider {
+    flex: 1;
+    accent-color: var(--ae-blue);
+    cursor: pointer;
+}
+
+.scriptui-checkbox-label, .scriptui-radio-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    font-size: 12px;
+}
+
+/* -------------------------------------------------------------
+   Bottom Timeline & Layer Inspector (Exact AE Replication)
+   ------------------------------------------------------------- */
+.ae-bottom-section {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    background-color: var(--bg-panel);
+    min-height: 200px;
+    overflow: hidden;
+}
+
+.ae-timeline-header {
+    height: 28px;
+    background-color: var(--bg-header);
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    align-items: center;
+    padding: 0 10px;
+    font-size: 11px;
+    color: var(--text-muted);
+    min-width: 520px;
+    flex-shrink: 0;
+}
+
+.ae-col-layer-name {
+    width: 250px;
+    padding-left: 20px;
+    flex-shrink: 0;
+}
+
+.ae-col-switches {
+    width: 130px;
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+.ae-col-properties {
+    flex: 1;
+    padding-left: 12px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.ae-layers-tree {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: auto;
+}
+
+/* Layer Row */
+.ae-layer-row {
+    background-color: var(--bg-row-even);
+    border-bottom: 1px solid #2e2e2e;
+    font-size: 12px;
+}
+.ae-layer-row:nth-child(odd) {
+    background-color: var(--bg-row-odd);
+}
+
+.ae-layer-main-bar {
+    height: 26px;
+    display: flex;
+    align-items: center;
+    padding: 0 8px;
+    cursor: pointer;
+    min-width: 520px;
+}
+.ae-layer-main-bar:hover {
+    background-color: #333333;
+}
+.ae-layer-main-bar.selected {
+    background-color: #2b3d56;
+}
+
+.ae-twirl {
+    width: 16px;
+    height: 16px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: #888;
+    cursor: pointer;
+    transition: transform 0.15s;
+}
+.ae-twirl.open {
+    transform: rotate(90deg);
+}
+
+.ae-color-tag {
+    width: 10px;
+    height: 10px;
+    border-radius: 2px;
+    margin: 0 6px;
+    flex-shrink: 0;
+}
+
+.ae-layer-num {
+    color: #888;
+    font-size: 11px;
+    width: 20px;
+    flex-shrink: 0;
+}
+
+.ae-layer-icon {
+    margin-right: 6px;
+    color: #aaa;
+    font-size: 11px;
+}
+
+.ae-layer-title {
+    font-weight: 500;
+    color: var(--text-primary);
+    width: 180px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Switches & 3D Cube Icon */
+.ae-switches {
+    width: 140px;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+    padding-right: 12px;
+}
+
+.ae-switch-3d {
+    width: 18px;
+    height: 18px;
+    border: 1px solid #555;
+    border-radius: 2px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    background: #222;
+    transition: all 0.15s;
+}
+.ae-switch-3d:hover {
+    border-color: #888;
+}
+.ae-switch-3d.active {
+    background: #3a4a60;
+    border-color: var(--ae-blue);
+}
+.ae-cube-icon {
+    width: 10px;
+    height: 10px;
+    border: 1px solid #aaa;
+    transform: rotate(45deg);
+}
+.ae-switch-3d.active .ae-cube-icon {
+    border-color: #fff;
+    background-color: var(--ae-blue);
+}
+
+/* Shy Switch & Global Shy Button (Authentic AE Kilroy / Shy Guy) */
+.ae-global-shy-btn {
+    width: 22px;
+    height: 22px;
+    background: #252525;
+    border: 1px solid var(--border-light);
+    color: #888888;
+    border-radius: 3px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+.ae-global-shy-btn:hover {
+    color: #ffffff;
+    background: #383838;
+}
+.ae-global-shy-btn.active {
+    background: #1c3b66;
+    border-color: var(--ae-blue);
+    color: #64b5f6;
+    box-shadow: 0 0 4px rgba(44, 140, 255, 0.4);
+}
+
+.ae-switch-shy {
+    width: 18px;
+    height: 18px;
+    border: 1px solid #444;
+    border-radius: 2px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    background: #222;
+    color: #777;
+    transition: all 0.15s;
+}
+.ae-switch-shy:hover {
+    border-color: #888;
+    color: #ccc;
+}
+.ae-switch-shy.active {
+    background: #1c3b66;
+    border-color: var(--ae-blue);
+    color: #64b5f6;
+}
+.ae-switch-shy.locked {
+    cursor: not-allowed;
+    background: #2a2416;
+    border-color: #786016;
+    color: var(--ae-gold);
+    opacity: 0.85;
+}
+.ae-switch-shy.locked:hover {
+    border-color: var(--ae-gold);
+    color: #ffd166;
+}
+
+.ae-badge-ui-locked {
+    font-size: 9px;
+    font-weight: 700;
+    color: #ffbe26;
+    background: rgba(255, 190, 38, 0.15);
+    border: 1px solid rgba(255, 190, 38, 0.4);
+    border-radius: 2px;
+    padding: 1px 5px;
+    letter-spacing: 0.5px;
+    margin-right: 6px;
+    user-select: none;
+    display: inline-flex;
+    align-items: center;
+}
+
+.ae-shy-notice {
+    padding: 8px 16px;
+    color: #888;
+    font-size: 11px;
+    font-style: italic;
+    background: rgba(255, 255, 255, 0.02);
+    border-bottom: 1px solid #282828;
+}
+
+/* -------------------------------------------------------------
+   Global Expressions Switch & 4-Way Evaluation Switch
+   ------------------------------------------------------------- */
+.ae-global-expr-btn {
+    width: 22px;
+    height: 22px;
+    background: #252525;
+    border: 1px solid var(--border-light);
+    color: var(--text-muted);
+    border-radius: 3px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+.ae-global-expr-btn:hover {
+    color: #ffffff;
+    background: #383838;
+}
+.ae-global-expr-btn.active {
+    background: #4a3b10;
+    border-color: var(--ae-gold);
+    color: #ffd166;
+    box-shadow: 0 0 4px rgba(255, 209, 102, 0.4);
+}
+.ae-expr-icon {
+    font-weight: 900;
+    font-size: 14px;
+    line-height: 1;
+    font-family: monospace;
+}
+
+/* Compact Property-level 4-Way Evaluation Mode Switch */
+.ae-prop-4way-switch {
+    display: inline-flex;
+    align-items: center;
+    background: #181818;
+    border: 1px solid #3c3c3c;
+    border-radius: 3px;
+    overflow: hidden;
+    margin-right: 6px;
+    flex-shrink: 0;
+    height: 16px;
+}
+
+.ae-prop-4way-btn {
+    background: none;
+    border: none;
+    color: #777;
+    font-size: 8px;
+    padding: 0 3px;
+    line-height: 16px;
+    height: 16px;
+    cursor: pointer;
+    transition: all 0.15s;
+    border-right: 1px solid #2e2e2e;
+    user-select: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+.ae-prop-4way-btn:last-child {
+    border-right: none;
+}
+.ae-prop-4way-btn:hover {
+    color: #fff;
+    background: #2a2a2a;
+}
+.ae-prop-4way-btn.active[data-mode="rand"] {
+    background: #1c3b66;
+    color: #64b5f6;
+}
+.ae-prop-4way-btn.active[data-mode="wiggle"] {
+    background: #473a10;
+    color: var(--ae-gold);
+}
+.ae-prop-4way-btn.active[data-mode="stop"] {
+    background: #552222;
+    color: #ff7675;
+}
+.ae-prop-4way-btn.active[data-mode="base"] {
+    background: #2d3436;
+    color: #dfe6e9;
+}
+
+/* -------------------------------------------------------------
+   Property Color Coding:
+   Blue = Animatable in AE Timeline
+   Red = Defined Once (Static) in AE
+   ------------------------------------------------------------- */
+.ae-prop-row.ae-prop-animatable {
+    background-color: rgba(44, 140, 255, 0.05);
+    border-left: 3px solid #2c8cff;
+}
+.ae-prop-row.ae-prop-animatable:hover {
+    background-color: rgba(44, 140, 255, 0.12);
+}
+
+.ae-prop-row.ae-prop-static {
+    background-color: rgba(255, 82, 82, 0.05);
+    border-left: 3px solid #ff5252;
+}
+.ae-prop-row.ae-prop-static:hover {
+    background-color: rgba(255, 82, 82, 0.12);
+}
+
+.ae-badge-type {
+    font-size: 9px;
+    font-weight: bold;
+    padding: 1px 4px;
+    border-radius: 2px;
+    margin-right: 6px;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+}
+.ae-badge-type.animatable {
+    background: rgba(44, 140, 255, 0.2);
+    color: #64b5f6;
+    border: 1px solid rgba(44, 140, 255, 0.4);
+}
+.ae-badge-type.static {
+    background: rgba(255, 82, 82, 0.2);
+    color: #ff7675;
+    border: 1px solid rgba(255, 82, 82, 0.4);
+}
+
+/* -------------------------------------------------------------
+   ScriptUI Sample Color Coding (Unified):
+   Blue = Animatable in Timeline
+   Red = Defined Once (Static Setup on Creation)
+   ------------------------------------------------------------- */
+.scriptui-animatable {
+    border-color: #2c8cff !important;
+    background: rgba(44, 140, 255, 0.05) !important;
+}
+.scriptui-animatable legend, .scriptui-anim-lbl {
+    color: #64b5f6 !important;
+    font-weight: 600;
+}
+
+.scriptui-static {
+    border-color: #ff5252 !important;
+    background: rgba(255, 82, 82, 0.04) !important;
+}
+.scriptui-static legend, .scriptui-static-lbl {
+    color: #ff7675 !important;
+    font-weight: 600;
+}
+
+.scriptui-legend {
+    display: flex;
+    gap: 12px;
+    font-size: 11px;
+    padding: 6px 8px;
+    margin-bottom: 8px;
+    background: #1c1c1c;
+    border-radius: 4px;
+    border: 1px solid #333;
+}
+
+.ae-parent-label {
+    color: #888;
+    font-size: 11px;
+    margin-left: 8px;
+}
+
+/* Property Groups (Contents / Transform) */
+.ae-prop-group {
+    padding-left: 24px;
+    border-top: 1px solid #232323;
+}
+
+.ae-prop-group-header {
+    height: 24px;
+    display: flex;
+    align-items: center;
+    padding: 0 8px;
+    color: #aaa;
+    font-size: 11px;
+    min-width: 520px;
+}
+.ae-prop-group-header:hover {
+    background-color: rgba(255, 255, 255, 0.03);
+}
+
+.ae-prop-group-title {
+    font-weight: 600;
+    margin-left: 4px;
+}
+
+.ae-prop-group-action {
+    margin-left: auto;
+    color: var(--ae-blue);
+    font-size: 11px;
+    cursor: pointer;
+}
+
+.ae-prop-items {
+    padding-left: 18px;
+}
+
+.ae-prop-row {
+    height: 22px;
+    display: flex;
+    align-items: center;
+    padding: 0 6px;
+    font-size: 11px;
+    min-width: 520px;
+}
+.ae-prop-row:hover {
+    background-color: rgba(255, 255, 255, 0.04);
+}
+
+.ae-prop-stopwatch {
+    width: 14px;
+    height: 14px;
+    margin-right: 6px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: #666;
+    overflow: hidden;
+    flex-shrink: 0;
+}
+.ae-prop-stopwatch.active {
+    color: var(--ae-gold);
+}
+
+.ae-prop-name {
+    width: 140px;
+    color: #bbb;
+}
+
+.ae-prop-val-container {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+/* Color Picker & Swatch in Timeline */
+.ae-color-picker-label {
+    display: inline-flex;
+    align-items: center;
+    position: relative;
+    cursor: pointer;
+    vertical-align: middle;
+}
+
+.ae-color-picker-label input[type="color"] {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+    pointer-events: none;
+}
+
+.ae-color-swatch-box {
+    display: inline-block;
+    width: 14px;
+    height: 14px;
+    border-radius: 2px;
+    border: 1px solid rgba(255, 255, 255, 0.45);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+    cursor: pointer;
+    transition: transform 0.1s, border-color 0.1s;
+    vertical-align: middle;
+}
+
+.ae-color-swatch-box:hover {
+    transform: scale(1.15);
+    border-color: #ffffff;
+}
+
+.ae-color-rgb-val {
+    font-family: var(--font-mono);
+    color: #64b5f6;
+    font-size: 11px;
+    padding: 1px 5px;
+    background: rgba(44, 140, 255, 0.1);
+    border: 1px solid rgba(44, 140, 255, 0.25);
+    border-radius: 3px;
+    user-select: text;
+}
+
+/* Scrubbable Number Values */
+.ae-scrub-val {
+    color: var(--ae-blue);
+    font-family: var(--font-mono);
+    cursor: ew-resize;
+    padding: 1px 3px;
+    border-radius: 2px;
+}
+.ae-scrub-val:hover {
+    color: var(--ae-blue-hover);
+    background-color: rgba(44, 140, 255, 0.15);
+}
+
+.ae-wiggle-badge {
+    background: #473a10;
+    color: var(--ae-gold);
+    border: 1px solid #786016;
+    border-radius: 3px;
+    padding: 0 4px;
+    font-size: 9px;
+    font-weight: bold;
+    cursor: pointer;
+    margin-left: 6px;
+}
+
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+::-webkit-scrollbar-track {
+    background: #1e1e1e;
+}
+::-webkit-scrollbar-thumb {
+    background: #3a3a3a;
+    border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: #505050;
+}
+
+/* -------------------------------------------------------------
+   AE 3D Axis Orientation Gizmo (Bottom Left Corner)
+   ------------------------------------------------------------- */
+.ae-axis-gizmo {
+    position: absolute;
+    left: 20px;
+    bottom: 20px;
+    width: 90px;
+    height: 90px;
+    pointer-events: none;
+    z-index: 60;
+    perspective: 350px;
+    perspective-origin: 24px 66px;
+}
+
+.ae-axis-gizmo-rig {
+    position: absolute;
+    left: 24px;
+    top: 66px;
+    width: 0;
+    height: 0;
+    transform-style: preserve-3d;
+}
+
+/* 3D Origin Box with Center Dot */
+.ae-gizmo-origin {
+    position: absolute;
+    left: 0;
+    top: 0;
+    transform-style: preserve-3d;
+}
+
+.ae-gizmo-origin-cube {
+    position: absolute;
+    left: -5px;
+    top: -5px;
+    width: 10px;
+    height: 10px;
+    transform-style: preserve-3d;
+}
+
+.ae-cube-face {
+    position: absolute;
+    width: 10px;
+    height: 10px;
+    border: 1px solid #2f80ed;
+    background: rgba(47, 128, 237, 0.15);
+    box-sizing: border-box;
+}
+
+.ae-cube-face.front  { transform: translateZ(5px); }
+.ae-cube-face.back   { transform: rotateY(180deg) translateZ(5px); }
+.ae-cube-face.left   { transform: rotateY(-90deg) translateZ(5px); }
+.ae-cube-face.right  { transform: rotateY(90deg) translateZ(5px); }
+.ae-cube-face.top    { transform: rotateX(90deg) translateZ(5px); }
+.ae-cube-face.bottom { transform: rotateX(-90deg) translateZ(5px); }
+
+.ae-gizmo-dot {
+    position: absolute;
+    left: -2px;
+    top: -2px;
+    width: 4px;
+    height: 4px;
+    background: #ff3b30;
+    border-radius: 50%;
+    box-shadow: 0 0 3px rgba(255, 59, 48, 0.8);
+    transform: translateZ(0);
+}
+
+/* Base Axis Container */
+.ae-gizmo-axis {
+    position: absolute;
+    left: 0;
+    top: 0;
+    transform-style: preserve-3d;
+}
+
+.ae-axis-stem {
+    position: absolute;
+    left: 5px;
+    top: -0.75px;
+    width: 38px;
+    height: 1.5px;
+    transform-origin: 0 50%;
+}
+
+.ae-axis-arrow {
+    position: absolute;
+    left: 42px;
+    top: -4.5px;
+    width: 0;
+    height: 0;
+    border-top: 4.5px solid transparent;
+    border-bottom: 4.5px solid transparent;
+}
+
+.ae-axis-arrow.cross {
+    transform: rotateX(90deg);
+}
+
+.ae-axis-label {
+    position: absolute;
+    left: 57px;
+    top: -7px;
+    font-size: 12px;
+    font-weight: 700;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    user-select: none;
+    line-height: 1;
+    display: inline-block;
+}
+
+/* Red X Axis (+X: right) */
+.ae-axis-x {
+    transform: none;
+}
+.ae-axis-x .ae-axis-stem {
+    background: #ff3b30;
+    box-shadow: 0 0 2px rgba(255, 59, 48, 0.4);
+}
+.ae-axis-x .ae-axis-arrow {
+    border-left: 10px solid #ff3b30;
+}
+.ae-axis-x .ae-axis-label {
+    color: #ff3b30;
+    text-shadow: 0 0 4px rgba(255, 59, 48, 0.6);
+}
+
+/* Green Y Axis (-Y in CSS: UP, matching AE viewport orientation) */
+.ae-axis-y {
+    transform: rotateZ(-90deg);
+}
+.ae-axis-y .ae-axis-stem {
+    background: #00e676;
+    box-shadow: 0 0 2px rgba(0, 230, 118, 0.4);
+}
+.ae-axis-y .ae-axis-arrow {
+    border-left: 10px solid #00e676;
+}
+.ae-axis-y .ae-axis-label {
+    color: #00e676;
+    text-shadow: 0 0 4px rgba(0, 230, 118, 0.6);
+}
+
+/* Blue Z Axis (+Z in CSS: depth/towards camera) */
+.ae-axis-z {
+    transform: rotateY(-90deg);
+}
+.ae-axis-z .ae-axis-stem {
+    background: #2f80ed;
+    box-shadow: 0 0 2px rgba(47, 128, 237, 0.4);
+}
+.ae-axis-z .ae-axis-arrow {
+    border-left: 10px solid #2f80ed;
+}
+.ae-axis-z .ae-axis-label {
+    color: #2f80ed;
+    text-shadow: 0 0 4px rgba(47, 128, 237, 0.6);
+}

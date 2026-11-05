@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>After Effects JSX & ScriptUI 3D Simulator</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Topbar -->
+    <header class="ae-topbar">
+        <div class="ae-brand">
+            <span class="ae-badge">Ae</span>
+            <span>AE JS Layer & ScriptUI Emulator</span>
+        </div>
+
+        <div class="ae-topbar-center">
+            <button id="btn-open-jsx" class="ae-btn" title="Upload and load a .JSX file from disk">📂 Upload .JSX</button>
+            <input type="file" id="file-input-jsx" accept=".jsx,.js,.txt" style="display: none;">
+            <label style="color:#aaa; font-size:11px; margin-left:6px;">Presets:</label>
+            <select id="ae-preset-select" class="ae-preset-select"></select>
+            <button id="btn-run-script" class="ae-btn ae-btn-primary" title="Execute script (Ctrl + Enter)">&#9658; Run Script</button>
+        </div>
+
+        <div class="ae-topbar-actions">
+            <button id="btn-play-pause" class="ae-btn" title="Toggle animation / wiggle">Pause Wiggle</button>
+            <button id="btn-add-shape" class="ae-btn" title="Add new shape layer">+ 3D Shape</button>
+            <button id="btn-clear-comp" class="ae-btn" title="Clear all layers">Clear</button>
+        </div>
+    </header>
+
+    <!-- Main Workspace -->
+    <main class="ae-workspace" id="ae-workspace">
+        <!-- Left Column: Camera Preview (Top) + Layer Properties Inspector (Bottom) -->
+        <section class="ae-left-column" id="ae-left-column">
+            <!-- 3D Composition Viewport / Camera Preview -->
+            <div id="ae-viewport-panel" class="ae-viewport-panel">
+                <!-- AERenderer mounts here -->
+            </div>
+
+            <!-- Horizontal Resizer between Camera Viewport and Timeline -->
+            <div class="ae-resizer ae-resizer-h" id="resizer-horizontal" title="Drag vertically to resize viewport and timeline (Double-click to reset)"></div>
+
+            <!-- Bottom Panel: AE Layer Inspector & Properties Timeline (Same width as camera preview) -->
+            <div class="ae-bottom-section" id="ae-bottom-section">
+                <div class="ae-timeline-header">
+                    <div class="ae-col-layer-name">
+                        <span>Source Name</span>
+                    </div>
+                    <div class="ae-col-switches">
+                        <!-- Global Shy Switch (Active by default, using authentic AE Shy Guy pictogram) -->
+                        <button id="btn-global-shy" class="ae-global-shy-btn active" title="Hide all layers for which the 'Shy' switch is set (Focus on .JSX UI)">
+                            <svg class="ae-shy-icon" viewBox="0 0 20 20" width="16" height="16" fill="none">
+                                <!-- Head Dome -->
+                                <path d="M 4 13.5 C 4 6, 16 6, 16 13.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                                <!-- Eyes -->
+                                <circle cx="7.2" cy="8.8" r="1.1" fill="currentColor"/>
+                                <circle cx="12.8" cy="8.8" r="1.1" fill="currentColor"/>
+                                <!-- Bulbous Drooping Nose -->
+                                <path d="M 8.4 10.5 C 8.4 15.2, 11.6 15.2, 11.6 10.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" fill="currentColor" fill-opacity="0.2"/>
+                                <!-- Fence / Wall -->
+                                <line x1="2" y1="13.5" x2="18" y2="13.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                            </svg>
+                        </button>
+
+                        <!-- Global Expression Hide/Show Switch (= symbol only) -->
+                        <button id="btn-global-expr" class="ae-global-expr-btn active" title="Toggle Expressions Display (Hide / Show expression formulas and badges)">
+                            <span class="ae-expr-icon">=</span>
+                        </button>
+
+                        <span>Switches</span>
+                    </div>
+                    <div class="ae-col-properties">
+                        <span style="color:#64b5f6; margin-right: 12px;">● Blue: Animatable in AE Timeline</span>
+                        <span style="color:#ff6b6b;">● Red: Defined Once (Static)</span>
+                    </div>
+                </div>
+
+                <div id="ae-layers-tree" class="ae-layers-tree">
+                    <!-- Dynamically populated layer items -->
+                </div>
+            </div>
+        </section>
+
+        <!-- Vertical Resizer between Left Column and Right Column -->
+        <div class="ae-resizer ae-resizer-v" id="resizer-vertical" title="Drag horizontally to resize columns (Double-click to reset)"></div>
+
+        <!-- Right Column: Code Editor & ScriptUI Preview (Full Available Height) -->
+        <section class="ae-editor-panel" id="ae-editor-panel">
+            <div class="ae-panel-tabs">
+                <button id="tab-editor" class="ae-tab active">JSX Code Editor</button>
+                <button id="tab-scriptui" class="ae-tab">ScriptUI Panel Preview</button>
+                <span id="current-filename" class="ae-file-status" title="Current file">Cube Preset</span>
+            </div>
+
+            <div id="editor-view" class="ae-editor-content">
+                <div id="ae-drag-overlay" class="ae-drag-overlay" style="display: none;">
+                    <span>Drop .JSX file to open</span>
+                </div>
+                <textarea id="ae-code-editor" class="ae-code-textarea" spellcheck="false" placeholder="Paste or drag .jsx script here..."></textarea>
+                <div id="ae-console-drawer" class="ae-console-drawer">
+                    <div class="ae-console-line" style="color: #6a9955;">// AE JSX Console initialized. Ready for scripts.</div>
+                </div>
+            </div>
+
+            <div id="scriptui-dock-host" class="scriptui-dock" style="display: none;">
+                <div style="color: #888; text-align: center; margin-top: 40px;">
+                    ScriptUI Window will appear here when created by your script.
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- JavaScript Modules -->
+    <script src="js/ae-core.js"></script>
+    <script src="js/scriptui.js"></script>
+    <script src="js/ae-renderer.js"></script>
+    <script src="jsx/manifest.js"></script>
+    <script src="js/presets.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
