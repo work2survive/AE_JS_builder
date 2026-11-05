@@ -2297,43 +2297,7 @@
                     }
                 }
 
-                    var botRoot = preCapBot.property("ADBE Root Vectors Group") || preCapBot.property("Contents") || (preCapBot.property && preCapBot.property(1));
-                    var botGrp = botRoot ? (botRoot.property("Cap Vector") || botRoot.property(1)) : null;
-                    if (botGrp) {
-                        var botContents = botGrp.property("ADBE Vectors Group") || botGrp.property("Contents") || (botGrp.property && botGrp.property(2)) || (botGrp.property && botGrp.property(1));
-                        if (botContents) {
-                            var botShape = botContents.property("ADBE Vector Shape - Group") || botContents.property(1);
-                            if (botShape) {
-                                var bpProp = botShape.property("ADBE Vector Shape") || botShape.property("Path") || botShape.property(1);
-                                if (bpProp) {
-                                    try {
-                                        var initBShape = computeCapShape(radius, segCount, enableSlice, startAngle, endAngle);
-                                        if (initBShape) bpProp.setValue(initBShape);
-                                    } catch (eBotS) {}
-                                    bpProp.expression = exprCapPath;
-                                }
-                            }
-                            var botFl = botContents.property("ADBE Vector Graphic - Fill") || botContents.property(2);
-                            if (botFl) {
-                                var bfCol = botFl.property("ADBE Vector Fill Color") || botFl.property("Color") || botFl.property(1);
-                                if (bfCol) bfCol.expression = exprBottomColor;
-                                var bfOp = botFl.property("ADBE Vector Fill Opacity") || botFl.property("Opacity") || botFl.property(2);
-                                if (bfOp) bfOp.expression = exprOpacity;
-                            }
-                            var botSt = botContents.property("ADBE Vector Graphic - Stroke") || botContents.property(3);
-                            if (botSt) {
-                                var bsCol = botSt.property("ADBE Vector Stroke Color") || botSt.property("Color") || botSt.property(1);
-                                if (bsCol) bsCol.expression = exprStrokeColor;
-                                var bsW = botSt.property("ADBE Vector Stroke Width") || botSt.property("Stroke Width") || botSt.property(2);
-                                if (bsW) bsW.expression = exprStrokeWidth;
-                                var bsOp = botSt.property("ADBE Vector Stroke Opacity") || botSt.property("Opacity") || botSt.property(3);
-                                if (bsOp) bsOp.expression = exprStrokeOpacity;
-                            }
-                        }
-                    }
-                }
-
-                cylLayer.selected = true;
+                if (cylLayer) cylLayer.selected = true;
                 $.writeln("Cylinder Maker: Successfully created 3D cylinder on [" + precompName + "] linked to precomp.");
             } catch (err) {
                 alert("Cylinder Maker Error: " + err.toString());
