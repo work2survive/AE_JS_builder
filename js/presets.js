@@ -140,11 +140,22 @@
     function getLayer(comp, nameOrIndex) {
         if (!comp) return null;
         if (typeof comp.layer === "function") {
-            return comp.layer(nameOrIndex);
+            try {
+                return comp.layer(nameOrIndex);
+            } catch (e) {}
         }
         if (comp.layers) {
-            if (typeof nameOrIndex === "number") return comp.layers[nameOrIndex - 1];
-            if (typeof comp.layers.byName === "function") return comp.layers.byName(nameOrIndex);
+            try {
+                if (typeof nameOrIndex === "number") return comp.layers[nameOrIndex - 1] || comp.layers[nameOrIndex];
+                if (typeof comp.layers.byName === "function") return comp.layers.byName(nameOrIndex);
+                if (typeof comp.layers.find === "function") {
+                    return comp.layers.find(function(l) { return l.name === nameOrIndex; }) || null;
+                }
+                for (var li = 1; li <= comp.layers.length; li++) {
+                    var l = comp.layers[li];
+                    if (l && l.name === nameOrIndex) return l;
+                }
+            } catch (e2) {}
         }
         return null;
     }
@@ -713,23 +724,37 @@
                 }
 
                 // 4. In parent composition: target the resulting cube_maker layer
-                var cubeLayer = getLayer(parentComp, precompName) || getLayer(parentComp, 1);
-                cubeLayer.name = precompName;
-                cubeLayer.threeDLayer = true;
-                if ("collapseTransformation" in cubeLayer) {
-                    cubeLayer.collapseTransformation = true; // Continuous 3D rasterization in AE
+                var cubeLayer = null;
+                if (parentComp.layers) {
+                    for (var pli = 1; pli <= parentComp.layers.length; pli++) {
+                        var testL = parentComp.layer(pli);
+                        if (testL && testL.source === preComp) {
+                            cubeLayer = testL;
+                            break;
+                        }
+                    }
                 }
-                cubeLayer.label = 1;              // RED color in After Effects
-                cubeLayer.colorLabel = "#ff3b30"; // RED color in emulator
-                cubeLayer.notShyable = true;
+                if (!cubeLayer) {
+                    cubeLayer = getLayer(parentComp, precompName) || getLayer(parentComp, 1);
+                }
+                if (cubeLayer) {
+                    cubeLayer.name = precompName;
+                    cubeLayer.threeDLayer = true;
+                    if ("collapseTransformation" in cubeLayer) {
+                        cubeLayer.collapseTransformation = true; // Continuous 3D rasterization in AE
+                    }
+                    cubeLayer.label = 1;              // RED color in After Effects
+                    cubeLayer.colorLabel = "#ff3b30"; // RED color in emulator
+                    cubeLayer.notShyable = true;
 
-                // Center the precomp layer in parent composition
-                setTransformVal(cubeLayer, "Anchor Point", preCenter);
-                setTransformVal(cubeLayer, "Position", center);
+                    // Center the precomp layer in parent composition
+                    setTransformVal(cubeLayer, "Anchor Point", preCenter);
+                    setTransformVal(cubeLayer, "Position", center);
 
-                // Ensure cube_maker layer is on top in parent comp
-                if (cubeLayer.moveToBeginning) {
-                    cubeLayer.moveToBeginning();
+                    // Ensure cube_maker layer is on top in parent comp
+                    if (cubeLayer.moveToBeginning) {
+                        cubeLayer.moveToBeginning();
+                    }
                 }
 
                 // 5. MASTER CONTROLS ON PARENT COMPOSITION:
@@ -1129,14 +1154,22 @@
     function getLayer(comp, nameOrIndex) {
         if (!comp) return null;
         if (typeof comp.layer === "function") {
-            return comp.layer(nameOrIndex);
+            try {
+                return comp.layer(nameOrIndex);
+            } catch (e) {}
         }
         if (comp.layers) {
-            if (typeof nameOrIndex === "number") return comp.layers[nameOrIndex - 1];
-            if (typeof comp.layers.byName === "function") return comp.layers.byName(nameOrIndex);
-            if (typeof comp.layers.find === "function") {
-                return comp.layers.find(function(l) { return l.name === nameOrIndex; }) || null;
-            }
+            try {
+                if (typeof nameOrIndex === "number") return comp.layers[nameOrIndex - 1] || comp.layers[nameOrIndex];
+                if (typeof comp.layers.byName === "function") return comp.layers.byName(nameOrIndex);
+                if (typeof comp.layers.find === "function") {
+                    return comp.layers.find(function(l) { return l.name === nameOrIndex; }) || null;
+                }
+                for (var li = 1; li <= comp.layers.length; li++) {
+                    var l = comp.layers[li];
+                    if (l && l.name === nameOrIndex) return l;
+                }
+            } catch (e2) {}
         }
         return null;
     }
@@ -1189,7 +1222,7 @@
     pnlHeader.spacing = 3;
     pnlHeader.margins = [10, 8, 10, 8];
 
-    var lblDesc = pnlHeader.add("statictext", undefined, "v1.1 - Parametric 3D Shape Layer Cylinder & Slice generator with live master rig.");
+    var lblDesc = pnlHeader.add("statictext", undefined, "v1.2 - Parametric 3D Shape Layer Cylinder & Slice generator with live master rig.");
 
     // -------------------------------------------------------------------------
     // 4. Tabbed Panel: Geometry vs. Appearance
@@ -1644,116 +1677,116 @@
                     createdLayers.push(wall);
                 }
 
-                // 3. Create Slice Radial Walls (if slice is enabled and not full 360)
-                var hasSliceWalls = enableSlice && Math.abs(sweepAngle) < 359.99;
-                var sliceStartLayer = null;
-                var sliceEndLayer = null;
+                // 3. Create Slice Radial Walls (Always created so toggling Enable Slice dynamically in AE reveals them)
+                var isSliceInitiallyActive = enableSlice && Math.abs(sweepAngle) < 359.99;
+                var initialSliceOp = isSliceInitiallyActive ? opacityVal : 0;
+                var initialSliceStrokeOp = (isSliceInitiallyActive && strokeWidth > 0.0001) ? opacityVal : 0;
 
-                if (hasSliceWalls) {
-                    // Start Slice Wall
-                    var sRad = startAngle * (Math.PI / 180);
-                    var sPos = [(radius / 2) * Math.sin(sRad), 0, -(radius / 2) * Math.cos(sRad)];
-                    var sRot = [0, 90 - startAngle, 0];
+                // Start Slice Wall
+                var sRad = startAngle * (Math.PI / 180);
+                var sPos = [(radius / 2) * Math.sin(sRad), 0, -(radius / 2) * Math.cos(sRad)];
+                var sRot = [0, 90 - startAngle, 0];
 
-                    sliceStartLayer = parentComp.layers.addShape();
-                    sliceStartLayer.name = "Slice_Start";
-                    sliceStartLayer.threeDLayer = true;
-                    sliceStartLayer.shy = true;
+                var sliceStartLayer = parentComp.layers.addShape();
+                sliceStartLayer.name = "Slice_Start";
+                sliceStartLayer.threeDLayer = true;
+                sliceStartLayer.shy = true;
 
-                    var rootS = sliceStartLayer.property("ADBE Root Vectors Group") || sliceStartLayer.property("Contents") || (sliceStartLayer.property && sliceStartLayer.property(1));
-                    var grpS = rootS.addProperty("ADBE Vector Group");
-                    grpS.name = "Slice Vector";
+                var rootS = sliceStartLayer.property("ADBE Root Vectors Group") || sliceStartLayer.property("Contents") || (sliceStartLayer.property && sliceStartLayer.property(1));
+                var grpS = rootS.addProperty("ADBE Vector Group");
+                grpS.name = "Slice Vector";
 
-                    var grpSContents = grpS.property("ADBE Vectors Group") || grpS.property("Contents") || (grpS.property && grpS.property(2)) || (grpS.property && grpS.property(1));
-                    grpSContents.addProperty("ADBE Vector Shape - Rect");
-                    grpSContents.addProperty("ADBE Vector Graphic - Fill");
-                    grpSContents.addProperty("ADBE Vector Graphic - Stroke");
+                var grpSContents = grpS.property("ADBE Vectors Group") || grpS.property("Contents") || (grpS.property && grpS.property(2)) || (grpS.property && grpS.property(1));
+                grpSContents.addProperty("ADBE Vector Shape - Rect");
+                grpSContents.addProperty("ADBE Vector Graphic - Fill");
+                grpSContents.addProperty("ADBE Vector Graphic - Stroke");
 
-                    grpSContents = grpS.property("ADBE Vectors Group") || grpS.property("Contents") || (grpS.property && grpS.property(2)) || (grpS.property && grpS.property(1));
+                grpSContents = grpS.property("ADBE Vectors Group") || grpS.property("Contents") || (grpS.property && grpS.property(2)) || (grpS.property && grpS.property(1));
 
-                    var rectS = grpSContents.property("ADBE Vector Shape - Rect") || grpSContents.property(1);
-                    if (rectS) {
-                        var rsSize = rectS.property("ADBE Vector Rect Size") || rectS.property("Size") || rectS.property(2) || rectS.property(1);
-                        if (rsSize && rsSize.setValue) rsSize.setValue([radius, height]);
-                    }
-
-                    var fillS = grpSContents.property("ADBE Vector Graphic - Fill") || grpSContents.property(2);
-                    if (fillS) {
-                        var fsCol = fillS.property("ADBE Vector Fill Color") || fillS.property("Color") || fillS.property(1);
-                        if (fsCol && fsCol.setValue) fsCol.setValue(wallsColor);
-                        var fsOp = fillS.property("ADBE Vector Fill Opacity") || fillS.property("Opacity") || fillS.property(2);
-                        if (fsOp && fsOp.setValue) fsOp.setValue(opacityVal);
-                    }
-
-                    var strokeS = grpSContents.property("ADBE Vector Graphic - Stroke") || grpSContents.property(3);
-                    if (strokeS) {
-                        var ssCol = strokeS.property("ADBE Vector Stroke Color") || strokeS.property("Color") || strokeS.property(1);
-                        if (ssCol && ssCol.setValue) ssCol.setValue(strokeColor);
-                        var ssW = strokeS.property("ADBE Vector Stroke Width") || strokeS.property("Stroke Width") || strokeS.property(2);
-                        if (ssW && ssW.setValue) ssW.setValue(strokeWidth);
-                        var ssOp = strokeS.property("ADBE Vector Stroke Opacity") || strokeS.property("Opacity") || strokeS.property(3);
-                        if (ssOp && ssOp.setValue) ssOp.setValue(strokeWidth <= 0.0001 ? 0 : opacityVal);
-                    }
-
-                    sliceStartLayer.parent = master;
-                    setTransformVal(sliceStartLayer, "Anchor Point", [0, 0, 0]);
-                    setTransformVal(sliceStartLayer, "Position", sPos);
-                    setTransformVal(sliceStartLayer, "Orientation", sRot);
-
-                    createdLayers.push(sliceStartLayer);
-
-                    // End Slice Wall
-                    var eRad = endAngle * (Math.PI / 180);
-                    var ePos = [(radius / 2) * Math.sin(eRad), 0, -(radius / 2) * Math.cos(eRad)];
-                    var eRot = [0, 90 - endAngle, 0];
-
-                    sliceEndLayer = parentComp.layers.addShape();
-                    sliceEndLayer.name = "Slice_End";
-                    sliceEndLayer.threeDLayer = true;
-                    sliceEndLayer.shy = true;
-
-                    var rootE = sliceEndLayer.property("ADBE Root Vectors Group") || sliceEndLayer.property("Contents") || (sliceEndLayer.property && sliceEndLayer.property(1));
-                    var grpE = rootE.addProperty("ADBE Vector Group");
-                    grpE.name = "Slice Vector";
-
-                    var grpEContents = grpE.property("ADBE Vectors Group") || grpE.property("Contents") || (grpE.property && grpE.property(2)) || (grpE.property && grpE.property(1));
-                    grpEContents.addProperty("ADBE Vector Shape - Rect");
-                    grpEContents.addProperty("ADBE Vector Graphic - Fill");
-                    grpEContents.addProperty("ADBE Vector Graphic - Stroke");
-
-                    grpEContents = grpE.property("ADBE Vectors Group") || grpE.property("Contents") || (grpE.property && grpE.property(2)) || (grpE.property && grpE.property(1));
-
-                    var rectE = grpEContents.property("ADBE Vector Shape - Rect") || grpEContents.property(1);
-                    if (rectE) {
-                        var reSize = rectE.property("ADBE Vector Rect Size") || rectE.property("Size") || rectE.property(2) || rectE.property(1);
-                        if (reSize && reSize.setValue) reSize.setValue([radius, height]);
-                    }
-
-                    var fillE = grpEContents.property("ADBE Vector Graphic - Fill") || grpEContents.property(2);
-                    if (fillE) {
-                        var feCol = fillE.property("ADBE Vector Fill Color") || fillE.property("Color") || fillE.property(1);
-                        if (feCol && feCol.setValue) feCol.setValue(wallsColor);
-                        var feOp = fillE.property("ADBE Vector Fill Opacity") || fillE.property("Opacity") || fillE.property(2);
-                        if (feOp && feOp.setValue) feOp.setValue(opacityVal);
-                    }
-
-                    var strokeE = grpEContents.property("ADBE Vector Graphic - Stroke") || grpEContents.property(3);
-                    if (strokeE) {
-                        var seCol = strokeE.property("ADBE Vector Stroke Color") || strokeE.property("Color") || strokeE.property(1);
-                        if (seCol && seCol.setValue) seCol.setValue(strokeColor);
-                        var seW = strokeE.property("ADBE Vector Stroke Width") || strokeE.property("Stroke Width") || strokeE.property(2);
-                        if (seW && seW.setValue) seW.setValue(strokeWidth);
-                        var seOp = strokeE.property("ADBE Vector Stroke Opacity") || strokeE.property("Opacity") || strokeE.property(3);
-                        if (seOp && seOp.setValue) seOp.setValue(strokeWidth <= 0.0001 ? 0 : opacityVal);
-                    }
-
-                    sliceEndLayer.parent = master;
-                    setTransformVal(sliceEndLayer, "Anchor Point", [0, 0, 0]);
-                    setTransformVal(sliceEndLayer, "Position", ePos);
-                    setTransformVal(sliceEndLayer, "Orientation", eRot);
-
-                    createdLayers.push(sliceEndLayer);
+                var rectS = grpSContents.property("ADBE Vector Shape - Rect") || grpSContents.property(1);
+                if (rectS) {
+                    var rsSize = rectS.property("ADBE Vector Rect Size") || rectS.property("Size") || rectS.property(2) || rectS.property(1);
+                    if (rsSize && rsSize.setValue) rsSize.setValue([radius, height]);
                 }
+
+                var fillS = grpSContents.property("ADBE Vector Graphic - Fill") || grpSContents.property(2);
+                if (fillS) {
+                    var fsCol = fillS.property("ADBE Vector Fill Color") || fillS.property("Color") || fillS.property(1);
+                    if (fsCol && fsCol.setValue) fsCol.setValue(wallsColor);
+                    var fsOp = fillS.property("ADBE Vector Fill Opacity") || fillS.property("Opacity") || fillS.property(2);
+                    if (fsOp && fsOp.setValue) fsOp.setValue(initialSliceOp);
+                }
+
+                var strokeS = grpSContents.property("ADBE Vector Graphic - Stroke") || grpSContents.property(3);
+                if (strokeS) {
+                    var ssCol = strokeS.property("ADBE Vector Stroke Color") || strokeS.property("Color") || strokeS.property(1);
+                    if (ssCol && ssCol.setValue) ssCol.setValue(strokeColor);
+                    var ssW = strokeS.property("ADBE Vector Stroke Width") || strokeS.property("Stroke Width") || strokeS.property(2);
+                    if (ssW && ssW.setValue) ssW.setValue(strokeWidth);
+                    var ssOp = strokeS.property("ADBE Vector Stroke Opacity") || strokeS.property("Opacity") || strokeS.property(3);
+                    if (ssOp && ssOp.setValue) ssOp.setValue(initialSliceStrokeOp);
+                }
+
+                sliceStartLayer.parent = master;
+                setTransformVal(sliceStartLayer, "Anchor Point", [0, 0, 0]);
+                setTransformVal(sliceStartLayer, "Position", sPos);
+                setTransformVal(sliceStartLayer, "Orientation", sRot);
+                setTransformVal(sliceStartLayer, "Opacity", isSliceInitiallyActive ? 100 : 0);
+
+                createdLayers.push(sliceStartLayer);
+
+                // End Slice Wall
+                var eRad = endAngle * (Math.PI / 180);
+                var ePos = [(radius / 2) * Math.sin(eRad), 0, -(radius / 2) * Math.cos(eRad)];
+                var eRot = [0, 90 - endAngle, 0];
+
+                var sliceEndLayer = parentComp.layers.addShape();
+                sliceEndLayer.name = "Slice_End";
+                sliceEndLayer.threeDLayer = true;
+                sliceEndLayer.shy = true;
+
+                var rootE = sliceEndLayer.property("ADBE Root Vectors Group") || sliceEndLayer.property("Contents") || (sliceEndLayer.property && sliceEndLayer.property(1));
+                var grpE = rootE.addProperty("ADBE Vector Group");
+                grpE.name = "Slice Vector";
+
+                var grpEContents = grpE.property("ADBE Vectors Group") || grpE.property("Contents") || (grpE.property && grpE.property(2)) || (grpE.property && grpE.property(1));
+                grpEContents.addProperty("ADBE Vector Shape - Rect");
+                grpEContents.addProperty("ADBE Vector Graphic - Fill");
+                grpEContents.addProperty("ADBE Vector Graphic - Stroke");
+
+                grpEContents = grpE.property("ADBE Vectors Group") || grpE.property("Contents") || (grpE.property && grpE.property(2)) || (grpE.property && grpE.property(1));
+
+                var rectE = grpEContents.property("ADBE Vector Shape - Rect") || grpEContents.property(1);
+                if (rectE) {
+                    var reSize = rectE.property("ADBE Vector Rect Size") || rectE.property("Size") || rectE.property(2) || rectE.property(1);
+                    if (reSize && reSize.setValue) reSize.setValue([radius, height]);
+                }
+
+                var fillE = grpEContents.property("ADBE Vector Graphic - Fill") || grpEContents.property(2);
+                if (fillE) {
+                    var feCol = fillE.property("ADBE Vector Fill Color") || fillE.property("Color") || fillE.property(1);
+                    if (feCol && feCol.setValue) feCol.setValue(wallsColor);
+                    var feOp = fillE.property("ADBE Vector Fill Opacity") || fillE.property("Opacity") || fillE.property(2);
+                    if (feOp && feOp.setValue) feOp.setValue(initialSliceOp);
+                }
+
+                var strokeE = grpEContents.property("ADBE Vector Graphic - Stroke") || grpEContents.property(3);
+                if (strokeE) {
+                    var seCol = strokeE.property("ADBE Vector Stroke Color") || strokeE.property("Color") || strokeE.property(1);
+                    if (seCol && seCol.setValue) seCol.setValue(strokeColor);
+                    var seW = strokeE.property("ADBE Vector Stroke Width") || strokeE.property("Stroke Width") || strokeE.property(2);
+                    if (seW && seW.setValue) seW.setValue(strokeWidth);
+                    var seOp = strokeE.property("ADBE Vector Stroke Opacity") || strokeE.property("Opacity") || strokeE.property(3);
+                    if (seOp && seOp.setValue) seOp.setValue(initialSliceStrokeOp);
+                }
+
+                sliceEndLayer.parent = master;
+                setTransformVal(sliceEndLayer, "Anchor Point", [0, 0, 0]);
+                setTransformVal(sliceEndLayer, "Position", ePos);
+                setTransformVal(sliceEndLayer, "Orientation", eRot);
+                setTransformVal(sliceEndLayer, "Opacity", isSliceInitiallyActive ? 100 : 0);
+
+                createdLayers.push(sliceEndLayer);
 
                 // 4. Create Top and Bottom Caps (using Path generator)
                 function createCapLayer(capName, yPos, xRot, capColor) {
@@ -1846,7 +1879,19 @@
                 }
 
                 // Target precomp layer in parent composition
-                var cylLayer = getLayer(parentComp, precompName) || getLayer(parentComp, 1);
+                var cylLayer = null;
+                if (parentComp.layers) {
+                    for (var pli = 1; pli <= parentComp.layers.length; pli++) {
+                        var testL = parentComp.layer(pli);
+                        if (testL && testL.source === preComp) {
+                            cylLayer = testL;
+                            break;
+                        }
+                    }
+                }
+                if (!cylLayer) {
+                    cylLayer = getLayer(parentComp, precompName) || getLayer(parentComp, 1);
+                }
                 if (cylLayer) {
                     cylLayer.name = precompName;
                     cylLayer.threeDLayer = true;
@@ -1863,10 +1908,14 @@
 
                 // 6. MASTER CONTROLS ON PARENT COMPOSITION:
                 function addMasterProp(type, name, val) {
+                    if (!cylLayer) return null;
                     var parade = cylLayer.property("ADBE Effect Parade") || cylLayer.property("Effects");
+                    if (!parade) return null;
                     var eff = parade.addProperty(type);
                     eff.name = name;
-                    eff.property(1).setValue(val);
+                    if (eff.property(1) && typeof eff.property(1).setValue === "function") {
+                        eff.property(1).setValue(val);
+                    }
                     return eff;
                 }
 
@@ -1885,11 +1934,15 @@
 
                 // 7. PRECOMP CONTROLLER LINKED EXPRESSIONS:
                 function addPrecompLinkedEffect(type, name, effTarget, defaultVal) {
+                    if (!preMaster) return null;
                     var parade = preMaster.property("ADBE Effect Parade") || preMaster.property("Effects");
+                    if (!parade) return null;
                     var eff = parade.addProperty(type);
                     eff.name = name;
-                    eff.property(1).setValue(defaultVal);
-                    eff.property(1).expression = 'try { comp("' + parentComp.name + '").layer("' + precompName + '").effect("' + effTarget + '")(1).value; } catch (err) { value; }';
+                    if (eff.property(1) && typeof eff.property(1).setValue === "function") {
+                        eff.property(1).setValue(defaultVal);
+                    }
+                    eff.property(1).expression = 'try { comp("' + parentComp.name.replace(/\\\\/g, '\\\\\\\\').replace(/"/g, '\\\\"') + '").layer("' + precompName + '").effect("' + effTarget + '")(1).value; } catch (err) { value; }';
                     return eff;
                 }
 
@@ -1908,14 +1961,33 @@
                     addPrecompLinkedEffect("ADBE Slider Control", "Stroke Width", "Stroke Width", strokeWidth);
                 }
 
-                // 8. EXPRESSIONS ON WALLS & CAPS:
-                var exprWallsColor = 'try { thisComp.layer("Cylinder_Master_Controller").effect("Walls Color")("Color").value; } catch(e) { value; }';
-                var exprTopColor = 'try { thisComp.layer("Cylinder_Master_Controller").effect("Top Color")("Color").value; } catch(e) { value; }';
-                var exprBottomColor = 'try { thisComp.layer("Cylinder_Master_Controller").effect("Bottom Color")("Color").value; } catch(e) { value; }';
-                var exprOpacity = 'try { thisComp.layer("Cylinder_Master_Controller").effect("Opacity")("Slider").value; } catch(e) { value; }';
-                var exprStrokeColor = 'try { thisComp.layer("Cylinder_Master_Controller").effect("Stroke Color")("Color").value; } catch(e) { value; }';
-                var exprStrokeWidth = 'try { Math.max(0, thisComp.layer("Cylinder_Master_Controller").effect("Stroke Width")("Slider").value); } catch(e) { value; }';
-                var exprStrokeOpacity = 'try { var sw = thisComp.layer("Cylinder_Master_Controller").effect("Stroke Width")("Slider").value; var op = thisComp.layer("Cylinder_Master_Controller").effect("Opacity")("Slider").value; (sw <= 0.0001) ? 0 : op; } catch(e) { value; }';
+                // 8. EXPRESSIONS ON WALLS, SLICE WALLS & CAPS:
+                var exprWallsColor = 'try { thisComp.layer("Cylinder_Master_Controller").effect("Walls Color")(1).value; } catch(e) { value; }';
+                var exprTopColor = 'try { thisComp.layer("Cylinder_Master_Controller").effect("Top Color")(1).value; } catch(e) { value; }';
+                var exprBottomColor = 'try { thisComp.layer("Cylinder_Master_Controller").effect("Bottom Color")(1).value; } catch(e) { value; }';
+                var exprOpacity = 'try { thisComp.layer("Cylinder_Master_Controller").effect("Opacity")(1).value; } catch(e) { value; }';
+                var exprStrokeColor = 'try { thisComp.layer("Cylinder_Master_Controller").effect("Stroke Color")(1).value; } catch(e) { value; }';
+                var exprStrokeWidth = 'try { Math.max(0, thisComp.layer("Cylinder_Master_Controller").effect("Stroke Width")(1).value); } catch(e) { value; }';
+                var exprStrokeOpacity = 'try { var sw = thisComp.layer("Cylinder_Master_Controller").effect("Stroke Width")(1).value; var op = thisComp.layer("Cylinder_Master_Controller").effect("Opacity")(1).value; (sw <= 0.0001) ? 0 : op; } catch(e) { value; }';
+
+                var exprSliceVisibility = 'try {\\n' +
+                    '    var m = thisComp.layer("Cylinder_Master_Controller");\\n' +
+                    '    var en = m.effect("Enable Slice")(1).value > 0;\\n' +
+                    '    var a0 = m.effect("Start Angle")(1).value;\\n' +
+                    '    var a1 = m.effect("End Angle")(1).value;\\n' +
+                    '    var op = m.effect("Opacity")(1).value;\\n' +
+                    '    (en && Math.abs(a1 - a0) < 359.99) ? op : 0;\\n' +
+                    '} catch(e) { value; }';
+
+                var exprSliceStrokeVisibility = 'try {\\n' +
+                    '    var m = thisComp.layer("Cylinder_Master_Controller");\\n' +
+                    '    var en = m.effect("Enable Slice")(1).value > 0;\\n' +
+                    '    var a0 = m.effect("Start Angle")(1).value;\\n' +
+                    '    var a1 = m.effect("End Angle")(1).value;\\n' +
+                    '    var sw = m.effect("Stroke Width")(1).value;\\n' +
+                    '    var op = m.effect("Opacity")(1).value;\\n' +
+                    '    (en && Math.abs(a1 - a0) < 359.99 && sw > 0.0001) ? op : 0;\\n' +
+                    '} catch(e) { value; }';
 
                 // Expressions on Wall segments
                 for (var wi = 0; wi < segCount; wi++) {
@@ -1924,11 +1996,11 @@
                         wLayer.parent = preMaster;
 
                         var wExprPos = 'var m = thisComp.layer("Cylinder_Master_Controller");\\n' +
-                            'var r = m.effect("Radius")("Slider").value;\\n' +
-                            'var n = Math.max(3, Math.round(m.effect("Rotation Segments")("Slider").value));\\n' +
-                            'var slice = m.effect("Enable Slice")("Checkbox").value > 0;\\n' +
-                            'var a0 = slice ? m.effect("Start Angle")("Slider").value : 0;\\n' +
-                            'var a1 = slice ? m.effect("End Angle")("Slider").value : 360;\\n' +
+                            'var r = m.effect("Radius")(1).value;\\n' +
+                            'var n = Math.max(3, Math.round(m.effect("Rotation Segments")(1).value));\\n' +
+                            'var slice = m.effect("Enable Slice")(1).value > 0;\\n' +
+                            'var a0 = slice ? m.effect("Start Angle")(1).value : 0;\\n' +
+                            'var a1 = slice ? m.effect("End Angle")(1).value : 360;\\n' +
                             'var span = a1 - a0;\\n' +
                             'var alpha = (Math.abs(span) / n) * (Math.PI / 180);\\n' +
                             'var rMid = r * Math.cos(alpha / 2);\\n' +
@@ -1937,21 +2009,21 @@
                             '[rMid * Math.sin(rad), 0, -rMid * Math.cos(rad)];';
 
                         var wExprRot = 'var m = thisComp.layer("Cylinder_Master_Controller");\\n' +
-                            'var n = Math.max(3, Math.round(m.effect("Rotation Segments")("Slider").value));\\n' +
-                            'var slice = m.effect("Enable Slice")("Checkbox").value > 0;\\n' +
-                            'var a0 = slice ? m.effect("Start Angle")("Slider").value : 0;\\n' +
-                            'var a1 = slice ? m.effect("End Angle")("Slider").value : 360;\\n' +
+                            'var n = Math.max(3, Math.round(m.effect("Rotation Segments")(1).value));\\n' +
+                            'var slice = m.effect("Enable Slice")(1).value > 0;\\n' +
+                            'var a0 = slice ? m.effect("Start Angle")(1).value : 0;\\n' +
+                            'var a1 = slice ? m.effect("End Angle")(1).value : 360;\\n' +
                             'var span = a1 - a0;\\n' +
                             'var theta = a0 + (' + wi + ' + 0.5) * (span / n);\\n' +
                             '[0, -theta, 0];';
 
                         var wExprSize = 'var m = thisComp.layer("Cylinder_Master_Controller");\\n' +
-                            'var r = m.effect("Radius")("Slider").value;\\n' +
-                            'var h = m.effect("Extrude Distance")("Slider").value;\\n' +
-                            'var n = Math.max(3, Math.round(m.effect("Rotation Segments")("Slider").value));\\n' +
-                            'var slice = m.effect("Enable Slice")("Checkbox").value > 0;\\n' +
-                            'var a0 = slice ? m.effect("Start Angle")("Slider").value : 0;\\n' +
-                            'var a1 = slice ? m.effect("End Angle")("Slider").value : 360;\\n' +
+                            'var r = m.effect("Radius")(1).value;\\n' +
+                            'var h = m.effect("Extrude Distance")(1).value;\\n' +
+                            'var n = Math.max(3, Math.round(m.effect("Rotation Segments")(1).value));\\n' +
+                            'var slice = m.effect("Enable Slice")(1).value > 0;\\n' +
+                            'var a0 = slice ? m.effect("Start Angle")(1).value : 0;\\n' +
+                            'var a1 = slice ? m.effect("End Angle")(1).value : 360;\\n' +
                             'var alpha = (Math.abs(a1 - a0) / n) * (Math.PI / 180);\\n' +
                             'var chord = Math.max(1, 2 * r * Math.sin(alpha / 2));\\n' +
                             '[chord, h];';
@@ -1990,110 +2062,110 @@
                     }
                 }
 
-                // Expressions on Slice Start & End walls
-                if (sliceStartLayer) {
-                    var sLayer = getLayer(preComp, "Slice_Start");
-                    if (sLayer && preMaster) {
-                        sLayer.parent = preMaster;
-                        setTransformVal(sLayer, "Anchor Point", [0, 0, 0]);
-                        var sRad = startAngle * (Math.PI / 180);
-                        setTransformVal(sLayer, "Position", [(radius / 2) * Math.sin(sRad), 0, -(radius / 2) * Math.cos(sRad)]);
-                        setTransformVal(sLayer, "Orientation", [0, 90 - startAngle, 0]);
+                // Expressions on Slice Start & End walls (Always present and reactive)
+                var sLayer = getLayer(preComp, "Slice_Start");
+                if (sLayer && preMaster) {
+                    sLayer.parent = preMaster;
+                    setTransformVal(sLayer, "Anchor Point", [0, 0, 0]);
+                    var sRad = startAngle * (Math.PI / 180);
+                    setTransformVal(sLayer, "Position", [(radius / 2) * Math.sin(sRad), 0, -(radius / 2) * Math.cos(sRad)]);
+                    setTransformVal(sLayer, "Orientation", [0, 90 - startAngle, 0]);
 
-                        var sExprPos = 'var m = thisComp.layer("Cylinder_Master_Controller");\\n' +
-                            'var r = m.effect("Radius")("Slider").value;\\n' +
-                            'var a0 = m.effect("Start Angle")("Slider").value * (Math.PI / 180);\\n' +
-                            '[(r / 2) * Math.sin(a0), 0, -(r / 2) * Math.cos(a0)];';
-                        var sExprRot = 'var m = thisComp.layer("Cylinder_Master_Controller");\\n' +
-                            'var a0 = m.effect("Start Angle")("Slider").value;\\n' +
-                            '[0, 90 - a0, 0];';
-                        var sExprSize = 'var m = thisComp.layer("Cylinder_Master_Controller");\\n' +
-                            'var r = m.effect("Radius")("Slider").value;\\n' +
-                            'var h = m.effect("Extrude Distance")("Slider").value;\\n' +
-                            '[r, h];';
+                    var sExprPos = 'var m = thisComp.layer("Cylinder_Master_Controller");\\n' +
+                        'var r = m.effect("Radius")(1).value;\\n' +
+                        'var a0 = m.effect("Start Angle")(1).value * (Math.PI / 180);\\n' +
+                        '[(r / 2) * Math.sin(a0), 0, -(r / 2) * Math.cos(a0)];';
+                    var sExprRot = 'var m = thisComp.layer("Cylinder_Master_Controller");\\n' +
+                        'var a0 = m.effect("Start Angle")(1).value;\\n' +
+                        '[0, 90 - a0, 0];';
+                    var sExprSize = 'var m = thisComp.layer("Cylinder_Master_Controller");\\n' +
+                        'var r = m.effect("Radius")(1).value;\\n' +
+                        'var h = m.effect("Extrude Distance")(1).value;\\n' +
+                        '[r, h];';
 
-                        setTransformExpr(sLayer, "Position", sExprPos);
-                        setTransformExpr(sLayer, "Orientation", sExprRot);
-                        var sRoot = sLayer.property("ADBE Root Vectors Group") || sLayer.property("Contents") || (sLayer.property && sLayer.property(1));
-                        var sGrp = sRoot ? (sRoot.property("Slice Vector") || sRoot.property(1)) : null;
-                        if (sGrp) {
-                            var sContents = sGrp.property("ADBE Vectors Group") || sGrp.property("Contents") || (grp && grp.property(2)) || (sGrp.property && sGrp.property(1));
-                            if (sContents) {
-                                var sR = sContents.property("ADBE Vector Shape - Rect") || sContents.property(1);
-                                if (sR) {
-                                    var srSize = sR.property("ADBE Vector Rect Size") || sR.property("Size") || sR.property(2) || sR.property(1);
-                                    if (srSize) srSize.expression = sExprSize;
-                                }
-                                var sFl = sContents.property("ADBE Vector Graphic - Fill") || sContents.property(2);
-                                if (sFl) {
-                                    var sfCol = sFl.property("ADBE Vector Fill Color") || sFl.property("Color") || sFl.property(1);
-                                    if (sfCol) sfCol.expression = exprWallsColor;
-                                    var sfOp = sFl.property("ADBE Vector Fill Opacity") || sFl.property("Opacity") || sFl.property(2);
-                                    if (sfOp) sfOp.expression = exprOpacity;
-                                }
-                                var sSt = sContents.property("ADBE Vector Graphic - Stroke") || sContents.property(3);
-                                if (sSt) {
-                                    var ssCol = sSt.property("ADBE Vector Stroke Color") || sSt.property("Color") || sSt.property(1);
-                                    if (ssCol) ssCol.expression = exprStrokeColor;
-                                    var ssW = sSt.property("ADBE Vector Stroke Width") || sSt.property("Stroke Width") || sSt.property(2);
-                                    if (ssW) ssW.expression = exprStrokeWidth;
-                                    var ssOp = sSt.property("ADBE Vector Stroke Opacity") || sSt.property("Opacity") || sSt.property(3);
-                                    if (ssOp) ssOp.expression = exprStrokeOpacity;
-                                }
+                    setTransformExpr(sLayer, "Position", sExprPos);
+                    setTransformExpr(sLayer, "Orientation", sExprRot);
+                    setTransformExpr(sLayer, "Opacity", 'try { (thisComp.layer("Cylinder_Master_Controller").effect("Enable Slice")(1).value > 0 && Math.abs(thisComp.layer("Cylinder_Master_Controller").effect("End Angle")(1).value - thisComp.layer("Cylinder_Master_Controller").effect("Start Angle")(1).value) < 359.99) ? 100 : 0; } catch(e) { value; }');
+
+                    var sRoot = sLayer.property("ADBE Root Vectors Group") || sLayer.property("Contents") || (sLayer.property && sLayer.property(1));
+                    var sGrp = sRoot ? (sRoot.property("Slice Vector") || sRoot.property(1)) : null;
+                    if (sGrp) {
+                        var sContents = sGrp.property("ADBE Vectors Group") || sGrp.property("Contents") || (sGrp.property && sGrp.property(2)) || (sGrp.property && sGrp.property(1));
+                        if (sContents) {
+                            var sR = sContents.property("ADBE Vector Shape - Rect") || sContents.property(1);
+                            if (sR) {
+                                var srSize = sR.property("ADBE Vector Rect Size") || sR.property("Size") || sR.property(2) || sR.property(1);
+                                if (srSize) srSize.expression = sExprSize;
+                            }
+                            var sFl = sContents.property("ADBE Vector Graphic - Fill") || sContents.property(2);
+                            if (sFl) {
+                                var sfCol = sFl.property("ADBE Vector Fill Color") || sFl.property("Color") || sFl.property(1);
+                                if (sfCol) sfCol.expression = exprWallsColor;
+                                var sfOp = sFl.property("ADBE Vector Fill Opacity") || sFl.property("Opacity") || sFl.property(2);
+                                if (sfOp) sfOp.expression = exprSliceVisibility;
+                            }
+                            var sSt = sContents.property("ADBE Vector Graphic - Stroke") || sContents.property(3);
+                            if (sSt) {
+                                var ssCol = sSt.property("ADBE Vector Stroke Color") || sSt.property("Color") || sSt.property(1);
+                                if (ssCol) ssCol.expression = exprStrokeColor;
+                                var ssW = sSt.property("ADBE Vector Stroke Width") || sSt.property("Stroke Width") || sSt.property(2);
+                                if (ssW) ssW.expression = exprStrokeWidth;
+                                var ssOp = sSt.property("ADBE Vector Stroke Opacity") || sSt.property("Opacity") || sSt.property(3);
+                                if (ssOp) ssOp.expression = exprSliceStrokeVisibility;
                             }
                         }
                     }
                 }
 
-                if (sliceEndLayer) {
-                    var eLayer = getLayer(preComp, "Slice_End");
-                    if (eLayer && preMaster) {
-                        eLayer.parent = preMaster;
-                        setTransformVal(eLayer, "Anchor Point", [0, 0, 0]);
-                        var eRad = endAngle * (Math.PI / 180);
-                        setTransformVal(eLayer, "Position", [(radius / 2) * Math.sin(eRad), 0, -(radius / 2) * Math.cos(eRad)]);
-                        setTransformVal(eLayer, "Orientation", [0, 90 - endAngle, 0]);
+                var eLayer = getLayer(preComp, "Slice_End");
+                if (eLayer && preMaster) {
+                    eLayer.parent = preMaster;
+                    setTransformVal(eLayer, "Anchor Point", [0, 0, 0]);
+                    var eRad = endAngle * (Math.PI / 180);
+                    setTransformVal(eLayer, "Position", [(radius / 2) * Math.sin(eRad), 0, -(radius / 2) * Math.cos(eRad)]);
+                    setTransformVal(eLayer, "Orientation", [0, 90 - endAngle, 0]);
 
-                        var eExprPos = 'var m = thisComp.layer("Cylinder_Master_Controller");\\n' +
-                            'var r = m.effect("Radius")("Slider").value;\\n' +
-                            'var a1 = m.effect("End Angle")("Slider").value * (Math.PI / 180);\\n' +
-                            '[(r / 2) * Math.sin(a1), 0, -(r / 2) * Math.cos(a1)];';
-                        var eExprRot = 'var m = thisComp.layer("Cylinder_Master_Controller");\\n' +
-                            'var a1 = m.effect("End Angle")("Slider").value;\\n' +
-                            '[0, 90 - a1, 0];';
-                        var eExprSize = 'var m = thisComp.layer("Cylinder_Master_Controller");\\n' +
-                            'var r = m.effect("Radius")("Slider").value;\\n' +
-                            'var h = m.effect("Extrude Distance")("Slider").value;\\n' +
-                            '[r, h];';
+                    var eExprPos = 'var m = thisComp.layer("Cylinder_Master_Controller");\\n' +
+                        'var r = m.effect("Radius")(1).value;\\n' +
+                        'var a1 = m.effect("End Angle")(1).value * (Math.PI / 180);\\n' +
+                        '[(r / 2) * Math.sin(a1), 0, -(r / 2) * Math.cos(a1)];';
+                    var eExprRot = 'var m = thisComp.layer("Cylinder_Master_Controller");\\n' +
+                        'var a1 = m.effect("End Angle")(1).value;\\n' +
+                        '[0, 90 - a1, 0];';
+                    var eExprSize = 'var m = thisComp.layer("Cylinder_Master_Controller");\\n' +
+                        'var r = m.effect("Radius")(1).value;\\n' +
+                        'var h = m.effect("Extrude Distance")(1).value;\\n' +
+                        '[r, h];';
 
-                        setTransformExpr(eLayer, "Position", eExprPos);
-                        setTransformExpr(eLayer, "Orientation", eExprRot);
-                        var eRoot = eLayer.property("ADBE Root Vectors Group") || eLayer.property("Contents") || (eLayer.property && eLayer.property(1));
-                        var eGrp = eRoot ? (eRoot.property("Slice Vector") || eRoot.property(1)) : null;
-                        if (eGrp) {
-                            var eContents = eGrp.property("ADBE Vectors Group") || eGrp.property("Contents") || (eGrp.property && eGrp.property(2)) || (eGrp.property && eGrp.property(1));
-                            if (eContents) {
-                                var eR = eContents.property("ADBE Vector Shape - Rect") || eContents.property(1);
-                                if (eR) {
-                                    var erSize = eR.property("ADBE Vector Rect Size") || eR.property("Size") || eR.property(2) || eR.property(1);
-                                    if (erSize) erSize.expression = eExprSize;
-                                }
-                                var eFl = eContents.property("ADBE Vector Graphic - Fill") || eContents.property(2);
-                                if (eFl) {
-                                    var efCol = eFl.property("ADBE Vector Fill Color") || eFl.property("Color") || eFl.property(1);
-                                    if (efCol) efCol.expression = exprWallsColor;
-                                    var efOp = eFl.property("ADBE Vector Fill Opacity") || eFl.property("Opacity") || eFl.property(2);
-                                    if (efOp) efOp.expression = exprOpacity;
-                                }
-                                var eSt = eContents.property("ADBE Vector Graphic - Stroke") || eContents.property(3);
-                                if (eSt) {
-                                    var esCol = eSt.property("ADBE Vector Stroke Color") || eSt.property("Color") || eSt.property(1);
-                                    if (esCol) esCol.expression = exprStrokeColor;
-                                    var esW = eSt.property("ADBE Vector Stroke Width") || eSt.property("Stroke Width") || eSt.property(2);
-                                    if (esW) esW.expression = exprStrokeWidth;
-                                    var esOp = eSt.property("ADBE Vector Stroke Opacity") || eSt.property("Opacity") || eSt.property(3);
-                                    if (esOp) esOp.expression = exprStrokeOpacity;
-                                }
+                    setTransformExpr(eLayer, "Position", eExprPos);
+                    setTransformExpr(eLayer, "Orientation", eExprRot);
+                    setTransformExpr(eLayer, "Opacity", 'try { (thisComp.layer("Cylinder_Master_Controller").effect("Enable Slice")(1).value > 0 && Math.abs(thisComp.layer("Cylinder_Master_Controller").effect("End Angle")(1).value - thisComp.layer("Cylinder_Master_Controller").effect("Start Angle")(1).value) < 359.99) ? 100 : 0; } catch(e) { value; }');
+
+                    var eRoot = eLayer.property("ADBE Root Vectors Group") || eLayer.property("Contents") || (eLayer.property && eLayer.property(1));
+                    var eGrp = eRoot ? (eRoot.property("Slice Vector") || eRoot.property(1)) : null;
+                    if (eGrp) {
+                        var eContents = eGrp.property("ADBE Vectors Group") || eGrp.property("Contents") || (eGrp.property && eGrp.property(2)) || (eGrp.property && eGrp.property(1));
+                        if (eContents) {
+                            var eR = eContents.property("ADBE Vector Shape - Rect") || eContents.property(1);
+                            if (eR) {
+                                var erSize = eR.property("ADBE Vector Rect Size") || eR.property("Size") || eR.property(2) || eR.property(1);
+                                if (erSize) erSize.expression = eExprSize;
+                            }
+                            var eFl = eContents.property("ADBE Vector Graphic - Fill") || eContents.property(2);
+                            if (eFl) {
+                                var efCol = eFl.property("ADBE Vector Fill Color") || eFl.property("Color") || eFl.property(1);
+                                if (efCol) efCol.expression = exprWallsColor;
+                                var efOp = eFl.property("ADBE Vector Fill Opacity") || eFl.property("Opacity") || eFl.property(2);
+                                if (efOp) efOp.expression = exprSliceVisibility;
+                            }
+                            var eSt = eContents.property("ADBE Vector Graphic - Stroke") || eContents.property(3);
+                            if (eSt) {
+                                var esCol = eSt.property("ADBE Vector Stroke Color") || eSt.property("Color") || eSt.property(1);
+                                if (esCol) esCol.expression = exprStrokeColor;
+                                var esW = eSt.property("ADBE Vector Stroke Width") || eSt.property("Stroke Width") || eSt.property(2);
+                                if (esW) esW.expression = exprStrokeWidth;
+                                var esOp = eSt.property("ADBE Vector Stroke Opacity") || eSt.property("Opacity") || eSt.property(3);
+                                if (esOp) esOp.expression = exprSliceStrokeVisibility;
                             }
                         }
                     }
@@ -2101,11 +2173,11 @@
 
                 // Cap Generator Expression (Dynamic Pie Slice or Circle Path)
                 var exprCapPath = 'var m = thisComp.layer("Cylinder_Master_Controller");\\n' +
-                    'var r = Math.max(0.001, m.effect("Radius")("Slider").value);\\n' +
-                    'var n = Math.max(3, Math.round(m.effect("Rotation Segments")("Slider").value));\\n' +
-                    'var slice = m.effect("Enable Slice")("Checkbox").value > 0;\\n' +
-                    'var a0 = slice ? m.effect("Start Angle")("Slider").value : 0;\\n' +
-                    'var a1 = slice ? m.effect("End Angle")("Slider").value : 360;\\n' +
+                    'var r = Math.max(0.001, m.effect("Radius")(1).value);\\n' +
+                    'var n = Math.max(3, Math.round(m.effect("Rotation Segments")(1).value));\\n' +
+                    'var slice = m.effect("Enable Slice")(1).value > 0;\\n' +
+                    'var a0 = slice ? m.effect("Start Angle")(1).value : 0;\\n' +
+                    'var a1 = slice ? m.effect("End Angle")(1).value : 360;\\n' +
                     'var span = a1 - a0;\\n' +
                     'var isFull = !slice || Math.abs(span) >= 359.99;\\n' +
                     'var verts = [];\\n' +
@@ -2136,7 +2208,7 @@
                     setTransformVal(preCapTop, "Orientation", [90, 0, 0]);
 
                     var exprTopPos = 'var m = thisComp.layer("Cylinder_Master_Controller");\\n' +
-                        'var h = m.effect("Extrude Distance")("Slider").value;\\n' +
+                        'var h = m.effect("Extrude Distance")(1).value;\\n' +
                         '[0, -h / 2, 0];';
                     setTransformExpr(preCapTop, "Position", exprTopPos);
 
@@ -2185,9 +2257,45 @@
                     setTransformVal(preCapBot, "Orientation", [90, 0, 0]);
 
                     var exprBotPos = 'var m = thisComp.layer("Cylinder_Master_Controller");\\n' +
-                        'var h = m.effect("Extrude Distance")("Slider").value;\\n' +
+                        'var h = m.effect("Extrude Distance")(1).value;\\n' +
                         '[0, h / 2, 0];';
                     setTransformExpr(preCapBot, "Position", exprBotPos);
+
+                    var botRoot = preCapBot.property("ADBE Root Vectors Group") || preCapBot.property("Contents") || (preCapBot.property && preCapBot.property(1));
+                    var botGrp = botRoot ? (botRoot.property("Cap Vector") || botRoot.property(1)) : null;
+                    if (botGrp) {
+                        var botContents = botGrp.property("ADBE Vectors Group") || botGrp.property("Contents") || (botGrp.property && botGrp.property(2)) || (botGrp.property && botGrp.property(1));
+                        if (botContents) {
+                            var botShape = botContents.property("ADBE Vector Shape - Group") || botContents.property(1);
+                            if (botShape) {
+                                var bpProp = botShape.property("ADBE Vector Shape") || botShape.property("Path") || botShape.property(1);
+                                if (bpProp) {
+                                    try {
+                                        var initBShape = computeCapShape(radius, segCount, enableSlice, startAngle, endAngle);
+                                        if (initBShape) bpProp.setValue(initBShape);
+                                    } catch (eBotS) {}
+                                    bpProp.expression = exprCapPath;
+                                }
+                            }
+                            var botFl = botContents.property("ADBE Vector Graphic - Fill") || botContents.property(2);
+                            if (botFl) {
+                                var bfCol = botFl.property("ADBE Vector Fill Color") || botFl.property("Color") || botFl.property(1);
+                                if (bfCol) bfCol.expression = exprBottomColor;
+                                var bfOp = botFl.property("ADBE Vector Fill Opacity") || botFl.property("Opacity") || botFl.property(2);
+                                if (bfOp) bfOp.expression = exprOpacity;
+                            }
+                            var botSt = botContents.property("ADBE Vector Graphic - Stroke") || botContents.property(3);
+                            if (botSt) {
+                                var bsCol = botSt.property("ADBE Vector Stroke Color") || botSt.property("Color") || botSt.property(1);
+                                if (bsCol) bsCol.expression = exprStrokeColor;
+                                var bsW = botSt.property("ADBE Vector Stroke Width") || botSt.property("Stroke Width") || botSt.property(2);
+                                if (bsW) bsW.expression = exprStrokeWidth;
+                                var bsOp = botSt.property("ADBE Vector Stroke Opacity") || botSt.property("Opacity") || botSt.property(3);
+                                if (bsOp) bsOp.expression = exprStrokeOpacity;
+                            }
+                        }
+                    }
+                }
 
                     var botRoot = preCapBot.property("ADBE Root Vectors Group") || preCapBot.property("Contents") || (preCapBot.property && preCapBot.property(1));
                     var botGrp = botRoot ? (botRoot.property("Cap Vector") || botRoot.property(1)) : null;
@@ -2717,14 +2825,22 @@ $.writeln("Shapes showcase created: Square, Circle, and Bézier Star!");
     function getLayer(comp, nameOrIndex) {
         if (!comp) return null;
         if (typeof comp.layer === "function") {
-            return comp.layer(nameOrIndex);
+            try {
+                return comp.layer(nameOrIndex);
+            } catch (e) {}
         }
         if (comp.layers) {
-            if (typeof nameOrIndex === "number") return comp.layers[nameOrIndex - 1];
-            if (typeof comp.layers.byName === "function") return comp.layers.byName(nameOrIndex);
-            if (typeof comp.layers.find === "function") {
-                return comp.layers.find(function(l) { return l.name === nameOrIndex; }) || null;
-            }
+            try {
+                if (typeof nameOrIndex === "number") return comp.layers[nameOrIndex - 1] || comp.layers[nameOrIndex];
+                if (typeof comp.layers.byName === "function") return comp.layers.byName(nameOrIndex);
+                if (typeof comp.layers.find === "function") {
+                    return comp.layers.find(function(l) { return l.name === nameOrIndex; }) || null;
+                }
+                for (var li = 1; li <= comp.layers.length; li++) {
+                    var l = comp.layers[li];
+                    if (l && l.name === nameOrIndex) return l;
+                }
+            } catch (e2) {}
         }
         return null;
     }
@@ -3090,14 +3206,23 @@ $.writeln("Shapes showcase created: Square, Circle, and Bézier Star!");
         return picker;
     }
 
-    // Front / Back Caps Color
-    var grpCapCol = pnlStyle.add("group");
-    grpCapCol.orientation = "row";
-    grpCapCol.alignment = ["fill", "top"];
-    var lblCapCol = grpCapCol.add("statictext", undefined, "Front/Back Caps Color:");
-    lblCapCol.preferredSize = [135, -1];
-    var cpCaps = createColorPicker(grpCapCol, "#2288ee");
-    cpCaps.onChange = function() { buildOrUpdateExtruded(false); };
+    // Front Face Color
+    var grpFrontCol = pnlStyle.add("group");
+    grpFrontCol.orientation = "row";
+    grpFrontCol.alignment = ["fill", "top"];
+    var lblFrontCol = grpFrontCol.add("statictext", undefined, "Front Color:");
+    lblFrontCol.preferredSize = [135, -1];
+    var cpFront = createColorPicker(grpFrontCol, "#2288ee");
+    cpFront.onChange = function() { buildOrUpdateExtruded(false); };
+
+    // Back Face Color
+    var grpBackCol = pnlStyle.add("group");
+    grpBackCol.orientation = "row";
+    grpBackCol.alignment = ["fill", "top"];
+    var lblBackCol = grpBackCol.add("statictext", undefined, "Back Color:");
+    lblBackCol.preferredSize = [135, -1];
+    var cpBack = createColorPicker(grpBackCol, "#ee8822");
+    cpBack.onChange = function() { buildOrUpdateExtruded(false); };
 
     // Front / Back Caps Opacity
     var grpCapOp = pnlStyle.add("group");
@@ -3439,7 +3564,8 @@ $.writeln("Shapes showcase created: Square, Circle, and Bézier Star!");
         var segCount = Math.max(2, Math.min(16, parseInt(txtSeg.text, 10) || 6));
         var preventOverlap = chkOverlap.value;
 
-        var capsColor = hexToRgb(cpCaps._color);
+        var frontColor = hexToRgb(cpFront._color);
+        var backColor = hexToRgb(cpBack._color);
         var capsOpacity = Math.max(0, Math.min(100, parseFloat(txtCapOp.text) || 100));
         var sidesColor = hexToRgb(cpSides._color);
         var sidesOpacity = Math.max(0, Math.min(100, parseFloat(txtSidesOp.text) || 90));
@@ -3597,7 +3723,7 @@ $.writeln("Shapes showcase created: Square, Circle, and Bézier Star!");
                 createCornerQuadrant("TL", function() { return [-w / 2 + rTL, -h / 2 + rTL]; }, 180, 270, rTL);
 
                 // 4. Create Front and Back Caps (Procedural Bézier Geometry)
-                function createCap(capName, zPos, xRot) {
+                function createCap(capName, zPos, xRot, capColor) {
                     var cap = parentComp.layers.addShape();
                     cap.name = capName;
                     cap.threeDLayer = true;
@@ -3635,7 +3761,7 @@ $.writeln("Shapes showcase created: Square, Circle, and Bézier Star!");
                     var fill = contents.property("ADBE Vector Graphic - Fill") || contents.property(2);
                     if (fill) {
                         var fCol = fill.property("ADBE Vector Fill Color") || fill.property("Color") || fill.property(1);
-                        if (fCol && fCol.setValue) fCol.setValue(capsColor);
+                        if (fCol && fCol.setValue) fCol.setValue(capColor);
                         var fOp = fill.property("ADBE Vector Fill Opacity") || fill.property("Opacity") || fill.property(2);
                         if (fOp && fOp.setValue) fOp.setValue(capsOpacity);
                     }
@@ -3658,8 +3784,8 @@ $.writeln("Shapes showcase created: Square, Circle, and Bézier Star!");
                     return cap;
                 }
 
-                var capFront = createCap("Cap_Front", -d / 2, 0);
-                var capBack = createCap("Cap_Back", d / 2, 0);
+                var capFront = createCap("Cap_Front", -d / 2, 0, frontColor);
+                var capBack = createCap("Cap_Back", d / 2, 0, backColor);
 
                 // 5. Precompose All Sub-Layers
                 var indicesMap = {};
@@ -3692,7 +3818,19 @@ $.writeln("Shapes showcase created: Square, Circle, and Bézier Star!");
                 }
 
                 // Target precomp layer in parent comp
-                var extLayer = getLayer(parentComp, precompName) || getLayer(parentComp, 1);
+                var extLayer = null;
+                if (parentComp.layers) {
+                    for (var pli = 1; pli <= parentComp.layers.length; pli++) {
+                        var testL = parentComp.layer(pli);
+                        if (testL && testL.source === preComp) {
+                            extLayer = testL;
+                            break;
+                        }
+                    }
+                }
+                if (!extLayer) {
+                    extLayer = getLayer(parentComp, precompName) || getLayer(parentComp, 1);
+                }
                 if (extLayer) {
                     extLayer.name = precompName;
                     extLayer.threeDLayer = true;
@@ -3709,10 +3847,14 @@ $.writeln("Shapes showcase created: Square, Circle, and Bézier Star!");
 
                 // 6. Master Controls on Parent Layer
                 function addMasterProp(type, name, val) {
+                    if (!extLayer) return null;
                     var parade = extLayer.property("ADBE Effect Parade") || extLayer.property("Effects");
+                    if (!parade) return null;
                     var eff = parade.addProperty(type);
                     eff.name = name;
-                    eff.property(1).setValue(val);
+                    if (eff.property(1) && typeof eff.property(1).setValue === "function") {
+                        eff.property(1).setValue(val);
+                    }
                     return eff;
                 }
 
@@ -3727,8 +3869,9 @@ $.writeln("Shapes showcase created: Square, Circle, and Bézier Star!");
                 addMasterProp("ADBE Slider Control",   "Radius Bottom-Left",   rBL);
                 addMasterProp("ADBE Slider Control",   "Corner Segments",      segCount);
                 addMasterProp("ADBE Checkbox Control", "Prevent Overlap",      preventOverlap ? 1 : 0);
-                addMasterProp("ADBE Color Control",    "Front/Back Color",     capsColor);
-                addMasterProp("ADBE Slider Control",   "Front/Back Opacity",   capsOpacity);
+                addMasterProp("ADBE Color Control",    "Front Color",          frontColor);
+                addMasterProp("ADBE Color Control",    "Back Color",           backColor);
+                addMasterProp("ADBE Slider Control",   "Caps Opacity",         capsOpacity);
                 addMasterProp("ADBE Color Control",    "Sides Color",          sidesColor);
                 addMasterProp("ADBE Slider Control",   "Sides Opacity",        sidesOpacity);
                 addMasterProp("ADBE Color Control",    "Stroke Color",         strokeColor);
@@ -3737,39 +3880,47 @@ $.writeln("Shapes showcase created: Square, Circle, and Bézier Star!");
 
                 // 7. Expressions on Master Controller inside Subcomp
                 if (preMaster) {
-                    function linkControllerProp(effName, effTarget) {
-                        var eff = preMaster.property("ADBE Effect Parade").addProperty(
+                    function linkControllerProp(effName, effTarget, defaultVal) {
+                        var parade = preMaster.property("ADBE Effect Parade") || preMaster.property("Effects");
+                        if (!parade) return null;
+                        var eff = parade.addProperty(
                             effName.indexOf("Color") !== -1 ? "ADBE Color Control" :
                             (effName.indexOf("Link") !== -1 || effName.indexOf("Overlap") !== -1 ? "ADBE Checkbox Control" : "ADBE Slider Control")
                         );
                         eff.name = effName;
-                        eff.property(1).expression = 'try { comp("' + parentComp.name + '").layer("' + precompName + '").effect("' + effTarget + '")(1).value; } catch(e) { value; }';
+                        if (typeof defaultVal !== "undefined" && eff.property(1) && typeof eff.property(1).setValue === "function") {
+                            eff.property(1).setValue(defaultVal);
+                        }
+                        eff.property(1).expression = 'try { comp("' + parentComp.name.replace(/\\\\/g, '\\\\\\\\').replace(/"/g, '\\\\"') + '").layer("' + precompName + '").effect("' + effTarget + '")(1).value; } catch(e) { value; }';
+                        return eff;
                     }
 
-                    linkControllerProp("Width", "Width");
-                    linkControllerProp("Height", "Height");
-                    linkControllerProp("Extrude Depth", "Extrude Depth");
-                    linkControllerProp("Link All Corners", "Link All Corners");
-                    linkControllerProp("Radius All", "Radius All");
-                    linkControllerProp("Radius Top-Left", "Radius Top-Left");
-                    linkControllerProp("Radius Top-Right", "Radius Top-Right");
-                    linkControllerProp("Radius Bottom-Right", "Radius Bottom-Right");
-                    linkControllerProp("Radius Bottom-Left", "Radius Bottom-Left");
-                    linkControllerProp("Corner Segments", "Corner Segments");
-                    linkControllerProp("Prevent Overlap", "Prevent Overlap");
-                    linkControllerProp("Front/Back Color", "Front/Back Color");
-                    linkControllerProp("Front/Back Opacity", "Front/Back Opacity");
-                    linkControllerProp("Sides Color", "Sides Color");
-                    linkControllerProp("Sides Opacity", "Sides Opacity");
-                    linkControllerProp("Stroke Color", "Stroke Color");
-                    linkControllerProp("Stroke Width", "Stroke Width");
-                    linkControllerProp("Stroke Opacity", "Stroke Opacity");
+                    linkControllerProp("Width", "Width", w);
+                    linkControllerProp("Height", "Height", h);
+                    linkControllerProp("Extrude Depth", "Extrude Depth", d);
+                    linkControllerProp("Link All Corners", "Link All Corners", linkAll ? 1 : 0);
+                    linkControllerProp("Radius All", "Radius All", rAll);
+                    linkControllerProp("Radius Top-Left", "Radius Top-Left", rTL);
+                    linkControllerProp("Radius Top-Right", "Radius Top-Right", rTR);
+                    linkControllerProp("Radius Bottom-Right", "Radius Bottom-Right", rBR);
+                    linkControllerProp("Radius Bottom-Left", "Radius Bottom-Left", rBL);
+                    linkControllerProp("Corner Segments", "Corner Segments", segCount);
+                    linkControllerProp("Prevent Overlap", "Prevent Overlap", preventOverlap ? 1 : 0);
+                    linkControllerProp("Front Color", "Front Color", frontColor);
+                    linkControllerProp("Back Color", "Back Color", backColor);
+                    linkControllerProp("Caps Opacity", "Caps Opacity", capsOpacity);
+                    linkControllerProp("Sides Color", "Sides Color", sidesColor);
+                    linkControllerProp("Sides Opacity", "Sides Opacity", sidesOpacity);
+                    linkControllerProp("Stroke Color", "Stroke Color", strokeColor);
+                    linkControllerProp("Stroke Width", "Stroke Width", strokeWidth);
+                    linkControllerProp("Stroke Opacity", "Stroke Opacity", strokeOpacity);
                 }
 
                 // 8. Dynamic Expressions on Subcomp Layers
                 // Shared expression snippets
-                var exprCapsCol = 'try { thisComp.layer("Extruded_Rect_Master_Controller").effect("Front/Back Color")(1).value; } catch(e) { value; }';
-                var exprCapsOp = 'try { thisComp.layer("Extruded_Rect_Master_Controller").effect("Front/Back Opacity")(1).value; } catch(e) { value; }';
+                var exprFrontCol = 'try { thisComp.layer("Extruded_Rect_Master_Controller").effect("Front Color")(1).value; } catch(e) { value; }';
+                var exprBackCol = 'try { thisComp.layer("Extruded_Rect_Master_Controller").effect("Back Color")(1).value; } catch(e) { value; }';
+                var exprCapsOp = 'try { thisComp.layer("Extruded_Rect_Master_Controller").effect("Caps Opacity")(1).value; } catch(e) { try { thisComp.layer("Extruded_Rect_Master_Controller").effect("Front/Back Opacity")(1).value; } catch(e2) { value; } }';
                 var exprSidesCol = 'try { thisComp.layer("Extruded_Rect_Master_Controller").effect("Sides Color")(1).value; } catch(e) { value; }';
                 var exprSidesOp = 'try { thisComp.layer("Extruded_Rect_Master_Controller").effect("Sides Opacity")(1).value; } catch(e) { value; }';
                 var exprStrokeCol = 'try { thisComp.layer("Extruded_Rect_Master_Controller").effect("Stroke Color")(1).value; } catch(e) { value; }';
@@ -3777,7 +3928,7 @@ $.writeln("Shapes showcase created: Square, Circle, and Bézier Star!");
                 var exprStrokeOp = 'try { var sw = thisComp.layer("Extruded_Rect_Master_Controller").effect("Stroke Width")(1).value; var op = thisComp.layer("Extruded_Rect_Master_Controller").effect("Stroke Opacity")(1).value; (sw <= 0.0001) ? 0 : op; } catch(e) { value; }';
 
                 // Setup layer expressions helper
-                function applyCommonMaterialExprs(lay, isCap) {
+                function applyCommonMaterialExprs(lay, faceType) {
                     if (!lay) return;
                     var root = lay.property("ADBE Root Vectors Group") || lay.property("Contents") || (lay.property && lay.property(1));
                     if (!root) return;
@@ -3789,9 +3940,13 @@ $.writeln("Shapes showcase created: Square, Circle, and Bézier Star!");
                     var fill = contents.property("ADBE Vector Graphic - Fill") || contents.property(2);
                     if (fill) {
                         var fCol = fill.property("ADBE Vector Fill Color") || fill.property("Color") || fill.property(1);
-                        if (fCol) fCol.expression = isCap ? exprCapsCol : exprSidesCol;
+                        if (fCol) {
+                            if (faceType === "front") fCol.expression = exprFrontCol;
+                            else if (faceType === "back") fCol.expression = exprBackCol;
+                            else fCol.expression = exprSidesCol;
+                        }
                         var fOp = fill.property("ADBE Vector Fill Opacity") || fill.property("Opacity") || fill.property(2);
-                        if (fOp) fOp.expression = isCap ? exprCapsOp : exprSidesOp;
+                        if (fOp) fOp.expression = (faceType === "front" || faceType === "back") ? exprCapsOp : exprSidesOp;
                     }
 
                     var stroke = contents.property("ADBE Vector Graphic - Stroke") || contents.property(3);
@@ -3808,8 +3963,8 @@ $.writeln("Shapes showcase created: Square, Circle, and Bézier Star!");
                 // Front & Back Caps expressions
                 var preCapFront = getLayer(preComp, "Cap_Front");
                 if (preCapFront) {
-                    setTransformExpr(preCapFront, "Position", '[0, 0, -thisComp.layer("Extruded_Rect_Master_Controller").effect("Extrude Depth")(1).value / 2];');
-                    applyCommonMaterialExprs(preCapFront, true);
+                    setTransformExpr(preCapFront, "Position", 'try { [0, 0, -thisComp.layer("Extruded_Rect_Master_Controller").effect("Extrude Depth")(1).value / 2]; } catch(e) { [0, 0, -' + (d / 2) + ']; }');
+                    applyCommonMaterialExprs(preCapFront, "front");
                     var rootF = preCapFront.property("ADBE Root Vectors Group") || preCapFront.property("Contents") || (preCapFront.property && preCapFront.property(1));
                     var grpF = rootF.property(1);
                     var contF = grpF.property("ADBE Vectors Group") || grpF.property("Contents") || (grpF.property && grpF.property(2)) || (grpF.property && grpF.property(1));
@@ -3820,8 +3975,8 @@ $.writeln("Shapes showcase created: Square, Circle, and Bézier Star!");
 
                 var preCapBack = getLayer(preComp, "Cap_Back");
                 if (preCapBack) {
-                    setTransformExpr(preCapBack, "Position", '[0, 0, thisComp.layer("Extruded_Rect_Master_Controller").effect("Extrude Depth")(1).value / 2];');
-                    applyCommonMaterialExprs(preCapBack, true);
+                    setTransformExpr(preCapBack, "Position", 'try { [0, 0, thisComp.layer("Extruded_Rect_Master_Controller").effect("Extrude Depth")(1).value / 2]; } catch(e) { [0, 0, ' + (d / 2) + ']; }');
+                    applyCommonMaterialExprs(preCapBack, "back");
                     var rootB = preCapBack.property("ADBE Root Vectors Group") || preCapBack.property("Contents") || (preCapBack.property && preCapBack.property(1));
                     var grpB = rootB.property(1);
                     var contB = grpB.property("ADBE Vectors Group") || grpB.property("Contents") || (grpB.property && grpB.property(2)) || (grpB.property && grpB.property(1));
@@ -3833,16 +3988,17 @@ $.writeln("Shapes showcase created: Square, Circle, and Bézier Star!");
                 // Helper for wall dimensions & positions
                 var exprSolverHeader = [
                     'var m = thisComp.layer("Extruded_Rect_Master_Controller");',
-                    'var w = Math.max(0, m.effect("Width")(1).value);',
-                    'var h = Math.max(0, m.effect("Height")(1).value);',
-                    'var d = Math.max(0, m.effect("Extrude Depth")(1).value);',
-                    'var link = m.effect("Link All Corners")(1).value > 0;',
-                    'var rAll = Math.max(0, m.effect("Radius All")(1).value);',
-                    'var rTL = link ? rAll : Math.max(0, m.effect("Radius Top-Left")(1).value);',
-                    'var rTR = link ? rAll : Math.max(0, m.effect("Radius Top-Right")(1).value);',
-                    'var rBR = link ? rAll : Math.max(0, m.effect("Radius Bottom-Right")(1).value);',
-                    'var rBL = link ? rAll : Math.max(0, m.effect("Radius Bottom-Left")(1).value);',
-                    'if (m.effect("Prevent Overlap")(1).value > 0) {',
+                    'function _gv(n, fb) { try { var eff = m.effect(n); return (eff && eff(1)) ? eff(1).value : fb; } catch(e) { return fb; } }',
+                    'var w = Math.max(0, _gv("Width", ' + w + '));',
+                    'var h = Math.max(0, _gv("Height", ' + h + '));',
+                    'var d = Math.max(0, _gv("Extrude Depth", ' + d + '));',
+                    'var link = _gv("Link All Corners", ' + (linkAll ? 1 : 0) + ') > 0;',
+                    'var rAll = Math.max(0, _gv("Radius All", ' + rAll + '));',
+                    'var rTL = link ? rAll : Math.max(0, _gv("Radius Top-Left", ' + rTL + '));',
+                    'var rTR = link ? rAll : Math.max(0, _gv("Radius Top-Right", ' + rTR + '));',
+                    'var rBR = link ? rAll : Math.max(0, _gv("Radius Bottom-Right", ' + rBR + '));',
+                    'var rBL = link ? rAll : Math.max(0, _gv("Radius Bottom-Left", ' + rBL + '));',
+                    'if (_gv("Prevent Overlap", ' + (preventOverlap ? 1 : 0) + ') > 0) {',
                     '    var tS = rTL + rTR, bS = rBL + rBR, lS = rTL + rBL, rS = rTR + rBR;',
                     '    var f = 1.0;',
                     '    if (tS > w && tS > 0) f = Math.min(f, w / tS);',
@@ -3899,11 +4055,11 @@ $.writeln("Shapes showcase created: Square, Circle, and Bézier Star!");
                         var wName = "Corner_" + cornerId + "_Wall_" + (s + 1);
                         var lay = getLayer(preComp, wName);
                         if (lay) {
-                            var tFormula = startDeg + ' + (' + s + ' + 0.5) * (' + sweep + ' / Math.max(1, Math.round(m.effect("Corner Segments")(1).value)))';
+                            var tFormula = startDeg + ' + (' + s + ' + 0.5) * (' + sweep + ' / Math.max(1, Math.round(_gv("Corner Segments", ' + segCount + '))))';
                             var posExpr = [
                                 exprSolverHeader,
                                 'var r = ' + radiusVar + ';',
-                                'var segs = Math.max(1, Math.round(m.effect("Corner Segments")(1).value));',
+                                'var segs = Math.max(1, Math.round(_gv("Corner Segments", ' + segCount + ')));',
                                 'var alpha = (' + Math.abs(sweep) + ' / segs) * (Math.PI / 180);',
                                 'var rMid = r * Math.cos(alpha / 2);',
                                 'var theta = ' + tFormula + ';',
@@ -3915,7 +4071,7 @@ $.writeln("Shapes showcase created: Square, Circle, and Bézier Star!");
                             var sizeExpr = [
                                 exprSolverHeader,
                                 'var r = ' + radiusVar + ';',
-                                'var segs = Math.max(1, Math.round(m.effect("Corner Segments")(1).value));',
+                                'var segs = Math.max(1, Math.round(_gv("Corner Segments", ' + segCount + ')));',
                                 'var alpha = (' + Math.abs(sweep) + ' / segs) * (Math.PI / 180);',
                                 'var chord = Math.max(0.1, 2 * r * Math.sin(alpha / 2));',
                                 '[chord, d];'
@@ -3978,7 +4134,10 @@ $.writeln("Shapes showcase created: Square, Circle, and Bézier Star!");
             setEffectVal(existingLayer, "Radius Bottom-Left",   rBL);
             setEffectVal(existingLayer, "Corner Segments",      segCount);
             setEffectVal(existingLayer, "Prevent Overlap",      preventOverlap ? 1 : 0);
-            setEffectVal(existingLayer, "Front/Back Color",     capsColor);
+            setEffectVal(existingLayer, "Front Color",          frontColor);
+            setEffectVal(existingLayer, "Back Color",           backColor);
+            setEffectVal(existingLayer, "Caps Opacity",         capsOpacity);
+            setEffectVal(existingLayer, "Front/Back Color",     frontColor);
             setEffectVal(existingLayer, "Front/Back Opacity",   capsOpacity);
             setEffectVal(existingLayer, "Sides Color",          sidesColor);
             setEffectVal(existingLayer, "Sides Opacity",        sidesOpacity);
@@ -4083,14 +4242,22 @@ $.writeln("Shapes showcase created: Square, Circle, and Bézier Star!");
     function getLayer(comp, nameOrIndex) {
         if (!comp) return null;
         if (typeof comp.layer === "function") {
-            return comp.layer(nameOrIndex);
+            try {
+                return comp.layer(nameOrIndex);
+            } catch (e) {}
         }
         if (comp.layers) {
-            if (typeof nameOrIndex === "number") return comp.layers[nameOrIndex - 1];
-            if (typeof comp.layers.byName === "function") return comp.layers.byName(nameOrIndex);
-            if (typeof comp.layers.find === "function") {
-                return comp.layers.find(function(l) { return l.name === nameOrIndex; }) || null;
-            }
+            try {
+                if (typeof nameOrIndex === "number") return comp.layers[nameOrIndex - 1] || comp.layers[nameOrIndex];
+                if (typeof comp.layers.byName === "function") return comp.layers.byName(nameOrIndex);
+                if (typeof comp.layers.find === "function") {
+                    return comp.layers.find(function(l) { return l.name === nameOrIndex; }) || null;
+                }
+                for (var li = 1; li <= comp.layers.length; li++) {
+                    var l = comp.layers[li];
+                    if (l && l.name === nameOrIndex) return l;
+                }
+            } catch (e2) {}
         }
         return null;
     }

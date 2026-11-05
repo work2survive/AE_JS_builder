@@ -129,11 +129,22 @@
     function getLayer(comp, nameOrIndex) {
         if (!comp) return null;
         if (typeof comp.layer === "function") {
-            return comp.layer(nameOrIndex);
+            try {
+                return comp.layer(nameOrIndex);
+            } catch (e) {}
         }
         if (comp.layers) {
-            if (typeof nameOrIndex === "number") return comp.layers[nameOrIndex - 1];
-            if (typeof comp.layers.byName === "function") return comp.layers.byName(nameOrIndex);
+            try {
+                if (typeof nameOrIndex === "number") return comp.layers[nameOrIndex - 1] || comp.layers[nameOrIndex];
+                if (typeof comp.layers.byName === "function") return comp.layers.byName(nameOrIndex);
+                if (typeof comp.layers.find === "function") {
+                    return comp.layers.find(function(l) { return l.name === nameOrIndex; }) || null;
+                }
+                for (var li = 1; li <= comp.layers.length; li++) {
+                    var l = comp.layers[li];
+                    if (l && l.name === nameOrIndex) return l;
+                }
+            } catch (e2) {}
         }
         return null;
     }
@@ -702,23 +713,37 @@
                 }
 
                 // 4. In parent composition: target the resulting cube_maker layer
-                var cubeLayer = getLayer(parentComp, precompName) || getLayer(parentComp, 1);
-                cubeLayer.name = precompName;
-                cubeLayer.threeDLayer = true;
-                if ("collapseTransformation" in cubeLayer) {
-                    cubeLayer.collapseTransformation = true; // Continuous 3D rasterization in AE
+                var cubeLayer = null;
+                if (parentComp.layers) {
+                    for (var pli = 1; pli <= parentComp.layers.length; pli++) {
+                        var testL = parentComp.layer(pli);
+                        if (testL && testL.source === preComp) {
+                            cubeLayer = testL;
+                            break;
+                        }
+                    }
                 }
-                cubeLayer.label = 1;              // RED color in After Effects
-                cubeLayer.colorLabel = "#ff3b30"; // RED color in emulator
-                cubeLayer.notShyable = true;
+                if (!cubeLayer) {
+                    cubeLayer = getLayer(parentComp, precompName) || getLayer(parentComp, 1);
+                }
+                if (cubeLayer) {
+                    cubeLayer.name = precompName;
+                    cubeLayer.threeDLayer = true;
+                    if ("collapseTransformation" in cubeLayer) {
+                        cubeLayer.collapseTransformation = true; // Continuous 3D rasterization in AE
+                    }
+                    cubeLayer.label = 1;              // RED color in After Effects
+                    cubeLayer.colorLabel = "#ff3b30"; // RED color in emulator
+                    cubeLayer.notShyable = true;
 
-                // Center the precomp layer in parent composition
-                setTransformVal(cubeLayer, "Anchor Point", preCenter);
-                setTransformVal(cubeLayer, "Position", center);
+                    // Center the precomp layer in parent composition
+                    setTransformVal(cubeLayer, "Anchor Point", preCenter);
+                    setTransformVal(cubeLayer, "Position", center);
 
-                // Ensure cube_maker layer is on top in parent comp
-                if (cubeLayer.moveToBeginning) {
-                    cubeLayer.moveToBeginning();
+                    // Ensure cube_maker layer is on top in parent comp
+                    if (cubeLayer.moveToBeginning) {
+                        cubeLayer.moveToBeginning();
+                    }
                 }
 
                 // 5. MASTER CONTROLS ON PARENT COMPOSITION:

@@ -97,13 +97,13 @@ The emulator includes production-ready After Effects ScriptUI tools as well as q
      - **Stroke Width**: Real-time slider ($0\text{ to }20\text{ px}$) with automatic stroke suppression when width is 0.
      - **Corner Roundness & Face Gap**: Scrubbable sliders for rounded bevels and inset edge spacing.
 
-2. **Cylinder Maker 3D (`jsx/cylinder_maker.jsx` - v1.1)**:
+2. **Cylinder Maker 3D (`jsx/cylinder_maker.jsx` - v1.2)**:
    - **Parametric 3D Cylinder & Slice Generator**: Generates full cylinders or customizable radial slice sectors.
    - **Geometry Tab**:
      - **Radius**: Scrubbable slider and numeric field ($1\text{ to }500\text{ px}$).
      - **Extrude (Height)**: Scrubbable slider ($1\text{ to }1000\text{ px}$).
      - **Wall Segments**: Dynamic resolution slider ($3\text{ to }64\text{ segments}$) computing exact chord lengths and tangent angles.
-     - **Slice Options**: "Enable Slice" checkbox with Start Angle and End Angle controls ($0^\circ\text{ to }360^\circ$) to produce pie wedges, open tubes, and half-cylinders with automatically generated radial end walls (`Slice_Start` and `Slice_End`).
+     - **Slice Options**: "Enable Slice" checkbox with Start Angle and End Angle controls ($0^\circ\text{ to }360^\circ$) to produce pie wedges, open tubes, and half-cylinders with automatically generated radial end walls (`Slice_Start` and `Slice_End`) driven by reactive expressions ensuring walls stay visible and in sync if slice is toggled post-creation.
    - **Appearance Tab**:
      - **Tri-Color Palette**: 3 separate color swatches with paired hex fields for Top/Front Cap, Walls, and Bottom/Back Cap.
      - **Opacity & Stroke**: Global opacity slider, stroke color swatch + hex field, and stroke width slider ($0\text{ to }20\text{ px}$) with dynamic expression to hide stroke at 0.
@@ -141,8 +141,8 @@ The emulator includes production-ready After Effects ScriptUI tools as well as q
      - **Corner Resolution**: Configurable segment count ($2\text{ to }16\text{ facets per corner}$) to balance smoothness and render speed.
      - **W3C Overlap Protection**: Auto-scales corner radii proportionally when combined radii exceed dimensions.
    - **Appearance Tab**:
-     - **Dual Color Palette**: Separate live color swatches paired with hex inputs for Front/Back Caps vs. Perimeter Walls/Corners.
-     - **Independent Opacity**: Sliders for Cap Opacity and Sides Opacity.
+     - **Tri-Color Palette**: Independent live color swatches paired with hex inputs for Front Face Color, Back Face Color, and Perimeter Walls/Corners Color.
+     - **Independent Opacity**: Sliders for Caps Opacity and Sides Opacity.
      - **Edge Stroke**: Color swatch + hex input and stroke width slider ($0\text{ to }30\text{ px}$) with 0-stroke suppression.
    - **Live Rigging**: Builds 31 native 3D Shape Layers precomposed into an auto-rigged subcomp driven by 18 Master Effect Controls on the parent layer with continuous rasterization.
 

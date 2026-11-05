@@ -106,14 +106,22 @@
     function getLayer(comp, nameOrIndex) {
         if (!comp) return null;
         if (typeof comp.layer === "function") {
-            return comp.layer(nameOrIndex);
+            try {
+                return comp.layer(nameOrIndex);
+            } catch (e) {}
         }
         if (comp.layers) {
-            if (typeof nameOrIndex === "number") return comp.layers[nameOrIndex - 1];
-            if (typeof comp.layers.byName === "function") return comp.layers.byName(nameOrIndex);
-            if (typeof comp.layers.find === "function") {
-                return comp.layers.find(function(l) { return l.name === nameOrIndex; }) || null;
-            }
+            try {
+                if (typeof nameOrIndex === "number") return comp.layers[nameOrIndex - 1] || comp.layers[nameOrIndex];
+                if (typeof comp.layers.byName === "function") return comp.layers.byName(nameOrIndex);
+                if (typeof comp.layers.find === "function") {
+                    return comp.layers.find(function(l) { return l.name === nameOrIndex; }) || null;
+                }
+                for (var li = 1; li <= comp.layers.length; li++) {
+                    var l = comp.layers[li];
+                    if (l && l.name === nameOrIndex) return l;
+                }
+            } catch (e2) {}
         }
         return null;
     }
@@ -479,14 +487,23 @@
         return picker;
     }
 
-    // Front / Back Caps Color
-    var grpCapCol = pnlStyle.add("group");
-    grpCapCol.orientation = "row";
-    grpCapCol.alignment = ["fill", "top"];
-    var lblCapCol = grpCapCol.add("statictext", undefined, "Front/Back Caps Color:");
-    lblCapCol.preferredSize = [135, -1];
-    var cpCaps = createColorPicker(grpCapCol, "#2288ee");
-    cpCaps.onChange = function() { buildOrUpdateExtruded(false); };
+    // Front Face Color
+    var grpFrontCol = pnlStyle.add("group");
+    grpFrontCol.orientation = "row";
+    grpFrontCol.alignment = ["fill", "top"];
+    var lblFrontCol = grpFrontCol.add("statictext", undefined, "Front Color:");
+    lblFrontCol.preferredSize = [135, -1];
+    var cpFront = createColorPicker(grpFrontCol, "#2288ee");
+    cpFront.onChange = function() { buildOrUpdateExtruded(false); };
+
+    // Back Face Color
+    var grpBackCol = pnlStyle.add("group");
+    grpBackCol.orientation = "row";
+    grpBackCol.alignment = ["fill", "top"];
+    var lblBackCol = grpBackCol.add("statictext", undefined, "Back Color:");
+    lblBackCol.preferredSize = [135, -1];
+    var cpBack = createColorPicker(grpBackCol, "#ee8822");
+    cpBack.onChange = function() { buildOrUpdateExtruded(false); };
 
     // Front / Back Caps Opacity
     var grpCapOp = pnlStyle.add("group");
@@ -828,7 +845,8 @@
         var segCount = Math.max(2, Math.min(16, parseInt(txtSeg.text, 10) || 6));
         var preventOverlap = chkOverlap.value;
 
-        var capsColor = hexToRgb(cpCaps._color);
+        var frontColor = hexToRgb(cpFront._color);
+        var backColor = hexToRgb(cpBack._color);
         var capsOpacity = Math.max(0, Math.min(100, parseFloat(txtCapOp.text) || 100));
         var sidesColor = hexToRgb(cpSides._color);
         var sidesOpacity = Math.max(0, Math.min(100, parseFloat(txtSidesOp.text) || 90));
@@ -986,7 +1004,7 @@
                 createCornerQuadrant("TL", function() { return [-w / 2 + rTL, -h / 2 + rTL]; }, 180, 270, rTL);
 
                 // 4. Create Front and Back Caps (Procedural Bézier Geometry)
-                function createCap(capName, zPos, xRot) {
+                function createCap(capName, zPos, xRot, capColor) {
                     var cap = parentComp.layers.addShape();
                     cap.name = capName;
                     cap.threeDLayer = true;
@@ -1024,7 +1042,7 @@
                     var fill = contents.property("ADBE Vector Graphic - Fill") || contents.property(2);
                     if (fill) {
                         var fCol = fill.property("ADBE Vector Fill Color") || fill.property("Color") || fill.property(1);
-                        if (fCol && fCol.setValue) fCol.setValue(capsColor);
+                        if (fCol && fCol.setValue) fCol.setValue(capColor);
                         var fOp = fill.property("ADBE Vector Fill Opacity") || fill.property("Opacity") || fill.property(2);
                         if (fOp && fOp.setValue) fOp.setValue(capsOpacity);
                     }
@@ -1047,8 +1065,8 @@
                     return cap;
                 }
 
-                var capFront = createCap("Cap_Front", -d / 2, 0);
-                var capBack = createCap("Cap_Back", d / 2, 0);
+                var capFront = createCap("Cap_Front", -d / 2, 0, frontColor);
+                var capBack = createCap("Cap_Back", d / 2, 0, backColor);
 
                 // 5. Precompose All Sub-Layers
                 var indicesMap = {};
@@ -1081,7 +1099,19 @@
                 }
 
                 // Target precomp layer in parent comp
-                var extLayer = getLayer(parentComp, precompName) || getLayer(parentComp, 1);
+                var extLayer = null;
+                if (parentComp.layers) {
+                    for (var pli = 1; pli <= parentComp.layers.length; pli++) {
+                        var testL = parentComp.layer(pli);
+                        if (testL && testL.source === preComp) {
+                            extLayer = testL;
+                            break;
+                        }
+                    }
+                }
+                if (!extLayer) {
+                    extLayer = getLayer(parentComp, precompName) || getLayer(parentComp, 1);
+                }
                 if (extLayer) {
                     extLayer.name = precompName;
                     extLayer.threeDLayer = true;
@@ -1098,10 +1128,14 @@
 
                 // 6. Master Controls on Parent Layer
                 function addMasterProp(type, name, val) {
+                    if (!extLayer) return null;
                     var parade = extLayer.property("ADBE Effect Parade") || extLayer.property("Effects");
+                    if (!parade) return null;
                     var eff = parade.addProperty(type);
                     eff.name = name;
-                    eff.property(1).setValue(val);
+                    if (eff.property(1) && typeof eff.property(1).setValue === "function") {
+                        eff.property(1).setValue(val);
+                    }
                     return eff;
                 }
 
@@ -1116,8 +1150,9 @@
                 addMasterProp("ADBE Slider Control",   "Radius Bottom-Left",   rBL);
                 addMasterProp("ADBE Slider Control",   "Corner Segments",      segCount);
                 addMasterProp("ADBE Checkbox Control", "Prevent Overlap",      preventOverlap ? 1 : 0);
-                addMasterProp("ADBE Color Control",    "Front/Back Color",     capsColor);
-                addMasterProp("ADBE Slider Control",   "Front/Back Opacity",   capsOpacity);
+                addMasterProp("ADBE Color Control",    "Front Color",          frontColor);
+                addMasterProp("ADBE Color Control",    "Back Color",           backColor);
+                addMasterProp("ADBE Slider Control",   "Caps Opacity",         capsOpacity);
                 addMasterProp("ADBE Color Control",    "Sides Color",          sidesColor);
                 addMasterProp("ADBE Slider Control",   "Sides Opacity",        sidesOpacity);
                 addMasterProp("ADBE Color Control",    "Stroke Color",         strokeColor);
@@ -1126,39 +1161,47 @@
 
                 // 7. Expressions on Master Controller inside Subcomp
                 if (preMaster) {
-                    function linkControllerProp(effName, effTarget) {
-                        var eff = preMaster.property("ADBE Effect Parade").addProperty(
+                    function linkControllerProp(effName, effTarget, defaultVal) {
+                        var parade = preMaster.property("ADBE Effect Parade") || preMaster.property("Effects");
+                        if (!parade) return null;
+                        var eff = parade.addProperty(
                             effName.indexOf("Color") !== -1 ? "ADBE Color Control" :
                             (effName.indexOf("Link") !== -1 || effName.indexOf("Overlap") !== -1 ? "ADBE Checkbox Control" : "ADBE Slider Control")
                         );
                         eff.name = effName;
-                        eff.property(1).expression = 'try { comp("' + parentComp.name + '").layer("' + precompName + '").effect("' + effTarget + '")(1).value; } catch(e) { value; }';
+                        if (typeof defaultVal !== "undefined" && eff.property(1) && typeof eff.property(1).setValue === "function") {
+                            eff.property(1).setValue(defaultVal);
+                        }
+                        eff.property(1).expression = 'try { comp("' + parentComp.name.replace(/\\/g, '\\\\').replace(/"/g, '\\"') + '").layer("' + precompName + '").effect("' + effTarget + '")(1).value; } catch(e) { value; }';
+                        return eff;
                     }
 
-                    linkControllerProp("Width", "Width");
-                    linkControllerProp("Height", "Height");
-                    linkControllerProp("Extrude Depth", "Extrude Depth");
-                    linkControllerProp("Link All Corners", "Link All Corners");
-                    linkControllerProp("Radius All", "Radius All");
-                    linkControllerProp("Radius Top-Left", "Radius Top-Left");
-                    linkControllerProp("Radius Top-Right", "Radius Top-Right");
-                    linkControllerProp("Radius Bottom-Right", "Radius Bottom-Right");
-                    linkControllerProp("Radius Bottom-Left", "Radius Bottom-Left");
-                    linkControllerProp("Corner Segments", "Corner Segments");
-                    linkControllerProp("Prevent Overlap", "Prevent Overlap");
-                    linkControllerProp("Front/Back Color", "Front/Back Color");
-                    linkControllerProp("Front/Back Opacity", "Front/Back Opacity");
-                    linkControllerProp("Sides Color", "Sides Color");
-                    linkControllerProp("Sides Opacity", "Sides Opacity");
-                    linkControllerProp("Stroke Color", "Stroke Color");
-                    linkControllerProp("Stroke Width", "Stroke Width");
-                    linkControllerProp("Stroke Opacity", "Stroke Opacity");
+                    linkControllerProp("Width", "Width", w);
+                    linkControllerProp("Height", "Height", h);
+                    linkControllerProp("Extrude Depth", "Extrude Depth", d);
+                    linkControllerProp("Link All Corners", "Link All Corners", linkAll ? 1 : 0);
+                    linkControllerProp("Radius All", "Radius All", rAll);
+                    linkControllerProp("Radius Top-Left", "Radius Top-Left", rTL);
+                    linkControllerProp("Radius Top-Right", "Radius Top-Right", rTR);
+                    linkControllerProp("Radius Bottom-Right", "Radius Bottom-Right", rBR);
+                    linkControllerProp("Radius Bottom-Left", "Radius Bottom-Left", rBL);
+                    linkControllerProp("Corner Segments", "Corner Segments", segCount);
+                    linkControllerProp("Prevent Overlap", "Prevent Overlap", preventOverlap ? 1 : 0);
+                    linkControllerProp("Front Color", "Front Color", frontColor);
+                    linkControllerProp("Back Color", "Back Color", backColor);
+                    linkControllerProp("Caps Opacity", "Caps Opacity", capsOpacity);
+                    linkControllerProp("Sides Color", "Sides Color", sidesColor);
+                    linkControllerProp("Sides Opacity", "Sides Opacity", sidesOpacity);
+                    linkControllerProp("Stroke Color", "Stroke Color", strokeColor);
+                    linkControllerProp("Stroke Width", "Stroke Width", strokeWidth);
+                    linkControllerProp("Stroke Opacity", "Stroke Opacity", strokeOpacity);
                 }
 
                 // 8. Dynamic Expressions on Subcomp Layers
                 // Shared expression snippets
-                var exprCapsCol = 'try { thisComp.layer("Extruded_Rect_Master_Controller").effect("Front/Back Color")(1).value; } catch(e) { value; }';
-                var exprCapsOp = 'try { thisComp.layer("Extruded_Rect_Master_Controller").effect("Front/Back Opacity")(1).value; } catch(e) { value; }';
+                var exprFrontCol = 'try { thisComp.layer("Extruded_Rect_Master_Controller").effect("Front Color")(1).value; } catch(e) { value; }';
+                var exprBackCol = 'try { thisComp.layer("Extruded_Rect_Master_Controller").effect("Back Color")(1).value; } catch(e) { value; }';
+                var exprCapsOp = 'try { thisComp.layer("Extruded_Rect_Master_Controller").effect("Caps Opacity")(1).value; } catch(e) { try { thisComp.layer("Extruded_Rect_Master_Controller").effect("Front/Back Opacity")(1).value; } catch(e2) { value; } }';
                 var exprSidesCol = 'try { thisComp.layer("Extruded_Rect_Master_Controller").effect("Sides Color")(1).value; } catch(e) { value; }';
                 var exprSidesOp = 'try { thisComp.layer("Extruded_Rect_Master_Controller").effect("Sides Opacity")(1).value; } catch(e) { value; }';
                 var exprStrokeCol = 'try { thisComp.layer("Extruded_Rect_Master_Controller").effect("Stroke Color")(1).value; } catch(e) { value; }';
@@ -1166,7 +1209,7 @@
                 var exprStrokeOp = 'try { var sw = thisComp.layer("Extruded_Rect_Master_Controller").effect("Stroke Width")(1).value; var op = thisComp.layer("Extruded_Rect_Master_Controller").effect("Stroke Opacity")(1).value; (sw <= 0.0001) ? 0 : op; } catch(e) { value; }';
 
                 // Setup layer expressions helper
-                function applyCommonMaterialExprs(lay, isCap) {
+                function applyCommonMaterialExprs(lay, faceType) {
                     if (!lay) return;
                     var root = lay.property("ADBE Root Vectors Group") || lay.property("Contents") || (lay.property && lay.property(1));
                     if (!root) return;
@@ -1178,9 +1221,13 @@
                     var fill = contents.property("ADBE Vector Graphic - Fill") || contents.property(2);
                     if (fill) {
                         var fCol = fill.property("ADBE Vector Fill Color") || fill.property("Color") || fill.property(1);
-                        if (fCol) fCol.expression = isCap ? exprCapsCol : exprSidesCol;
+                        if (fCol) {
+                            if (faceType === "front") fCol.expression = exprFrontCol;
+                            else if (faceType === "back") fCol.expression = exprBackCol;
+                            else fCol.expression = exprSidesCol;
+                        }
                         var fOp = fill.property("ADBE Vector Fill Opacity") || fill.property("Opacity") || fill.property(2);
-                        if (fOp) fOp.expression = isCap ? exprCapsOp : exprSidesOp;
+                        if (fOp) fOp.expression = (faceType === "front" || faceType === "back") ? exprCapsOp : exprSidesOp;
                     }
 
                     var stroke = contents.property("ADBE Vector Graphic - Stroke") || contents.property(3);
@@ -1197,8 +1244,8 @@
                 // Front & Back Caps expressions
                 var preCapFront = getLayer(preComp, "Cap_Front");
                 if (preCapFront) {
-                    setTransformExpr(preCapFront, "Position", '[0, 0, -thisComp.layer("Extruded_Rect_Master_Controller").effect("Extrude Depth")(1).value / 2];');
-                    applyCommonMaterialExprs(preCapFront, true);
+                    setTransformExpr(preCapFront, "Position", 'try { [0, 0, -thisComp.layer("Extruded_Rect_Master_Controller").effect("Extrude Depth")(1).value / 2]; } catch(e) { [0, 0, -' + (d / 2) + ']; }');
+                    applyCommonMaterialExprs(preCapFront, "front");
                     var rootF = preCapFront.property("ADBE Root Vectors Group") || preCapFront.property("Contents") || (preCapFront.property && preCapFront.property(1));
                     var grpF = rootF.property(1);
                     var contF = grpF.property("ADBE Vectors Group") || grpF.property("Contents") || (grpF.property && grpF.property(2)) || (grpF.property && grpF.property(1));
@@ -1209,8 +1256,8 @@
 
                 var preCapBack = getLayer(preComp, "Cap_Back");
                 if (preCapBack) {
-                    setTransformExpr(preCapBack, "Position", '[0, 0, thisComp.layer("Extruded_Rect_Master_Controller").effect("Extrude Depth")(1).value / 2];');
-                    applyCommonMaterialExprs(preCapBack, true);
+                    setTransformExpr(preCapBack, "Position", 'try { [0, 0, thisComp.layer("Extruded_Rect_Master_Controller").effect("Extrude Depth")(1).value / 2]; } catch(e) { [0, 0, ' + (d / 2) + ']; }');
+                    applyCommonMaterialExprs(preCapBack, "back");
                     var rootB = preCapBack.property("ADBE Root Vectors Group") || preCapBack.property("Contents") || (preCapBack.property && preCapBack.property(1));
                     var grpB = rootB.property(1);
                     var contB = grpB.property("ADBE Vectors Group") || grpB.property("Contents") || (grpB.property && grpB.property(2)) || (grpB.property && grpB.property(1));
@@ -1222,16 +1269,17 @@
                 // Helper for wall dimensions & positions
                 var exprSolverHeader = [
                     'var m = thisComp.layer("Extruded_Rect_Master_Controller");',
-                    'var w = Math.max(0, m.effect("Width")(1).value);',
-                    'var h = Math.max(0, m.effect("Height")(1).value);',
-                    'var d = Math.max(0, m.effect("Extrude Depth")(1).value);',
-                    'var link = m.effect("Link All Corners")(1).value > 0;',
-                    'var rAll = Math.max(0, m.effect("Radius All")(1).value);',
-                    'var rTL = link ? rAll : Math.max(0, m.effect("Radius Top-Left")(1).value);',
-                    'var rTR = link ? rAll : Math.max(0, m.effect("Radius Top-Right")(1).value);',
-                    'var rBR = link ? rAll : Math.max(0, m.effect("Radius Bottom-Right")(1).value);',
-                    'var rBL = link ? rAll : Math.max(0, m.effect("Radius Bottom-Left")(1).value);',
-                    'if (m.effect("Prevent Overlap")(1).value > 0) {',
+                    'function _gv(n, fb) { try { var eff = m.effect(n); return (eff && eff(1)) ? eff(1).value : fb; } catch(e) { return fb; } }',
+                    'var w = Math.max(0, _gv("Width", ' + w + '));',
+                    'var h = Math.max(0, _gv("Height", ' + h + '));',
+                    'var d = Math.max(0, _gv("Extrude Depth", ' + d + '));',
+                    'var link = _gv("Link All Corners", ' + (linkAll ? 1 : 0) + ') > 0;',
+                    'var rAll = Math.max(0, _gv("Radius All", ' + rAll + '));',
+                    'var rTL = link ? rAll : Math.max(0, _gv("Radius Top-Left", ' + rTL + '));',
+                    'var rTR = link ? rAll : Math.max(0, _gv("Radius Top-Right", ' + rTR + '));',
+                    'var rBR = link ? rAll : Math.max(0, _gv("Radius Bottom-Right", ' + rBR + '));',
+                    'var rBL = link ? rAll : Math.max(0, _gv("Radius Bottom-Left", ' + rBL + '));',
+                    'if (_gv("Prevent Overlap", ' + (preventOverlap ? 1 : 0) + ') > 0) {',
                     '    var tS = rTL + rTR, bS = rBL + rBR, lS = rTL + rBL, rS = rTR + rBR;',
                     '    var f = 1.0;',
                     '    if (tS > w && tS > 0) f = Math.min(f, w / tS);',
@@ -1288,11 +1336,11 @@
                         var wName = "Corner_" + cornerId + "_Wall_" + (s + 1);
                         var lay = getLayer(preComp, wName);
                         if (lay) {
-                            var tFormula = startDeg + ' + (' + s + ' + 0.5) * (' + sweep + ' / Math.max(1, Math.round(m.effect("Corner Segments")(1).value)))';
+                            var tFormula = startDeg + ' + (' + s + ' + 0.5) * (' + sweep + ' / Math.max(1, Math.round(_gv("Corner Segments", ' + segCount + '))))';
                             var posExpr = [
                                 exprSolverHeader,
                                 'var r = ' + radiusVar + ';',
-                                'var segs = Math.max(1, Math.round(m.effect("Corner Segments")(1).value));',
+                                'var segs = Math.max(1, Math.round(_gv("Corner Segments", ' + segCount + ')));',
                                 'var alpha = (' + Math.abs(sweep) + ' / segs) * (Math.PI / 180);',
                                 'var rMid = r * Math.cos(alpha / 2);',
                                 'var theta = ' + tFormula + ';',
@@ -1304,7 +1352,7 @@
                             var sizeExpr = [
                                 exprSolverHeader,
                                 'var r = ' + radiusVar + ';',
-                                'var segs = Math.max(1, Math.round(m.effect("Corner Segments")(1).value));',
+                                'var segs = Math.max(1, Math.round(_gv("Corner Segments", ' + segCount + ')));',
                                 'var alpha = (' + Math.abs(sweep) + ' / segs) * (Math.PI / 180);',
                                 'var chord = Math.max(0.1, 2 * r * Math.sin(alpha / 2));',
                                 '[chord, d];'
@@ -1367,7 +1415,10 @@
             setEffectVal(existingLayer, "Radius Bottom-Left",   rBL);
             setEffectVal(existingLayer, "Corner Segments",      segCount);
             setEffectVal(existingLayer, "Prevent Overlap",      preventOverlap ? 1 : 0);
-            setEffectVal(existingLayer, "Front/Back Color",     capsColor);
+            setEffectVal(existingLayer, "Front Color",          frontColor);
+            setEffectVal(existingLayer, "Back Color",           backColor);
+            setEffectVal(existingLayer, "Caps Opacity",         capsOpacity);
+            setEffectVal(existingLayer, "Front/Back Color",     frontColor);
             setEffectVal(existingLayer, "Front/Back Opacity",   capsOpacity);
             setEffectVal(existingLayer, "Sides Color",          sidesColor);
             setEffectVal(existingLayer, "Sides Opacity",        sidesOpacity);
