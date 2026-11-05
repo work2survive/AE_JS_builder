@@ -64,6 +64,37 @@ body {
     letter-spacing: 0.5px;
 }
 
+.ae-version-badge {
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--ae-blue);
+    background: rgba(44, 140, 255, 0.12);
+    border: 1px solid rgba(44, 140, 255, 0.3);
+    padding: 1px 7px;
+    border-radius: 10px;
+    letter-spacing: 0.4px;
+    font-family: var(--font-mono);
+    user-select: none;
+}
+
+.ae-github-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-muted);
+    padding: 3px;
+    border-radius: 4px;
+    transition: color 0.15s ease, background-color 0.15s ease, transform 0.15s ease;
+    text-decoration: none;
+    margin-left: 2px;
+}
+
+.ae-github-link:hover {
+    color: #ffffff;
+    background-color: rgba(255, 255, 255, 0.12);
+    transform: scale(1.1);
+}
+
 .ae-badge {
     background-color: #9999ff;
     color: #100030;
@@ -375,6 +406,7 @@ body.is-resizing-h .ae-resizer-h {
     position: absolute;
     left: 0;
     top: 0;
+    transform-origin: 0 0 0;
     transform-style: preserve-3d;
     transition: none;
 }
@@ -667,6 +699,23 @@ body.is-resizing-h .ae-resizer-h {
     gap: 8px;
     cursor: pointer;
     font-size: 12px;
+}
+
+/* Subtle ScriptUI Footer Links */
+.scriptui-statictext.scriptui-link {
+    color: #64b5f6 !important;
+    font-size: 11px;
+    cursor: pointer !important;
+    text-decoration: underline;
+    opacity: 0.7;
+    transition: opacity 0.15s ease, color 0.15s ease;
+    display: inline-block;
+    padding: 2px 4px;
+}
+
+.scriptui-statictext.scriptui-link:hover {
+    color: #90caf9 !important;
+    opacity: 1;
 }
 
 /* -------------------------------------------------------------

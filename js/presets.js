@@ -20,17 +20,19 @@
 //
 // ARCHITECTURE & WORKFLOW:
 //   1. ScriptUI UI Window / Dockable Panel (2 Distinct Tabs):
-//      - 📐 Geometry Tab:
+//      - [1] Geometry Tab:
 //        * Dimensions controls (X, Y, Z scrubbable sliders & numeric text fields).
 //        * "Link all sizes to Z" checkbox (drives an AE Checkbox Control effect).
 //        * 3D topology structure and Build / Rebuild button.
-//      - 🎨 Appearance Tab:
+//      - [2] Appearance Tab:
 //        * Live color pickers for faces (Fill) and edges (Stroke).
 //        * Stroke width slider and numeric input.
+//        * Corner roundness slider and numeric input.
+//        * Gap slider (edge inset) and numeric input.
 //
 //   2. Color-Coding System:
-//      - 🔵 BLUE: Animatable properties in the AE Timeline (can be keyframed or wiggled).
-//      - 🔴 RED: Structural / setup properties defined only once upon layer creation.
+//      - BLUE: Animatable properties in the AE Timeline (can be keyframed or animated).
+//      - RED: Structural / setup properties defined only once upon layer creation.
 //
 //   3. 3D Spatial Geometry:
 //      - 6 rectangular Shape Layers oriented in 3D Euclidean space:
@@ -56,21 +58,21 @@
     //   scope, so we create a floating "palette" Window.
     var win = (thisObj instanceof Panel) 
         ? thisObj 
-        : new Window("palette", "Cube Maker", undefined, { resizeable: true });
+        : new Window("palette", "Cube Maker 3D - v1.2", undefined, { resizeable: true });
+    win.text = "Cube Maker 3D - v1.2";
 
     // Track active precomp name across sessions / live slider updates
     var currentPrecompName = "";
 
+    // Set top-level layout properties
     win.orientation = "column";          // Stack child controls vertically
     win.alignChildren = ["fill", "top"]; // Stretch children horizontally to fill width
     win.spacing = 10;                    // 10px vertical gap between panel sections
     win.margins = 14;                    // 14px outer margin padding around the window
 
     // -------------------------------------------------------------------------
-    // 2. Helper: Convert Hex Color String to Normalized AE RGB Array
+    // 2. Helper Functions: Colors, Transforms & Cross-Platform Layer Access
     // -------------------------------------------------------------------------
-    // HTML / ScriptUI colors use "#RRGGBB" (0-255).
-    // After Effects shape layer properties expect normalized 0.0 to 1.0 floats: [R, G, B].
     function hexToRgb(hex) {
         hex = hex.replace("#", "");
         if (hex.length === 3) {
@@ -84,9 +86,6 @@
         ];
     }
 
-    // -------------------------------------------------------------------------
-    // Cross-Platform AE ExtendScript / Emulator Property & Layer Access Helpers
-    // -------------------------------------------------------------------------
     function getTransformProp(layer, propName) {
         if (!layer) return null;
         var p = null;
@@ -160,7 +159,6 @@
     // -------------------------------------------------------------------------
     // 3. UI Section: Add-on Name, Version & Description Header
     // -------------------------------------------------------------------------
-    // Displays the script title, version number, and brief description.
     var pnlHeader = win.add("panel", undefined, "Cube Maker 3D - v1.2");
     pnlHeader.orientation = "column";
     pnlHeader.alignChildren = ["fill", "top"];
@@ -173,12 +171,6 @@
     // -------------------------------------------------------------------------
     // 4. UI Section: Tabbed Panel Container (Geometry vs. Appearance)
     // -------------------------------------------------------------------------
-    // ScriptUI "tabbedpanel" divides complex plugin controls into logical,
-    // focused category tabs:
-    //   - Tab 1 ("Geometry"): Spatial dimensions (X, Y, Z), proportional locking,
-    //     and 3D cube mesh topology / rebuild controls.
-    //   - Tab 2 ("Appearance"): Aesthetic styling (face fill color, edge stroke color,
-    //     and stroke width slider).
     var tpanel = win.add("tabbedpanel", undefined, undefined);
     tpanel.alignChildren = ["fill", "top"];
     tpanel.alignment = ["fill", "fill"];
@@ -186,7 +178,6 @@
     // =========================================================================
     // TAB 1: GEOMETRY & TOPOLOGY
     // =========================================================================
-    // Groups all spatial, dimensional, and structural parameters.
     var tabGeometry = tpanel.add("tab", undefined, "Geometry");
     tabGeometry.orientation = "column";
     tabGeometry.alignChildren = ["fill", "top"];
@@ -195,8 +186,6 @@
     tabGeometry.margins = 8;
 
     // --- Sub-panel: Dimensions (X, Y, Z Size) ---
-    // Contains scrubbable sliders and text inputs for width (X), height (Y), depth (Z).
-    // All dimensions can be linked to Z using the animatable effect checkbox.
     var pnlDim = tabGeometry.add("panel", undefined, "Dimensions (X, Y, Z)");
     pnlDim.orientation = "column";
     pnlDim.spacing = 8;
@@ -208,11 +197,11 @@
     grpX.orientation = "row";
     grpX.alignment = ["fill", "top"];
     var lblX = grpX.add("statictext", undefined, "Size X:");
-    lblX.preferredSize = [80, -1]; // Fixed 80px label width for aligned columns
+    lblX.preferredSize = [80, -1];
     var sldX = grpX.add("slider", undefined, 200, { minvalue: 50, maxvalue: 500 });
     sldX.alignment = ["fill", "center"];
     var txtX = grpX.add("edittext", undefined, "200");
-    txtX.characters = 4; // Width suited for 4-digit numbers
+    txtX.characters = 4;
 
     // --- Dimension Y Row ---
     var grpY = pnlDim.add("group");
@@ -237,81 +226,51 @@
     txtZ.characters = 4;
 
     // --- Checkbox: Link all sizes to Z ---
-    // When enabled, X and Y dimensions lock to Z so the cube maintains equal proportions.
-    // In After Effects, this is exposed as an "ADBE Checkbox Control" effect on the master layer.
     var chkLinkZ = pnlDim.add("checkbox", undefined, "Link all sizes to Z");
     chkLinkZ.value = false;
 
     // -------------------------------------------------------------------------
     // 5. Two-Way Slider & EditText Synchronization Logic
     // -------------------------------------------------------------------------
-    // Ensures that dragging a slider updates the numeric text box immediately,
-    // and typing into the text box updates the slider position.
     function syncDimension(source) {
         if (chkLinkZ.value) {
-            // When linked to Z, read the Z value and copy to X, Y, and Z
             var valZ = (source === "txtZ") 
                 ? (parseFloat(txtZ.text) || 200) 
                 : Math.round(sldZ.value);
-
-            sldX.value = valZ; txtX.text = String(valZ);
-            sldY.value = valZ; txtY.text = String(valZ);
-            sldZ.value = valZ; txtZ.text = String(valZ);
+            
+            sldX.value = valZ;
+            sldY.value = valZ;
+            sldZ.value = valZ;
+            txtX.text = String(valZ);
+            txtY.text = String(valZ);
+            txtZ.text = String(valZ);
         } else {
-            // Independent dimension updates
             if (source === "sldX") txtX.text = String(Math.round(sldX.value));
-            if (source === "txtX") sldX.value = parseFloat(txtX.text) || 200;
-
             if (source === "sldY") txtY.text = String(Math.round(sldY.value));
-            if (source === "txtY") sldY.value = parseFloat(txtY.text) || 200;
-
             if (source === "sldZ") txtZ.text = String(Math.round(sldZ.value));
-            if (source === "txtZ") sldZ.value = parseFloat(txtZ.text) || 200;
+
+            if (source === "txtX") sldX.value = Math.max(10, parseFloat(txtX.text) || 200);
+            if (source === "txtY") sldY.value = Math.max(10, parseFloat(txtY.text) || 200);
+            if (source === "txtZ") sldZ.value = Math.max(10, parseFloat(txtZ.text) || 200);
         }
 
-        // Live update the cube layers in the active comp
         buildOrUpdateCube();
     }
 
-    // Attach event callbacks:
-    // - onChanging: fires continuously while the user drags the slider thumb
-    // - onChange: fires when the user finishes editing text (presses Enter or tabs out)
     sldX.onChanging = function() { syncDimension("sldX"); };
-    txtX.onChange   = function() { syncDimension("txtX"); };
     sldY.onChanging = function() { syncDimension("sldY"); };
-    txtY.onChange   = function() { syncDimension("txtY"); };
     sldZ.onChanging = function() { syncDimension("sldZ"); };
-    txtZ.onChange   = function() { syncDimension("txtZ"); };
 
-    // Toggle behavior when "Link all sizes to Z" is clicked
+    txtX.onChange = function() { syncDimension("txtX"); };
+    txtY.onChange = function() { syncDimension("txtY"); };
+    txtZ.onChange = function() { syncDimension("txtZ"); };
+
     chkLinkZ.onClick = function() {
         if (chkLinkZ.value) {
-            // Disable X and Y inputs since they are slave to Z
-            sldX.enabled = false;
-            sldY.enabled = false;
-            txtX.enabled = false;
-            txtY.enabled = false;
             syncDimension("sldZ");
-        } else {
-            // Re-enable X and Y controls for independent non-uniform box dimensions
-            sldX.enabled = true;
-            sldY.enabled = true;
-            txtX.enabled = true;
-            txtY.enabled = true;
         }
-
-        // Keep the Effect Control Checkbox in the AE timeline in lockstep
-        var comp = app.project ? app.project.activeItem : null;
-        var targetComp = comp;
-        if (currentPrecompName && app.project && app.project.items) {
-            for (var k = 0; k < app.project.items.length; k++) {
-                if (app.project.items[k] && app.project.items[k].name === currentPrecompName) {
-                    targetComp = app.project.items[k];
-                    break;
-                }
-            }
-        }
-        var master = targetComp ? targetComp.layers.byName("Cube_Master_Controller") : null;
+        var parentComp = app.project ? app.project.activeItem : null;
+        var master = getLayer(parentComp, "Cube_Master_Controller");
         if (master) {
             var linkEff = master.effect("Link all sizes to Z");
             if (linkEff) {
@@ -321,8 +280,6 @@
     };
 
     // --- Sub-panel: Structure & Topology - [Defined Once on Creation] ---
-    // Topology and parenting hierarchy are defined once in script and cannot be
-    // animated across keyframes. The button forces a complete tear-down and rebuild.
     var pnlStruct = tabGeometry.add("panel", undefined, "3D Cube Structure & Topology - [Defined Once]");
     pnlStruct.orientation = "column";
     pnlStruct.spacing = 8;
@@ -340,7 +297,6 @@
     // =========================================================================
     // TAB 2: APPEARANCE & STYLING
     // =========================================================================
-    // Groups all visual, color, and stroke styling parameters.
     var tabAppearance = tpanel.add("tab", undefined, "Appearance");
     tabAppearance.orientation = "column";
     tabAppearance.alignChildren = ["fill", "top"];
@@ -351,34 +307,22 @@
     // -------------------------------------------------------------------------
     // 6. UI Section: Colors & Stroke Styling - [Animatable]
     // -------------------------------------------------------------------------
-    // Provides color pickers for the cube faces and edges, plus stroke thickness.
     var pnlStyle = tabAppearance.add("panel", undefined, "Colors & Stroke - [Animatable]");
     pnlStyle.orientation = "column";
     pnlStyle.spacing = 10;
     pnlStyle.alignChildren = ["fill", "top"];
     pnlStyle.alignment = ["fill", "top"];
 
-    // -------------------------------------------------------------------------
-    // Helper: Adobe After Effects Compatible ScriptUI Color Picker Control
-    // -------------------------------------------------------------------------
-    // In native After Effects ScriptUI, there is no built-in 'colorpicker' control
-    // type (calling .add('colorpicker') throws an AE runtime error).
-    // Standard AE scripts build a cross-platform color picker using:
-    //   1. A clickable swatch button that invokes native AE '$.colorPicker()'.
-    //   2. An editable hex text field ('edittext') for direct '#RRGGBB' input.
-    //   3. A ScriptUI 'onDraw' callback to render the selected color swatch directly.
     function createColorPicker(parent, defaultHex) {
         var grp = parent.add("group");
         grp.orientation = "row";
         grp.spacing = 6;
         grp.alignChildren = ["left", "center"];
 
-        // Clickable Swatch Button (36 x 22 px)
         var btnSwatch = grp.add("button", undefined, "");
         btnSwatch.preferredSize = [36, 22];
         btnSwatch.helpTip = "Click to pick color (After Effects native Color Picker)";
 
-        // Hex Code Text Box (#RRGGBB)
         var txtHex = grp.add("edittext", undefined, defaultHex);
         txtHex.preferredSize = [70, 22];
         txtHex.characters = 7;
@@ -393,8 +337,6 @@
             onChange: null
         };
 
-        // Custom draw callback for native After Effects ScriptUI:
-        // Paints the button rectangle with the selected color
         btnSwatch.onDraw = function() {
             try {
                 var g = this.graphics;
@@ -415,12 +357,12 @@
             picker.value = newHex;
             txtHex.text = newHex.toUpperCase();
 
-            // In After Effects: Redraw button graphics
-            if (btnSwatch.notify) {
-                btnSwatch.notify("onDraw");
-            }
+            try {
+                if (btnSwatch.notify) {
+                    btnSwatch.notify("onDraw");
+                }
+            } catch(e) {}
 
-            // In browser emulator: update DOM button style
             if (btnSwatch.domElement) {
                 btnSwatch.domElement.style.backgroundColor = newHex;
                 btnSwatch.domElement.style.border = "1px solid #777";
@@ -431,12 +373,8 @@
             }
         }
 
-        // Swatch Button Click:
-        // - In After Effects: calls native $.colorPicker() dialog
-        // - In browser emulator: opens browser color picker
         btnSwatch.onClick = function() {
             if (typeof document !== "undefined") {
-                // Browser emulator: trigger HTML5 color input
                 var input = document.createElement("input");
                 input.type = "color";
                 input.value = picker._color;
@@ -447,7 +385,6 @@
                 return;
             }
 
-            // Native Adobe After Effects:
             var hexNum = parseInt(picker._color.replace("#", ""), 16);
             var result = -1;
             if (typeof $.colorPicker === "function") {
@@ -460,9 +397,8 @@
             }
         };
 
-        // Text input onChange:
         txtHex.onChange = function() {
-            var val = txtHex.text.replace(/^\s+|\s+$/g, "");
+            var val = txtHex.text.replace(/^\\s+|\\s+$/g, "");
             if (val.indexOf("#") !== 0) val = "#" + val;
             if (/^#[0-9A-Fa-f]{6}$/.test(val)) {
                 setColor(val, true);
@@ -471,9 +407,7 @@
             }
         };
 
-        // Initial setup
         setColor(defaultHex, false);
-
         return picker;
     }
 
@@ -602,16 +536,28 @@
     // Set initial active tab (index 0: Geometry)
     tpanel.selection = 0;
 
+    // --- Bottom Subtle Repository Link ---
+    var grpRepoLink = win.add("group");
+    grpRepoLink.orientation = "row";
+    grpRepoLink.alignment = ["fill", "bottom"];
+    grpRepoLink.alignChildren = ["center", "center"];
+    grpRepoLink.margins = [0, 4, 0, 0];
+    var lblRepoLink = grpRepoLink.add("statictext", undefined, "GitHub: work2survive/AE_JS_builder");
+    lblRepoLink.helpTip = "https://github.com/work2survive/AE_JS_builder";
+    lblRepoLink.onClick = function() {
+        var url = "https://github.com/work2survive/AE_JS_builder";
+        if (typeof window !== "undefined" && window.open) {
+            window.open(url, "_blank");
+        } else if ($.os.indexOf("Windows") !== -1) {
+            system.callSystem('explorer "' + url + '"');
+        } else {
+            system.callSystem('open "' + url + '"');
+        }
+    };
+
     // -------------------------------------------------------------------------
-    // 8. Core Engine: Build or Live-Update the 3D Cube in After Effects
+    // 7. Core Engine: Build or Live-Update the 3D Cube in After Effects
     // -------------------------------------------------------------------------
-    // Handles two execution modes:
-    //   - Initial Build / Rebuild:
-    //     Creates 6 faces and controller (controller always on top & red),
-    //     precomposes them into a new composition "cube_maker_XXXX",
-    //     and sets up linked expressions in the parent composition's cube_maker layer.
-    //   - Live Update:
-    //     Updates property values on already-existing layers inside the precomp.
     function buildOrUpdateCube(forceRebuild) {
         var parentComp = app.project ? app.project.activeItem : null;
         if (!parentComp || !(parentComp instanceof CompItem)) {
@@ -735,11 +681,17 @@
                     faceLayers.push(face);
                 }
 
-                // 3. Precompose: Controller is Layer 1, Faces are Layers 2-7
-                var indices = [master.index];
+                // 3. Precompose: Deduplicate and sort indices ascending (required by AE ExtendScript)
+                var indicesMap = {};
+                if (master && master.index) indicesMap[master.index] = true;
                 for (var fi = 0; fi < faceLayers.length; fi++) {
-                    indices.push(faceLayers[fi].index);
+                    if (faceLayers[fi] && faceLayers[fi].index) indicesMap[faceLayers[fi].index] = true;
                 }
+                var indices = [];
+                for (var kIdx in indicesMap) {
+                    if (indicesMap.hasOwnProperty(kIdx)) indices.push(parseInt(kIdx, 10));
+                }
+                indices.sort(function(a, b) { return a - b; });
                 var preComp = parentComp.layers.precompose(indices, precompName, true);
 
                 // Ensure controller inside precomp is on top, red, and precisely in the CENTER of the precomp
@@ -914,7 +866,6 @@
         // Case B: Live Property Update on Existing Layers inside Precomp
         // ---------------------------------------------------------------------
         else {
-            // Locate the precomposition item in the project
             var preComp = null;
             if (app.project && app.project.items) {
                 for (var k = 0; k < app.project.items.length; k++) {
@@ -942,6 +893,7 @@
                 var effG = cubeLayer.effect("Gap"); if (effG) effG.property("Slider").setValue(gap);
             }
 
+            // 2. Also update targetComp base values directly for immediate viewport response
             var targetComp = preComp || parentComp;
             var master = getLayer(targetComp, "Cube_Master_Controller");
 
@@ -999,7 +951,7 @@
                     var l = getLayer(targetComp, u.name);
                     if (l) {
                         setTransformVal(l, "Position", u.pos);
-                        var grp = l.property("Contents").property("Face Vector") || l.property("Contents").property(1);
+                        var grp = l.property("Contents") ? (l.property("Contents").property("Face Vector") || l.property("Contents").property(1)) : null;
                         if (grp) {
                             var r = grp.property("Contents").property("ADBE Vector Shape - Rect");
                             if (r) {
@@ -1028,11 +980,8 @@
     }
 
     // -------------------------------------------------------------------------
-    // 9. Layout, Display & Initial Execution
+    // 8. Layout, Display & Initial Execution
     // -------------------------------------------------------------------------
-    // Crucial for After Effects ScriptUI Panels:
-    // In AE, dockable panels DO NOT calculate child bounds or draw without
-    // explicitly calling layout() and resize().
     if (win) {
         win.layout.layout(true);
         win.layout.resize();
@@ -1097,7 +1046,8 @@
     // -------------------------------------------------------------------------
     var win = (thisObj instanceof Panel)
         ? thisObj
-        : new Window("palette", "Cylinder Maker 3D", undefined, { resizeable: true });
+        : new Window("palette", "Cylinder Maker 3D - v1.0", undefined, { resizeable: true });
+    win.text = "Cylinder Maker 3D - v1.0";
 
     var currentPrecompName = "";
 
@@ -1203,19 +1153,18 @@
         var verts = [];
         var ins = [];
         var outs = [];
-        var Z = [0, 0];
         if (isFull) {
             for (var j = 0; j < n; j++) {
                 var phi = (j / n) * 2 * Math.PI;
                 verts.push([r * Math.sin(phi), -r * Math.cos(phi)]);
-                ins.push(Z); outs.push(Z);
+                ins.push([0, 0]); outs.push([0, 0]);
             }
         } else {
-            verts.push([0, 0]); ins.push(Z); outs.push(Z);
+            verts.push([0, 0]); ins.push([0, 0]); outs.push([0, 0]);
             for (var j = 0; j <= n; j++) {
                 var phi = (a0 + j * (span / n)) * (Math.PI / 180);
                 verts.push([r * Math.sin(phi), -r * Math.cos(phi)]);
-                ins.push(Z); outs.push(Z);
+                ins.push([0, 0]); outs.push([0, 0]);
             }
         }
         s.vertices = verts;
@@ -1426,7 +1375,7 @@
         };
 
         txtHex.onChange = function() {
-            var val = txtHex.text.replace(/^\s+|\s+$/g, "");
+            var val = txtHex.text.replace(/^\\s+|\\s+$/g, "");
             if (val.indexOf("#") !== 0) val = "#" + val;
             if (/^#[0-9A-Fa-f]{6}$/.test(val)) {
                 setColor(val, true);
@@ -1527,6 +1476,25 @@
         buildOrUpdateCylinder(true);
     };
 
+    // --- Bottom Subtle Repository Link ---
+    var grpRepoLink = win.add("group");
+    grpRepoLink.orientation = "row";
+    grpRepoLink.alignment = ["fill", "bottom"];
+    grpRepoLink.alignChildren = ["center", "center"];
+    grpRepoLink.margins = [0, 4, 0, 0];
+    var lblRepoLink = grpRepoLink.add("statictext", undefined, "GitHub: work2survive/AE_JS_builder");
+    lblRepoLink.helpTip = "https://github.com/work2survive/AE_JS_builder";
+    lblRepoLink.onClick = function() {
+        var url = "https://github.com/work2survive/AE_JS_builder";
+        if (typeof window !== "undefined" && window.open) {
+            window.open(url, "_blank");
+        } else if ($.os.indexOf("Windows") !== -1) {
+            system.callSystem('explorer "' + url + '"');
+        } else {
+            system.callSystem('open "' + url + '"');
+        }
+    };
+
     // -------------------------------------------------------------------------
     // 5. Core Generator & Dynamic Linking Logic
     // -------------------------------------------------------------------------
@@ -1619,20 +1587,40 @@
                     wall.threeDLayer = true;
                     wall.shy = true;
 
-                    var grp = wall.property("Contents").addProperty("ADBE Vector Group");
+                    var rootW = wall.property("ADBE Root Vectors Group") || wall.property("Contents") || (wall.property && wall.property(1));
+                    var grp = rootW.addProperty("ADBE Vector Group");
                     grp.name = "Wall Vector";
 
-                    var rect = grp.property("Contents").addProperty("ADBE Vector Shape - Rect");
-                    rect.property("Size").setValue([chordWidth, height]);
+                    var grpContents = grp.property("ADBE Vectors Group") || grp.property("Contents") || (grp.property && grp.property(2)) || (grp.property && grp.property(1));
+                    grpContents.addProperty("ADBE Vector Shape - Rect");
+                    grpContents.addProperty("ADBE Vector Graphic - Fill");
+                    grpContents.addProperty("ADBE Vector Graphic - Stroke");
 
-                    var fill = grp.property("Contents").addProperty("ADBE Vector Graphic - Fill");
-                    fill.property("Color").setValue(wallsColor);
-                    fill.property("Opacity").setValue(opacityVal);
+                    grpContents = grp.property("ADBE Vectors Group") || grp.property("Contents") || (grp.property && grp.property(2)) || (grp.property && grp.property(1));
 
-                    var stroke = grp.property("Contents").addProperty("ADBE Vector Graphic - Stroke");
-                    stroke.property("Color").setValue(strokeColor);
-                    stroke.property("Stroke Width").setValue(strokeWidth);
-                    stroke.property("Opacity").setValue(opacityVal);
+                    var rect = grpContents.property("ADBE Vector Shape - Rect") || grpContents.property(1);
+                    if (rect) {
+                        var rSize = rect.property("ADBE Vector Rect Size") || rect.property("Size") || rect.property(2) || rect.property(1);
+                        if (rSize && rSize.setValue) rSize.setValue([chordWidth, height]);
+                    }
+
+                    var fill = grpContents.property("ADBE Vector Graphic - Fill") || grpContents.property(2);
+                    if (fill) {
+                        var fCol = fill.property("ADBE Vector Fill Color") || fill.property("Color") || fill.property(1);
+                        if (fCol && fCol.setValue) fCol.setValue(wallsColor);
+                        var fOp = fill.property("ADBE Vector Fill Opacity") || fill.property("Opacity") || fill.property(2);
+                        if (fOp && fOp.setValue) fOp.setValue(opacityVal);
+                    }
+
+                    var stroke = grpContents.property("ADBE Vector Graphic - Stroke") || grpContents.property(3);
+                    if (stroke) {
+                        var sCol = stroke.property("ADBE Vector Stroke Color") || stroke.property("Color") || stroke.property(1);
+                        if (sCol && sCol.setValue) sCol.setValue(strokeColor);
+                        var sW = stroke.property("ADBE Vector Stroke Width") || stroke.property("Stroke Width") || stroke.property(2);
+                        if (sW && sW.setValue) sW.setValue(strokeWidth);
+                        var sOp = stroke.property("ADBE Vector Stroke Opacity") || stroke.property("Opacity") || stroke.property(3);
+                        if (sOp && sOp.setValue) sOp.setValue(strokeWidth <= 0.0001 ? 0 : opacityVal);
+                    }
 
                     wall.parent = master;
                     setTransformVal(wall, "Anchor Point", [0, 0, 0]);
@@ -1658,17 +1646,40 @@
                     sliceStartLayer.threeDLayer = true;
                     sliceStartLayer.shy = true;
 
-                    var grpS = sliceStartLayer.property("Contents").addProperty("ADBE Vector Group");
+                    var rootS = sliceStartLayer.property("ADBE Root Vectors Group") || sliceStartLayer.property("Contents") || (sliceStartLayer.property && sliceStartLayer.property(1));
+                    var grpS = rootS.addProperty("ADBE Vector Group");
                     grpS.name = "Slice Vector";
-                    var rectS = grpS.property("Contents").addProperty("ADBE Vector Shape - Rect");
-                    rectS.property("Size").setValue([radius, height]);
-                    var fillS = grpS.property("Contents").addProperty("ADBE Vector Graphic - Fill");
-                    fillS.property("Color").setValue(wallsColor);
-                    fillS.property("Opacity").setValue(opacityVal);
-                    var strokeS = grpS.property("Contents").addProperty("ADBE Vector Graphic - Stroke");
-                    strokeS.property("Color").setValue(strokeColor);
-                    strokeS.property("Stroke Width").setValue(strokeWidth);
-                    strokeS.property("Opacity").setValue(opacityVal);
+
+                    var grpSContents = grpS.property("ADBE Vectors Group") || grpS.property("Contents") || (grpS.property && grpS.property(2)) || (grpS.property && grpS.property(1));
+                    grpSContents.addProperty("ADBE Vector Shape - Rect");
+                    grpSContents.addProperty("ADBE Vector Graphic - Fill");
+                    grpSContents.addProperty("ADBE Vector Graphic - Stroke");
+
+                    grpSContents = grpS.property("ADBE Vectors Group") || grpS.property("Contents") || (grpS.property && grpS.property(2)) || (grpS.property && grpS.property(1));
+
+                    var rectS = grpSContents.property("ADBE Vector Shape - Rect") || grpSContents.property(1);
+                    if (rectS) {
+                        var rsSize = rectS.property("ADBE Vector Rect Size") || rectS.property("Size") || rectS.property(2) || rectS.property(1);
+                        if (rsSize && rsSize.setValue) rsSize.setValue([radius, height]);
+                    }
+
+                    var fillS = grpSContents.property("ADBE Vector Graphic - Fill") || grpSContents.property(2);
+                    if (fillS) {
+                        var fsCol = fillS.property("ADBE Vector Fill Color") || fillS.property("Color") || fillS.property(1);
+                        if (fsCol && fsCol.setValue) fsCol.setValue(wallsColor);
+                        var fsOp = fillS.property("ADBE Vector Fill Opacity") || fillS.property("Opacity") || fillS.property(2);
+                        if (fsOp && fsOp.setValue) fsOp.setValue(opacityVal);
+                    }
+
+                    var strokeS = grpSContents.property("ADBE Vector Graphic - Stroke") || grpSContents.property(3);
+                    if (strokeS) {
+                        var ssCol = strokeS.property("ADBE Vector Stroke Color") || strokeS.property("Color") || strokeS.property(1);
+                        if (ssCol && ssCol.setValue) ssCol.setValue(strokeColor);
+                        var ssW = strokeS.property("ADBE Vector Stroke Width") || strokeS.property("Stroke Width") || strokeS.property(2);
+                        if (ssW && ssW.setValue) ssW.setValue(strokeWidth);
+                        var ssOp = strokeS.property("ADBE Vector Stroke Opacity") || strokeS.property("Opacity") || strokeS.property(3);
+                        if (ssOp && ssOp.setValue) ssOp.setValue(strokeWidth <= 0.0001 ? 0 : opacityVal);
+                    }
 
                     sliceStartLayer.parent = master;
                     setTransformVal(sliceStartLayer, "Anchor Point", [0, 0, 0]);
@@ -1687,17 +1698,40 @@
                     sliceEndLayer.threeDLayer = true;
                     sliceEndLayer.shy = true;
 
-                    var grpE = sliceEndLayer.property("Contents").addProperty("ADBE Vector Group");
+                    var rootE = sliceEndLayer.property("ADBE Root Vectors Group") || sliceEndLayer.property("Contents") || (sliceEndLayer.property && sliceEndLayer.property(1));
+                    var grpE = rootE.addProperty("ADBE Vector Group");
                     grpE.name = "Slice Vector";
-                    var rectE = grpE.property("Contents").addProperty("ADBE Vector Shape - Rect");
-                    rectE.property("Size").setValue([radius, height]);
-                    var fillE = grpE.property("Contents").addProperty("ADBE Vector Graphic - Fill");
-                    fillE.property("Color").setValue(wallsColor);
-                    fillE.property("Opacity").setValue(opacityVal);
-                    var strokeE = grpE.property("Contents").addProperty("ADBE Vector Graphic - Stroke");
-                    strokeE.property("Color").setValue(strokeColor);
-                    strokeE.property("Stroke Width").setValue(strokeWidth);
-                    strokeE.property("Opacity").setValue(opacityVal);
+
+                    var grpEContents = grpE.property("ADBE Vectors Group") || grpE.property("Contents") || (grpE.property && grpE.property(2)) || (grpE.property && grpE.property(1));
+                    grpEContents.addProperty("ADBE Vector Shape - Rect");
+                    grpEContents.addProperty("ADBE Vector Graphic - Fill");
+                    grpEContents.addProperty("ADBE Vector Graphic - Stroke");
+
+                    grpEContents = grpE.property("ADBE Vectors Group") || grpE.property("Contents") || (grpE.property && grpE.property(2)) || (grpE.property && grpE.property(1));
+
+                    var rectE = grpEContents.property("ADBE Vector Shape - Rect") || grpEContents.property(1);
+                    if (rectE) {
+                        var reSize = rectE.property("ADBE Vector Rect Size") || rectE.property("Size") || rectE.property(2) || rectE.property(1);
+                        if (reSize && reSize.setValue) reSize.setValue([radius, height]);
+                    }
+
+                    var fillE = grpEContents.property("ADBE Vector Graphic - Fill") || grpEContents.property(2);
+                    if (fillE) {
+                        var feCol = fillE.property("ADBE Vector Fill Color") || fillE.property("Color") || fillE.property(1);
+                        if (feCol && feCol.setValue) feCol.setValue(wallsColor);
+                        var feOp = fillE.property("ADBE Vector Fill Opacity") || fillE.property("Opacity") || fillE.property(2);
+                        if (feOp && feOp.setValue) feOp.setValue(opacityVal);
+                    }
+
+                    var strokeE = grpEContents.property("ADBE Vector Graphic - Stroke") || grpEContents.property(3);
+                    if (strokeE) {
+                        var seCol = strokeE.property("ADBE Vector Stroke Color") || strokeE.property("Color") || strokeE.property(1);
+                        if (seCol && seCol.setValue) seCol.setValue(strokeColor);
+                        var seW = strokeE.property("ADBE Vector Stroke Width") || strokeE.property("Stroke Width") || strokeE.property(2);
+                        if (seW && seW.setValue) seW.setValue(strokeWidth);
+                        var seOp = strokeE.property("ADBE Vector Stroke Opacity") || strokeE.property("Opacity") || strokeE.property(3);
+                        if (seOp && seOp.setValue) seOp.setValue(strokeWidth <= 0.0001 ? 0 : opacityVal);
+                    }
 
                     sliceEndLayer.parent = master;
                     setTransformVal(sliceEndLayer, "Anchor Point", [0, 0, 0]);
@@ -1714,25 +1748,45 @@
                     cap.threeDLayer = true;
                     cap.shy = true;
 
-                    var grp = cap.property("Contents").addProperty("ADBE Vector Group");
+                    var rootVectors = cap.property("ADBE Root Vectors Group") || cap.property("Contents") || (cap.property && cap.property(1));
+                    var grp = rootVectors.addProperty("ADBE Vector Group");
                     grp.name = "Cap Vector";
 
-                    var shapeGroup = grp.property("Contents").addProperty("ADBE Vector Shape - Group");
-                    var fill = grp.property("Contents").addProperty("ADBE Vector Graphic - Fill");
-                    fill.property("Color").setValue(capColor);
-                    fill.property("Opacity").setValue(opacityVal);
+                    var grpContents = grp.property("ADBE Vectors Group") || grp.property("Contents") || (grp.property && grp.property(2)) || (grp.property && grp.property(1));
+                    grpContents.addProperty("ADBE Vector Shape - Group");
+                    grpContents.addProperty("ADBE Vector Graphic - Fill");
+                    grpContents.addProperty("ADBE Vector Graphic - Stroke");
 
-                    var stroke = grp.property("Contents").addProperty("ADBE Vector Graphic - Stroke");
-                    stroke.property("Color").setValue(strokeColor);
-                    stroke.property("Stroke Width").setValue(strokeWidth);
-                    stroke.property("Opacity").setValue(opacityVal);
+                    // Re-query grpContents fresh after all additions to prevent stale references in ExtendScript
+                    grpContents = grp.property("ADBE Vectors Group") || grp.property("Contents") || (grp.property && grp.property(2)) || (grp.property && grp.property(1));
 
-                    var pProp = shapeGroup.property("ADBE Vector Shape") || shapeGroup.property("Path") || shapeGroup.property(1);
-                    if (pProp) {
-                        try {
-                            var initCapShape = computeCapShape(radius, segCount, enableSlice, startAngle, endAngle);
-                            if (initCapShape) pProp.setValue(initCapShape);
-                        } catch (eShape) {}
+                    var shapeGroup = grpContents.property("ADBE Vector Shape - Group") || grpContents.property(1);
+                    if (shapeGroup) {
+                        var pProp = shapeGroup.property("ADBE Vector Shape") || shapeGroup.property("Path") || shapeGroup.property(1);
+                        if (pProp && typeof Shape !== "undefined") {
+                            try {
+                                var initCapShape = computeCapShape(radius, segCount, enableSlice, startAngle, endAngle);
+                                if (initCapShape) pProp.setValue(initCapShape);
+                            } catch (eShape) {}
+                        }
+                    }
+
+                    var fill = grpContents.property("ADBE Vector Graphic - Fill") || grpContents.property(2);
+                    if (fill) {
+                        var fCol = fill.property("ADBE Vector Fill Color") || fill.property("Color") || fill.property(1);
+                        if (fCol && fCol.setValue) fCol.setValue(capColor);
+                        var fOp = fill.property("ADBE Vector Fill Opacity") || fill.property("Opacity") || fill.property(2);
+                        if (fOp && fOp.setValue) fOp.setValue(opacityVal);
+                    }
+
+                    var stroke = grpContents.property("ADBE Vector Graphic - Stroke") || grpContents.property(3);
+                    if (stroke) {
+                        var sCol = stroke.property("ADBE Vector Stroke Color") || stroke.property("Color") || stroke.property(1);
+                        if (sCol && sCol.setValue) sCol.setValue(strokeColor);
+                        var sW = stroke.property("ADBE Vector Stroke Width") || stroke.property("Stroke Width") || stroke.property(2);
+                        if (sW && sW.setValue) sW.setValue(strokeWidth);
+                        var sOp = stroke.property("ADBE Vector Stroke Opacity") || stroke.property("Opacity") || stroke.property(3);
+                        if (sOp && sOp.setValue) sOp.setValue(strokeWidth <= 0.0001 ? 0 : opacityVal);
                     }
 
                     cap.parent = master;
@@ -1747,16 +1801,27 @@
                 var capTop = createCapLayer("Cap_Top", -height / 2, 90, topColor);
                 var capBottom = createCapLayer("Cap_Bottom", height / 2, 90, bottomColor);
 
-                // 5. Precompose: Controller is Layer 1, followed by walls & caps
-                var indices = [master.index];
+                // 5. Precompose: Deduplicate and sort indices ascending (required by AE ExtendScript)
+                var indicesMap = {};
+                if (master && master.index) indicesMap[master.index] = true;
                 for (var ci = 0; ci < createdLayers.length; ci++) {
-                    indices.push(createdLayers[ci].index);
+                    if (createdLayers[ci] && createdLayers[ci].index) {
+                        indicesMap[createdLayers[ci].index] = true;
+                    }
                 }
+                var indices = [];
+                for (var kIdx in indicesMap) {
+                    if (indicesMap.hasOwnProperty(kIdx)) {
+                        indices.push(parseInt(kIdx, 10));
+                    }
+                }
+                indices.sort(function(a, b) { return a - b; });
+
                 var preComp = parentComp.layers.precompose(indices, precompName, true);
 
                 // Center preMaster inside precomp
                 var preCenter = [preComp.width / 2, preComp.height / 2, 0];
-                var preMaster = getLayer(preComp, "Cylinder_Master_Controller") || (preComp.layers && preComp.layers[0]);
+                var preMaster = getLayer(preComp, "Cylinder_Master_Controller") || (preComp.layer ? preComp.layer(1) : (preComp.layers && preComp.layers[0]));
                 if (preMaster) {
                     preMaster.label = 1;
                     preMaster.colorLabel = "#ff3b30";
@@ -1768,17 +1833,19 @@
 
                 // Target precomp layer in parent composition
                 var cylLayer = getLayer(parentComp, precompName) || getLayer(parentComp, 1);
-                cylLayer.name = precompName;
-                cylLayer.threeDLayer = true;
-                if ("collapseTransformation" in cylLayer) {
-                    cylLayer.collapseTransformation = true;
+                if (cylLayer) {
+                    cylLayer.name = precompName;
+                    cylLayer.threeDLayer = true;
+                    if ("collapseTransformation" in cylLayer) {
+                        cylLayer.collapseTransformation = true;
+                    }
+                    cylLayer.label = 1;
+                    cylLayer.colorLabel = "#ff3b30";
+                    cylLayer.notShyable = true;
+                    setTransformVal(cylLayer, "Anchor Point", preCenter);
+                    setTransformVal(cylLayer, "Position", center);
+                    if (cylLayer.moveToBeginning) cylLayer.moveToBeginning();
                 }
-                cylLayer.label = 1;
-                cylLayer.colorLabel = "#ff3b30";
-                cylLayer.notShyable = true;
-                setTransformVal(cylLayer, "Anchor Point", preCenter);
-                setTransformVal(cylLayer, "Position", center);
-                if (cylLayer.moveToBeginning) cylLayer.moveToBeginning();
 
                 // 6. MASTER CONTROLS ON PARENT COMPOSITION:
                 function addMasterProp(type, name, val) {
@@ -1833,7 +1900,8 @@
                 var exprBottomColor = 'try { thisComp.layer("Cylinder_Master_Controller").effect("Bottom Color")("Color").value; } catch(e) { value; }';
                 var exprOpacity = 'try { thisComp.layer("Cylinder_Master_Controller").effect("Opacity")("Slider").value; } catch(e) { value; }';
                 var exprStrokeColor = 'try { thisComp.layer("Cylinder_Master_Controller").effect("Stroke Color")("Color").value; } catch(e) { value; }';
-                var exprStrokeWidth = 'try { thisComp.layer("Cylinder_Master_Controller").effect("Stroke Width")("Slider").value; } catch(e) { value; }';
+                var exprStrokeWidth = 'try { Math.max(0, thisComp.layer("Cylinder_Master_Controller").effect("Stroke Width")("Slider").value); } catch(e) { value; }';
+                var exprStrokeOpacity = 'try { var sw = thisComp.layer("Cylinder_Master_Controller").effect("Stroke Width")("Slider").value; var op = thisComp.layer("Cylinder_Master_Controller").effect("Opacity")("Slider").value; (sw <= 0.0001) ? 0 : op; } catch(e) { value; }';
 
                 // Expressions on Wall segments
                 for (var wi = 0; wi < segCount; wi++) {
@@ -1841,56 +1909,68 @@
                     if (wLayer && preMaster) {
                         wLayer.parent = preMaster;
 
-                        var wExprPos = 'var m = thisComp.layer("Cylinder_Master_Controller");\n' +
-                            'var r = m.effect("Radius")("Slider").value;\n' +
-                            'var n = Math.max(3, Math.round(m.effect("Rotation Segments")("Slider").value));\n' +
-                            'var slice = m.effect("Enable Slice")("Checkbox").value > 0;\n' +
-                            'var a0 = slice ? m.effect("Start Angle")("Slider").value : 0;\n' +
-                            'var a1 = slice ? m.effect("End Angle")("Slider").value : 360;\n' +
-                            'var span = a1 - a0;\n' +
-                            'var alpha = (Math.abs(span) / n) * (Math.PI / 180);\n' +
-                            'var rMid = r * Math.cos(alpha / 2);\n' +
-                            'var theta = a0 + (' + wi + ' + 0.5) * (span / n);\n' +
-                            'var rad = theta * (Math.PI / 180);\n' +
+                        var wExprPos = 'var m = thisComp.layer("Cylinder_Master_Controller");\\n' +
+                            'var r = m.effect("Radius")("Slider").value;\\n' +
+                            'var n = Math.max(3, Math.round(m.effect("Rotation Segments")("Slider").value));\\n' +
+                            'var slice = m.effect("Enable Slice")("Checkbox").value > 0;\\n' +
+                            'var a0 = slice ? m.effect("Start Angle")("Slider").value : 0;\\n' +
+                            'var a1 = slice ? m.effect("End Angle")("Slider").value : 360;\\n' +
+                            'var span = a1 - a0;\\n' +
+                            'var alpha = (Math.abs(span) / n) * (Math.PI / 180);\\n' +
+                            'var rMid = r * Math.cos(alpha / 2);\\n' +
+                            'var theta = a0 + (' + wi + ' + 0.5) * (span / n);\\n' +
+                            'var rad = theta * (Math.PI / 180);\\n' +
                             '[rMid * Math.sin(rad), 0, -rMid * Math.cos(rad)];';
 
-                        var wExprRot = 'var m = thisComp.layer("Cylinder_Master_Controller");\n' +
-                            'var n = Math.max(3, Math.round(m.effect("Rotation Segments")("Slider").value));\n' +
-                            'var slice = m.effect("Enable Slice")("Checkbox").value > 0;\n' +
-                            'var a0 = slice ? m.effect("Start Angle")("Slider").value : 0;\n' +
-                            'var a1 = slice ? m.effect("End Angle")("Slider").value : 360;\n' +
-                            'var span = a1 - a0;\n' +
-                            'var theta = a0 + (' + wi + ' + 0.5) * (span / n);\n' +
+                        var wExprRot = 'var m = thisComp.layer("Cylinder_Master_Controller");\\n' +
+                            'var n = Math.max(3, Math.round(m.effect("Rotation Segments")("Slider").value));\\n' +
+                            'var slice = m.effect("Enable Slice")("Checkbox").value > 0;\\n' +
+                            'var a0 = slice ? m.effect("Start Angle")("Slider").value : 0;\\n' +
+                            'var a1 = slice ? m.effect("End Angle")("Slider").value : 360;\\n' +
+                            'var span = a1 - a0;\\n' +
+                            'var theta = a0 + (' + wi + ' + 0.5) * (span / n);\\n' +
                             '[0, -theta, 0];';
 
-                        var wExprSize = 'var m = thisComp.layer("Cylinder_Master_Controller");\n' +
-                            'var r = m.effect("Radius")("Slider").value;\n' +
-                            'var h = m.effect("Extrude Distance")("Slider").value;\n' +
-                            'var n = Math.max(3, Math.round(m.effect("Rotation Segments")("Slider").value));\n' +
-                            'var slice = m.effect("Enable Slice")("Checkbox").value > 0;\n' +
-                            'var a0 = slice ? m.effect("Start Angle")("Slider").value : 0;\n' +
-                            'var a1 = slice ? m.effect("End Angle")("Slider").value : 360;\n' +
-                            'var alpha = (Math.abs(a1 - a0) / n) * (Math.PI / 180);\n' +
-                            'var chord = Math.max(1, 2 * r * Math.sin(alpha / 2));\n' +
+                        var wExprSize = 'var m = thisComp.layer("Cylinder_Master_Controller");\\n' +
+                            'var r = m.effect("Radius")("Slider").value;\\n' +
+                            'var h = m.effect("Extrude Distance")("Slider").value;\\n' +
+                            'var n = Math.max(3, Math.round(m.effect("Rotation Segments")("Slider").value));\\n' +
+                            'var slice = m.effect("Enable Slice")("Checkbox").value > 0;\\n' +
+                            'var a0 = slice ? m.effect("Start Angle")("Slider").value : 0;\\n' +
+                            'var a1 = slice ? m.effect("End Angle")("Slider").value : 360;\\n' +
+                            'var alpha = (Math.abs(a1 - a0) / n) * (Math.PI / 180);\\n' +
+                            'var chord = Math.max(1, 2 * r * Math.sin(alpha / 2));\\n' +
                             '[chord, h];';
 
                         setTransformExpr(wLayer, "Position", wExprPos);
                         setTransformExpr(wLayer, "Orientation", wExprRot);
 
-                        var wGrp = wLayer.property("Contents") ? (wLayer.property("Contents").property("Wall Vector") || wLayer.property("Contents").property(1)) : null;
+                        var wRoot = wLayer.property("ADBE Root Vectors Group") || wLayer.property("Contents") || (wLayer.property && wLayer.property(1));
+                        var wGrp = wRoot ? (wRoot.property("Wall Vector") || wRoot.property(1)) : null;
                         if (wGrp) {
-                            var wRect = wGrp.property("Contents").property("ADBE Vector Shape - Rect");
-                            if (wRect) wRect.property("Size").expression = wExprSize;
-                            var wFill = wGrp.property("Contents").property("ADBE Vector Graphic - Fill");
-                            if (wFill) {
-                                wFill.property("Color").expression = exprWallsColor;
-                                wFill.property("Opacity").expression = exprOpacity;
-                            }
-                            var wStroke = wGrp.property("Contents").property("ADBE Vector Graphic - Stroke");
-                            if (wStroke) {
-                                wStroke.property("Color").expression = exprStrokeColor;
-                                wStroke.property("Stroke Width").expression = exprStrokeWidth;
-                                wStroke.property("Opacity").expression = exprOpacity;
+                            var wContents = wGrp.property("ADBE Vectors Group") || wGrp.property("Contents") || (wGrp.property && wGrp.property(2)) || (wGrp.property && wGrp.property(1));
+                            if (wContents) {
+                                var wRect = wContents.property("ADBE Vector Shape - Rect") || wContents.property(1);
+                                if (wRect) {
+                                    var wrSize = wRect.property("ADBE Vector Rect Size") || wRect.property("Size") || wRect.property(2) || wRect.property(1);
+                                    if (wrSize) wrSize.expression = wExprSize;
+                                }
+                                var wFill = wContents.property("ADBE Vector Graphic - Fill") || wContents.property(2);
+                                if (wFill) {
+                                    var wfCol = wFill.property("ADBE Vector Fill Color") || wFill.property("Color") || wFill.property(1);
+                                    if (wfCol) wfCol.expression = exprWallsColor;
+                                    var wfOp = wFill.property("ADBE Vector Fill Opacity") || wFill.property("Opacity") || wFill.property(2);
+                                    if (wfOp) wfOp.expression = exprOpacity;
+                                }
+                                var wStroke = wContents.property("ADBE Vector Graphic - Stroke") || wContents.property(3);
+                                if (wStroke) {
+                                    var wsCol = wStroke.property("ADBE Vector Stroke Color") || wStroke.property("Color") || wStroke.property(1);
+                                    if (wsCol) wsCol.expression = exprStrokeColor;
+                                    var wsW = wStroke.property("ADBE Vector Stroke Width") || wStroke.property("Stroke Width") || wStroke.property(2);
+                                    if (wsW) wsW.expression = exprStrokeWidth;
+                                    var wsOp = wStroke.property("ADBE Vector Stroke Opacity") || wStroke.property("Opacity") || wStroke.property(3);
+                                    if (wsOp) wsOp.expression = exprStrokeOpacity;
+                                }
                             }
                         }
                     }
@@ -1906,28 +1986,47 @@
                         setTransformVal(sLayer, "Position", [(radius / 2) * Math.sin(sRad), 0, -(radius / 2) * Math.cos(sRad)]);
                         setTransformVal(sLayer, "Orientation", [0, 90 - startAngle, 0]);
 
-                        var sExprPos = 'var m = thisComp.layer("Cylinder_Master_Controller");\n' +
-                            'var r = m.effect("Radius")("Slider").value;\n' +
-                            'var a0 = m.effect("Start Angle")("Slider").value * (Math.PI / 180);\n' +
+                        var sExprPos = 'var m = thisComp.layer("Cylinder_Master_Controller");\\n' +
+                            'var r = m.effect("Radius")("Slider").value;\\n' +
+                            'var a0 = m.effect("Start Angle")("Slider").value * (Math.PI / 180);\\n' +
                             '[(r / 2) * Math.sin(a0), 0, -(r / 2) * Math.cos(a0)];';
-                        var sExprRot = 'var m = thisComp.layer("Cylinder_Master_Controller");\n' +
-                            'var a0 = m.effect("Start Angle")("Slider").value;\n' +
+                        var sExprRot = 'var m = thisComp.layer("Cylinder_Master_Controller");\\n' +
+                            'var a0 = m.effect("Start Angle")("Slider").value;\\n' +
                             '[0, 90 - a0, 0];';
-                        var sExprSize = 'var m = thisComp.layer("Cylinder_Master_Controller");\n' +
-                            'var r = m.effect("Radius")("Slider").value;\n' +
-                            'var h = m.effect("Extrude Distance")("Slider").value;\n' +
+                        var sExprSize = 'var m = thisComp.layer("Cylinder_Master_Controller");\\n' +
+                            'var r = m.effect("Radius")("Slider").value;\\n' +
+                            'var h = m.effect("Extrude Distance")("Slider").value;\\n' +
                             '[r, h];';
 
                         setTransformExpr(sLayer, "Position", sExprPos);
                         setTransformExpr(sLayer, "Orientation", sExprRot);
-                        var sGrp = sLayer.property("Contents") ? (sLayer.property("Contents").property("Slice Vector") || sLayer.property("Contents").property(1)) : null;
+                        var sRoot = sLayer.property("ADBE Root Vectors Group") || sLayer.property("Contents") || (sLayer.property && sLayer.property(1));
+                        var sGrp = sRoot ? (sRoot.property("Slice Vector") || sRoot.property(1)) : null;
                         if (sGrp) {
-                            var sR = sGrp.property("Contents").property("ADBE Vector Shape - Rect");
-                            if (sR) sR.property("Size").expression = sExprSize;
-                            var sFl = sGrp.property("Contents").property("ADBE Vector Graphic - Fill");
-                            if (sFl) { sFl.property("Color").expression = exprWallsColor; sFl.property("Opacity").expression = exprOpacity; }
-                            var sSt = sGrp.property("Contents").property("ADBE Vector Graphic - Stroke");
-                            if (sSt) { sSt.property("Color").expression = exprStrokeColor; sSt.property("Stroke Width").expression = exprStrokeWidth; sSt.property("Opacity").expression = exprOpacity; }
+                            var sContents = sGrp.property("ADBE Vectors Group") || sGrp.property("Contents") || (grp && grp.property(2)) || (sGrp.property && sGrp.property(1));
+                            if (sContents) {
+                                var sR = sContents.property("ADBE Vector Shape - Rect") || sContents.property(1);
+                                if (sR) {
+                                    var srSize = sR.property("ADBE Vector Rect Size") || sR.property("Size") || sR.property(2) || sR.property(1);
+                                    if (srSize) srSize.expression = sExprSize;
+                                }
+                                var sFl = sContents.property("ADBE Vector Graphic - Fill") || sContents.property(2);
+                                if (sFl) {
+                                    var sfCol = sFl.property("ADBE Vector Fill Color") || sFl.property("Color") || sFl.property(1);
+                                    if (sfCol) sfCol.expression = exprWallsColor;
+                                    var sfOp = sFl.property("ADBE Vector Fill Opacity") || sFl.property("Opacity") || sFl.property(2);
+                                    if (sfOp) sfOp.expression = exprOpacity;
+                                }
+                                var sSt = sContents.property("ADBE Vector Graphic - Stroke") || sContents.property(3);
+                                if (sSt) {
+                                    var ssCol = sSt.property("ADBE Vector Stroke Color") || sSt.property("Color") || sSt.property(1);
+                                    if (ssCol) ssCol.expression = exprStrokeColor;
+                                    var ssW = sSt.property("ADBE Vector Stroke Width") || sSt.property("Stroke Width") || sSt.property(2);
+                                    if (ssW) ssW.expression = exprStrokeWidth;
+                                    var ssOp = sSt.property("ADBE Vector Stroke Opacity") || sSt.property("Opacity") || sSt.property(3);
+                                    if (ssOp) ssOp.expression = exprStrokeOpacity;
+                                }
+                            }
                         }
                     }
                 }
@@ -1941,59 +2040,77 @@
                         setTransformVal(eLayer, "Position", [(radius / 2) * Math.sin(eRad), 0, -(radius / 2) * Math.cos(eRad)]);
                         setTransformVal(eLayer, "Orientation", [0, 90 - endAngle, 0]);
 
-                        var eExprPos = 'var m = thisComp.layer("Cylinder_Master_Controller");\n' +
-                            'var r = m.effect("Radius")("Slider").value;\n' +
-                            'var a1 = m.effect("End Angle")("Slider").value * (Math.PI / 180);\n' +
+                        var eExprPos = 'var m = thisComp.layer("Cylinder_Master_Controller");\\n' +
+                            'var r = m.effect("Radius")("Slider").value;\\n' +
+                            'var a1 = m.effect("End Angle")("Slider").value * (Math.PI / 180);\\n' +
                             '[(r / 2) * Math.sin(a1), 0, -(r / 2) * Math.cos(a1)];';
-                        var eExprRot = 'var m = thisComp.layer("Cylinder_Master_Controller");\n' +
-                            'var a1 = m.effect("End Angle")("Slider").value;\n' +
+                        var eExprRot = 'var m = thisComp.layer("Cylinder_Master_Controller");\\n' +
+                            'var a1 = m.effect("End Angle")("Slider").value;\\n' +
                             '[0, 90 - a1, 0];';
-                        var eExprSize = 'var m = thisComp.layer("Cylinder_Master_Controller");\n' +
-                            'var r = m.effect("Radius")("Slider").value;\n' +
-                            'var h = m.effect("Extrude Distance")("Slider").value;\n' +
+                        var eExprSize = 'var m = thisComp.layer("Cylinder_Master_Controller");\\n' +
+                            'var r = m.effect("Radius")("Slider").value;\\n' +
+                            'var h = m.effect("Extrude Distance")("Slider").value;\\n' +
                             '[r, h];';
 
                         setTransformExpr(eLayer, "Position", eExprPos);
                         setTransformExpr(eLayer, "Orientation", eExprRot);
-                        var eGrp = eLayer.property("Contents") ? (eLayer.property("Contents").property("Slice Vector") || eLayer.property("Contents").property(1)) : null;
+                        var eRoot = eLayer.property("ADBE Root Vectors Group") || eLayer.property("Contents") || (eLayer.property && eLayer.property(1));
+                        var eGrp = eRoot ? (eRoot.property("Slice Vector") || eRoot.property(1)) : null;
                         if (eGrp) {
-                            var eR = eGrp.property("Contents").property("ADBE Vector Shape - Rect");
-                            if (eR) eR.property("Size").expression = eExprSize;
-                            var eFl = eGrp.property("Contents").property("ADBE Vector Graphic - Fill");
-                            if (eFl) { eFl.property("Color").expression = exprWallsColor; eFl.property("Opacity").expression = exprOpacity; }
-                            var eSt = eGrp.property("Contents").property("ADBE Vector Graphic - Stroke");
-                            if (eSt) { eSt.property("Color").expression = exprStrokeColor; eSt.property("Stroke Width").expression = exprStrokeWidth; eSt.property("Opacity").expression = exprOpacity; }
+                            var eContents = eGrp.property("ADBE Vectors Group") || eGrp.property("Contents") || (eGrp.property && eGrp.property(2)) || (eGrp.property && eGrp.property(1));
+                            if (eContents) {
+                                var eR = eContents.property("ADBE Vector Shape - Rect") || eContents.property(1);
+                                if (eR) {
+                                    var erSize = eR.property("ADBE Vector Rect Size") || eR.property("Size") || eR.property(2) || eR.property(1);
+                                    if (erSize) erSize.expression = eExprSize;
+                                }
+                                var eFl = eContents.property("ADBE Vector Graphic - Fill") || eContents.property(2);
+                                if (eFl) {
+                                    var efCol = eFl.property("ADBE Vector Fill Color") || eFl.property("Color") || eFl.property(1);
+                                    if (efCol) efCol.expression = exprWallsColor;
+                                    var efOp = eFl.property("ADBE Vector Fill Opacity") || eFl.property("Opacity") || eFl.property(2);
+                                    if (efOp) efOp.expression = exprOpacity;
+                                }
+                                var eSt = eContents.property("ADBE Vector Graphic - Stroke") || eContents.property(3);
+                                if (eSt) {
+                                    var esCol = eSt.property("ADBE Vector Stroke Color") || eSt.property("Color") || eSt.property(1);
+                                    if (esCol) esCol.expression = exprStrokeColor;
+                                    var esW = eSt.property("ADBE Vector Stroke Width") || eSt.property("Stroke Width") || eSt.property(2);
+                                    if (esW) esW.expression = exprStrokeWidth;
+                                    var esOp = eSt.property("ADBE Vector Stroke Opacity") || eSt.property("Opacity") || eSt.property(3);
+                                    if (esOp) esOp.expression = exprStrokeOpacity;
+                                }
+                            }
                         }
                     }
                 }
 
                 // Cap Generator Expression (Dynamic Pie Slice or Circle Path)
-                var exprCapPath = 'var m = thisComp.layer("Cylinder_Master_Controller");\n' +
-                    'var r = Math.max(0.001, m.effect("Radius")("Slider").value);\n' +
-                    'var n = Math.max(3, Math.round(m.effect("Rotation Segments")("Slider").value));\n' +
-                    'var slice = m.effect("Enable Slice")("Checkbox").value > 0;\n' +
-                    'var a0 = slice ? m.effect("Start Angle")("Slider").value : 0;\n' +
-                    'var a1 = slice ? m.effect("End Angle")("Slider").value : 360;\n' +
-                    'var span = a1 - a0;\n' +
-                    'var isFull = !slice || Math.abs(span) >= 359.99;\n' +
-                    'var verts = [];\n' +
-                    'var ins = [];\n' +
-                    'var outs = [];\n' +
-                    'var Z = [0, 0];\n' +
-                    'if (isFull) {\n' +
-                    '  for (var j = 0; j < n; j++) {\n' +
-                    '    var phi = (j / n) * 2 * Math.PI;\n' +
-                    '    verts.push([r * Math.sin(phi), -r * Math.cos(phi)]);\n' +
-                    '    ins.push(Z); outs.push(Z);\n' +
-                    '  }\n' +
-                    '} else {\n' +
-                    '  verts.push([0, 0]); ins.push(Z); outs.push(Z);\n' +
-                    '  for (var j = 0; j <= n; j++) {\n' +
-                    '    var phi = (a0 + j * (span / n)) * (Math.PI / 180);\n' +
-                    '    verts.push([r * Math.sin(phi), -r * Math.cos(phi)]);\n' +
-                    '    ins.push(Z); outs.push(Z);\n' +
-                    '  }\n' +
-                    '}\n' +
+                var exprCapPath = 'var m = thisComp.layer("Cylinder_Master_Controller");\\n' +
+                    'var r = Math.max(0.001, m.effect("Radius")("Slider").value);\\n' +
+                    'var n = Math.max(3, Math.round(m.effect("Rotation Segments")("Slider").value));\\n' +
+                    'var slice = m.effect("Enable Slice")("Checkbox").value > 0;\\n' +
+                    'var a0 = slice ? m.effect("Start Angle")("Slider").value : 0;\\n' +
+                    'var a1 = slice ? m.effect("End Angle")("Slider").value : 360;\\n' +
+                    'var span = a1 - a0;\\n' +
+                    'var isFull = !slice || Math.abs(span) >= 359.99;\\n' +
+                    'var verts = [];\\n' +
+                    'var ins = [];\\n' +
+                    'var outs = [];\\n' +
+                    'if (isFull) {\\n' +
+                    '  for (var j = 0; j < n; j++) {\\n' +
+                    '    var phi = (j / n) * 2 * Math.PI;\\n' +
+                    '    verts.push([r * Math.sin(phi), -r * Math.cos(phi)]);\\n' +
+                    '    ins.push([0, 0]); outs.push([0, 0]);\\n' +
+                    '  }\\n' +
+                    '} else {\\n' +
+                    '  verts.push([0, 0]); ins.push([0, 0]); outs.push([0, 0]);\\n' +
+                    '  for (var j = 0; j <= n; j++) {\\n' +
+                    '    var phi = (a0 + j * (span / n)) * (Math.PI / 180);\\n' +
+                    '    verts.push([r * Math.sin(phi), -r * Math.cos(phi)]);\\n' +
+                    '    ins.push([0, 0]); outs.push([0, 0]);\\n' +
+                    '  }\\n' +
+                    '}\\n' +
                     'createPath(verts, ins, outs, true);';
 
                 // Expressions on Cap_Top
@@ -2004,28 +2121,44 @@
                     setTransformVal(preCapTop, "Position", [0, -height / 2, 0]);
                     setTransformVal(preCapTop, "Orientation", [90, 0, 0]);
 
-                    var exprTopPos = 'var m = thisComp.layer("Cylinder_Master_Controller");\n' +
-                        'var h = m.effect("Extrude Distance")("Slider").value;\n' +
+                    var exprTopPos = 'var m = thisComp.layer("Cylinder_Master_Controller");\\n' +
+                        'var h = m.effect("Extrude Distance")("Slider").value;\\n' +
                         '[0, -h / 2, 0];';
                     setTransformExpr(preCapTop, "Position", exprTopPos);
 
-                    var topGrp = preCapTop.property("Contents") ? (preCapTop.property("Contents").property("Cap Vector") || preCapTop.property("Contents").property(1)) : null;
+                    var topRoot = preCapTop.property("ADBE Root Vectors Group") || preCapTop.property("Contents") || (preCapTop.property && preCapTop.property(1));
+                    var topGrp = topRoot ? (topRoot.property("Cap Vector") || topRoot.property(1)) : null;
                     if (topGrp) {
-                        var topShape = topGrp.property("Contents").property("ADBE Vector Shape - Group") || topGrp.property("Contents").property(1);
-                        if (topShape) {
-                            var pProp = topShape.property("ADBE Vector Shape") || topShape.property("Path") || topShape.property(1);
-                            if (pProp) {
-                                try {
-                                    var initTShape = computeCapShape(radius, segCount, enableSlice, startAngle, endAngle);
-                                    if (initTShape) pProp.setValue(initTShape);
-                                } catch (eTopS) {}
-                                pProp.expression = exprCapPath;
+                        var topContents = topGrp.property("ADBE Vectors Group") || topGrp.property("Contents") || (topGrp.property && topGrp.property(2)) || (topGrp.property && topGrp.property(1));
+                        if (topContents) {
+                            var topShape = topContents.property("ADBE Vector Shape - Group") || topContents.property(1);
+                            if (topShape) {
+                                var pProp = topShape.property("ADBE Vector Shape") || topShape.property("Path") || topShape.property(1);
+                                if (pProp) {
+                                    try {
+                                        var initTShape = computeCapShape(radius, segCount, enableSlice, startAngle, endAngle);
+                                        if (initTShape) pProp.setValue(initTShape);
+                                    } catch (eTopS) {}
+                                    pProp.expression = exprCapPath;
+                                }
+                            }
+                            var topFl = topContents.property("ADBE Vector Graphic - Fill") || topContents.property(2);
+                            if (topFl) {
+                                var tfCol = topFl.property("ADBE Vector Fill Color") || topFl.property("Color") || topFl.property(1);
+                                if (tfCol) tfCol.expression = exprTopColor;
+                                var tfOp = topFl.property("ADBE Vector Fill Opacity") || topFl.property("Opacity") || topFl.property(2);
+                                if (tfOp) tfOp.expression = exprOpacity;
+                            }
+                            var topSt = topContents.property("ADBE Vector Graphic - Stroke") || topContents.property(3);
+                            if (topSt) {
+                                var tsCol = topSt.property("ADBE Vector Stroke Color") || topSt.property("Color") || topSt.property(1);
+                                if (tsCol) tsCol.expression = exprStrokeColor;
+                                var tsW = topSt.property("ADBE Vector Stroke Width") || topSt.property("Stroke Width") || topSt.property(2);
+                                if (tsW) tsW.expression = exprStrokeWidth;
+                                var tsOp = topSt.property("ADBE Vector Stroke Opacity") || topSt.property("Opacity") || topSt.property(3);
+                                if (tsOp) tsOp.expression = exprStrokeOpacity;
                             }
                         }
-                        var topFl = topGrp.property("Contents").property("ADBE Vector Graphic - Fill");
-                        if (topFl) { topFl.property("Color").expression = exprTopColor; topFl.property("Opacity").expression = exprOpacity; }
-                        var topSt = topGrp.property("Contents").property("ADBE Vector Graphic - Stroke");
-                        if (topSt) { topSt.property("Color").expression = exprStrokeColor; topSt.property("Stroke Width").expression = exprStrokeWidth; topSt.property("Opacity").expression = exprOpacity; }
                     }
                 }
 
@@ -2037,28 +2170,44 @@
                     setTransformVal(preCapBot, "Position", [0, height / 2, 0]);
                     setTransformVal(preCapBot, "Orientation", [90, 0, 0]);
 
-                    var exprBotPos = 'var m = thisComp.layer("Cylinder_Master_Controller");\n' +
-                        'var h = m.effect("Extrude Distance")("Slider").value;\n' +
+                    var exprBotPos = 'var m = thisComp.layer("Cylinder_Master_Controller");\\n' +
+                        'var h = m.effect("Extrude Distance")("Slider").value;\\n' +
                         '[0, h / 2, 0];';
                     setTransformExpr(preCapBot, "Position", exprBotPos);
 
-                    var botGrp = preCapBot.property("Contents") ? (preCapBot.property("Contents").property("Cap Vector") || preCapBot.property("Contents").property(1)) : null;
+                    var botRoot = preCapBot.property("ADBE Root Vectors Group") || preCapBot.property("Contents") || (preCapBot.property && preCapBot.property(1));
+                    var botGrp = botRoot ? (botRoot.property("Cap Vector") || botRoot.property(1)) : null;
                     if (botGrp) {
-                        var botShape = botGrp.property("Contents").property("ADBE Vector Shape - Group") || botGrp.property("Contents").property(1);
-                        if (botShape) {
-                            var bpProp = botShape.property("ADBE Vector Shape") || botShape.property("Path") || botShape.property(1);
-                            if (bpProp) {
-                                try {
-                                    var initBShape = computeCapShape(radius, segCount, enableSlice, startAngle, endAngle);
-                                    if (initBShape) bpProp.setValue(initBShape);
-                                } catch (eBotS) {}
-                                bpProp.expression = exprCapPath;
+                        var botContents = botGrp.property("ADBE Vectors Group") || botGrp.property("Contents") || (botGrp.property && botGrp.property(2)) || (botGrp.property && botGrp.property(1));
+                        if (botContents) {
+                            var botShape = botContents.property("ADBE Vector Shape - Group") || botContents.property(1);
+                            if (botShape) {
+                                var bpProp = botShape.property("ADBE Vector Shape") || botShape.property("Path") || botShape.property(1);
+                                if (bpProp) {
+                                    try {
+                                        var initBShape = computeCapShape(radius, segCount, enableSlice, startAngle, endAngle);
+                                        if (initBShape) bpProp.setValue(initBShape);
+                                    } catch (eBotS) {}
+                                    bpProp.expression = exprCapPath;
+                                }
+                            }
+                            var botFl = botContents.property("ADBE Vector Graphic - Fill") || botContents.property(2);
+                            if (botFl) {
+                                var bfCol = botFl.property("ADBE Vector Fill Color") || botFl.property("Color") || botFl.property(1);
+                                if (bfCol) bfCol.expression = exprBottomColor;
+                                var bfOp = botFl.property("ADBE Vector Fill Opacity") || botFl.property("Opacity") || botFl.property(2);
+                                if (bfOp) bfOp.expression = exprOpacity;
+                            }
+                            var botSt = botContents.property("ADBE Vector Graphic - Stroke") || botContents.property(3);
+                            if (botSt) {
+                                var bsCol = botSt.property("ADBE Vector Stroke Color") || botSt.property("Color") || botSt.property(1);
+                                if (bsCol) bsCol.expression = exprStrokeColor;
+                                var bsW = botSt.property("ADBE Vector Stroke Width") || botSt.property("Stroke Width") || botSt.property(2);
+                                if (bsW) bsW.expression = exprStrokeWidth;
+                                var bsOp = botSt.property("ADBE Vector Stroke Opacity") || botSt.property("Opacity") || botSt.property(3);
+                                if (bsOp) bsOp.expression = exprStrokeOpacity;
                             }
                         }
-                        var botFl = botGrp.property("Contents").property("ADBE Vector Graphic - Fill");
-                        if (botFl) { botFl.property("Color").expression = exprBottomColor; botFl.property("Opacity").expression = exprOpacity; }
-                        var botSt = botGrp.property("Contents").property("ADBE Vector Graphic - Stroke");
-                        if (botSt) { botSt.property("Color").expression = exprStrokeColor; botSt.property("Stroke Width").expression = exprStrokeWidth; botSt.property("Opacity").expression = exprOpacity; }
                     }
                 }
 
@@ -2085,38 +2234,50 @@
                 }
             }
 
+            function setLayerEffectVal(layer, effName, val) {
+                if (!layer) return;
+                var parade = layer.property("ADBE Effect Parade") || layer.property("Effects");
+                if (parade) {
+                    var eff = parade.property(effName);
+                    if (eff) {
+                        var p = eff.property(1) || eff.property("Slider") || eff.property("Checkbox") || eff.property("Color");
+                        if (p && p.setValue) p.setValue(val);
+                    }
+                }
+            }
+
             // 1. Update Master Effect Controls on the parent comp's cylinder_maker layer
             var cylLayer = getLayer(parentComp, currentPrecompName) || getLayer(parentComp, 1);
             if (cylLayer) {
-                var effR = cylLayer.effect("Radius"); if (effR) effR.property("Slider").setValue(radius);
-                var effH = cylLayer.effect("Extrude Distance"); if (effH) effH.property("Slider").setValue(height);
-                var effSeg = cylLayer.effect("Rotation Segments"); if (effSeg) effSeg.property("Slider").setValue(segCount);
-                var effSl = cylLayer.effect("Enable Slice"); if (effSl) effSl.property("Checkbox").setValue(enableSlice ? 1 : 0);
-                var effS0 = cylLayer.effect("Start Angle"); if (effS0) effS0.property("Slider").setValue(startAngle);
-                var effS1 = cylLayer.effect("End Angle"); if (effS1) effS1.property("Slider").setValue(endAngle);
-                var effTC = cylLayer.effect("Top Color"); if (effTC) effTC.property("Color").setValue(topColor);
-                var effWC = cylLayer.effect("Walls Color"); if (effWC) effWC.property("Color").setValue(wallsColor);
-                var effBC = cylLayer.effect("Bottom Color"); if (effBC) effBC.property("Color").setValue(bottomColor);
-                var effOp = cylLayer.effect("Opacity"); if (effOp) effOp.property("Slider").setValue(opacityVal);
-                var effStC = cylLayer.effect("Stroke Color"); if (effStC) effStC.property("Color").setValue(strokeColor);
-                var effSW = cylLayer.effect("Stroke Width"); if (effSW) effSW.property("Slider").setValue(strokeWidth);
+                setLayerEffectVal(cylLayer, "Radius", radius);
+                setLayerEffectVal(cylLayer, "Extrude Distance", height);
+                setLayerEffectVal(cylLayer, "Rotation Segments", segCount);
+                setLayerEffectVal(cylLayer, "Enable Slice", enableSlice ? 1 : 0);
+                setLayerEffectVal(cylLayer, "Start Angle", startAngle);
+                setLayerEffectVal(cylLayer, "End Angle", endAngle);
+                setLayerEffectVal(cylLayer, "Top Color", topColor);
+                setLayerEffectVal(cylLayer, "Walls Color", wallsColor);
+                setLayerEffectVal(cylLayer, "Bottom Color", bottomColor);
+                setLayerEffectVal(cylLayer, "Opacity", opacityVal);
+                setLayerEffectVal(cylLayer, "Stroke Color", strokeColor);
+                setLayerEffectVal(cylLayer, "Stroke Width", strokeWidth);
             }
 
             var targetComp = preComp || parentComp;
             var master = getLayer(targetComp, "Cylinder_Master_Controller");
             if (master) {
-                var effR = master.effect("Radius"); if (effR) effR.property("Slider").setValue(radius);
-                var effH = master.effect("Extrude Distance"); if (effH) effH.property("Slider").setValue(height);
-                var effSeg = master.effect("Rotation Segments"); if (effSeg) effSeg.property("Slider").setValue(segCount);
-                var effSl = master.effect("Enable Slice"); if (effSl) effSl.property("Checkbox").setValue(enableSlice ? 1 : 0);
-                var effS0 = master.effect("Start Angle"); if (effS0) effS0.property("Slider").setValue(startAngle);
-                var effS1 = master.effect("End Angle"); if (effS1) effS1.property("Slider").setValue(endAngle);
-                var effTC = master.effect("Top Color"); if (effTC) effTC.property("Color").setValue(topColor);
-                var effWC = master.effect("Walls Color"); if (effWC) effWC.property("Color").setValue(wallsColor);
-                var effBC = master.effect("Bottom Color"); if (effBC) effBC.property("Color").setValue(bottomColor);
-                var effOp = master.effect("Opacity"); if (effOp) effOp.property("Slider").setValue(opacityVal);
-                var effStC = master.effect("Stroke Color"); if (effStC) effStC.property("Color").setValue(strokeColor);
-                var effSW = master.effect("Stroke Width"); if (effSW) effSW.property("Slider").setValue(strokeWidth);
+                setLayerEffectVal(master, "Radius", radius);
+                setLayerEffectVal(master, "Extrude Distance", height);
+                setLayerEffectVal(master, "Rotation Segments", segCount);
+                setLayerEffectVal(master, "Enable Slice", enableSlice ? 1 : 0);
+                setLayerEffectVal(master, "Start Angle", startAngle);
+                setLayerEffectVal(master, "End Angle", endAngle);
+                setLayerEffectVal(master, "Top Color", topColor);
+                setLayerEffectVal(master, "Walls Color", wallsColor);
+                setLayerEffectVal(master, "Bottom Color", bottomColor);
+                setLayerEffectVal(master, "Opacity", opacityVal);
+                setLayerEffectVal(master, "Stroke Color", strokeColor);
+                setLayerEffectVal(master, "Stroke Width", strokeWidth);
             }
         }
     }
@@ -2635,6 +2796,7 @@ $.writeln("Shapes showcase created: Square, Circle, and Bézier Star!");
             try {
                 var layer = comp.layers.addShape();
                 layer.name = "Pie Slice Shape";
+                layer.notShyable = true;
 
                 function addSlider(name, value) {
                     var parade = layer.property("ADBE Effect Parade");
@@ -2682,6 +2844,25 @@ $.writeln("Shapes showcase created: Square, Circle, and Bézier Star!");
                 alert("Could not create Pie Slice Shape:\\n" + err.toString());
             } finally {
                 app.endUndoGroup();
+            }
+        };
+
+        // --- Bottom Subtle Repository Link ---
+        var grpRepoLink = panel.add("group");
+        grpRepoLink.orientation = "row";
+        grpRepoLink.alignment = ["fill", "bottom"];
+        grpRepoLink.alignChildren = ["center", "center"];
+        grpRepoLink.margins = [0, 4, 0, 0];
+        var lblRepoLink = grpRepoLink.add("statictext", undefined, "GitHub: work2survive/AE_JS_builder");
+        lblRepoLink.helpTip = "https://github.com/work2survive/AE_JS_builder";
+        lblRepoLink.onClick = function() {
+            var url = "https://github.com/work2survive/AE_JS_builder";
+            if (typeof window !== "undefined" && window.open) {
+                window.open(url, "_blank");
+            } else if ($.os.indexOf("Windows") !== -1) {
+                system.callSystem('explorer "' + url + '"');
+            } else {
+                system.callSystem('open "' + url + '"');
             }
         };
 

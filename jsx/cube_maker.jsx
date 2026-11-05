@@ -47,7 +47,8 @@
     //   scope, so we create a floating "palette" Window.
     var win = (thisObj instanceof Panel) 
         ? thisObj 
-        : new Window("palette", "Cube Maker", undefined, { resizeable: true });
+        : new Window("palette", "Cube Maker 3D - v1.2", undefined, { resizeable: true });
+    win.text = "Cube Maker 3D - v1.2";
 
     // Track active precomp name across sessions / live slider updates
     var currentPrecompName = "";
@@ -524,6 +525,25 @@
     // Set initial active tab (index 0: Geometry)
     tpanel.selection = 0;
 
+    // --- Bottom Subtle Repository Link ---
+    var grpRepoLink = win.add("group");
+    grpRepoLink.orientation = "row";
+    grpRepoLink.alignment = ["fill", "bottom"];
+    grpRepoLink.alignChildren = ["center", "center"];
+    grpRepoLink.margins = [0, 4, 0, 0];
+    var lblRepoLink = grpRepoLink.add("statictext", undefined, "GitHub: work2survive/AE_JS_builder");
+    lblRepoLink.helpTip = "https://github.com/work2survive/AE_JS_builder";
+    lblRepoLink.onClick = function() {
+        var url = "https://github.com/work2survive/AE_JS_builder";
+        if (typeof window !== "undefined" && window.open) {
+            window.open(url, "_blank");
+        } else if ($.os.indexOf("Windows") !== -1) {
+            system.callSystem('explorer "' + url + '"');
+        } else {
+            system.callSystem('open "' + url + '"');
+        }
+    };
+
     // -------------------------------------------------------------------------
     // 7. Core Engine: Build or Live-Update the 3D Cube in After Effects
     // -------------------------------------------------------------------------
@@ -650,11 +670,17 @@
                     faceLayers.push(face);
                 }
 
-                // 3. Precompose: Controller is Layer 1, Faces are Layers 2-7
-                var indices = [master.index];
+                // 3. Precompose: Deduplicate and sort indices ascending (required by AE ExtendScript)
+                var indicesMap = {};
+                if (master && master.index) indicesMap[master.index] = true;
                 for (var fi = 0; fi < faceLayers.length; fi++) {
-                    indices.push(faceLayers[fi].index);
+                    if (faceLayers[fi] && faceLayers[fi].index) indicesMap[faceLayers[fi].index] = true;
                 }
+                var indices = [];
+                for (var kIdx in indicesMap) {
+                    if (indicesMap.hasOwnProperty(kIdx)) indices.push(parseInt(kIdx, 10));
+                }
+                indices.sort(function(a, b) { return a - b; });
                 var preComp = parentComp.layers.precompose(indices, precompName, true);
 
                 // Ensure controller inside precomp is on top, red, and precisely in the CENTER of the precomp

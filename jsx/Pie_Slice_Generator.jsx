@@ -16,7 +16,8 @@
     function buildUI(thisObj) {
         var panel = (thisObj instanceof Panel)
             ? thisObj
-            : new Window("palette", "Pie / Slice Generator", undefined, { resizeable: true });
+            : new Window("palette", "Pie / Slice Generator - v4.0", undefined, { resizeable: true });
+        panel.text = "Pie / Slice Generator - v4.0";
 
         panel.orientation = "column";
         panel.alignChildren = ["fill", "top"];
@@ -247,6 +248,25 @@
                 alert("Could not create Pie Slice Shape:\n" + err.toString());
             } finally {
                 app.endUndoGroup();
+            }
+        };
+
+        // --- Bottom Subtle Repository Link ---
+        var grpRepoLink = panel.add("group");
+        grpRepoLink.orientation = "row";
+        grpRepoLink.alignment = ["fill", "bottom"];
+        grpRepoLink.alignChildren = ["center", "center"];
+        grpRepoLink.margins = [0, 4, 0, 0];
+        var lblRepoLink = grpRepoLink.add("statictext", undefined, "GitHub: work2survive/AE_JS_builder");
+        lblRepoLink.helpTip = "https://github.com/work2survive/AE_JS_builder";
+        lblRepoLink.onClick = function() {
+            var url = "https://github.com/work2survive/AE_JS_builder";
+            if (typeof window !== "undefined" && window.open) {
+                window.open(url, "_blank");
+            } else if ($.os.indexOf("Windows") !== -1) {
+                system.callSystem('explorer "' + url + '"');
+            } else {
+                system.callSystem('open "' + url + '"');
             }
         };
 

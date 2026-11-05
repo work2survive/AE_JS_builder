@@ -6,6 +6,25 @@
 (function(global) {
     'use strict';
 
+    // -------------------------------------------------------------
+    // Daily Version Management (Starts at 1.0.0 on 2026-11-05)
+    // -------------------------------------------------------------
+    function computeDailyVersion() {
+        const launchYear = 2026;
+        const launchMonth = 10; // 0-indexed (10 = November)
+        const launchDate = 5;
+
+        const now = new Date();
+        const startUtc = Date.UTC(launchYear, launchMonth, launchDate);
+        const currentUtc = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate());
+        const dayDifference = Math.max(0, Math.floor((currentUtc - startUtc) / (1000 * 60 * 60 * 24)));
+
+        return `1.0.${dayDifference}`;
+    }
+
+    const APP_VERSION = computeDailyVersion();
+    global.EMULATOR_VERSION = APP_VERSION;
+
     let renderer = null;
     let selectedLayer = null;
     let globalShyActive = true; // Switch to shy all properties not related to .JSX UI by default
@@ -1000,6 +1019,13 @@
     // Initialization
     // -------------------------------------------------------------
     window.addEventListener('DOMContentLoaded', () => {
+        // Update version badge
+        const versionBadge = document.getElementById('ae-version-badge');
+        if (versionBadge) {
+            versionBadge.textContent = 'v' + APP_VERSION;
+            versionBadge.title = `Daily Incremental Version: v${APP_VERSION} (Started at v1.0.0 on 2026-11-05)`;
+        }
+
         const comp = app.project.activeItem;
         if (comp) {
             comp._onChanged = () => {
@@ -1009,6 +1035,7 @@
 
         // Init 3D Viewport Renderer
         renderer = new AERenderer(comp, 'ae-viewport-panel');
+        global.aeRenderer = renderer;
 
         // Setup preset selector with .jsx files detected in jsx/ subfolder
         const presetSelect = document.getElementById('ae-preset-select');
@@ -1271,23 +1298,6 @@
             }
             renderTimeline();
             appendConsole('Cleared all layers in composition.');
-        };
-
-        document.getElementById('btn-play-pause').onclick = (e) => {
-            renderer.isPlaying = !renderer.isPlaying;
-            e.currentTarget.textContent = renderer.isPlaying ? 'Pause Wiggle' : 'Play Wiggle';
-        };
-
-        document.getElementById('btn-add-shape').onclick = () => {
-            const layer = comp.layers.addShape();
-            layer.threeDLayer = true;
-            const group = layer.property('Contents').addProperty('ADBE Vector Group');
-            const rect = group.property('Contents').addProperty('ADBE Vector Shape - Rect');
-            rect.property('Size').setValue([150, 150]);
-            const fill = group.property('Contents').addProperty('ADBE Vector Graphic - Fill');
-            fill.property('Color').setValue([0.2, 0.6, 0.9]);
-            renderTimeline();
-            appendConsole('Added new 3D Shape Layer.');
         };
 
         // Keyboard Shortcut: Ctrl+Enter to Run

@@ -20,6 +20,7 @@
                 orbitX: -35,      // Azimuth (degrees)
                 orbitY: 25,       // Elevation (degrees)
                 distance: 1800,   // Dolly distance (px, ~67% zoom to fit standard viewports)
+                zoom: 1.0,        // 2D Canvas Magnification factor (1.0 = 100%)
                 targetX: comp.width / 2,
                 targetY: comp.height / 2,
                 targetZ: 0,
@@ -131,7 +132,28 @@
                 e.preventDefault();
                 const delta = e.deltaY;
                 const factor = delta > 0 ? 1.08 : 0.92;
-                this.camera.distance = Math.max(150, Math.min(6000, this.camera.distance * factor));
+                if (!this.camera.zoom) this.camera.zoom = 1.0;
+
+                // Two-stage Zoom Architecture:
+                // Safe distance threshold: 900px.
+                // At distance >= 900px, 3D vertices (radius up to ~350px) never approach the 1200px CSS perspective near-plane singularity.
+                // When zooming closer, 2D viewport magnification (zoom) scales up to 1000% seamlessly without near-plane distortion.
+                if (delta < 0) {
+                    // Zooming in
+                    if (this.camera.distance > 900) {
+                        this.camera.distance = Math.max(900, this.camera.distance * factor);
+                    } else {
+                        this.camera.zoom = Math.min(10.0, this.camera.zoom * 1.08);
+                    }
+                } else {
+                    // Zooming out
+                    if (this.camera.zoom > 1.01) {
+                        this.camera.zoom = Math.max(1.0, this.camera.zoom / 1.08);
+                    } else {
+                        this.camera.zoom = 1.0;
+                        this.camera.distance = Math.min(6000, this.camera.distance * factor);
+                    }
+                }
                 this.updateCameraTransform();
             }, { passive: false });
 
@@ -167,8 +189,9 @@
                     this.camera.orbitY = Math.max(-89.9, Math.min(89.9, this.camera.orbitY));
                     this.viewNameEl.textContent = 'Custom View';
                 } else if (this.camera.isPanning) {
-                    // Pan relative to distance
-                    const panSpeed = this.camera.distance * 0.0012;
+                    // Pan relative to distance and current zoom magnification
+                    const curZoom = this.camera.zoom || 1.0;
+                    const panSpeed = (this.camera.distance / curZoom) * 0.0012;
                     this.camera.targetX -= dx * panSpeed * 1.5;
                     this.camera.targetY -= dy * panSpeed * 1.5;
                 }
@@ -198,6 +221,7 @@
             this.camera.targetX = this.comp.width / 2;
             this.camera.targetY = this.comp.height / 2;
             this.camera.targetZ = 0;
+            this.camera.zoom = 1.0;
 
             const defaultDist = 1800;
             switch (preset) {
@@ -238,20 +262,22 @@
 
         updateCameraTransform() {
             if (!this.cameraRig) return;
+            if (!this.camera.zoom) this.camera.zoom = 1.0;
 
             // Update UI readout
             if (this.orbitValsEl) {
                 this.orbitValsEl.textContent = `${Math.round(this.camera.orbitX)}°, ${Math.round(this.camera.orbitY)}°`;
             }
             if (this.zoomValEl) {
-                const zoomPct = Math.round((1200 / this.camera.distance) * 100);
-                this.zoomValEl.textContent = `${zoomPct}%`;
+                const effectiveZoom = Math.round(((1800 / this.camera.distance) * this.camera.zoom) * 100);
+                this.zoomValEl.textContent = `${effectiveZoom}%`;
             }
 
             // AE 3D Camera Rig Transform:
             // Move scene so target is at (0, 0, 0), rotate around it, and position along Z relative to 1200px perspective
             const zTarget = 1200 - this.camera.distance;
-            const transformStr = `translateZ(${zTarget}px) rotateX(${this.camera.orbitY}deg) rotateY(${this.camera.orbitX}deg) translate3d(${-this.camera.targetX}px, ${-this.camera.targetY}px, ${-this.camera.targetZ}px)`;
+            const zScale = this.camera.zoom;
+            const transformStr = `scale(${zScale}, ${zScale}) translateZ(${zTarget}px) rotateX(${this.camera.orbitY}deg) rotateY(${this.camera.orbitX}deg) translate3d(${-this.camera.targetX}px, ${-this.camera.targetY}px, ${-this.camera.targetZ}px)`;
             this.cameraRig.style.transform = transformStr;
 
             // Synchronize AE 3D Axis Orientation Gizmo with Camera Orbit
@@ -307,11 +333,16 @@
                         const col = prop.color.getValueAtTime(time);
                         const rawOp = prop.opacity.getValueAtTime(time);
                         const op = (rawOp !== undefined && rawOp !== null && !isNaN(rawOp)) ? Math.max(0, Math.min(1, rawOp / 100)) : 1;
-                        const sw = prop.strokeWidth.getValueAtTime(time) || 1;
-                        const r = Math.round((col[0] || 0) * 255);
-                        const g = Math.round((col[1] || 0) * 255);
-                        const b = Math.round((col[2] || 0) * 255);
-                        localStroke = { color: `rgba(${r}, ${g}, ${b}, ${op})`, width: sw, opacity: op };
+                        const rawSw = prop.strokeWidth.getValueAtTime(time);
+                        const sw = (rawSw !== undefined && rawSw !== null && !isNaN(rawSw)) ? Math.max(0, Number(rawSw)) : 0;
+                        if (sw > 0.0001 && op > 0.0001) {
+                            const r = Math.round((col[0] || 0) * 255);
+                            const g = Math.round((col[1] || 0) * 255);
+                            const b = Math.round((col[2] || 0) * 255);
+                            localStroke = { color: `rgba(${r}, ${g}, ${b}, ${op})`, width: sw, opacity: op };
+                        } else {
+                            localStroke = null;
+                        }
                     }
                 }
 
@@ -326,7 +357,9 @@
                         const y = pos[1] - h / 2;
 
                         const fillAttr = localFill ? `fill="${localFill.color}"` : 'fill="none"';
-                        const strokeAttr = localStroke ? `stroke="${localStroke.color}" stroke-width="${localStroke.width}"` : 'stroke="none"';
+                        const strokeAttr = (localStroke && localStroke.width > 0 && localStroke.opacity > 0)
+                            ? `stroke="${localStroke.color}" stroke-width="${localStroke.width}"`
+                            : 'stroke="none"';
 
                         svgChildren += `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${round}" ry="${round}" ${fillAttr} ${strokeAttr} />`;
                     } else if (prop instanceof VectorShapeEllipse) {
@@ -336,7 +369,9 @@
                         const ry = (size[1] || 100) / 2;
 
                         const fillAttr = localFill ? `fill="${localFill.color}"` : 'fill="none"';
-                        const strokeAttr = localStroke ? `stroke="${localStroke.color}" stroke-width="${localStroke.width}"` : 'stroke="none"';
+                        const strokeAttr = (localStroke && localStroke.width > 0 && localStroke.opacity > 0)
+                            ? `stroke="${localStroke.color}" stroke-width="${localStroke.width}"`
+                            : 'stroke="none"';
 
                         svgChildren += `<ellipse cx="${pos[0]}" cy="${pos[1]}" rx="${rx}" ry="${ry}" ${fillAttr} ${strokeAttr} />`;
                     } else if (prop instanceof VectorShapePath) {
@@ -344,7 +379,9 @@
                         if (shapeData && shapeData.vertices && shapeData.vertices.length > 0) {
                             const d = this.generateSVGPathData(shapeData);
                             const fillAttr = localFill ? `fill="${localFill.color}"` : 'fill="none"';
-                            const strokeAttr = localStroke ? `stroke="${localStroke.color}" stroke-width="${localStroke.width}"` : 'stroke="none"';
+                            const strokeAttr = (localStroke && localStroke.width > 0 && localStroke.opacity > 0)
+                                ? `stroke="${localStroke.color}" stroke-width="${localStroke.width}"`
+                                : 'stroke="none"';
                             svgChildren += `<path d="${d}" ${fillAttr} ${strokeAttr} />`;
                         }
                     } else if (prop instanceof VectorGroup) {

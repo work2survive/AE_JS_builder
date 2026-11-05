@@ -460,9 +460,29 @@
                 span.style.color = '#ff7675';
                 span.style.fontWeight = '600';
             }
+            if (this._onClick || (this.text && (this.text.toLowerCase().includes('github') || this.text.toLowerCase().includes('http')))) {
+                span.classList.add('scriptui-link');
+            }
             span.textContent = this.text;
+            span.onclick = (e) => {
+                if (typeof this.onClick === 'function') {
+                    e.stopPropagation();
+                    this.onClick();
+                }
+            };
             this.domElement = span;
             return span;
+        }
+
+        set onClick(fn) {
+            this._onClick = fn;
+            if (this.domElement) {
+                this.domElement.classList.add('scriptui-link');
+            }
+        }
+
+        get onClick() {
+            return this._onClick;
         }
     }
 
@@ -803,6 +823,18 @@
                 resize: () => this.updateLayout()
             };
             this.domWrapper = null;
+        }
+
+        get text() {
+            return this.title;
+        }
+
+        set text(val) {
+            this.title = val;
+            if (this.domWrapper) {
+                const titleEl = this.domWrapper.querySelector('.scriptui-window-title');
+                if (titleEl) titleEl.textContent = val;
+            }
         }
 
         center() {
