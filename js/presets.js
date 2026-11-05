@@ -8,8 +8,8 @@
 
     const PRESETS = {
         cubeMaker: {
-            name: "★ Cube Maker (X,Y,Z, Link to Z, Colors & Stroke)",
-            code: `// =============================================================================
+        name: "★ Cube Maker 3D (X,Y,Z, Link to Z, Colors & Stroke)",
+        code: `// =============================================================================
 // ADOBE AFTER EFFECTS EXTENDSCRIPT & SCRIPTUI PANEL: CUBE MAKER
 // =============================================================================
 //
@@ -58,8 +58,10 @@
     //   scope, so we create a floating "palette" Window.
     var win = (thisObj instanceof Panel) 
         ? thisObj 
-        : new Window("palette", "Cube Maker 3D - v1.2", undefined, { resizeable: true });
-    win.text = "Cube Maker 3D - v1.2";
+        : new Window("palette", "Cube Maker 3D", undefined, { resizeable: true });
+    if (!(thisObj instanceof Panel)) {
+        win.text = "Cube Maker 3D";
+    }
 
     // Track active precomp name across sessions / live slider updates
     var currentPrecompName = "";
@@ -157,16 +159,16 @@
     }
 
     // -------------------------------------------------------------------------
-    // 3. UI Section: Add-on Name, Version & Description Header
+    // 3. UI Section: Header (Panel Title + Version & Description)
     // -------------------------------------------------------------------------
-    var pnlHeader = win.add("panel", undefined, "Cube Maker 3D - v1.2");
+    var pnlHeader = win.add("panel", undefined, "Cube Maker 3D");
     pnlHeader.orientation = "column";
     pnlHeader.alignChildren = ["fill", "top"];
     pnlHeader.alignment = ["fill", "top"];
     pnlHeader.spacing = 3;
     pnlHeader.margins = [10, 8, 10, 8];
 
-    var lblDesc = pnlHeader.add("statictext", undefined, "Parametric 3D Shape Layer Cube generator and live controller rig.");
+    var lblDesc = pnlHeader.add("statictext", undefined, "v1.3 - Parametric 3D Shape Layer Cube generator and live controller rig.");
 
     // -------------------------------------------------------------------------
     // 4. UI Section: Tabbed Panel Container (Geometry vs. Appearance)
@@ -198,7 +200,7 @@
     grpX.alignment = ["fill", "top"];
     var lblX = grpX.add("statictext", undefined, "Size X:");
     lblX.preferredSize = [80, -1];
-    var sldX = grpX.add("slider", undefined, 200, { minvalue: 50, maxvalue: 500 });
+    var sldX = grpX.add("slider", undefined, 200, 50, 500);
     sldX.alignment = ["fill", "center"];
     var txtX = grpX.add("edittext", undefined, "200");
     txtX.characters = 4;
@@ -209,7 +211,7 @@
     grpY.alignment = ["fill", "top"];
     var lblY = grpY.add("statictext", undefined, "Size Y:");
     lblY.preferredSize = [80, -1];
-    var sldY = grpY.add("slider", undefined, 200, { minvalue: 50, maxvalue: 500 });
+    var sldY = grpY.add("slider", undefined, 200, 50, 500);
     sldY.alignment = ["fill", "center"];
     var txtY = grpY.add("edittext", undefined, "200");
     txtY.characters = 4;
@@ -220,7 +222,7 @@
     grpZ.alignment = ["fill", "top"];
     var lblZ = grpZ.add("statictext", undefined, "Size Z:");
     lblZ.preferredSize = [80, -1];
-    var sldZ = grpZ.add("slider", undefined, 200, { minvalue: 50, maxvalue: 500 });
+    var sldZ = grpZ.add("slider", undefined, 200, 50, 500);
     sldZ.alignment = ["fill", "center"];
     var txtZ = grpZ.add("edittext", undefined, "200");
     txtZ.characters = 4;
@@ -287,12 +289,6 @@
     pnlStruct.alignment = ["fill", "top"];
 
     pnlStruct.add("statictext", undefined, "Topology: 6 Faces parented to Controller (Defined Once)");
-
-    var btnBuild = pnlStruct.add("button", undefined, "Build / Rebuild 3D Structure");
-    btnBuild.alignment = ["fill", "top"];
-    btnBuild.onClick = function() {
-        buildOrUpdateCube(true); // Pass true to force structural recreation
-    };
 
     // =========================================================================
     // TAB 2: APPEARANCE & STYLING
@@ -374,24 +370,23 @@
         }
 
         btnSwatch.onClick = function() {
-            if (typeof document !== "undefined") {
-                var input = document.createElement("input");
-                input.type = "color";
-                input.value = picker._color;
-                input.oninput = function() {
-                    setColor(input.value, true);
-                };
-                input.click();
+            var curHex = picker._color || "#2288EE";
+            if (typeof window !== "undefined" && typeof window.openWindowsColorPicker === "function") {
+                window.openWindowsColorPicker(curHex, function(selectedHex) {
+                    setColor(selectedHex, true);
+                });
                 return;
             }
 
-            var hexNum = parseInt(picker._color.replace("#", ""), 16);
+            var hexNum = parseInt(curHex.replace("#", ""), 16);
             var result = -1;
             if (typeof $.colorPicker === "function") {
-                result = $.colorPicker(hexNum);
+                result = $.colorPicker(hexNum, function(selectedHex) {
+                    setColor(selectedHex, true);
+                });
             }
             if (result !== -1 && result !== undefined && result !== null) {
-                var hexStr = result.toString(16);
+                var hexStr = Number(result).toString(16);
                 while (hexStr.length < 6) hexStr = "0" + hexStr;
                 setColor("#" + hexStr, true);
             }
@@ -428,7 +423,7 @@
     grpSidesOp.alignment = ["fill", "top"];
     var lblSidesOp = grpSidesOp.add("statictext", undefined, "Sides Opacity:");
     lblSidesOp.preferredSize = [115, -1];
-    var sldSidesOp = grpSidesOp.add("slider", undefined, 85, { minvalue: 0, maxvalue: 100 });
+    var sldSidesOp = grpSidesOp.add("slider", undefined, 85, 0, 100);
     sldSidesOp.alignment = ["fill", "center"];
     var txtSidesOp = grpSidesOp.add("edittext", undefined, "85");
     txtSidesOp.characters = 3;
@@ -459,7 +454,7 @@
     grpStrokeOp.alignment = ["fill", "top"];
     var lblStrokeOp = grpStrokeOp.add("statictext", undefined, "Stroke Opacity:");
     lblStrokeOp.preferredSize = [115, -1];
-    var sldStrokeOp = grpStrokeOp.add("slider", undefined, 100, { minvalue: 0, maxvalue: 100 });
+    var sldStrokeOp = grpStrokeOp.add("slider", undefined, 100, 0, 100);
     sldStrokeOp.alignment = ["fill", "center"];
     var txtStrokeOp = grpStrokeOp.add("edittext", undefined, "100");
     txtStrokeOp.characters = 3;
@@ -479,7 +474,7 @@
     grpThick.alignment = ["fill", "top"];
     var lblThick = grpThick.add("statictext", undefined, "Stroke Width:");
     lblThick.preferredSize = [115, -1];
-    var sldThick = grpThick.add("slider", undefined, 3, { minvalue: 1, maxvalue: 20 });
+    var sldThick = grpThick.add("slider", undefined, 3, 1, 20);
     sldThick.alignment = ["fill", "center"];
     var txtThick = grpThick.add("edittext", undefined, "3");
     txtThick.characters = 3;
@@ -499,7 +494,7 @@
     grpRound.alignment = ["fill", "top"];
     var lblRound = grpRound.add("statictext", undefined, "Corner Roundness:");
     lblRound.preferredSize = [115, -1];
-    var sldRound = grpRound.add("slider", undefined, 10, { minvalue: 0, maxvalue: 80 });
+    var sldRound = grpRound.add("slider", undefined, 10, 0, 80);
     sldRound.alignment = ["fill", "center"];
     var txtRound = grpRound.add("edittext", undefined, "10");
     txtRound.characters = 3;
@@ -519,7 +514,7 @@
     grpGap.alignment = ["fill", "top"];
     var lblGap = grpGap.add("statictext", undefined, "Gap:");
     lblGap.preferredSize = [115, -1];
-    var sldGap = grpGap.add("slider", undefined, 0, { minvalue: 0, maxvalue: 40 });
+    var sldGap = grpGap.add("slider", undefined, 0, 0, 40);
     sldGap.alignment = ["fill", "center"];
     var txtGap = grpGap.add("edittext", undefined, "0");
     txtGap.characters = 3;
@@ -535,6 +530,14 @@
 
     // Set initial active tab (index 0: Geometry)
     tpanel.selection = 0;
+
+    // --- Build Button (Always at bottom, outside of tabs) ---
+    var btnBuild = win.add("button", undefined, "Build / Rebuild 3D Cube");
+    btnBuild.alignment = ["fill", "top"];
+    btnBuild.preferredSize = [-1, 36];
+    btnBuild.onClick = function() {
+        buildOrUpdateCube(true);
+    };
 
     // --- Bottom Subtle Repository Link ---
     var grpRepoLink = win.add("group");
@@ -999,11 +1002,11 @@
     return win;
 })(this);
 `
-        },
+    },
 
         cylinderMaker: {
-            name: "⚙️ Cylinder Maker 3D (Radius, Extrude, Segments, Slice, Colors)",
-            code: `// =============================================================================
+        name: "⚙️ Cylinder Maker 3D (Radius, Extrude, Segments, Slice, Colors)",
+        code: `// =============================================================================
 // ADOBE AFTER EFFECTS EXTENDSCRIPT & SCRIPTUI PANEL: CYLINDER MAKER 3D
 // =============================================================================
 //
@@ -1046,8 +1049,10 @@
     // -------------------------------------------------------------------------
     var win = (thisObj instanceof Panel)
         ? thisObj
-        : new Window("palette", "Cylinder Maker 3D - v1.0", undefined, { resizeable: true });
-    win.text = "Cylinder Maker 3D - v1.0";
+        : new Window("palette", "Cylinder Maker 3D", undefined, { resizeable: true });
+    if (!(thisObj instanceof Panel)) {
+        win.text = "Cylinder Maker 3D";
+    }
 
     var currentPrecompName = "";
 
@@ -1175,16 +1180,16 @@
     }
 
     // -------------------------------------------------------------------------
-    // 3. UI Header
+    // 3. UI Header (Panel Title + Version & Description)
     // -------------------------------------------------------------------------
-    var pnlHeader = win.add("panel", undefined, "Cylinder Maker 3D - v1.0");
+    var pnlHeader = win.add("panel", undefined, "Cylinder Maker 3D");
     pnlHeader.orientation = "column";
     pnlHeader.alignChildren = ["fill", "top"];
     pnlHeader.alignment = ["fill", "top"];
     pnlHeader.spacing = 3;
     pnlHeader.margins = [10, 8, 10, 8];
 
-    var lblDesc = pnlHeader.add("statictext", undefined, "Parametric 3D Shape Layer Cylinder & Slice generator with live master rig.");
+    var lblDesc = pnlHeader.add("statictext", undefined, "v1.1 - Parametric 3D Shape Layer Cylinder & Slice generator with live master rig.");
 
     // -------------------------------------------------------------------------
     // 4. Tabbed Panel: Geometry vs. Appearance
@@ -1218,7 +1223,7 @@
     grpRad.alignment = ["fill", "top"];
     var lblRad = grpRad.add("statictext", undefined, "Radius:");
     lblRad.preferredSize = [100, -1];
-    var sldRad = grpRad.add("slider", undefined, 150, { minvalue: 20, maxvalue: 500 });
+    var sldRad = grpRad.add("slider", undefined, 150, 20, 500);
     sldRad.alignment = ["fill", "center"];
     var txtRad = grpRad.add("edittext", undefined, "150");
     txtRad.characters = 4;
@@ -1229,7 +1234,7 @@
     grpH.alignment = ["fill", "top"];
     var lblH = grpH.add("statictext", undefined, "Extrude (Height):");
     lblH.preferredSize = [100, -1];
-    var sldH = grpH.add("slider", undefined, 250, { minvalue: 20, maxvalue: 800 });
+    var sldH = grpH.add("slider", undefined, 250, 20, 800);
     sldH.alignment = ["fill", "center"];
     var txtH = grpH.add("edittext", undefined, "250");
     txtH.characters = 4;
@@ -1240,7 +1245,7 @@
     grpSeg.alignment = ["fill", "top"];
     var lblSeg = grpSeg.add("statictext", undefined, "Wall Segments:");
     lblSeg.preferredSize = [100, -1];
-    var sldSeg = grpSeg.add("slider", undefined, 16, { minvalue: 3, maxvalue: 48 });
+    var sldSeg = grpSeg.add("slider", undefined, 16, 3, 48);
     sldSeg.alignment = ["fill", "center"];
     var txtSeg = grpSeg.add("edittext", undefined, "16");
     txtSeg.characters = 3;
@@ -1261,7 +1266,7 @@
     grpStart.alignment = ["fill", "top"];
     var lblStart = grpStart.add("statictext", undefined, "Start Angle:");
     lblStart.preferredSize = [100, -1];
-    var sldStart = grpStart.add("slider", undefined, 0, { minvalue: -360, maxvalue: 360 });
+    var sldStart = grpStart.add("slider", undefined, 0, -360, 360);
     sldStart.alignment = ["fill", "center"];
     var txtStart = grpStart.add("edittext", undefined, "0");
     txtStart.characters = 5;
@@ -1272,7 +1277,7 @@
     grpEnd.alignment = ["fill", "top"];
     var lblEnd = grpEnd.add("statictext", undefined, "End Angle:");
     lblEnd.preferredSize = [100, -1];
-    var sldEnd = grpEnd.add("slider", undefined, 270, { minvalue: -360, maxvalue: 360 });
+    var sldEnd = grpEnd.add("slider", undefined, 270, -360, 360);
     sldEnd.alignment = ["fill", "center"];
     var txtEnd = grpEnd.add("edittext", undefined, "270");
     txtEnd.characters = 5;
@@ -1351,24 +1356,23 @@
         }
 
         btnSwatch.onClick = function() {
-            if (typeof document !== "undefined") {
-                var input = document.createElement("input");
-                input.type = "color";
-                input.value = picker._color;
-                input.oninput = function() {
-                    setColor(input.value, true);
-                };
-                input.click();
+            var curHex = picker._color || "#2288EE";
+            if (typeof window !== "undefined" && typeof window.openWindowsColorPicker === "function") {
+                window.openWindowsColorPicker(curHex, function(selectedHex) {
+                    setColor(selectedHex, true);
+                });
                 return;
             }
 
-            var hexNum = parseInt(picker._color.replace("#", ""), 16);
+            var hexNum = parseInt(curHex.replace("#", ""), 16);
             var result = -1;
             if (typeof $.colorPicker === "function") {
-                result = $.colorPicker(hexNum);
+                result = $.colorPicker(hexNum, function(selectedHex) {
+                    setColor(selectedHex, true);
+                });
             }
             if (result !== -1 && result !== undefined && result !== null) {
-                var hexStr = result.toString(16);
+                var hexStr = Number(result).toString(16);
                 while (hexStr.length < 6) hexStr = "0" + hexStr;
                 setColor("#" + hexStr, true);
             }
@@ -1421,7 +1425,7 @@
     grpOp.alignment = ["fill", "top"];
     var lblOp = grpOp.add("statictext", undefined, "Opacity (%):");
     lblOp.preferredSize = [120, -1];
-    var sldOp = grpOp.add("slider", undefined, 90, { minvalue: 0, maxvalue: 100 });
+    var sldOp = grpOp.add("slider", undefined, 90, 0, 100);
     sldOp.alignment = ["fill", "center"];
     var txtOp = grpOp.add("edittext", undefined, "90");
     txtOp.characters = 3;
@@ -1441,21 +1445,31 @@
     grpThick.alignment = ["fill", "top"];
     var lblThick = grpThick.add("statictext", undefined, "Stroke Width:");
     lblThick.preferredSize = [120, -1];
-    var sldThick = grpThick.add("slider", undefined, 2, { minvalue: 0, maxvalue: 20 });
+    var sldThick = grpThick.add("slider", undefined, 2, 0, 20);
     sldThick.alignment = ["fill", "center"];
     var txtThick = grpThick.add("edittext", undefined, "2");
     txtThick.characters = 3;
 
     // Two-Way Sync for UI sliders
     function hookSliderText(sld, txt, onChangeFn, isInt) {
-        sld.onChanging = function() {
-            txt.text = String(isInt ? Math.round(sld.value) : Math.round(sld.value * 10) / 10);
-            onChangeFn();
-        };
+        function updateFromSlider() {
+            var val = isInt ? Math.round(sld.value) : Math.round(sld.value * 10) / 10;
+            if (isNaN(val)) val = isInt ? Math.round(sld.minvalue || 0) : 0;
+            txt.text = String(val);
+            if (typeof onChangeFn === "function") onChangeFn();
+        }
+        sld.onChanging = updateFromSlider;
+        sld.onChange = updateFromSlider;
+
         txt.onChange = function() {
-            var val = parseFloat(txt.text) || 0;
-            sld.value = Math.max(sld.minvalue, Math.min(sld.maxvalue, val));
-            onChangeFn();
+            var val = parseFloat(txt.text);
+            if (isNaN(val)) val = (typeof sld.minvalue === "number") ? sld.minvalue : 0;
+            var minV = (typeof sld.minvalue === "number") ? sld.minvalue : 0;
+            var maxV = (typeof sld.maxvalue === "number") ? sld.maxvalue : 10000;
+            val = Math.max(minV, Math.min(maxV, val));
+            sld.value = val;
+            txt.text = String(isInt ? Math.round(val) : Math.round(val * 10) / 10);
+            if (typeof onChangeFn === "function") onChangeFn();
         };
     }
 
@@ -2301,7 +2315,7 @@
     return win;
 })(this);
 `
-        },
+    },
 
         cube200: {
             name: "Test 1: 3D Cube (200x200px) with Wiggle",
@@ -2593,9 +2607,2307 @@ starStroke.property("Stroke Width").setValue(3);
 $.writeln("Shapes showcase created: Square, Circle, and Bézier Star!");
 `
         },
-        pieSlice: {
-            name: "Pie / Slice Generator (Path Expression & Geometry)",
-            code: `/*
+        extrudedRoundRectangle: {
+        name: "📦 Extruded Round Rectangle (3D Caps, Walls & Cylindrical Corners)",
+        code: `// =============================================================================
+// ADOBE AFTER EFFECTS EXTENDSCRIPT & SCRIPTUI PANEL: EXTRUDED ROUND RECTANGLE
+// =============================================================================
+//
+// PURPOSE:
+//   An interactive ScriptUI panel for After Effects that creates a parametric 3D
+//   Extruded Rounded Rectangle built out of native Shape Layers inside a dedicated
+//   precomposition with continuous rasterization.
+//
+// TOPOLOGY & GEOMETRY:
+//   1. Front & Back Faces:
+//      - Two 3D Shape Layers (Cap_Front at -Z/2, Cap_Back at +Z/2).
+//      - Native procedural Bézier paths with 4 independent corner radii
+//        (Top-Left, Top-Right, Bottom-Right, Bottom-Left) and W3C CSS
+//        proportional overlap protection (§5.5).
+//   2. Side Walls & Corners:
+//      - 4 Straight Wall 3D Shape Layers (Top, Bottom, Left, Right) positioned
+//        between the corner arcs.
+//      - 4 Curved Corner Quadrants built from cylindrical sector wall facets
+//        (Corner_TR, Corner_BR, Corner_BL, Corner_TL) with customizable segments.
+//   3. Composition Hierarchy:
+//      - Master Controller Layer (Extruded_Rect_Master_Controller) inside precomp.
+//      - Precomp layer in parent comp with collapseTransformation = true.
+//      - 17 Master Effect Controls driving geometry, corners, colors, and stroke.
+//
+// COMPATIBILITY:
+//   - Adobe After Effects CS6, CC 2014 - 2026+ (ExtendScript engine).
+//   - Web AE JS & ScriptUI Emulator (ae-core.js, ae-renderer.js, app.js).
+// =============================================================================
+
+(function(thisObj) {
+    "use strict";
+
+    // -------------------------------------------------------------------------
+    // 1. ScriptUI Window / Dockable Panel Initialization
+    // -------------------------------------------------------------------------
+    var win = (thisObj instanceof Panel)
+        ? thisObj
+        : new Window("palette", "Extruded Round Rectangle", undefined, { resizeable: true });
+    if (!(thisObj instanceof Panel)) {
+        win.text = "Extruded Round Rectangle";
+    }
+
+    var currentPrecompName = "";
+
+    win.orientation = "column";
+    win.alignChildren = ["fill", "top"];
+    win.spacing = 10;
+    win.margins = 14;
+
+    // -------------------------------------------------------------------------
+    // 2. Helper Functions: Colors, Transforms & Cross-Platform Layer Access
+    // -------------------------------------------------------------------------
+    function hexToRgb(hex) {
+        hex = hex.replace("#", "");
+        if (hex.length === 3) {
+            hex = hex.charAt(0) + hex.charAt(0) + hex.charAt(1) + hex.charAt(1) + hex.charAt(2) + hex.charAt(2);
+        }
+        var num = parseInt(hex, 16);
+        return [
+            ((num >> 16) & 255) / 255, // Red (0.0 to 1.0)
+            ((num >> 8) & 255) / 255,  // Green (0.0 to 1.0)
+            (num & 255) / 255          // Blue (0.0 to 1.0)
+        ];
+    }
+
+    function getTransformProp(layer, propName) {
+        if (!layer) return null;
+        var p = null;
+        if (layer.transform && typeof layer.transform.property === "function") {
+            p = layer.transform.property(propName);
+        }
+        if (!p && typeof layer.property === "function") {
+            var tg = layer.property("ADBE Transform Group") || layer.property("Transform");
+            if (tg && typeof tg.property === "function") {
+                p = tg.property(propName);
+            }
+        }
+        if (!p && layer.transform) {
+            if (propName === "X Rotation") p = layer.transform.xRotation;
+            else if (propName === "Y Rotation") p = layer.transform.yRotation;
+            else if (propName === "Z Rotation") p = layer.transform.zRotation || layer.transform.rotation;
+            else if (propName === "Scale") p = layer.transform.scale;
+            else if (propName === "Orientation") p = layer.transform.orientation;
+            else if (propName === "Position") p = layer.transform.position;
+            else if (propName === "Anchor Point") p = layer.transform.anchorPoint;
+            else if (propName === "Opacity") p = layer.transform.opacity;
+        }
+        return p;
+    }
+
+    function setTransformVal(layer, propName, val) {
+        var p = getTransformProp(layer, propName);
+        if (p && typeof p.setValue === "function") {
+            p.setValue(val);
+        }
+    }
+
+    function setTransformExpr(layer, propName, expr) {
+        var p = getTransformProp(layer, propName);
+        if (p) {
+            p.expression = expr;
+        }
+    }
+
+    function getLayer(comp, nameOrIndex) {
+        if (!comp) return null;
+        if (typeof comp.layer === "function") {
+            return comp.layer(nameOrIndex);
+        }
+        if (comp.layers) {
+            if (typeof nameOrIndex === "number") return comp.layers[nameOrIndex - 1];
+            if (typeof comp.layers.byName === "function") return comp.layers.byName(nameOrIndex);
+            if (typeof comp.layers.find === "function") {
+                return comp.layers.find(function(l) { return l.name === nameOrIndex; }) || null;
+            }
+        }
+        return null;
+    }
+
+    function removeLayer(comp, layer) {
+        if (!layer) return;
+        if (typeof layer.remove === "function") {
+            layer.remove();
+        } else if (comp && comp.layers && typeof comp.layers.remove === "function") {
+            comp.layers.remove(layer);
+        }
+    }
+
+    // -------------------------------------------------------------------------
+    // 3. UI Header (Panel Title + Version & Description)
+    // -------------------------------------------------------------------------
+    var pnlHeader = win.add("panel", undefined, "Extruded Round Rectangle");
+    pnlHeader.orientation = "column";
+    pnlHeader.alignChildren = ["fill", "top"];
+    pnlHeader.alignment = ["fill", "top"];
+    pnlHeader.spacing = 3;
+    pnlHeader.margins = [10, 8, 10, 8];
+
+    var lblDesc = pnlHeader.add("statictext", undefined, "v1.1 - Parametric 3D extruded rounded rectangle with procedural front/back caps and cylindrical corners.");
+
+    // -------------------------------------------------------------------------
+    // 4. Tabbed Panel (Geometry vs. Appearance)
+    // -------------------------------------------------------------------------
+    var tabs = win.add("tabbedpanel");
+    tabs.alignChildren = ["fill", "top"];
+    tabs.alignment = ["fill", "top"];
+
+    // =========================================================================
+    // TAB 1: GEOMETRY
+    // =========================================================================
+    var tabGeometry = tabs.add("tab", undefined, "Geometry");
+    tabGeometry.orientation = "column";
+    tabGeometry.alignChildren = ["fill", "top"];
+    tabGeometry.spacing = 10;
+    tabGeometry.margins = 10;
+
+    // --- Dimensions Section ---
+    var pnlDim = tabGeometry.add("panel", undefined, "Dimensions (Width, Height, Extrude Depth)");
+    pnlDim.orientation = "column";
+    pnlDim.spacing = 8;
+    pnlDim.alignChildren = ["fill", "top"];
+    pnlDim.alignment = ["fill", "top"];
+
+    // Width
+    var grpW = pnlDim.add("group");
+    grpW.orientation = "row";
+    grpW.alignment = ["fill", "top"];
+    var lblW = grpW.add("statictext", undefined, "Width (X):");
+    lblW.preferredSize = [70, -1];
+    var sldW = grpW.add("slider", undefined, 500, 20, 1920);
+    sldW.minvalue = 20; sldW.maxvalue = 1920; sldW.value = 500;
+    sldW.alignment = ["fill", "center"];
+    var txtW = grpW.add("edittext", undefined, "500");
+    txtW.characters = 4;
+
+    // Height
+    var grpH = pnlDim.add("group");
+    grpH.orientation = "row";
+    grpH.alignment = ["fill", "top"];
+    var lblH = grpH.add("statictext", undefined, "Height (Y):");
+    lblH.preferredSize = [70, -1];
+    var sldH = grpH.add("slider", undefined, 300, 20, 1080);
+    sldH.minvalue = 20; sldH.maxvalue = 1080; sldH.value = 300;
+    sldH.alignment = ["fill", "center"];
+    var txtH = grpH.add("edittext", undefined, "300");
+    txtH.characters = 4;
+
+    // Extrude Depth
+    var grpD = pnlDim.add("group");
+    grpD.orientation = "row";
+    grpD.alignment = ["fill", "top"];
+    var lblD = grpD.add("statictext", undefined, "Depth (Z):");
+    lblD.preferredSize = [70, -1];
+    var sldD = grpD.add("slider", undefined, 120, 10, 800);
+    sldD.minvalue = 10; sldD.maxvalue = 800; sldD.value = 120;
+    sldD.alignment = ["fill", "center"];
+    var txtD = grpD.add("edittext", undefined, "120");
+    txtD.characters = 4;
+
+    // Quick Dimension Presets
+    var grpDimPresets = pnlDim.add("group");
+    grpDimPresets.orientation = "row";
+    grpDimPresets.spacing = 4;
+    var btnDimCard = grpDimPresets.add("button", undefined, "Card");
+    btnDimCard.helpTip = "Card: 500 x 300 x 120";
+    var btnDimSquare = grpDimPresets.add("button", undefined, "Cube");
+    btnDimSquare.helpTip = "Cube: 350 x 350 x 350";
+    var btnDimPill = grpDimPresets.add("button", undefined, "Pill");
+    btnDimPill.helpTip = "Pill: 600 x 200 x 80";
+    var btnDimTile = grpDimPresets.add("button", undefined, "Tile");
+    btnDimTile.helpTip = "Tile: 400 x 400 x 30";
+
+    btnDimCard.onClick = function() { setDim(500, 300, 120); };
+    btnDimSquare.onClick = function() { setDim(350, 350, 350); };
+    btnDimPill.onClick = function() { setDim(600, 200, 80); };
+    btnDimTile.onClick = function() { setDim(400, 400, 30); };
+
+    function setDim(w, h, d) {
+        sldW.value = w; txtW.text = String(w);
+        sldH.value = h; txtH.text = String(h);
+        sldD.value = d; txtD.text = String(d);
+        buildOrUpdateExtruded(false);
+    }
+
+    // --- Corner Radii Section ---
+    var pnlCorners = tabGeometry.add("panel", undefined, "Corner Radii & Resolution");
+    pnlCorners.orientation = "column";
+    pnlCorners.spacing = 6;
+    pnlCorners.alignChildren = ["fill", "top"];
+    pnlCorners.alignment = ["fill", "top"];
+
+    var chkLink = pnlCorners.add("checkbox", undefined, "Link All Corners");
+    chkLink.value = true;
+
+    // Master Radius Row
+    var grpMaster = pnlCorners.add("group");
+    grpMaster.orientation = "row";
+    grpMaster.alignment = ["fill", "top"];
+    var lblMaster = grpMaster.add("statictext", undefined, "Radius:");
+    lblMaster.preferredSize = [65, -1];
+    var sldMaster = grpMaster.add("slider", undefined, 60, 0, 400);
+    sldMaster.minvalue = 0; sldMaster.maxvalue = 400; sldMaster.value = 60;
+    sldMaster.alignment = ["fill", "center"];
+    var txtMaster = grpMaster.add("edittext", undefined, "60");
+    txtMaster.characters = 4;
+
+    // Individual Corner Radii (2x2 Grid with compact labels TL/TR/BL/BR)
+    var grpGrid = pnlCorners.add("group");
+    grpGrid.orientation = "column";
+    grpGrid.spacing = 5;
+    grpGrid.alignment = ["fill", "top"];
+    grpGrid.enabled = false;
+
+    // Row Top: TL and TR
+    var grpRowTop = grpGrid.add("group");
+    grpRowTop.orientation = "row";
+    grpRowTop.alignment = ["fill", "top"];
+
+    var lblTL = grpRowTop.add("statictext", undefined, "TL:");
+    lblTL.preferredSize = [24, -1];
+    var sldTL = grpRowTop.add("slider", undefined, 60, 0, 400);
+    sldTL.minvalue = 0; sldTL.maxvalue = 400; sldTL.value = 60;
+    sldTL.alignment = ["fill", "center"];
+    var txtTL = grpRowTop.add("edittext", undefined, "60");
+    txtTL.characters = 3;
+
+    var lblTR = grpRowTop.add("statictext", undefined, "TR:");
+    lblTR.preferredSize = [24, -1];
+    var sldTR = grpRowTop.add("slider", undefined, 60, 0, 400);
+    sldTR.minvalue = 0; sldTR.maxvalue = 400; sldTR.value = 60;
+    sldTR.alignment = ["fill", "center"];
+    var txtTR = grpRowTop.add("edittext", undefined, "60");
+    txtTR.characters = 3;
+
+    // Row Bottom: BL and BR
+    var grpRowBottom = grpGrid.add("group");
+    grpRowBottom.orientation = "row";
+    grpRowBottom.alignment = ["fill", "top"];
+
+    var lblBL = grpRowBottom.add("statictext", undefined, "BL:");
+    lblBL.preferredSize = [24, -1];
+    var sldBL = grpRowBottom.add("slider", undefined, 60, 0, 400);
+    sldBL.minvalue = 0; sldBL.maxvalue = 400; sldBL.value = 60;
+    sldBL.alignment = ["fill", "center"];
+    var txtBL = grpRowBottom.add("edittext", undefined, "60");
+    txtBL.characters = 3;
+
+    var lblBR = grpRowBottom.add("statictext", undefined, "BR:");
+    lblBR.preferredSize = [24, -1];
+    var sldBR = grpRowBottom.add("slider", undefined, 60, 0, 400);
+    sldBR.minvalue = 0; sldBR.maxvalue = 400; sldBR.value = 60;
+    sldBR.alignment = ["fill", "center"];
+    var txtBR = grpRowBottom.add("edittext", undefined, "60");
+    txtBR.characters = 3;
+
+    // Corner Segments Row (Cylindrical Resolution)
+    var grpSeg = pnlCorners.add("group");
+    grpSeg.orientation = "row";
+    grpSeg.alignment = ["fill", "top"];
+    var lblSeg = grpSeg.add("statictext", undefined, "Segments:");
+    lblSeg.preferredSize = [65, -1];
+    var sldSeg = grpSeg.add("slider", undefined, 6, 2, 16);
+    sldSeg.minvalue = 2; sldSeg.maxvalue = 16; sldSeg.value = 6;
+    sldSeg.alignment = ["fill", "center"];
+    var txtSeg = grpSeg.add("edittext", undefined, "6");
+    txtSeg.characters = 3;
+
+    // Quick Corner Presets (2 Rows of 2 Buttons for compact resilience)
+    var grpCornerPresets = pnlCorners.add("group");
+    grpCornerPresets.orientation = "column";
+    grpCornerPresets.alignChildren = ["fill", "top"];
+    grpCornerPresets.spacing = 3;
+
+    var rowCP1 = grpCornerPresets.add("group");
+    rowCP1.orientation = "row";
+    rowCP1.spacing = 4;
+    var btnPreCapsule = rowCP1.add("button", undefined, "Capsule");
+    var btnPreTabs = rowCP1.add("button", undefined, "Top Tab");
+
+    var rowCP2 = grpCornerPresets.add("group");
+    rowCP2.orientation = "row";
+    rowCP2.spacing = 4;
+    var btnPreDiag = rowCP2.add("button", undefined, "Diagonal");
+    var btnPreSharp = rowCP2.add("button", undefined, "Sharp (0px)");
+
+    btnPreCapsule.onClick = function() {
+        chkLink.value = true;
+        grpMaster.enabled = true;
+        grpGrid.enabled = false;
+        var r = Math.min(sldW.value, sldH.value) / 2;
+        sldMaster.value = r; txtMaster.text = String(Math.round(r));
+        setAllRadii(r, r, r, r);
+    };
+
+    btnPreTabs.onClick = function() {
+        chkLink.value = false;
+        grpMaster.enabled = false;
+        grpGrid.enabled = true;
+        setAllRadii(60, 60, 0, 0);
+    };
+
+    btnPreDiag.onClick = function() {
+        chkLink.value = false;
+        grpMaster.enabled = false;
+        grpGrid.enabled = true;
+        setAllRadii(80, 0, 80, 0);
+    };
+
+    btnPreSharp.onClick = function() {
+        chkLink.value = true;
+        grpMaster.enabled = true;
+        grpGrid.enabled = false;
+        sldMaster.value = 0; txtMaster.text = "0";
+        setAllRadii(0, 0, 0, 0);
+    };
+
+    function setAllRadii(tl, tr, bl, br) {
+        sldTL.value = tl; txtTL.text = String(Math.round(tl));
+        sldTR.value = tr; txtTR.text = String(Math.round(tr));
+        sldBL.value = bl; txtBL.text = String(Math.round(bl));
+        sldBR.value = br; txtBR.text = String(Math.round(br));
+        buildOrUpdateExtruded(false);
+    }
+
+    // Overlap Protection
+    var chkOverlap = pnlCorners.add("checkbox", undefined, "Prevent Overlap (W3C CSS Proportional Scaling)");
+    chkOverlap.value = true;
+    chkOverlap.onClick = function() { buildOrUpdateExtruded(false); };
+
+    // =========================================================================
+    // TAB 2: APPEARANCE & STYLING
+    // =========================================================================
+    var tabAppearance = tabs.add("tab", undefined, "Appearance");
+    tabAppearance.orientation = "column";
+    tabAppearance.alignChildren = ["fill", "top"];
+    tabAppearance.spacing = 10;
+    tabAppearance.margins = 10;
+
+    var pnlStyle = tabAppearance.add("panel", undefined, "Materials & Colors");
+    pnlStyle.orientation = "column";
+    pnlStyle.spacing = 8;
+    pnlStyle.alignChildren = ["fill", "top"];
+    pnlStyle.alignment = ["fill", "top"];
+
+    // Color Picker Helper Function
+    function createColorPicker(parent, defaultHex) {
+        var grp = parent.add("group");
+        grp.orientation = "row";
+        grp.spacing = 6;
+        grp.alignChildren = ["left", "center"];
+
+        var btnSwatch = grp.add("button", undefined, "");
+        btnSwatch.preferredSize = [36, 22];
+        btnSwatch.helpTip = "Click to pick color";
+
+        var txtHex = grp.add("edittext", undefined, defaultHex.toUpperCase());
+        txtHex.preferredSize = [70, 22];
+        txtHex.characters = 7;
+        txtHex.helpTip = "Direct hex color input (e.g. #2288EE)";
+
+        var picker = {
+            group: grp,
+            button: btnSwatch,
+            edittext: txtHex,
+            _color: defaultHex,
+            value: defaultHex,
+            onChange: null
+        };
+
+        btnSwatch.onDraw = function() {
+            try {
+                var g = this.graphics;
+                var rgb = hexToRgb(picker._color);
+                var brush = g.newBrush(g.BrushType.SOLID_COLOR, [rgb[0], rgb[1], rgb[2], 1.0]);
+                var pen = g.newPen(g.PenType.SOLID_COLOR, [0.7, 0.7, 0.7, 1.0], 1);
+                g.newPath();
+                g.rectPath(0, 0, this.size ? this.size[0] : 36, this.size ? this.size[1] : 22);
+                g.fillPath(brush);
+                g.strokePath(pen);
+            } catch(e) {}
+        };
+
+        function setColor(newHex, triggerChange) {
+            if (!newHex) return;
+            if (newHex.indexOf("#") !== 0) newHex = "#" + newHex;
+            picker._color = newHex;
+            picker.value = newHex;
+            txtHex.text = newHex.toUpperCase();
+
+            try {
+                if (btnSwatch.notify) btnSwatch.notify("onDraw");
+            } catch(e) {}
+
+            if (btnSwatch.domElement) {
+                btnSwatch.domElement.style.backgroundColor = newHex;
+                btnSwatch.domElement.style.border = "1px solid #777";
+            }
+
+            if (triggerChange && typeof picker.onChange === "function") {
+                picker.onChange();
+            }
+        }
+
+        btnSwatch.onClick = function() {
+            var curHex = picker._color || "#2288EE";
+            if (typeof window !== "undefined" && typeof window.openWindowsColorPicker === "function") {
+                window.openWindowsColorPicker(curHex, function(selectedHex) {
+                    setColor(selectedHex, true);
+                });
+                return;
+            }
+
+            var hexNum = parseInt(curHex.replace("#", ""), 16);
+            var result = -1;
+            if (typeof $.colorPicker === "function") {
+                result = $.colorPicker(hexNum, function(selectedHex) {
+                    setColor(selectedHex, true);
+                });
+            }
+            if (result !== -1 && result !== undefined && result !== null) {
+                var hexStr = Number(result).toString(16);
+                while (hexStr.length < 6) hexStr = "0" + hexStr;
+                setColor("#" + hexStr, true);
+            }
+        };
+
+        txtHex.onChange = function() {
+            var val = txtHex.text.replace(/^\\s+|\\s+$/g, "");
+            if (val.indexOf("#") !== 0) val = "#" + val;
+            if (/^#[0-9A-Fa-f]{6}$/.test(val)) {
+                setColor(val, true);
+            } else {
+                txtHex.text = picker._color.toUpperCase();
+            }
+        };
+
+        setColor(defaultHex, false);
+        return picker;
+    }
+
+    // Front / Back Caps Color
+    var grpCapCol = pnlStyle.add("group");
+    grpCapCol.orientation = "row";
+    grpCapCol.alignment = ["fill", "top"];
+    var lblCapCol = grpCapCol.add("statictext", undefined, "Front/Back Caps Color:");
+    lblCapCol.preferredSize = [135, -1];
+    var cpCaps = createColorPicker(grpCapCol, "#2288ee");
+    cpCaps.onChange = function() { buildOrUpdateExtruded(false); };
+
+    // Front / Back Caps Opacity
+    var grpCapOp = pnlStyle.add("group");
+    grpCapOp.orientation = "row";
+    grpCapOp.alignment = ["fill", "top"];
+    var lblCapOp = grpCapOp.add("statictext", undefined, "Caps Opacity:");
+    lblCapOp.preferredSize = [135, -1];
+    var sldCapOp = grpCapOp.add("slider", undefined, 100, 0, 100);
+    sldCapOp.alignment = ["fill", "center"];
+    var txtCapOp = grpCapOp.add("edittext", undefined, "100");
+    txtCapOp.characters = 3;
+
+    // Sides / Walls Color
+    var grpSidesCol = pnlStyle.add("group");
+    grpSidesCol.orientation = "row";
+    grpSidesCol.alignment = ["fill", "top"];
+    var lblSidesCol = grpSidesCol.add("statictext", undefined, "Sides Color:");
+    lblSidesCol.preferredSize = [135, -1];
+    var cpSides = createColorPicker(grpSidesCol, "#1166cc");
+    cpSides.onChange = function() { buildOrUpdateExtruded(false); };
+
+    // Sides / Walls Opacity
+    var grpSidesOp = pnlStyle.add("group");
+    grpSidesOp.orientation = "row";
+    grpSidesOp.alignment = ["fill", "top"];
+    var lblSidesOp = grpSidesOp.add("statictext", undefined, "Sides Opacity:");
+    lblSidesOp.preferredSize = [135, -1];
+    var sldSidesOp = grpSidesOp.add("slider", undefined, 90, 0, 100);
+    sldSidesOp.alignment = ["fill", "center"];
+    var txtSidesOp = grpSidesOp.add("edittext", undefined, "90");
+    txtSidesOp.characters = 3;
+
+    // Stroke Color
+    var grpStroke = pnlStyle.add("group");
+    grpStroke.orientation = "row";
+    grpStroke.alignment = ["fill", "top"];
+    var lblStroke = grpStroke.add("statictext", undefined, "Stroke Color:");
+    lblStroke.preferredSize = [135, -1];
+    var cpStroke = createColorPicker(grpStroke, "#ffffff");
+    cpStroke.onChange = function() { buildOrUpdateExtruded(false); };
+
+    // Stroke Width
+    var grpThick = pnlStyle.add("group");
+    grpThick.orientation = "row";
+    grpThick.alignment = ["fill", "top"];
+    var lblThick = grpThick.add("statictext", undefined, "Stroke Width:");
+    lblThick.preferredSize = [135, -1];
+    var sldThick = grpThick.add("slider", undefined, 2, 0, 30);
+    sldThick.alignment = ["fill", "center"];
+    var txtThick = grpThick.add("edittext", undefined, "2");
+    txtThick.characters = 3;
+
+    // Stroke Opacity
+    var grpStrokeOp = pnlStyle.add("group");
+    grpStrokeOp.orientation = "row";
+    grpStrokeOp.alignment = ["fill", "top"];
+    var lblStrokeOp = grpStrokeOp.add("statictext", undefined, "Stroke Opacity:");
+    lblStrokeOp.preferredSize = [135, -1];
+    var sldStrokeOp = grpStrokeOp.add("slider", undefined, 100, 0, 100);
+    sldStrokeOp.alignment = ["fill", "center"];
+    var txtStrokeOp = grpStrokeOp.add("edittext", undefined, "100");
+    txtStrokeOp.characters = 3;
+
+    // Two-way slider hook helper
+    function hookSliderText(sld, txt, onChangeFn, isInt) {
+        function updateFromSlider() {
+            var val = isInt ? Math.round(sld.value) : Math.round(sld.value * 10) / 10;
+            if (isNaN(val)) val = isInt ? Math.round(sld.minvalue || 0) : 0;
+            txt.text = String(val);
+            if (typeof onChangeFn === "function") onChangeFn();
+        }
+        sld.onChanging = updateFromSlider;
+        sld.onChange = updateFromSlider;
+
+        txt.onChange = function() {
+            var val = parseFloat(txt.text);
+            if (isNaN(val)) val = (typeof sld.minvalue === "number") ? sld.minvalue : 0;
+            var minV = (typeof sld.minvalue === "number") ? sld.minvalue : 0;
+            var maxV = (typeof sld.maxvalue === "number") ? sld.maxvalue : 10000;
+            val = Math.max(minV, Math.min(maxV, val));
+            sld.value = val;
+            txt.text = String(isInt ? Math.round(val) : Math.round(val * 10) / 10);
+            if (typeof onChangeFn === "function") onChangeFn();
+        };
+    }
+
+    var onLiveUpdate = function() { buildOrUpdateExtruded(false); };
+    hookSliderText(sldW, txtW, onLiveUpdate, true);
+    hookSliderText(sldH, txtH, onLiveUpdate, true);
+    hookSliderText(sldD, txtD, onLiveUpdate, true);
+    hookSliderText(sldMaster, txtMaster, function() {
+        if (chkLink.value) {
+            var v = sldMaster.value;
+            sldTL.value = v; txtTL.text = String(Math.round(v));
+            sldTR.value = v; txtTR.text = String(Math.round(v));
+            sldBL.value = v; txtBL.text = String(Math.round(v));
+            sldBR.value = v; txtBR.text = String(Math.round(v));
+        }
+        onLiveUpdate();
+    }, true);
+    hookSliderText(sldTL, txtTL, onLiveUpdate, true);
+    hookSliderText(sldTR, txtTR, onLiveUpdate, true);
+    hookSliderText(sldBL, txtBL, onLiveUpdate, true);
+    hookSliderText(sldBR, txtBR, onLiveUpdate, true);
+    hookSliderText(sldSeg, txtSeg, onLiveUpdate, true);
+    hookSliderText(sldCapOp, txtCapOp, onLiveUpdate, true);
+    hookSliderText(sldSidesOp, txtSidesOp, onLiveUpdate, true);
+    hookSliderText(sldThick, txtThick, onLiveUpdate, true);
+    hookSliderText(sldStrokeOp, txtStrokeOp, onLiveUpdate, true);
+
+    chkLink.onClick = function() {
+        var linked = chkLink.value;
+        grpMaster.enabled = linked;
+        grpGrid.enabled = !linked;
+        if (linked) {
+            var v = sldMaster.value;
+            sldTL.value = v; txtTL.text = String(Math.round(v));
+            sldTR.value = v; txtTR.text = String(Math.round(v));
+            sldBL.value = v; txtBL.text = String(Math.round(v));
+            sldBR.value = v; txtBR.text = String(Math.round(v));
+        }
+        buildOrUpdateExtruded(false);
+    };
+
+    tabs.selection = 0;
+
+    // --- Action Button (Anchored at the bottom outside of tabs) ---
+    var btnBuild = win.add("button", undefined, "Build / Rebuild Extruded Rectangle");
+    btnBuild.alignment = ["fill", "top"];
+    btnBuild.preferredSize = [-1, 36];
+    btnBuild.onClick = function() {
+        buildOrUpdateExtruded(true);
+    };
+
+    // --- Bottom Subtle Repository Link ---
+    var grpRepoLink = win.add("group");
+    grpRepoLink.orientation = "row";
+    grpRepoLink.alignment = ["fill", "bottom"];
+    grpRepoLink.alignChildren = ["center", "center"];
+    grpRepoLink.margins = [0, 4, 0, 0];
+    var lblRepoLink = grpRepoLink.add("statictext", undefined, "GitHub: work2survive/AE_JS_builder");
+    lblRepoLink.helpTip = "https://github.com/work2survive/AE_JS_builder";
+    lblRepoLink.onClick = function() {
+        var url = "https://github.com/work2survive/AE_JS_builder";
+        if (typeof window !== "undefined" && window.open) {
+            window.open(url, "_blank");
+        } else if ($.os.indexOf("Windows") !== -1) {
+            system.callSystem('explorer "' + url + '"');
+        } else {
+            system.callSystem('open "' + url + '"');
+        }
+    };
+
+    // -------------------------------------------------------------------------
+    // 5. Procedural Geometry & Expression Generation
+    // -------------------------------------------------------------------------
+    function computeCapShapeData(w, h, rTL, rTR, rBR, rBL, preventOverlap) {
+        w = Math.max(0, w);
+        h = Math.max(0, h);
+        rTL = Math.max(0, rTL);
+        rTR = Math.max(0, rTR);
+        rBR = Math.max(0, rBR);
+        rBL = Math.max(0, rBL);
+
+        if (preventOverlap) {
+            var topSum    = rTL + rTR;
+            var bottomSum = rBL + rBR;
+            var leftSum   = rTL + rBL;
+            var rightSum  = rTR + rBR;
+
+            var f = 1.0;
+            if (topSum > w && topSum > 0)       f = Math.min(f, w / topSum);
+            if (bottomSum > w && bottomSum > 0) f = Math.min(f, w / bottomSum);
+            if (leftSum > h && leftSum > 0)     f = Math.min(f, h / leftSum);
+            if (rightSum > h && rightSum > 0)   f = Math.min(f, h / rightSum);
+
+            rTL *= f;
+            rTR *= f;
+            rBR *= f;
+            rBL *= f;
+        }
+
+        var K = 0.5522847498307936;
+        var halfW = w / 2;
+        var halfH = h / 2;
+        var xMin = -halfW;
+        var xMax =  halfW;
+        var yMin = -halfH;
+        var yMax =  halfH;
+
+        var points = [
+            [xMin + rTL, yMin],
+            [xMax - rTR, yMin],
+            [xMax, yMin + rTR],
+            [xMax, yMax - rBR],
+            [xMax - rBR, yMax],
+            [xMin + rBL, yMax],
+            [xMin, yMax - rBL],
+            [xMin, yMin + rTL]
+        ];
+
+        var inTangents = [
+            [-rTL * K, 0],
+            [0, 0],
+            [0, -rTR * K],
+            [0, 0],
+            [rBR * K, 0],
+            [0, 0],
+            [0, rBL * K],
+            [0, 0]
+        ];
+
+        var outTangents = [
+            [0, 0],
+            [rTR * K, 0],
+            [0, 0],
+            [0, rBR * K],
+            [0, 0],
+            [-rBL * K, 0],
+            [0, 0],
+            [0, -rTL * K]
+        ];
+
+        return {
+            points: points,
+            inTangents: inTangents,
+            outTangents: outTangents
+        };
+    }
+
+    var CAP_PATH_EXPR = [
+        "// Procedural Bézier Path for Extruded Rounded Rectangle Caps",
+        "(function() {",
+        "    function getVal(name, fallback) {",
+        "        try {",
+        "            var p = thisComp.layer('Extruded_Rect_Master_Controller').effect(name)(1);",
+        "            return (p && typeof p.value !== 'undefined') ? p.value : (p !== undefined ? p : fallback);",
+        "        } catch(e) {",
+        "            return fallback;",
+        "        }",
+        "    }",
+        "",
+        "    var w = Math.max(0, getVal('Width', 500));",
+        "    var h = Math.max(0, getVal('Height', 300));",
+        "    var linkAll = getVal('Link All Corners', 0);",
+        "    var masterR = Math.max(0, getVal('Radius All', 60));",
+        "",
+        "    var rTL = linkAll ? masterR : Math.max(0, getVal('Radius Top-Left', 60));",
+        "    var rTR = linkAll ? masterR : Math.max(0, getVal('Radius Top-Right', 60));",
+        "    var rBR = linkAll ? masterR : Math.max(0, getVal('Radius Bottom-Right', 60));",
+        "    var rBL = linkAll ? masterR : Math.max(0, getVal('Radius Bottom-Left', 60));",
+        "",
+        "    var preventOverlap = getVal('Prevent Overlap', 1);",
+        "",
+        "    if (preventOverlap > 0) {",
+        "        var topSum    = rTL + rTR;",
+        "        var bottomSum = rBL + rBR;",
+        "        var leftSum   = rTL + rBL;",
+        "        var rightSum  = rTR + rBR;",
+        "",
+        "        var f = 1.0;",
+        "        if (topSum > w && topSum > 0)       f = Math.min(f, w / topSum);",
+        "        if (bottomSum > w && bottomSum > 0) f = Math.min(f, w / bottomSum);",
+        "        if (leftSum > h && leftSum > 0)     f = Math.min(f, h / leftSum);",
+        "        if (rightSum > h && rightSum > 0)   f = Math.min(f, h / rightSum);",
+        "",
+        "        rTL *= f;",
+        "        rTR *= f;",
+        "        rBR *= f;",
+        "        rBL *= f;",
+        "    }",
+        "",
+        "    var K = 0.5522847498307936;",
+        "    var halfW = w / 2;",
+        "    var halfH = h / 2;",
+        "    var xMin = -halfW;",
+        "    var xMax =  halfW;",
+        "    var yMin = -halfH;",
+        "    var yMax =  halfH;",
+        "",
+        "    var points = [",
+        "        [xMin + rTL, yMin],",
+        "        [xMax - rTR, yMin],",
+        "        [xMax, yMin + rTR],",
+        "        [xMax, yMax - rBR],",
+        "        [xMax - rBR, yMax],",
+        "        [xMin + rBL, yMax],",
+        "        [xMin, yMax - rBL],",
+        "        [xMin, yMin + rTL]",
+        "    ];",
+        "",
+        "    var inTangents = [",
+        "        [-rTL * K, 0],",
+        "        [0, 0],",
+        "        [0, -rTR * K],",
+        "        [0, 0],",
+        "        [rBR * K, 0],",
+        "        [0, 0],",
+        "        [0, rBL * K],",
+        "        [0, 0]",
+        "    ];",
+        "",
+        "    var outTangents = [",
+        "        [0, 0],",
+        "        [rTR * K, 0],",
+        "        [0, 0],",
+        "        [0, rBR * K],",
+        "        [0, 0],",
+        "        [-rBL * K, 0],",
+        "        [0, 0],",
+        "        [0, -rTL * K]",
+        "    ];",
+        "",
+        "    return createPath(points, inTangents, outTangents, true);",
+        "})();"
+    ].join("\\n");
+
+    // -------------------------------------------------------------------------
+    // 6. Core Engine: Build & Live-Update the Extruded Shape
+    // -------------------------------------------------------------------------
+    function buildOrUpdateExtruded(forceRebuild) {
+        var parentComp = app.project ? app.project.activeItem : null;
+        if (!parentComp || !(parentComp instanceof CompItem)) {
+            if (forceRebuild) alert("Please select or open an active composition first.");
+            return;
+        }
+
+        if (!forceRebuild && !currentPrecompName) return;
+
+        var w = parseFloat(txtW.text) || 500;
+        var h = parseFloat(txtH.text) || 300;
+        var d = parseFloat(txtD.text) || 120;
+        var linkAll = chkLink.value;
+        var rAll = parseFloat(txtMaster.text) || 60;
+        var rTL = linkAll ? rAll : (parseFloat(txtTL.text) || 0);
+        var rTR = linkAll ? rAll : (parseFloat(txtTR.text) || 0);
+        var rBR = linkAll ? rAll : (parseFloat(txtBR.text) || 0);
+        var rBL = linkAll ? rAll : (parseFloat(txtBL.text) || 0);
+        var segCount = Math.max(2, Math.min(16, parseInt(txtSeg.text, 10) || 6));
+        var preventOverlap = chkOverlap.value;
+
+        var capsColor = hexToRgb(cpCaps._color);
+        var capsOpacity = Math.max(0, Math.min(100, parseFloat(txtCapOp.text) || 100));
+        var sidesColor = hexToRgb(cpSides._color);
+        var sidesOpacity = Math.max(0, Math.min(100, parseFloat(txtSidesOp.text) || 90));
+        var strokeColor = hexToRgb(cpStroke._color);
+        var strokeWidth = Math.max(0, parseFloat(txtThick.text) || 0);
+        var strokeOpacity = Math.max(0, Math.min(100, parseFloat(txtStrokeOp.text) || 100));
+
+        var center = [parentComp.width / 2, parentComp.height / 2, 0];
+
+        // ---------------------------------------------------------------------
+        // Case A: Structural Recreation
+        // ---------------------------------------------------------------------
+        if (forceRebuild) {
+            if (app.beginUndoGroup) app.beginUndoGroup("Build Extruded Rounded Rectangle Precomp");
+
+            try {
+                var randNum = Math.floor(1000 + Math.random() * 9000);
+                var precompName = "extruded_rect_" + randNum;
+                currentPrecompName = precompName;
+
+                // 1. Create Master Controller Layer
+                var master = parentComp.layers.addShape();
+                master.name = "Extruded_Rect_Master_Controller";
+                master.threeDLayer = true;
+                master.shy = false;
+                master.notShyable = true;
+                master.label = 1;              // Red label
+                master.colorLabel = "#ff3b30";
+                setTransformVal(master, "Anchor Point", [0, 0, 0]);
+                setTransformVal(master, "Position", center);
+
+                var createdLayers = [];
+
+                // Common function to configure Rect Vector Group
+                function setupRectVector(layer, size, fillCol, fillOp, strCol, strW, strOp) {
+                    var root = layer.property("ADBE Root Vectors Group") || layer.property("Contents") || (layer.property && layer.property(1));
+                    var grp = root.addProperty("ADBE Vector Group");
+                    grp.name = "Vector Group";
+
+                    var contents = grp.property("ADBE Vectors Group") || grp.property("Contents") || (grp.property && grp.property(2)) || (grp.property && grp.property(1));
+                    contents.addProperty("ADBE Vector Shape - Rect");
+                    contents.addProperty("ADBE Vector Graphic - Fill");
+                    contents.addProperty("ADBE Vector Graphic - Stroke");
+
+                    contents = grp.property("ADBE Vectors Group") || grp.property("Contents") || (grp.property && grp.property(2)) || (grp.property && grp.property(1));
+
+                    var rect = contents.property("ADBE Vector Shape - Rect") || contents.property(1);
+                    if (rect) {
+                        var rSize = rect.property("ADBE Vector Rect Size") || rect.property("Size") || rect.property(2) || rect.property(1);
+                        if (rSize && rSize.setValue) rSize.setValue(size);
+                    }
+
+                    var fill = contents.property("ADBE Vector Graphic - Fill") || contents.property(2);
+                    if (fill) {
+                        var fCol = fill.property("ADBE Vector Fill Color") || fill.property("Color") || fill.property(1);
+                        if (fCol && fCol.setValue) fCol.setValue(fillCol);
+                        var fOp = fill.property("ADBE Vector Fill Opacity") || fill.property("Opacity") || fill.property(2);
+                        if (fOp && fOp.setValue) fOp.setValue(fillOp);
+                    }
+
+                    var stroke = contents.property("ADBE Vector Graphic - Stroke") || contents.property(3);
+                    if (stroke) {
+                        var sCol = stroke.property("ADBE Vector Stroke Color") || stroke.property("Color") || stroke.property(1);
+                        if (sCol && sCol.setValue) sCol.setValue(strCol);
+                        var sW = stroke.property("ADBE Vector Stroke Width") || stroke.property("Stroke Width") || stroke.property(2);
+                        if (sW && sW.setValue) sW.setValue(strW);
+                        var sOp = stroke.property("ADBE Vector Stroke Opacity") || stroke.property("Opacity") || stroke.property(3);
+                        if (sOp && sOp.setValue) sOp.setValue(strW <= 0.0001 ? 0 : strOp);
+                    }
+                }
+
+                // 2. Create 4 Straight Side Walls
+                // Top Wall (Between TL and TR corners)
+                var wallTop = parentComp.layers.addShape();
+                wallTop.name = "Wall_Top";
+                wallTop.threeDLayer = true;
+                wallTop.shy = true;
+                setupRectVector(wallTop, [Math.max(0.1, w - rTL - rTR), d], sidesColor, sidesOpacity, strokeColor, strokeWidth, strokeOpacity);
+                wallTop.parent = master;
+                setTransformVal(wallTop, "Anchor Point", [0, 0, 0]);
+                setTransformVal(wallTop, "Position", [(-rTR + rTL) / 2, -h / 2, 0]);
+                setTransformVal(wallTop, "Orientation", [90, 0, 0]);
+                createdLayers.push(wallTop);
+
+                // Bottom Wall (Between BL and BR corners)
+                var wallBottom = parentComp.layers.addShape();
+                wallBottom.name = "Wall_Bottom";
+                wallBottom.threeDLayer = true;
+                wallBottom.shy = true;
+                setupRectVector(wallBottom, [Math.max(0.1, w - rBL - rBR), d], sidesColor, sidesOpacity, strokeColor, strokeWidth, strokeOpacity);
+                wallBottom.parent = master;
+                setTransformVal(wallBottom, "Anchor Point", [0, 0, 0]);
+                setTransformVal(wallBottom, "Position", [(-rBR + rBL) / 2, h / 2, 0]);
+                setTransformVal(wallBottom, "Orientation", [90, 180, 0]);
+                createdLayers.push(wallBottom);
+
+                // Left Wall (Between TL and BL corners)
+                var wallLeft = parentComp.layers.addShape();
+                wallLeft.name = "Wall_Left";
+                wallLeft.threeDLayer = true;
+                wallLeft.shy = true;
+                setupRectVector(wallLeft, [Math.max(0.1, h - rTL - rBL), d], sidesColor, sidesOpacity, strokeColor, strokeWidth, strokeOpacity);
+                wallLeft.parent = master;
+                setTransformVal(wallLeft, "Anchor Point", [0, 0, 0]);
+                setTransformVal(wallLeft, "Position", [-w / 2, (-rBL + rTL) / 2, 0]);
+                setTransformVal(wallLeft, "Orientation", [90, -90, 0]);
+                createdLayers.push(wallLeft);
+
+                // Right Wall (Between TR and BR corners)
+                var wallRight = parentComp.layers.addShape();
+                wallRight.name = "Wall_Right";
+                wallRight.threeDLayer = true;
+                wallRight.shy = true;
+                setupRectVector(wallRight, [Math.max(0.1, h - rTR - rBR), d], sidesColor, sidesOpacity, strokeColor, strokeWidth, strokeOpacity);
+                wallRight.parent = master;
+                setTransformVal(wallRight, "Anchor Point", [0, 0, 0]);
+                setTransformVal(wallRight, "Position", [w / 2, (-rBR + rTR) / 2, 0]);
+                setTransformVal(wallRight, "Orientation", [90, 90, 0]);
+                createdLayers.push(wallRight);
+
+                // 3. Create 4 Cylindrical Corner Quadrants
+                function createCornerQuadrant(cornerId, centerFn, startDeg, endDeg, rVal) {
+                    var sweep = endDeg - startDeg;
+                    var alpha = (Math.abs(sweep) / segCount) * (Math.PI / 180);
+                    var chord = Math.max(0.1, 2 * rVal * Math.sin(alpha / 2));
+                    var rMid = rVal * Math.cos(alpha / 2);
+
+                    for (var s = 0; s < segCount; s++) {
+                        var theta = startDeg + (s + 0.5) * (sweep / segCount);
+                        var rad = theta * (Math.PI / 180);
+                        var cCenter = centerFn();
+                        var posX = cCenter[0] + rMid * Math.cos(rad);
+                        var posY = cCenter[1] + rMid * Math.sin(rad);
+
+                        var cWall = parentComp.layers.addShape();
+                        cWall.name = "Corner_" + cornerId + "_Wall_" + (s + 1);
+                        cWall.threeDLayer = true;
+                        cWall.shy = true;
+                        setupRectVector(cWall, [chord, d], sidesColor, sidesOpacity, strokeColor, strokeWidth, strokeOpacity);
+                        cWall.parent = master;
+                        setTransformVal(cWall, "Anchor Point", [0, 0, 0]);
+                        setTransformVal(cWall, "Position", [posX, posY, 0]);
+                        setTransformVal(cWall, "Orientation", [90, theta + 90, 0]);
+                        createdLayers.push(cWall);
+                    }
+                }
+
+                // TR Corner (from -90° to 0°)
+                createCornerQuadrant("TR", function() { return [w / 2 - rTR, -h / 2 + rTR]; }, -90, 0, rTR);
+                // BR Corner (from 0° to 90°)
+                createCornerQuadrant("BR", function() { return [w / 2 - rBR, h / 2 - rBR]; }, 0, 90, rBR);
+                // BL Corner (from 90° to 180°)
+                createCornerQuadrant("BL", function() { return [-w / 2 + rBL, h / 2 - rBL]; }, 90, 180, rBL);
+                // TL Corner (from 180° to 270°)
+                createCornerQuadrant("TL", function() { return [-w / 2 + rTL, -h / 2 + rTL]; }, 180, 270, rTL);
+
+                // 4. Create Front and Back Caps (Procedural Bézier Geometry)
+                function createCap(capName, zPos, xRot) {
+                    var cap = parentComp.layers.addShape();
+                    cap.name = capName;
+                    cap.threeDLayer = true;
+                    cap.shy = true;
+
+                    var root = cap.property("ADBE Root Vectors Group") || cap.property("Contents") || (cap.property && cap.property(1));
+                    var grp = root.addProperty("ADBE Vector Group");
+                    grp.name = "Cap Vector";
+
+                    var contents = grp.property("ADBE Vectors Group") || grp.property("Contents") || (grp.property && grp.property(2)) || (grp.property && grp.property(1));
+                    contents.addProperty("ADBE Vector Shape - Group");
+                    contents.addProperty("ADBE Vector Graphic - Fill");
+                    contents.addProperty("ADBE Vector Graphic - Stroke");
+
+                    contents = grp.property("ADBE Vectors Group") || grp.property("Contents") || (grp.property && grp.property(2)) || (grp.property && grp.property(1));
+
+                    var shapeGroup = contents.property("ADBE Vector Shape - Group") || contents.property(1);
+                    if (shapeGroup) {
+                        var pProp = shapeGroup.property("ADBE Vector Shape") || shapeGroup.property("Path") || (shapeGroup.numProperties >= 2 ? shapeGroup.property(2) : shapeGroup.property(1));
+                        if (pProp) {
+                            var capData = computeCapShapeData(w, h, rTL, rTR, rBR, rBL, preventOverlap);
+                            if (typeof Shape !== "undefined") {
+                                try {
+                                    var sObj = new Shape();
+                                    sObj.vertices = capData.points;
+                                    sObj.inTangents = capData.inTangents;
+                                    sObj.outTangents = capData.outTangents;
+                                    sObj.closed = true;
+                                    pProp.setValue(sObj);
+                                } catch(eS) {}
+                            }
+                        }
+                    }
+
+                    var fill = contents.property("ADBE Vector Graphic - Fill") || contents.property(2);
+                    if (fill) {
+                        var fCol = fill.property("ADBE Vector Fill Color") || fill.property("Color") || fill.property(1);
+                        if (fCol && fCol.setValue) fCol.setValue(capsColor);
+                        var fOp = fill.property("ADBE Vector Fill Opacity") || fill.property("Opacity") || fill.property(2);
+                        if (fOp && fOp.setValue) fOp.setValue(capsOpacity);
+                    }
+
+                    var stroke = contents.property("ADBE Vector Graphic - Stroke") || contents.property(3);
+                    if (stroke) {
+                        var sCol = stroke.property("ADBE Vector Stroke Color") || stroke.property("Color") || stroke.property(1);
+                        if (sCol && sCol.setValue) sCol.setValue(strokeColor);
+                        var sW = stroke.property("ADBE Vector Stroke Width") || stroke.property("Stroke Width") || stroke.property(2);
+                        if (sW && sW.setValue) sW.setValue(strokeWidth);
+                        var sOp = stroke.property("ADBE Vector Stroke Opacity") || stroke.property("Opacity") || stroke.property(3);
+                        if (sOp && sOp.setValue) sOp.setValue(strokeWidth <= 0.0001 ? 0 : strokeOpacity);
+                    }
+
+                    cap.parent = master;
+                    setTransformVal(cap, "Anchor Point", [0, 0, 0]);
+                    setTransformVal(cap, "Position", [0, 0, zPos]);
+                    setTransformVal(cap, "Orientation", [xRot, 0, 0]);
+                    createdLayers.push(cap);
+                    return cap;
+                }
+
+                var capFront = createCap("Cap_Front", -d / 2, 0);
+                var capBack = createCap("Cap_Back", d / 2, 0);
+
+                // 5. Precompose All Sub-Layers
+                var indicesMap = {};
+                if (master && master.index) indicesMap[master.index] = true;
+                for (var ci = 0; ci < createdLayers.length; ci++) {
+                    if (createdLayers[ci] && createdLayers[ci].index) {
+                        indicesMap[createdLayers[ci].index] = true;
+                    }
+                }
+                var indices = [];
+                for (var kIdx in indicesMap) {
+                    if (indicesMap.hasOwnProperty(kIdx)) {
+                        indices.push(parseInt(kIdx, 10));
+                    }
+                }
+                indices.sort(function(a, b) { return a - b; });
+
+                var preComp = parentComp.layers.precompose(indices, precompName, true);
+
+                // Center preMaster inside precomp
+                var preCenter = [preComp.width / 2, preComp.height / 2, 0];
+                var preMaster = getLayer(preComp, "Extruded_Rect_Master_Controller") || (preComp.layer ? preComp.layer(1) : (preComp.layers && preComp.layers[0]));
+                if (preMaster) {
+                    preMaster.label = 1;
+                    preMaster.colorLabel = "#ff3b30";
+                    preMaster.notShyable = true;
+                    if (preMaster.moveToBeginning) preMaster.moveToBeginning();
+                    setTransformVal(preMaster, "Anchor Point", [0, 0, 0]);
+                    setTransformVal(preMaster, "Position", preCenter);
+                }
+
+                // Target precomp layer in parent comp
+                var extLayer = getLayer(parentComp, precompName) || getLayer(parentComp, 1);
+                if (extLayer) {
+                    extLayer.name = precompName;
+                    extLayer.threeDLayer = true;
+                    if ("collapseTransformation" in extLayer) {
+                        extLayer.collapseTransformation = true;
+                    }
+                    extLayer.label = 1;
+                    extLayer.colorLabel = "#ff3b30";
+                    extLayer.notShyable = true;
+                    setTransformVal(extLayer, "Anchor Point", preCenter);
+                    setTransformVal(extLayer, "Position", center);
+                    if (extLayer.moveToBeginning) extLayer.moveToBeginning();
+                }
+
+                // 6. Master Controls on Parent Layer
+                function addMasterProp(type, name, val) {
+                    var parade = extLayer.property("ADBE Effect Parade") || extLayer.property("Effects");
+                    var eff = parade.addProperty(type);
+                    eff.name = name;
+                    eff.property(1).setValue(val);
+                    return eff;
+                }
+
+                addMasterProp("ADBE Slider Control",   "Width",                w);
+                addMasterProp("ADBE Slider Control",   "Height",               h);
+                addMasterProp("ADBE Slider Control",   "Extrude Depth",        d);
+                addMasterProp("ADBE Checkbox Control", "Link All Corners",     linkAll ? 1 : 0);
+                addMasterProp("ADBE Slider Control",   "Radius All",           rAll);
+                addMasterProp("ADBE Slider Control",   "Radius Top-Left",      rTL);
+                addMasterProp("ADBE Slider Control",   "Radius Top-Right",     rTR);
+                addMasterProp("ADBE Slider Control",   "Radius Bottom-Right",  rBR);
+                addMasterProp("ADBE Slider Control",   "Radius Bottom-Left",   rBL);
+                addMasterProp("ADBE Slider Control",   "Corner Segments",      segCount);
+                addMasterProp("ADBE Checkbox Control", "Prevent Overlap",      preventOverlap ? 1 : 0);
+                addMasterProp("ADBE Color Control",    "Front/Back Color",     capsColor);
+                addMasterProp("ADBE Slider Control",   "Front/Back Opacity",   capsOpacity);
+                addMasterProp("ADBE Color Control",    "Sides Color",          sidesColor);
+                addMasterProp("ADBE Slider Control",   "Sides Opacity",        sidesOpacity);
+                addMasterProp("ADBE Color Control",    "Stroke Color",         strokeColor);
+                addMasterProp("ADBE Slider Control",   "Stroke Width",         strokeWidth);
+                addMasterProp("ADBE Slider Control",   "Stroke Opacity",       strokeOpacity);
+
+                // 7. Expressions on Master Controller inside Subcomp
+                if (preMaster) {
+                    function linkControllerProp(effName, effTarget) {
+                        var eff = preMaster.property("ADBE Effect Parade").addProperty(
+                            effName.indexOf("Color") !== -1 ? "ADBE Color Control" :
+                            (effName.indexOf("Link") !== -1 || effName.indexOf("Overlap") !== -1 ? "ADBE Checkbox Control" : "ADBE Slider Control")
+                        );
+                        eff.name = effName;
+                        eff.property(1).expression = 'try { comp("' + parentComp.name + '").layer("' + precompName + '").effect("' + effTarget + '")(1).value; } catch(e) { value; }';
+                    }
+
+                    linkControllerProp("Width", "Width");
+                    linkControllerProp("Height", "Height");
+                    linkControllerProp("Extrude Depth", "Extrude Depth");
+                    linkControllerProp("Link All Corners", "Link All Corners");
+                    linkControllerProp("Radius All", "Radius All");
+                    linkControllerProp("Radius Top-Left", "Radius Top-Left");
+                    linkControllerProp("Radius Top-Right", "Radius Top-Right");
+                    linkControllerProp("Radius Bottom-Right", "Radius Bottom-Right");
+                    linkControllerProp("Radius Bottom-Left", "Radius Bottom-Left");
+                    linkControllerProp("Corner Segments", "Corner Segments");
+                    linkControllerProp("Prevent Overlap", "Prevent Overlap");
+                    linkControllerProp("Front/Back Color", "Front/Back Color");
+                    linkControllerProp("Front/Back Opacity", "Front/Back Opacity");
+                    linkControllerProp("Sides Color", "Sides Color");
+                    linkControllerProp("Sides Opacity", "Sides Opacity");
+                    linkControllerProp("Stroke Color", "Stroke Color");
+                    linkControllerProp("Stroke Width", "Stroke Width");
+                    linkControllerProp("Stroke Opacity", "Stroke Opacity");
+                }
+
+                // 8. Dynamic Expressions on Subcomp Layers
+                // Shared expression snippets
+                var exprCapsCol = 'try { thisComp.layer("Extruded_Rect_Master_Controller").effect("Front/Back Color")(1).value; } catch(e) { value; }';
+                var exprCapsOp = 'try { thisComp.layer("Extruded_Rect_Master_Controller").effect("Front/Back Opacity")(1).value; } catch(e) { value; }';
+                var exprSidesCol = 'try { thisComp.layer("Extruded_Rect_Master_Controller").effect("Sides Color")(1).value; } catch(e) { value; }';
+                var exprSidesOp = 'try { thisComp.layer("Extruded_Rect_Master_Controller").effect("Sides Opacity")(1).value; } catch(e) { value; }';
+                var exprStrokeCol = 'try { thisComp.layer("Extruded_Rect_Master_Controller").effect("Stroke Color")(1).value; } catch(e) { value; }';
+                var exprStrokeWidth = 'try { Math.max(0, thisComp.layer("Extruded_Rect_Master_Controller").effect("Stroke Width")(1).value); } catch(e) { value; }';
+                var exprStrokeOp = 'try { var sw = thisComp.layer("Extruded_Rect_Master_Controller").effect("Stroke Width")(1).value; var op = thisComp.layer("Extruded_Rect_Master_Controller").effect("Stroke Opacity")(1).value; (sw <= 0.0001) ? 0 : op; } catch(e) { value; }';
+
+                // Setup layer expressions helper
+                function applyCommonMaterialExprs(lay, isCap) {
+                    if (!lay) return;
+                    var root = lay.property("ADBE Root Vectors Group") || lay.property("Contents") || (lay.property && lay.property(1));
+                    if (!root) return;
+                    var grp = root.property(1);
+                    if (!grp) return;
+                    var contents = grp.property("ADBE Vectors Group") || grp.property("Contents") || (grp.property && grp.property(2)) || (grp.property && grp.property(1));
+                    if (!contents) return;
+
+                    var fill = contents.property("ADBE Vector Graphic - Fill") || contents.property(2);
+                    if (fill) {
+                        var fCol = fill.property("ADBE Vector Fill Color") || fill.property("Color") || fill.property(1);
+                        if (fCol) fCol.expression = isCap ? exprCapsCol : exprSidesCol;
+                        var fOp = fill.property("ADBE Vector Fill Opacity") || fill.property("Opacity") || fill.property(2);
+                        if (fOp) fOp.expression = isCap ? exprCapsOp : exprSidesOp;
+                    }
+
+                    var stroke = contents.property("ADBE Vector Graphic - Stroke") || contents.property(3);
+                    if (stroke) {
+                        var sCol = stroke.property("ADBE Vector Stroke Color") || stroke.property("Color") || stroke.property(1);
+                        if (sCol) sCol.expression = exprStrokeCol;
+                        var sW = stroke.property("ADBE Vector Stroke Width") || stroke.property("Stroke Width") || stroke.property(2);
+                        if (sW) sW.expression = exprStrokeWidth;
+                        var sOp = stroke.property("ADBE Vector Stroke Opacity") || stroke.property("Opacity") || stroke.property(3);
+                        if (sOp) sOp.expression = exprStrokeOp;
+                    }
+                }
+
+                // Front & Back Caps expressions
+                var preCapFront = getLayer(preComp, "Cap_Front");
+                if (preCapFront) {
+                    setTransformExpr(preCapFront, "Position", '[0, 0, -thisComp.layer("Extruded_Rect_Master_Controller").effect("Extrude Depth")(1).value / 2];');
+                    applyCommonMaterialExprs(preCapFront, true);
+                    var rootF = preCapFront.property("ADBE Root Vectors Group") || preCapFront.property("Contents") || (preCapFront.property && preCapFront.property(1));
+                    var grpF = rootF.property(1);
+                    var contF = grpF.property("ADBE Vectors Group") || grpF.property("Contents") || (grpF.property && grpF.property(2)) || (grpF.property && grpF.property(1));
+                    var shpF = contF.property("ADBE Vector Shape - Group") || contF.property(1);
+                    var pF = shpF.property("ADBE Vector Shape") || shpF.property("Path") || (shpF.numProperties >= 2 ? shpF.property(2) : shpF.property(1));
+                    if (pF) pF.expression = CAP_PATH_EXPR;
+                }
+
+                var preCapBack = getLayer(preComp, "Cap_Back");
+                if (preCapBack) {
+                    setTransformExpr(preCapBack, "Position", '[0, 0, thisComp.layer("Extruded_Rect_Master_Controller").effect("Extrude Depth")(1).value / 2];');
+                    applyCommonMaterialExprs(preCapBack, true);
+                    var rootB = preCapBack.property("ADBE Root Vectors Group") || preCapBack.property("Contents") || (preCapBack.property && preCapBack.property(1));
+                    var grpB = rootB.property(1);
+                    var contB = grpB.property("ADBE Vectors Group") || grpB.property("Contents") || (grpB.property && grpB.property(2)) || (grpB.property && grpB.property(1));
+                    var shpB = contB.property("ADBE Vector Shape - Group") || contB.property(1);
+                    var pB = shpB.property("ADBE Vector Shape") || shpB.property("Path") || (shpB.numProperties >= 2 ? shpB.property(2) : shpB.property(1));
+                    if (pB) pB.expression = CAP_PATH_EXPR;
+                }
+
+                // Helper for wall dimensions & positions
+                var exprSolverHeader = [
+                    'var m = thisComp.layer("Extruded_Rect_Master_Controller");',
+                    'var w = Math.max(0, m.effect("Width")(1).value);',
+                    'var h = Math.max(0, m.effect("Height")(1).value);',
+                    'var d = Math.max(0, m.effect("Extrude Depth")(1).value);',
+                    'var link = m.effect("Link All Corners")(1).value > 0;',
+                    'var rAll = Math.max(0, m.effect("Radius All")(1).value);',
+                    'var rTL = link ? rAll : Math.max(0, m.effect("Radius Top-Left")(1).value);',
+                    'var rTR = link ? rAll : Math.max(0, m.effect("Radius Top-Right")(1).value);',
+                    'var rBR = link ? rAll : Math.max(0, m.effect("Radius Bottom-Right")(1).value);',
+                    'var rBL = link ? rAll : Math.max(0, m.effect("Radius Bottom-Left")(1).value);',
+                    'if (m.effect("Prevent Overlap")(1).value > 0) {',
+                    '    var tS = rTL + rTR, bS = rBL + rBR, lS = rTL + rBL, rS = rTR + rBR;',
+                    '    var f = 1.0;',
+                    '    if (tS > w && tS > 0) f = Math.min(f, w / tS);',
+                    '    if (bS > w && bS > 0) f = Math.min(f, w / bS);',
+                    '    if (lS > h && lS > 0) f = Math.min(f, h / lS);',
+                    '    if (rS > h && rS > 0) f = Math.min(f, h / rS);',
+                    '    rTL *= f; rTR *= f; rBR *= f; rBL *= f;',
+                    '}'
+                ].join('\\n');
+
+                function applyRectSizeExpr(lay, sizeExpr) {
+                    if (!lay) return;
+                    var root = lay.property("ADBE Root Vectors Group") || lay.property("Contents") || (lay.property && lay.property(1));
+                    var grp = root.property(1);
+                    var contents = grp.property("ADBE Vectors Group") || grp.property("Contents") || (grp.property && grp.property(2)) || (grp.property && grp.property(1));
+                    var rect = contents.property("ADBE Vector Shape - Rect") || contents.property(1);
+                    var rSize = rect.property("ADBE Vector Rect Size") || rect.property("Size") || rect.property(2) || rect.property(1);
+                    if (rSize) rSize.expression = sizeExpr;
+                }
+
+                // Apply expressions to straight walls
+                var preWallTop = getLayer(preComp, "Wall_Top");
+                if (preWallTop) {
+                    setTransformExpr(preWallTop, "Position", exprSolverHeader + '\\n[(-rTR + rTL) / 2, -h / 2, 0];');
+                    applyRectSizeExpr(preWallTop, exprSolverHeader + '\\n[Math.max(0.1, w - rTL - rTR), d];');
+                    applyCommonMaterialExprs(preWallTop, false);
+                }
+
+                var preWallBottom = getLayer(preComp, "Wall_Bottom");
+                if (preWallBottom) {
+                    setTransformExpr(preWallBottom, "Position", exprSolverHeader + '\\n[(-rBR + rBL) / 2, h / 2, 0];');
+                    applyRectSizeExpr(preWallBottom, exprSolverHeader + '\\n[Math.max(0.1, w - rBL - rBR), d];');
+                    applyCommonMaterialExprs(preWallBottom, false);
+                }
+
+                var preWallLeft = getLayer(preComp, "Wall_Left");
+                if (preWallLeft) {
+                    setTransformExpr(preWallLeft, "Position", exprSolverHeader + '\\n[-w / 2, (-rBL + rTL) / 2, 0];');
+                    applyRectSizeExpr(preWallLeft, exprSolverHeader + '\\n[Math.max(0.1, h - rTL - rBL), d];');
+                    applyCommonMaterialExprs(preWallLeft, false);
+                }
+
+                var preWallRight = getLayer(preComp, "Wall_Right");
+                if (preWallRight) {
+                    setTransformExpr(preWallRight, "Position", exprSolverHeader + '\\n[w / 2, (-rBR + rTR) / 2, 0];');
+                    applyRectSizeExpr(preWallRight, exprSolverHeader + '\\n[Math.max(0.1, h - rTR - rBR), d];');
+                    applyCommonMaterialExprs(preWallRight, false);
+                }
+
+                // Corner wall facet expressions
+                function applyCornerWallExprs(cornerId, startDeg, endDeg, radiusVar, centerExpr) {
+                    var sweep = endDeg - startDeg;
+                    for (var s = 0; s < segCount; s++) {
+                        var wName = "Corner_" + cornerId + "_Wall_" + (s + 1);
+                        var lay = getLayer(preComp, wName);
+                        if (lay) {
+                            var tFormula = startDeg + ' + (' + s + ' + 0.5) * (' + sweep + ' / Math.max(1, Math.round(m.effect("Corner Segments")(1).value)))';
+                            var posExpr = [
+                                exprSolverHeader,
+                                'var r = ' + radiusVar + ';',
+                                'var segs = Math.max(1, Math.round(m.effect("Corner Segments")(1).value));',
+                                'var alpha = (' + Math.abs(sweep) + ' / segs) * (Math.PI / 180);',
+                                'var rMid = r * Math.cos(alpha / 2);',
+                                'var theta = ' + tFormula + ';',
+                                'var rad = theta * (Math.PI / 180);',
+                                'var c = ' + centerExpr + ';',
+                                '[c[0] + rMid * Math.cos(rad), c[1] + rMid * Math.sin(rad), 0];'
+                            ].join('\\n');
+
+                            var sizeExpr = [
+                                exprSolverHeader,
+                                'var r = ' + radiusVar + ';',
+                                'var segs = Math.max(1, Math.round(m.effect("Corner Segments")(1).value));',
+                                'var alpha = (' + Math.abs(sweep) + ' / segs) * (Math.PI / 180);',
+                                'var chord = Math.max(0.1, 2 * r * Math.sin(alpha / 2));',
+                                '[chord, d];'
+                            ].join('\\n');
+
+                            var orientExpr = [
+                                exprSolverHeader,
+                                'var theta = ' + tFormula + ';',
+                                '[90, theta + 90, 0];'
+                            ].join('\\n');
+
+                            setTransformExpr(lay, "Position", posExpr);
+                            setTransformExpr(lay, "Orientation", orientExpr);
+                            applyRectSizeExpr(lay, sizeExpr);
+                            applyCommonMaterialExprs(lay, false);
+                        }
+                    }
+                }
+
+                applyCornerWallExprs("TR", -90, 0, "rTR", '[w / 2 - rTR, -h / 2 + rTR]');
+                applyCornerWallExprs("BR", 0, 90, "rBR", '[w / 2 - rBR, h / 2 - rBR]');
+                applyCornerWallExprs("BL", 90, 180, "rBL", '[-w / 2 + rBL, h / 2 - rBL]');
+                applyCornerWallExprs("TL", 180, 270, "rTL", '[-w / 2 + rTL, -h / 2 + rTL]');
+
+                if (extLayer) extLayer.selected = true;
+
+            } catch (err) {
+                alert("Error building Extruded Rounded Rectangle: " + err.toString());
+            } finally {
+                if (app.endUndoGroup) app.endUndoGroup();
+            }
+        }
+        // ---------------------------------------------------------------------
+        // Case B: Live Updating Existing Composition
+        // ---------------------------------------------------------------------
+        else {
+            var existingLayer = getLayer(parentComp, currentPrecompName);
+            if (!existingLayer) return;
+
+            function setEffectVal(layer, effName, val) {
+                if (!layer) return;
+                var parade = layer.property("ADBE Effect Parade") || layer.property("Effects");
+                if (parade) {
+                    var eff = parade.property(effName);
+                    if (eff) {
+                        var p = eff.property(1);
+                        if (p && typeof p.setValue === "function") p.setValue(val);
+                    }
+                }
+            }
+
+            setEffectVal(existingLayer, "Width",                w);
+            setEffectVal(existingLayer, "Height",               h);
+            setEffectVal(existingLayer, "Extrude Depth",        d);
+            setEffectVal(existingLayer, "Link All Corners",     linkAll ? 1 : 0);
+            setEffectVal(existingLayer, "Radius All",           rAll);
+            setEffectVal(existingLayer, "Radius Top-Left",      rTL);
+            setEffectVal(existingLayer, "Radius Top-Right",     rTR);
+            setEffectVal(existingLayer, "Radius Bottom-Right",  rBR);
+            setEffectVal(existingLayer, "Radius Bottom-Left",   rBL);
+            setEffectVal(existingLayer, "Corner Segments",      segCount);
+            setEffectVal(existingLayer, "Prevent Overlap",      preventOverlap ? 1 : 0);
+            setEffectVal(existingLayer, "Front/Back Color",     capsColor);
+            setEffectVal(existingLayer, "Front/Back Opacity",   capsOpacity);
+            setEffectVal(existingLayer, "Sides Color",          sidesColor);
+            setEffectVal(existingLayer, "Sides Opacity",        sidesOpacity);
+            setEffectVal(existingLayer, "Stroke Color",         strokeColor);
+            setEffectVal(existingLayer, "Stroke Width",         strokeWidth);
+            setEffectVal(existingLayer, "Stroke Opacity",       strokeOpacity);
+        }
+    }
+
+    // -------------------------------------------------------------------------
+    // 7. Layout & Show Window
+    // -------------------------------------------------------------------------
+    if (win) {
+        win.layout.layout(true);
+        win.layout.resize();
+        win.onResizing = win.onResize = function() {
+            this.layout.resize();
+        };
+
+        if (win instanceof Window) {
+            win.center();
+            win.show();
+        }
+    }
+
+    return win;
+})(this);
+`
+    },
+    customRoundedRect: {
+        name: "🔲 Custom Rounded Rect (Individual Radii & Overlap Protection)",
+        code: `// =============================================================================
+// ADOBE AFTER EFFECTS EXTENDSCRIPT & SCRIPTUI PANEL: CUSTOM ROUNDED RECTANGLE
+// =============================================================================
+//
+// PURPOSE:
+//   Creates a parametric vector Shape Layer rectangle with independently
+//   customizable corner radii (Top-Left, Top-Right, Bottom-Right, Bottom-Left)
+//   and mathematical proportional scaling to prevent overlapping corner curves
+//   when radii exceed width or height (adhering to W3C CSS border-radius standard).
+//
+// ARCHITECTURE & WORKFLOW:
+//   1. ScriptUI UI Window / Dockable Panel (2 Distinct Tabs):
+//      - [1] Geometry Tab:
+//        * Width & Height scrubbable sliders + numeric text inputs.
+//        * Quick dimension presets (Card, Square, HD 1080p, Banner).
+//        * "Link All Corners" checkbox + Master Radius slider.
+//        * 2x2 Corner grid: Top-Left, Top-Right, Bottom-Left, Bottom-Right.
+//        * Quick corner presets (Pill/Capsule, Top Tab, Bottom Tab, Diagonal, Card, Sharp).
+//        * "Prevent Overlap" checkbox (proportional scaling).
+//      - [2] Appearance Tab:
+//        * Live color pickers for Fill and Stroke.
+//        * Fill Opacity, Stroke Width, and Stroke Opacity sliders.
+//        * Automatic stroke suppression when stroke width is 0.
+//
+//   2. Live Rigging:
+//      - All parameters drive Effect Controls on the Shape Layer.
+//      - The procedural Bézier path expression recalculates dynamically in real time.
+//
+// COMPATIBILITY:
+//   - Adobe After Effects CS6, CC 2014 - 2026+ (ExtendScript engine).
+//   - Works both as a dockable panel and as a floating palette.
+//   - Full web emulator runtime compatibility.
+// =============================================================================
+
+(function(thisObj) {
+    "use strict";
+
+    // -------------------------------------------------------------------------
+    // 1. ScriptUI Window / Dockable Panel Initialization
+    // -------------------------------------------------------------------------
+    var win = (thisObj instanceof Panel)
+        ? thisObj
+        : new Window("palette", "Custom Rounded Rect", undefined, { resizeable: true });
+    if (!(thisObj instanceof Panel)) {
+        win.text = "Custom Rounded Rect";
+    }
+
+    var currentLayerName = "Custom_Rounded_Rect";
+
+    win.orientation = "column";
+    win.alignChildren = ["fill", "top"];
+    win.spacing = 10;
+    win.margins = 12;
+
+    // -------------------------------------------------------------------------
+    // 2. Helper Functions: Colors & Transforms
+    // -------------------------------------------------------------------------
+    function hexToRgb(hex) {
+        hex = hex.replace("#", "");
+        if (hex.length === 3) {
+            hex = hex.charAt(0) + hex.charAt(0) + hex.charAt(1) + hex.charAt(1) + hex.charAt(2) + hex.charAt(2);
+        }
+        var num = parseInt(hex, 16);
+        return [
+            ((num >> 16) & 255) / 255,
+            ((num >> 8) & 255) / 255,
+            (num & 255) / 255
+        ];
+    }
+
+    function getLayer(comp, nameOrIndex) {
+        if (!comp) return null;
+        if (typeof comp.layer === "function") {
+            return comp.layer(nameOrIndex);
+        }
+        if (comp.layers) {
+            if (typeof nameOrIndex === "number") return comp.layers[nameOrIndex - 1];
+            if (typeof comp.layers.byName === "function") return comp.layers.byName(nameOrIndex);
+            if (typeof comp.layers.find === "function") {
+                return comp.layers.find(function(l) { return l.name === nameOrIndex; }) || null;
+            }
+        }
+        return null;
+    }
+
+    function removeLayer(comp, layer) {
+        if (!layer) return;
+        if (typeof layer.remove === "function") {
+            layer.remove();
+        } else if (comp && comp.layers && typeof comp.layers.remove === "function") {
+            comp.layers.remove(layer);
+        }
+    }
+
+    // -------------------------------------------------------------------------
+    // 3. UI Header (Panel Title + Version & Description)
+    // -------------------------------------------------------------------------
+    var pnlHeader = win.add("panel", undefined, "Custom Rounded Rect");
+    pnlHeader.orientation = "column";
+    pnlHeader.alignChildren = ["fill", "top"];
+    pnlHeader.alignment = ["fill", "top"];
+    pnlHeader.spacing = 3;
+    pnlHeader.margins = [10, 8, 10, 8];
+
+    var lblDesc = pnlHeader.add("statictext", undefined, "v1.1 - Parametric 2D Shape Layer with independent corner radii & W3C overlap protection.");
+
+    // -------------------------------------------------------------------------
+    // 4. Tabbed Panel (Geometry vs. Appearance)
+    // -------------------------------------------------------------------------
+    var tpanel = win.add("tabbedpanel", undefined, undefined);
+    tpanel.alignChildren = ["fill", "top"];
+    tpanel.alignment = ["fill", "fill"];
+
+    // =========================================================================
+    // TAB 1: GEOMETRY
+    // =========================================================================
+    var tabGeometry = tpanel.add("tab", undefined, "Geometry");
+    tabGeometry.orientation = "column";
+    tabGeometry.alignChildren = ["fill", "top"];
+    tabGeometry.alignment = ["fill", "fill"];
+    tabGeometry.spacing = 8;
+    tabGeometry.margins = 8;
+
+    // --- Sub-panel: Dimensions (Width, Height) ---
+    var pnlDim = tabGeometry.add("panel", undefined, "Dimensions (px)");
+    pnlDim.orientation = "column";
+    pnlDim.spacing = 6;
+    pnlDim.alignChildren = ["fill", "top"];
+
+    // Width Row
+    var grpW = pnlDim.add("group");
+    grpW.orientation = "row";
+    grpW.alignment = ["fill", "top"];
+    var lblW = grpW.add("statictext", undefined, "Width:");
+    lblW.preferredSize = [60, -1];
+    var sldW = grpW.add("slider", undefined, 500, 10, 1920);
+    sldW.alignment = ["fill", "center"];
+    var txtW = grpW.add("edittext", undefined, "500");
+    txtW.characters = 5;
+
+    // Height Row
+    var grpH = pnlDim.add("group");
+    grpH.orientation = "row";
+    grpH.alignment = ["fill", "top"];
+    var lblH = grpH.add("statictext", undefined, "Height:");
+    lblH.preferredSize = [60, -1];
+    var sldH = grpH.add("slider", undefined, 300, 10, 1080);
+    sldH.alignment = ["fill", "center"];
+    var txtH = grpH.add("edittext", undefined, "300");
+    txtH.characters = 5;
+
+    // Quick Dimension Presets
+    var grpDimPresets = pnlDim.add("group");
+    grpDimPresets.orientation = "row";
+    grpDimPresets.spacing = 4;
+    var btnDimCard = grpDimPresets.add("button", undefined, "Card");
+    btnDimCard.helpTip = "Card: 500 x 300";
+    var btnDimSquare = grpDimPresets.add("button", undefined, "Square");
+    btnDimSquare.helpTip = "Square: 400 x 400";
+    var btnDimHD = grpDimPresets.add("button", undefined, "HD");
+    btnDimHD.helpTip = "HD: 1920 x 1080";
+    var btnDimBanner = grpDimPresets.add("button", undefined, "Banner");
+    btnDimBanner.helpTip = "Banner: 728 x 90";
+
+    btnDimCard.onClick = function() { setDim(500, 300); };
+    btnDimSquare.onClick = function() { setDim(400, 400); };
+    btnDimHD.onClick = function() { setDim(1920, 1080); };
+    btnDimBanner.onClick = function() { setDim(728, 90); };
+
+    function setDim(w, h) {
+        sldW.value = w; txtW.text = String(w);
+        sldH.value = h; txtH.text = String(h);
+        buildOrUpdateRect(false);
+    }
+
+    // --- Sub-panel: Corner Radii ---
+    var pnlCorners = tabGeometry.add("panel", undefined, "Corner Radii (px)");
+    pnlCorners.orientation = "column";
+    pnlCorners.spacing = 6;
+    pnlCorners.alignChildren = ["fill", "top"];
+
+    // Link All Checkbox
+    var chkLink = pnlCorners.add("checkbox", undefined, "Link All Corners");
+    chkLink.value = false;
+
+    // Master Radius Row
+    var grpMaster = pnlCorners.add("group");
+    grpMaster.orientation = "row";
+    grpMaster.alignment = ["fill", "top"];
+    var lblMaster = grpMaster.add("statictext", undefined, "All:");
+    lblMaster.preferredSize = [60, -1];
+    var sldMaster = grpMaster.add("slider", undefined, 50, 0, 500);
+    sldMaster.alignment = ["fill", "center"];
+    var txtMaster = grpMaster.add("edittext", undefined, "50");
+    txtMaster.characters = 4;
+    grpMaster.enabled = false;
+
+    // 2x2 Individual Corner Radii Grid:
+    // [ Top-Left ]      [ Top-Right ]
+    // [ Bottom-Left ]   [ Bottom-Right ]
+    var grpGrid = pnlCorners.add("group");
+    grpGrid.orientation = "column";
+    grpGrid.alignChildren = ["fill", "top"];
+    grpGrid.spacing = 6;
+
+    // Top Row: TL and TR
+    var grpRowTop = grpGrid.add("group");
+    grpRowTop.orientation = "row";
+    grpRowTop.alignment = ["fill", "top"];
+
+    var lblTL = grpRowTop.add("statictext", undefined, "TL:");
+    lblTL.preferredSize = [25, -1];
+    var sldTL = grpRowTop.add("slider", undefined, 50, 0, 500);
+    sldTL.alignment = ["fill", "center"];
+    var txtTL = grpRowTop.add("edittext", undefined, "50");
+    txtTL.characters = 4;
+
+    var lblTR = grpRowTop.add("statictext", undefined, "TR:");
+    lblTR.preferredSize = [25, -1];
+    var sldTR = grpRowTop.add("slider", undefined, 50, 0, 500);
+    sldTR.alignment = ["fill", "center"];
+    var txtTR = grpRowTop.add("edittext", undefined, "50");
+    txtTR.characters = 4;
+
+    // Bottom Row: BL and BR
+    var grpRowBot = grpGrid.add("group");
+    grpRowBot.orientation = "row";
+    grpRowBot.alignment = ["fill", "top"];
+
+    var lblBL = grpRowBot.add("statictext", undefined, "BL:");
+    lblBL.preferredSize = [25, -1];
+    var sldBL = grpRowBot.add("slider", undefined, 50, 0, 500);
+    sldBL.alignment = ["fill", "center"];
+    var txtBL = grpRowBot.add("edittext", undefined, "50");
+    txtBL.characters = 4;
+
+    var lblBR = grpRowBot.add("statictext", undefined, "BR:");
+    lblBR.preferredSize = [25, -1];
+    var sldBR = grpRowBot.add("slider", undefined, 50, 0, 500);
+    sldBR.alignment = ["fill", "center"];
+    var txtBR = grpRowBot.add("edittext", undefined, "50");
+    txtBR.characters = 4;
+
+    // Corner Presets
+    var grpPresets = pnlCorners.add("group");
+    grpPresets.orientation = "column";
+    grpPresets.alignChildren = ["fill", "top"];
+    grpPresets.spacing = 4;
+
+    var rowPreset1 = grpPresets.add("group");
+    rowPreset1.orientation = "row";
+    rowPreset1.spacing = 4;
+    var btnPill = rowPreset1.add("button", undefined, "Capsule / Pill");
+    var btnTopTab = rowPreset1.add("button", undefined, "Top Tab");
+    var btnBotTab = rowPreset1.add("button", undefined, "Bottom Tab");
+
+    var rowPreset2 = grpPresets.add("group");
+    rowPreset2.orientation = "row";
+    rowPreset2.spacing = 4;
+    var btnDiag = rowPreset2.add("button", undefined, "Diagonal");
+    var btnCard = rowPreset2.add("button", undefined, "Card (30px)");
+    var btnSharp = rowPreset2.add("button", undefined, "Sharp (0px)");
+
+    function setCorners(tl, tr, br, bl, link) {
+        chkLink.value = Boolean(link);
+        grpMaster.enabled = Boolean(link);
+        grpGrid.enabled = !link;
+        if (link) {
+            sldMaster.value = tl; txtMaster.text = String(tl);
+        }
+        sldTL.value = tl; txtTL.text = String(tl);
+        sldTR.value = tr; txtTR.text = String(tr);
+        sldBR.value = br; txtBR.text = String(br);
+        sldBL.value = bl; txtBL.text = String(bl);
+        buildOrUpdateRect(false);
+    }
+
+    btnPill.onClick = function() { setCorners(999, 999, 999, 999, true); };
+    btnTopTab.onClick = function() { setCorners(40, 40, 0, 0, false); };
+    btnBotTab.onClick = function() { setCorners(0, 0, 40, 40, false); };
+    btnDiag.onClick = function() { setCorners(60, 0, 60, 0, false); };
+    btnCard.onClick = function() { setCorners(30, 30, 30, 30, true); };
+    btnSharp.onClick = function() { setCorners(0, 0, 0, 0, true); };
+
+    // Prevent Overlap Checkbox
+    var chkOverlap = tabGeometry.add("checkbox", undefined, "Prevent Overlap (W3C CSS Proportional Scaling)");
+    chkOverlap.value = true;
+    chkOverlap.helpTip = "Scales radii proportionally if sum of adjacent corners exceeds width or height (CSS standard).";
+    chkOverlap.onClick = function() { buildOrUpdateRect(false); };
+
+    // =========================================================================
+    // TAB 2: APPEARANCE
+    // =========================================================================
+    var tabAppearance = tpanel.add("tab", undefined, "Appearance");
+    tabAppearance.orientation = "column";
+    tabAppearance.alignChildren = ["fill", "top"];
+    tabAppearance.alignment = ["fill", "fill"];
+    tabAppearance.spacing = 8;
+    tabAppearance.margins = 8;
+
+    var pnlStyle = tabAppearance.add("panel", undefined, "Fill & Stroke Styling");
+    pnlStyle.orientation = "column";
+    pnlStyle.spacing = 10;
+    pnlStyle.alignChildren = ["fill", "top"];
+
+    // Color Picker Creator
+    function createColorPicker(parent, defaultHex) {
+        var grp = parent.add("group");
+        grp.orientation = "row";
+        grp.spacing = 6;
+        grp.alignChildren = ["left", "center"];
+
+        var btnSwatch = grp.add("button", undefined, "");
+        btnSwatch.preferredSize = [36, 22];
+        btnSwatch.helpTip = "Click to pick color";
+
+        var txtHex = grp.add("edittext", undefined, defaultHex);
+        txtHex.preferredSize = [70, 22];
+        txtHex.characters = 7;
+
+        var picker = {
+            group: grp,
+            button: btnSwatch,
+            edittext: txtHex,
+            _color: defaultHex,
+            value: defaultHex,
+            onChange: null
+        };
+
+        btnSwatch.onDraw = function() {
+            try {
+                var g = this.graphics;
+                var rgb = hexToRgb(picker._color);
+                var brush = g.newBrush(g.BrushType.SOLID_COLOR, [rgb[0], rgb[1], rgb[2], 1.0]);
+                var pen = g.newPen(g.PenType.SOLID_COLOR, [0.7, 0.7, 0.7, 1.0], 1);
+                g.newPath();
+                g.rectPath(0, 0, this.size ? this.size[0] : 36, this.size ? this.size[1] : 22);
+                g.fillPath(brush);
+                g.strokePath(pen);
+            } catch(e) {}
+        };
+
+        function setColor(newHex, triggerChange) {
+            if (!newHex) return;
+            if (newHex.indexOf("#") !== 0) newHex = "#" + newHex;
+            picker._color = newHex;
+            picker.value = newHex;
+            txtHex.text = newHex.toUpperCase();
+
+            try {
+                if (btnSwatch.notify) btnSwatch.notify("onDraw");
+            } catch(e) {}
+
+            if (btnSwatch.domElement) {
+                btnSwatch.domElement.style.backgroundColor = newHex;
+                btnSwatch.domElement.style.border = "1px solid #777";
+            }
+
+            if (triggerChange && typeof picker.onChange === "function") {
+                picker.onChange();
+            }
+        }
+
+        btnSwatch.onClick = function() {
+            var curHex = picker._color || "#2288EE";
+            if (typeof window !== "undefined" && typeof window.openWindowsColorPicker === "function") {
+                window.openWindowsColorPicker(curHex, function(selectedHex) {
+                    setColor(selectedHex, true);
+                });
+                return;
+            }
+
+            var hexNum = parseInt(curHex.replace("#", ""), 16);
+            var result = -1;
+            if (typeof $.colorPicker === "function") {
+                result = $.colorPicker(hexNum, function(selectedHex) {
+                    setColor(selectedHex, true);
+                });
+            }
+            if (result !== -1 && result !== undefined && result !== null) {
+                var hexStr = Number(result).toString(16);
+                while (hexStr.length < 6) hexStr = "0" + hexStr;
+                setColor("#" + hexStr, true);
+            }
+        };
+
+        txtHex.onChange = function() {
+            var val = txtHex.text.replace(/^\\s+|\\s+$/g, "");
+            if (val.indexOf("#") !== 0) val = "#" + val;
+            if (/^#[0-9A-Fa-f]{6}$/.test(val)) {
+                setColor(val, true);
+            } else {
+                txtHex.text = picker._color.toUpperCase();
+            }
+        };
+
+        setColor(defaultHex, false);
+        return picker;
+    }
+
+    // Fill Color
+    var grpFill = pnlStyle.add("group");
+    grpFill.orientation = "row";
+    grpFill.alignment = ["fill", "top"];
+    var lblFill = grpFill.add("statictext", undefined, "Fill Color:");
+    lblFill.preferredSize = [100, -1];
+    var cpFill = createColorPicker(grpFill, "#2288ee");
+    cpFill.onChange = function() { buildOrUpdateRect(false); };
+
+    // Fill Opacity
+    var grpFillOp = pnlStyle.add("group");
+    grpFillOp.orientation = "row";
+    grpFillOp.alignment = ["fill", "top"];
+    var lblFillOp = grpFillOp.add("statictext", undefined, "Fill Opacity:");
+    lblFillOp.preferredSize = [100, -1];
+    var sldFillOp = grpFillOp.add("slider", undefined, 100, 0, 100);
+    sldFillOp.alignment = ["fill", "center"];
+    var txtFillOp = grpFillOp.add("edittext", undefined, "100");
+    txtFillOp.characters = 3;
+
+    // Stroke Color
+    var grpStroke = pnlStyle.add("group");
+    grpStroke.orientation = "row";
+    grpStroke.alignment = ["fill", "top"];
+    var lblStroke = grpStroke.add("statictext", undefined, "Stroke Color:");
+    lblStroke.preferredSize = [100, -1];
+    var cpStroke = createColorPicker(grpStroke, "#ffffff");
+    cpStroke.onChange = function() { buildOrUpdateRect(false); };
+
+    // Stroke Width
+    var grpThick = pnlStyle.add("group");
+    grpThick.orientation = "row";
+    grpThick.alignment = ["fill", "top"];
+    var lblThick = grpThick.add("statictext", undefined, "Stroke Width:");
+    lblThick.preferredSize = [100, -1];
+    var sldThick = grpThick.add("slider", undefined, 4, 0, 40);
+    sldThick.alignment = ["fill", "center"];
+    var txtThick = grpThick.add("edittext", undefined, "4");
+    txtThick.characters = 3;
+
+    // Stroke Opacity
+    var grpStrokeOp = pnlStyle.add("group");
+    grpStrokeOp.orientation = "row";
+    grpStrokeOp.alignment = ["fill", "top"];
+    var lblStrokeOp = grpStrokeOp.add("statictext", undefined, "Stroke Opacity:");
+    lblStrokeOp.preferredSize = [100, -1];
+    var sldStrokeOp = grpStrokeOp.add("slider", undefined, 100, 0, 100);
+    sldStrokeOp.alignment = ["fill", "center"];
+    var txtStrokeOp = grpStrokeOp.add("edittext", undefined, "100");
+    txtStrokeOp.characters = 3;
+
+    // Two-way slider hook helper
+    function hookSliderText(sld, txt, onChangeFn, isInt) {
+        function updateFromSlider() {
+            var val = isInt ? Math.round(sld.value) : Math.round(sld.value * 10) / 10;
+            if (isNaN(val)) val = isInt ? Math.round(sld.minvalue || 0) : 0;
+            txt.text = String(val);
+            if (typeof onChangeFn === "function") onChangeFn();
+        }
+        sld.onChanging = updateFromSlider;
+        sld.onChange = updateFromSlider;
+
+        txt.onChange = function() {
+            var val = parseFloat(txt.text);
+            if (isNaN(val)) val = (typeof sld.minvalue === "number") ? sld.minvalue : 0;
+            var minV = (typeof sld.minvalue === "number") ? sld.minvalue : 0;
+            var maxV = (typeof sld.maxvalue === "number") ? sld.maxvalue : 10000;
+            val = Math.max(minV, Math.min(maxV, val));
+            sld.value = val;
+            txt.text = String(isInt ? Math.round(val) : Math.round(val * 10) / 10);
+            if (typeof onChangeFn === "function") onChangeFn();
+        };
+    }
+
+    var onLiveUpdate = function() { buildOrUpdateRect(false); };
+    hookSliderText(sldW, txtW, onLiveUpdate, true);
+    hookSliderText(sldH, txtH, onLiveUpdate, true);
+    hookSliderText(sldMaster, txtMaster, function() {
+        if (chkLink.value) {
+            var v = sldMaster.value;
+            sldTL.value = v; txtTL.text = String(Math.round(v));
+            sldTR.value = v; txtTR.text = String(Math.round(v));
+            sldBR.value = v; txtBR.text = String(Math.round(v));
+            sldBL.value = v; txtBL.text = String(Math.round(v));
+        }
+        onLiveUpdate();
+    }, true);
+    hookSliderText(sldTL, txtTL, onLiveUpdate, true);
+    hookSliderText(sldTR, txtTR, onLiveUpdate, true);
+    hookSliderText(sldBR, txtBR, onLiveUpdate, true);
+    hookSliderText(sldBL, txtBL, onLiveUpdate, true);
+    hookSliderText(sldFillOp, txtFillOp, onLiveUpdate, true);
+    hookSliderText(sldThick, txtThick, onLiveUpdate, true);
+    hookSliderText(sldStrokeOp, txtStrokeOp, onLiveUpdate, true);
+
+    chkLink.onClick = function() {
+        var linked = chkLink.value;
+        grpMaster.enabled = linked;
+        grpGrid.enabled = !linked;
+        if (linked) {
+            var v = sldMaster.value;
+            sldTL.value = v; txtTL.text = String(Math.round(v));
+            sldTR.value = v; txtTR.text = String(Math.round(v));
+            sldBR.value = v; txtBR.text = String(Math.round(v));
+            sldBL.value = v; txtBL.text = String(Math.round(v));
+        }
+        buildOrUpdateRect(false);
+    };
+
+    tpanel.selection = 0;
+
+    // --- Action Button ---
+    var btnBuild = win.add("button", undefined, "Build / Rebuild Rounded Rectangle");
+    btnBuild.alignment = ["fill", "top"];
+    btnBuild.preferredSize = [-1, 36];
+    btnBuild.onClick = function() {
+        buildOrUpdateRect(true);
+    };
+
+    // --- Bottom Subtle Repository Link ---
+    var grpRepoLink = win.add("group");
+    grpRepoLink.orientation = "row";
+    grpRepoLink.alignment = ["fill", "bottom"];
+    grpRepoLink.alignChildren = ["center", "center"];
+    grpRepoLink.margins = [0, 4, 0, 0];
+    var lblRepoLink = grpRepoLink.add("statictext", undefined, "GitHub: work2survive/AECustomRoundedRect");
+    lblRepoLink.helpTip = "https://github.com/work2survive/AECustomRoundedRect";
+    lblRepoLink.onClick = function() {
+        var url = "https://github.com/work2survive/AECustomRoundedRect";
+        if (typeof window !== "undefined" && window.open) {
+            window.open(url, "_blank");
+        } else if ($.os.indexOf("Windows") !== -1) {
+            system.callSystem('explorer "' + url + '"');
+        } else {
+            system.callSystem('open "' + url + '"');
+        }
+    };
+
+    // -------------------------------------------------------------------------
+    // 5. Core Geometry & Expression Architecture
+    // -------------------------------------------------------------------------
+    function computeShapeData(w, h, rTL, rTR, rBR, rBL, preventOverlap) {
+        w = Math.max(0, w);
+        h = Math.max(0, h);
+        rTL = Math.max(0, rTL);
+        rTR = Math.max(0, rTR);
+        rBR = Math.max(0, rBR);
+        rBL = Math.max(0, rBL);
+
+        if (preventOverlap) {
+            var topSum    = rTL + rTR;
+            var bottomSum = rBL + rBR;
+            var leftSum   = rTL + rBL;
+            var rightSum  = rTR + rBR;
+
+            var f = 1.0;
+            if (topSum > w && topSum > 0)       f = Math.min(f, w / topSum);
+            if (bottomSum > w && bottomSum > 0) f = Math.min(f, w / bottomSum);
+            if (leftSum > h && leftSum > 0)     f = Math.min(f, h / leftSum);
+            if (rightSum > h && rightSum > 0)   f = Math.min(f, h / rightSum);
+
+            rTL *= f;
+            rTR *= f;
+            rBR *= f;
+            rBL *= f;
+        }
+
+        var K = 0.5522847498307936;
+        var halfW = w / 2;
+        var halfH = h / 2;
+        var xMin = -halfW;
+        var xMax =  halfW;
+        var yMin = -halfH;
+        var yMax =  halfH;
+
+        var points = [
+            [xMin + rTL, yMin],        // P0: Top edge, TL curve end
+            [xMax - rTR, yMin],        // P1: Top edge, TR curve start
+            [xMax, yMin + rTR],        // P2: Right edge, TR curve end
+            [xMax, yMax - rBR],        // P3: Right edge, BR curve start
+            [xMax - rBR, yMax],        // P4: Bottom edge, BR curve end
+            [xMin + rBL, yMax],        // P5: Bottom edge, BL curve start
+            [xMin, yMax - rBL],        // P6: Left edge, BL curve end
+            [xMin, yMin + rTL]         // P7: Left edge, TL curve start
+        ];
+
+        var inTangents = [
+            [-rTL * K, 0],
+            [0, 0],
+            [0, -rTR * K],
+            [0, 0],
+            [rBR * K, 0],
+            [0, 0],
+            [0, rBL * K],
+            [0, 0]
+        ];
+
+        var outTangents = [
+            [0, 0],
+            [rTR * K, 0],
+            [0, 0],
+            [0, rBR * K],
+            [0, 0],
+            [-rBL * K, 0],
+            [0, 0],
+            [0, -rTL * K]
+        ];
+
+        return {
+            points: points,
+            inTangents: inTangents,
+            outTangents: outTangents
+        };
+    }
+
+    var PATH_EXPR = [
+        "// Custom Rounded Rectangle Expression (W3C CSS Proportional Overlap)",
+        "(function() {",
+        "    function getVal(name, fallback) {",
+        "        try {",
+        "            var p = effect(name)(1);",
+        "            return (p && typeof p.value !== 'undefined') ? p.value : (p !== undefined ? p : fallback);",
+        "        } catch(e) {",
+        "            return fallback;",
+        "        }",
+        "    }",
+        "",
+        "    var w = Math.max(0, getVal('Width', 500));",
+        "    var h = Math.max(0, getVal('Height', 300));",
+        "    var linkAll = getVal('Link All Corners', 0);",
+        "    var masterR = Math.max(0, getVal('Radius All', 50));",
+        "",
+        "    var rTL = linkAll ? masterR : Math.max(0, getVal('Radius Top-Left', 50));",
+        "    var rTR = linkAll ? masterR : Math.max(0, getVal('Radius Top-Right', 50));",
+        "    var rBR = linkAll ? masterR : Math.max(0, getVal('Radius Bottom-Right', 50));",
+        "    var rBL = linkAll ? masterR : Math.max(0, getVal('Radius Bottom-Left', 50));",
+        "",
+        "    var preventOverlap = getVal('Prevent Overlap', 1);",
+        "",
+        "    // Proportional scaling (W3C CSS Backgrounds & Borders Level 3, §5.5)",
+        "    if (preventOverlap > 0) {",
+        "        var topSum    = rTL + rTR;",
+        "        var bottomSum = rBL + rBR;",
+        "        var leftSum   = rTL + rBL;",
+        "        var rightSum  = rTR + rBR;",
+        "",
+        "        var f = 1.0;",
+        "        if (topSum > w && topSum > 0)       f = Math.min(f, w / topSum);",
+        "        if (bottomSum > w && bottomSum > 0) f = Math.min(f, w / bottomSum);",
+        "        if (leftSum > h && leftSum > 0)     f = Math.min(f, h / leftSum);",
+        "        if (rightSum > h && rightSum > 0)   f = Math.min(f, h / rightSum);",
+        "",
+        "        rTL *= f;",
+        "        rTR *= f;",
+        "        rBR *= f;",
+        "        rBL *= f;",
+        "    }",
+        "",
+        "    // Bezier circle constant K = 4/3 * (sqrt(2) - 1)",
+        "    var K = 0.5522847498307936;",
+        "    var halfW = w / 2;",
+        "    var halfH = h / 2;",
+        "    var xMin = -halfW;",
+        "    var xMax =  halfW;",
+        "    var yMin = -halfH;",
+        "    var yMax =  halfH;",
+        "",
+        "    var points = [",
+        "        [xMin + rTL, yMin],",
+        "        [xMax - rTR, yMin],",
+        "        [xMax, yMin + rTR],",
+        "        [xMax, yMax - rBR],",
+        "        [xMax - rBR, yMax],",
+        "        [xMin + rBL, yMax],",
+        "        [xMin, yMax - rBL],",
+        "        [xMin, yMin + rTL]",
+        "    ];",
+        "",
+        "    var inTangents = [",
+        "        [-rTL * K, 0],",
+        "        [0, 0],",
+        "        [0, -rTR * K],",
+        "        [0, 0],",
+        "        [rBR * K, 0],",
+        "        [0, 0],",
+        "        [0, rBL * K],",
+        "        [0, 0]",
+        "    ];",
+        "",
+        "    var outTangents = [",
+        "        [0, 0],",
+        "        [rTR * K, 0],",
+        "        [0, 0],",
+        "        [0, rBR * K],",
+        "        [0, 0],",
+        "        [-rBL * K, 0],",
+        "        [0, 0],",
+        "        [0, -rTL * K]",
+        "    ];",
+        "",
+        "    return createPath(points, inTangents, outTangents, true);",
+        "})();"
+    ].join("\\n");
+
+    // -------------------------------------------------------------------------
+    // 6. Layer Creation & Live Updating
+    // -------------------------------------------------------------------------
+    function buildOrUpdateRect(forceRebuild) {
+        var comp = app.project ? app.project.activeItem : null;
+        if (!comp || !(comp instanceof CompItem)) {
+            if (forceRebuild) alert("Please select or open an active composition first.");
+            return;
+        }
+
+        var w = parseFloat(txtW.text) || 500;
+        var h = parseFloat(txtH.text) || 300;
+        var linkAll = chkLink.value;
+        var rAll = parseFloat(txtMaster.text) || 50;
+        var rTL = linkAll ? rAll : (parseFloat(txtTL.text) || 0);
+        var rTR = linkAll ? rAll : (parseFloat(txtTR.text) || 0);
+        var rBR = linkAll ? rAll : (parseFloat(txtBR.text) || 0);
+        var rBL = linkAll ? rAll : (parseFloat(txtBL.text) || 0);
+        var preventOverlap = chkOverlap.value;
+
+        var fillColor = hexToRgb(cpFill.value);
+        var fillOpacity = Math.max(0, Math.min(100, parseFloat(txtFillOp.text) || 100));
+        var strokeColor = hexToRgb(cpStroke.value);
+        var strokeWidth = Math.max(0, parseFloat(txtThick.text) || 0);
+        var strokeOpacity = Math.max(0, Math.min(100, parseFloat(txtStrokeOp.text) || 100));
+
+        var existingLayer = getLayer(comp, currentLayerName);
+
+        // Case A: Structural Creation
+        if (forceRebuild || !existingLayer) {
+            if (app.beginUndoGroup) app.beginUndoGroup("Create Custom Rounded Rectangle");
+            try {
+                if (existingLayer) removeLayer(comp, existingLayer);
+
+                var layer = comp.layers.addShape();
+                layer.name = currentLayerName;
+                layer.notShyable = true;
+                layer.label = 1;
+                layer.colorLabel = "#ff3b30";
+
+                var center = [comp.width / 2, comp.height / 2, 0];
+                if (layer.transform && layer.transform.position) {
+                    layer.transform.position.setValue(center);
+                }
+
+                // 1. Add Effect Controls
+                function addControl(type, name, val) {
+                    var parade = layer.property("ADBE Effect Parade") || layer.property("Effects");
+                    var eff = parade.addProperty(type);
+                    eff.name = name;
+                    eff.property(1).setValue(val);
+                    return eff;
+                }
+
+                addControl("ADBE Slider Control",   "Width",                w);
+                addControl("ADBE Slider Control",   "Height",               h);
+                addControl("ADBE Checkbox Control", "Link All Corners",     linkAll ? 1 : 0);
+                addControl("ADBE Slider Control",   "Radius All",           rAll);
+                addControl("ADBE Slider Control",   "Radius Top-Left",      rTL);
+                addControl("ADBE Slider Control",   "Radius Top-Right",     rTR);
+                addControl("ADBE Slider Control",   "Radius Bottom-Right",  rBR);
+                addControl("ADBE Slider Control",   "Radius Bottom-Left",   rBL);
+                addControl("ADBE Checkbox Control", "Prevent Overlap",      preventOverlap ? 1 : 0);
+                addControl("ADBE Color Control",    "Fill Color",           fillColor);
+                addControl("ADBE Slider Control",   "Fill Opacity",         fillOpacity);
+                addControl("ADBE Color Control",    "Stroke Color",         strokeColor);
+                addControl("ADBE Slider Control",   "Stroke Width",         strokeWidth);
+                addControl("ADBE Slider Control",   "Stroke Opacity",       strokeOpacity);
+
+                // 2. Add Shape Group with Path, Fill and Stroke
+                var root = layer.property("ADBE Root Vectors Group") || layer.property("Contents") || (layer.property && layer.property(1));
+                var grp = root.addProperty("ADBE Vector Group");
+                grp.name = "Rounded Rect Vector";
+
+                var grpContents = grp.property("ADBE Vectors Group") || grp.property("Contents") || (grp.property && grp.property(2)) || (grp.property && grp.property(1));
+                grpContents.addProperty("ADBE Vector Shape - Group");
+                grpContents.addProperty("ADBE Vector Graphic - Fill");
+                grpContents.addProperty("ADBE Vector Graphic - Stroke");
+
+                // Re-query grpContents fresh after all additions to prevent stale references
+                grpContents = grp.property("ADBE Vectors Group") || grp.property("Contents") || (grp.property && grp.property(2)) || (grp.property && grp.property(1));
+
+                var shapeGroup = grpContents.property("ADBE Vector Shape - Group") || grpContents.property(1);
+                if (shapeGroup) {
+                    var pathProp = shapeGroup.property("ADBE Vector Shape") || shapeGroup.property("Path") || (shapeGroup.numProperties >= 2 ? shapeGroup.property(2) : shapeGroup.property(1));
+                    if (pathProp) {
+                        var shapeData = computeShapeData(w, h, rTL, rTR, rBR, rBL, preventOverlap);
+                        if (typeof Shape !== "undefined") {
+                            try {
+                                var sObj = new Shape();
+                                sObj.vertices = shapeData.points;
+                                sObj.inTangents = shapeData.inTangents;
+                                sObj.outTangents = shapeData.outTangents;
+                                sObj.closed = true;
+                                pathProp.setValue(sObj);
+                            } catch(eS) {}
+                        }
+                        pathProp.expression = PATH_EXPR;
+                    }
+                }
+
+                var fill = grpContents.property("ADBE Vector Graphic - Fill") || grpContents.property(2);
+                if (fill) {
+                    var fCol = fill.property("ADBE Vector Fill Color") || fill.property("Color") || fill.property(1);
+                    if (fCol) {
+                        fCol.setValue(fillColor);
+                        fCol.expression = 'try { effect("Fill Color")(1).value; } catch(e) { value; }';
+                    }
+                    var fOp = fill.property("ADBE Vector Fill Opacity") || fill.property("Opacity") || fill.property(2);
+                    if (fOp) {
+                        fOp.setValue(fillOpacity);
+                        fOp.expression = 'try { effect("Fill Opacity")(1).value; } catch(e) { value; }';
+                    }
+                }
+
+                var stroke = grpContents.property("ADBE Vector Graphic - Stroke") || grpContents.property(3);
+                if (stroke) {
+                    var sCol = stroke.property("ADBE Vector Stroke Color") || stroke.property("Color") || stroke.property(1);
+                    if (sCol) {
+                        sCol.setValue(strokeColor);
+                        sCol.expression = 'try { effect("Stroke Color")(1).value; } catch(e) { value; }';
+                    }
+                    var sW = stroke.property("ADBE Vector Stroke Width") || stroke.property("Stroke Width") || stroke.property(2);
+                    if (sW) {
+                        sW.setValue(strokeWidth);
+                        sW.expression = 'try { Math.max(0, effect("Stroke Width")(1).value); } catch(e) { value; }';
+                    }
+                    var sOp = stroke.property("ADBE Vector Stroke Opacity") || stroke.property("Opacity") || stroke.property(3);
+                    if (sOp) {
+                        sOp.setValue(strokeWidth <= 0.0001 ? 0 : strokeOpacity);
+                        sOp.expression = 'try { var sw = effect("Stroke Width")(1).value; var op = effect("Stroke Opacity")(1).value; (sw <= 0.0001) ? 0 : op; } catch(e) { value; }';
+                    }
+                }
+
+                layer.selected = true;
+            } catch(err) {
+                alert("Error building Custom Rounded Rectangle: " + err.toString());
+            } finally {
+                if (app.endUndoGroup) app.endUndoGroup();
+            }
+        }
+        // Case B: Live Property Updating
+        else {
+            function setLayerEffectVal(layer, effName, val) {
+                if (!layer) return;
+                var parade = layer.property("ADBE Effect Parade") || layer.property("Effects");
+                if (parade) {
+                    var eff = parade.property(effName);
+                    if (eff) {
+                        var p = eff.property(1) || eff.property("Slider") || eff.property("Checkbox") || eff.property("Color");
+                        if (p && p.setValue) p.setValue(val);
+                    }
+                }
+            }
+
+            setLayerEffectVal(existingLayer, "Width",                w);
+            setLayerEffectVal(existingLayer, "Height",               h);
+            setLayerEffectVal(existingLayer, "Link All Corners",     linkAll ? 1 : 0);
+            setLayerEffectVal(existingLayer, "Radius All",           rAll);
+            setLayerEffectVal(existingLayer, "Radius Top-Left",      rTL);
+            setLayerEffectVal(existingLayer, "Radius Top-Right",     rTR);
+            setLayerEffectVal(existingLayer, "Radius Bottom-Right",  rBR);
+            setLayerEffectVal(existingLayer, "Radius Bottom-Left",   rBL);
+            setLayerEffectVal(existingLayer, "Prevent Overlap",      preventOverlap ? 1 : 0);
+            setLayerEffectVal(existingLayer, "Fill Color",           fillColor);
+            setLayerEffectVal(existingLayer, "Fill Opacity",         fillOpacity);
+            setLayerEffectVal(existingLayer, "Stroke Color",         strokeColor);
+            setLayerEffectVal(existingLayer, "Stroke Width",         strokeWidth);
+            setLayerEffectVal(existingLayer, "Stroke Opacity",       strokeWidth <= 0.0001 ? 0 : strokeOpacity);
+        }
+    }
+
+    // -------------------------------------------------------------------------
+    // 7. Layout & Show Window
+    // -------------------------------------------------------------------------
+    if (win) {
+        win.layout.layout(true);
+        win.layout.resize();
+        win.onResizing = win.onResize = function() {
+            this.layout.resize();
+        };
+
+        if (win instanceof Window) {
+            win.center();
+            win.show();
+        }
+    }
+
+})(this);
+`
+    },
+    pieSlice: {
+        name: "Pie / Slice Generator (Path Expression & Geometry)",
+        code: `/*
     Pie / Circular Sector Generator for Adobe After Effects  (v4)
     Creates a native Shape Layer with an expression-driven Path.
 
@@ -2614,11 +4926,26 @@ $.writeln("Shapes showcase created: Square, Circle, and Bézier Star!");
         var panel = (thisObj instanceof Panel)
             ? thisObj
             : new Window("palette", "Pie / Slice Generator", undefined, { resizeable: true });
+        if (!(thisObj instanceof Panel)) {
+            panel.text = "Pie / Slice Generator";
+        }
 
         panel.orientation = "column";
         panel.alignChildren = ["fill", "top"];
         panel.spacing = 8;
         panel.margins = 12;
+
+        // ---------------------------------------------------------------------
+        // UI Header (Panel Title + Version & Description)
+        // ---------------------------------------------------------------------
+        var pnlHeader = panel.add("panel", undefined, "Pie / Slice Generator");
+        pnlHeader.orientation = "column";
+        pnlHeader.alignChildren = ["fill", "top"];
+        pnlHeader.alignment = ["fill", "top"];
+        pnlHeader.spacing = 3;
+        pnlHeader.margins = [10, 8, 10, 8];
+
+        var lblDesc = pnlHeader.add("statictext", undefined, "v4.1 - Procedural Bézier Shape Layer pie & slice sector generator.");
 
         // ---------- Dimensions ----------
         var grpRadius = panel.add("panel", undefined, "Dimensions");
@@ -2689,6 +5016,8 @@ $.writeln("Shapes showcase created: Square, Circle, and Bézier Star!");
         };
 
         var btnCreate = panel.add("button", undefined, "Create Pie Slice Shape Layer");
+        btnCreate.alignment = ["fill", "top"];
+        btnCreate.preferredSize = [-1, 36];
 
         function numberFromField(field, fallback) {
             var n = parseFloat(field.text);
@@ -2878,7 +5207,7 @@ $.writeln("Shapes showcase created: Square, Circle, and Bézier Star!");
     }
 })(this);
 `
-        }
+    }
     };
 
     global.PRESETS = PRESETS;

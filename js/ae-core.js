@@ -890,10 +890,10 @@
 
             // 2. Rotations (AE Order: Orientation then X, Y, Z Rotation)
             if (this._threeDLayer) {
-                // Orientation (Z, Y, X)
-                if (orient[2]) m = Mat4.rotateZ(m, orient[2] * DEG2RAD);
-                if (orient[1]) m = Mat4.rotateY(m, orient[1] * DEG2RAD);
+                // Orientation in AE applies composite matrix R = Rx * Ry * Rz
                 if (orient[0]) m = Mat4.rotateX(m, orient[0] * DEG2RAD);
+                if (orient[1]) m = Mat4.rotateY(m, orient[1] * DEG2RAD);
+                if (orient[2]) m = Mat4.rotateZ(m, orient[2] * DEG2RAD);
 
                 // Individual 3D Rotations (X, then Y, then Z)
                 if (xRot) m = Mat4.rotateX(m, xRot * DEG2RAD);
@@ -1136,19 +1136,32 @@
             console.log('[AE JSX]', ...args);
             if (global.aeConsoleLog) global.aeConsoleLog(args.join(' '));
         },
-        // Adobe ExtendScript native $.colorPicker() API emulation
-        colorPicker(initialColor) {
+        // Adobe ExtendScript native $.colorPicker() API emulation (Windows ChooseColor dialog)
+        colorPicker(initialColor, callback) {
             let hex = '#2288EE';
             if (typeof initialColor === 'number' && initialColor >= 0) {
                 hex = '#' + initialColor.toString(16).padStart(6, '0');
             } else if (typeof initialColor === 'string') {
                 hex = initialColor.startsWith('#') ? initialColor : '#' + initialColor;
             }
+            if (typeof global.openWindowsColorPicker === 'function') {
+                global.openWindowsColorPicker(hex, (chosenHex) => {
+                    let clean = chosenHex.replace('#', '');
+                    let num = parseInt(clean, 16);
+                    if (typeof callback === 'function') {
+                        callback(chosenHex, num);
+                    }
+                });
+                return -1;
+            }
             const res = prompt('After Effects Color Picker:\nEnter hex color (e.g. #2288EE):', hex);
             if (res && res.trim()) {
                 let clean = res.trim().replace('#', '');
                 let num = parseInt(clean, 16);
-                if (!isNaN(num)) return num;
+                if (!isNaN(num)) {
+                    if (typeof callback === 'function') callback('#' + clean, num);
+                    return num;
+                }
             }
             return -1;
         }

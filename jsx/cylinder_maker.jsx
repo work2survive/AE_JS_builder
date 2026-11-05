@@ -41,8 +41,10 @@
     // -------------------------------------------------------------------------
     var win = (thisObj instanceof Panel)
         ? thisObj
-        : new Window("palette", "Cylinder Maker 3D - v1.0", undefined, { resizeable: true });
-    win.text = "Cylinder Maker 3D - v1.0";
+        : new Window("palette", "Cylinder Maker 3D", undefined, { resizeable: true });
+    if (!(thisObj instanceof Panel)) {
+        win.text = "Cylinder Maker 3D";
+    }
 
     var currentPrecompName = "";
 
@@ -170,16 +172,16 @@
     }
 
     // -------------------------------------------------------------------------
-    // 3. UI Header
+    // 3. UI Header (Panel Title + Version & Description)
     // -------------------------------------------------------------------------
-    var pnlHeader = win.add("panel", undefined, "Cylinder Maker 3D - v1.0");
+    var pnlHeader = win.add("panel", undefined, "Cylinder Maker 3D");
     pnlHeader.orientation = "column";
     pnlHeader.alignChildren = ["fill", "top"];
     pnlHeader.alignment = ["fill", "top"];
     pnlHeader.spacing = 3;
     pnlHeader.margins = [10, 8, 10, 8];
 
-    var lblDesc = pnlHeader.add("statictext", undefined, "Parametric 3D Shape Layer Cylinder & Slice generator with live master rig.");
+    var lblDesc = pnlHeader.add("statictext", undefined, "v1.1 - Parametric 3D Shape Layer Cylinder & Slice generator with live master rig.");
 
     // -------------------------------------------------------------------------
     // 4. Tabbed Panel: Geometry vs. Appearance
@@ -213,7 +215,7 @@
     grpRad.alignment = ["fill", "top"];
     var lblRad = grpRad.add("statictext", undefined, "Radius:");
     lblRad.preferredSize = [100, -1];
-    var sldRad = grpRad.add("slider", undefined, 150, { minvalue: 20, maxvalue: 500 });
+    var sldRad = grpRad.add("slider", undefined, 150, 20, 500);
     sldRad.alignment = ["fill", "center"];
     var txtRad = grpRad.add("edittext", undefined, "150");
     txtRad.characters = 4;
@@ -224,7 +226,7 @@
     grpH.alignment = ["fill", "top"];
     var lblH = grpH.add("statictext", undefined, "Extrude (Height):");
     lblH.preferredSize = [100, -1];
-    var sldH = grpH.add("slider", undefined, 250, { minvalue: 20, maxvalue: 800 });
+    var sldH = grpH.add("slider", undefined, 250, 20, 800);
     sldH.alignment = ["fill", "center"];
     var txtH = grpH.add("edittext", undefined, "250");
     txtH.characters = 4;
@@ -235,7 +237,7 @@
     grpSeg.alignment = ["fill", "top"];
     var lblSeg = grpSeg.add("statictext", undefined, "Wall Segments:");
     lblSeg.preferredSize = [100, -1];
-    var sldSeg = grpSeg.add("slider", undefined, 16, { minvalue: 3, maxvalue: 48 });
+    var sldSeg = grpSeg.add("slider", undefined, 16, 3, 48);
     sldSeg.alignment = ["fill", "center"];
     var txtSeg = grpSeg.add("edittext", undefined, "16");
     txtSeg.characters = 3;
@@ -256,7 +258,7 @@
     grpStart.alignment = ["fill", "top"];
     var lblStart = grpStart.add("statictext", undefined, "Start Angle:");
     lblStart.preferredSize = [100, -1];
-    var sldStart = grpStart.add("slider", undefined, 0, { minvalue: -360, maxvalue: 360 });
+    var sldStart = grpStart.add("slider", undefined, 0, -360, 360);
     sldStart.alignment = ["fill", "center"];
     var txtStart = grpStart.add("edittext", undefined, "0");
     txtStart.characters = 5;
@@ -267,7 +269,7 @@
     grpEnd.alignment = ["fill", "top"];
     var lblEnd = grpEnd.add("statictext", undefined, "End Angle:");
     lblEnd.preferredSize = [100, -1];
-    var sldEnd = grpEnd.add("slider", undefined, 270, { minvalue: -360, maxvalue: 360 });
+    var sldEnd = grpEnd.add("slider", undefined, 270, -360, 360);
     sldEnd.alignment = ["fill", "center"];
     var txtEnd = grpEnd.add("edittext", undefined, "270");
     txtEnd.characters = 5;
@@ -346,24 +348,23 @@
         }
 
         btnSwatch.onClick = function() {
-            if (typeof document !== "undefined") {
-                var input = document.createElement("input");
-                input.type = "color";
-                input.value = picker._color;
-                input.oninput = function() {
-                    setColor(input.value, true);
-                };
-                input.click();
+            var curHex = picker._color || "#2288EE";
+            if (typeof window !== "undefined" && typeof window.openWindowsColorPicker === "function") {
+                window.openWindowsColorPicker(curHex, function(selectedHex) {
+                    setColor(selectedHex, true);
+                });
                 return;
             }
 
-            var hexNum = parseInt(picker._color.replace("#", ""), 16);
+            var hexNum = parseInt(curHex.replace("#", ""), 16);
             var result = -1;
             if (typeof $.colorPicker === "function") {
-                result = $.colorPicker(hexNum);
+                result = $.colorPicker(hexNum, function(selectedHex) {
+                    setColor(selectedHex, true);
+                });
             }
             if (result !== -1 && result !== undefined && result !== null) {
-                var hexStr = result.toString(16);
+                var hexStr = Number(result).toString(16);
                 while (hexStr.length < 6) hexStr = "0" + hexStr;
                 setColor("#" + hexStr, true);
             }
@@ -416,7 +417,7 @@
     grpOp.alignment = ["fill", "top"];
     var lblOp = grpOp.add("statictext", undefined, "Opacity (%):");
     lblOp.preferredSize = [120, -1];
-    var sldOp = grpOp.add("slider", undefined, 90, { minvalue: 0, maxvalue: 100 });
+    var sldOp = grpOp.add("slider", undefined, 90, 0, 100);
     sldOp.alignment = ["fill", "center"];
     var txtOp = grpOp.add("edittext", undefined, "90");
     txtOp.characters = 3;
@@ -436,21 +437,31 @@
     grpThick.alignment = ["fill", "top"];
     var lblThick = grpThick.add("statictext", undefined, "Stroke Width:");
     lblThick.preferredSize = [120, -1];
-    var sldThick = grpThick.add("slider", undefined, 2, { minvalue: 0, maxvalue: 20 });
+    var sldThick = grpThick.add("slider", undefined, 2, 0, 20);
     sldThick.alignment = ["fill", "center"];
     var txtThick = grpThick.add("edittext", undefined, "2");
     txtThick.characters = 3;
 
     // Two-Way Sync for UI sliders
     function hookSliderText(sld, txt, onChangeFn, isInt) {
-        sld.onChanging = function() {
-            txt.text = String(isInt ? Math.round(sld.value) : Math.round(sld.value * 10) / 10);
-            onChangeFn();
-        };
+        function updateFromSlider() {
+            var val = isInt ? Math.round(sld.value) : Math.round(sld.value * 10) / 10;
+            if (isNaN(val)) val = isInt ? Math.round(sld.minvalue || 0) : 0;
+            txt.text = String(val);
+            if (typeof onChangeFn === "function") onChangeFn();
+        }
+        sld.onChanging = updateFromSlider;
+        sld.onChange = updateFromSlider;
+
         txt.onChange = function() {
-            var val = parseFloat(txt.text) || 0;
-            sld.value = Math.max(sld.minvalue, Math.min(sld.maxvalue, val));
-            onChangeFn();
+            var val = parseFloat(txt.text);
+            if (isNaN(val)) val = (typeof sld.minvalue === "number") ? sld.minvalue : 0;
+            var minV = (typeof sld.minvalue === "number") ? sld.minvalue : 0;
+            var maxV = (typeof sld.maxvalue === "number") ? sld.maxvalue : 10000;
+            val = Math.max(minV, Math.min(maxV, val));
+            sld.value = val;
+            txt.text = String(isInt ? Math.round(val) : Math.round(val * 10) / 10);
+            if (typeof onChangeFn === "function") onChangeFn();
         };
     }
 

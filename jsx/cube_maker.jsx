@@ -47,8 +47,10 @@
     //   scope, so we create a floating "palette" Window.
     var win = (thisObj instanceof Panel) 
         ? thisObj 
-        : new Window("palette", "Cube Maker 3D - v1.2", undefined, { resizeable: true });
-    win.text = "Cube Maker 3D - v1.2";
+        : new Window("palette", "Cube Maker 3D", undefined, { resizeable: true });
+    if (!(thisObj instanceof Panel)) {
+        win.text = "Cube Maker 3D";
+    }
 
     // Track active precomp name across sessions / live slider updates
     var currentPrecompName = "";
@@ -146,16 +148,16 @@
     }
 
     // -------------------------------------------------------------------------
-    // 3. UI Section: Add-on Name, Version & Description Header
+    // 3. UI Section: Header (Panel Title + Version & Description)
     // -------------------------------------------------------------------------
-    var pnlHeader = win.add("panel", undefined, "Cube Maker 3D - v1.2");
+    var pnlHeader = win.add("panel", undefined, "Cube Maker 3D");
     pnlHeader.orientation = "column";
     pnlHeader.alignChildren = ["fill", "top"];
     pnlHeader.alignment = ["fill", "top"];
     pnlHeader.spacing = 3;
     pnlHeader.margins = [10, 8, 10, 8];
 
-    var lblDesc = pnlHeader.add("statictext", undefined, "Parametric 3D Shape Layer Cube generator and live controller rig.");
+    var lblDesc = pnlHeader.add("statictext", undefined, "v1.3 - Parametric 3D Shape Layer Cube generator and live controller rig.");
 
     // -------------------------------------------------------------------------
     // 4. UI Section: Tabbed Panel Container (Geometry vs. Appearance)
@@ -187,7 +189,7 @@
     grpX.alignment = ["fill", "top"];
     var lblX = grpX.add("statictext", undefined, "Size X:");
     lblX.preferredSize = [80, -1];
-    var sldX = grpX.add("slider", undefined, 200, { minvalue: 50, maxvalue: 500 });
+    var sldX = grpX.add("slider", undefined, 200, 50, 500);
     sldX.alignment = ["fill", "center"];
     var txtX = grpX.add("edittext", undefined, "200");
     txtX.characters = 4;
@@ -198,7 +200,7 @@
     grpY.alignment = ["fill", "top"];
     var lblY = grpY.add("statictext", undefined, "Size Y:");
     lblY.preferredSize = [80, -1];
-    var sldY = grpY.add("slider", undefined, 200, { minvalue: 50, maxvalue: 500 });
+    var sldY = grpY.add("slider", undefined, 200, 50, 500);
     sldY.alignment = ["fill", "center"];
     var txtY = grpY.add("edittext", undefined, "200");
     txtY.characters = 4;
@@ -209,7 +211,7 @@
     grpZ.alignment = ["fill", "top"];
     var lblZ = grpZ.add("statictext", undefined, "Size Z:");
     lblZ.preferredSize = [80, -1];
-    var sldZ = grpZ.add("slider", undefined, 200, { minvalue: 50, maxvalue: 500 });
+    var sldZ = grpZ.add("slider", undefined, 200, 50, 500);
     sldZ.alignment = ["fill", "center"];
     var txtZ = grpZ.add("edittext", undefined, "200");
     txtZ.characters = 4;
@@ -276,12 +278,6 @@
     pnlStruct.alignment = ["fill", "top"];
 
     pnlStruct.add("statictext", undefined, "Topology: 6 Faces parented to Controller (Defined Once)");
-
-    var btnBuild = pnlStruct.add("button", undefined, "Build / Rebuild 3D Structure");
-    btnBuild.alignment = ["fill", "top"];
-    btnBuild.onClick = function() {
-        buildOrUpdateCube(true); // Pass true to force structural recreation
-    };
 
     // =========================================================================
     // TAB 2: APPEARANCE & STYLING
@@ -363,24 +359,23 @@
         }
 
         btnSwatch.onClick = function() {
-            if (typeof document !== "undefined") {
-                var input = document.createElement("input");
-                input.type = "color";
-                input.value = picker._color;
-                input.oninput = function() {
-                    setColor(input.value, true);
-                };
-                input.click();
+            var curHex = picker._color || "#2288EE";
+            if (typeof window !== "undefined" && typeof window.openWindowsColorPicker === "function") {
+                window.openWindowsColorPicker(curHex, function(selectedHex) {
+                    setColor(selectedHex, true);
+                });
                 return;
             }
 
-            var hexNum = parseInt(picker._color.replace("#", ""), 16);
+            var hexNum = parseInt(curHex.replace("#", ""), 16);
             var result = -1;
             if (typeof $.colorPicker === "function") {
-                result = $.colorPicker(hexNum);
+                result = $.colorPicker(hexNum, function(selectedHex) {
+                    setColor(selectedHex, true);
+                });
             }
             if (result !== -1 && result !== undefined && result !== null) {
-                var hexStr = result.toString(16);
+                var hexStr = Number(result).toString(16);
                 while (hexStr.length < 6) hexStr = "0" + hexStr;
                 setColor("#" + hexStr, true);
             }
@@ -417,7 +412,7 @@
     grpSidesOp.alignment = ["fill", "top"];
     var lblSidesOp = grpSidesOp.add("statictext", undefined, "Sides Opacity:");
     lblSidesOp.preferredSize = [115, -1];
-    var sldSidesOp = grpSidesOp.add("slider", undefined, 85, { minvalue: 0, maxvalue: 100 });
+    var sldSidesOp = grpSidesOp.add("slider", undefined, 85, 0, 100);
     sldSidesOp.alignment = ["fill", "center"];
     var txtSidesOp = grpSidesOp.add("edittext", undefined, "85");
     txtSidesOp.characters = 3;
@@ -448,7 +443,7 @@
     grpStrokeOp.alignment = ["fill", "top"];
     var lblStrokeOp = grpStrokeOp.add("statictext", undefined, "Stroke Opacity:");
     lblStrokeOp.preferredSize = [115, -1];
-    var sldStrokeOp = grpStrokeOp.add("slider", undefined, 100, { minvalue: 0, maxvalue: 100 });
+    var sldStrokeOp = grpStrokeOp.add("slider", undefined, 100, 0, 100);
     sldStrokeOp.alignment = ["fill", "center"];
     var txtStrokeOp = grpStrokeOp.add("edittext", undefined, "100");
     txtStrokeOp.characters = 3;
@@ -468,7 +463,7 @@
     grpThick.alignment = ["fill", "top"];
     var lblThick = grpThick.add("statictext", undefined, "Stroke Width:");
     lblThick.preferredSize = [115, -1];
-    var sldThick = grpThick.add("slider", undefined, 3, { minvalue: 1, maxvalue: 20 });
+    var sldThick = grpThick.add("slider", undefined, 3, 1, 20);
     sldThick.alignment = ["fill", "center"];
     var txtThick = grpThick.add("edittext", undefined, "3");
     txtThick.characters = 3;
@@ -488,7 +483,7 @@
     grpRound.alignment = ["fill", "top"];
     var lblRound = grpRound.add("statictext", undefined, "Corner Roundness:");
     lblRound.preferredSize = [115, -1];
-    var sldRound = grpRound.add("slider", undefined, 10, { minvalue: 0, maxvalue: 80 });
+    var sldRound = grpRound.add("slider", undefined, 10, 0, 80);
     sldRound.alignment = ["fill", "center"];
     var txtRound = grpRound.add("edittext", undefined, "10");
     txtRound.characters = 3;
@@ -508,7 +503,7 @@
     grpGap.alignment = ["fill", "top"];
     var lblGap = grpGap.add("statictext", undefined, "Gap:");
     lblGap.preferredSize = [115, -1];
-    var sldGap = grpGap.add("slider", undefined, 0, { minvalue: 0, maxvalue: 40 });
+    var sldGap = grpGap.add("slider", undefined, 0, 0, 40);
     sldGap.alignment = ["fill", "center"];
     var txtGap = grpGap.add("edittext", undefined, "0");
     txtGap.characters = 3;
@@ -524,6 +519,14 @@
 
     // Set initial active tab (index 0: Geometry)
     tpanel.selection = 0;
+
+    // --- Build Button (Always at bottom, outside of tabs) ---
+    var btnBuild = win.add("button", undefined, "Build / Rebuild 3D Cube");
+    btnBuild.alignment = ["fill", "top"];
+    btnBuild.preferredSize = [-1, 36];
+    btnBuild.onClick = function() {
+        buildOrUpdateCube(true);
+    };
 
     // --- Bottom Subtle Repository Link ---
     var grpRepoLink = win.add("group");

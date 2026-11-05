@@ -533,188 +533,372 @@ body.is-resizing-h .ae-resizer-h {
    ------------------------------------------------------------- */
 .scriptui-dock {
     flex: 1;
-    padding: 14px;
+    padding: 10px;
     overflow-y: auto;
-    background-color: #232323;
+    background-color: #1c1c1c;
 }
 
 .scriptui-window-container {
-    background: #2b2b2b;
-    border: 1px solid #444;
-    border-radius: 5px;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+    background: #232323;
+    border: 1px solid #383838;
+    border-radius: 3px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.45);
     overflow: hidden;
-    max-width: 450px;
+    max-width: 440px;
     margin: 0 auto;
+    font-size: 11px;
+    color: #cccccc;
+    font-family: var(--font-ui);
 }
 
 .scriptui-window-header {
-    background: #333333;
-    padding: 7px 12px;
-    border-bottom: 1px solid #444;
+    background: #2b2b2b;
+    padding: 5px 10px;
+    border-bottom: 1px solid #383838;
     display: flex;
     justify-content: space-between;
     align-items: center;
     font-weight: 600;
-    font-size: 12px;
+    font-size: 11px;
+    color: #cccccc;
+    user-select: none;
 }
 
 .scriptui-close-btn {
-    font-size: 16px;
+    font-size: 14px;
+    line-height: 14px;
     cursor: pointer;
-    color: #aaa;
+    color: #888888;
+    transition: color 0.1s ease;
 }
 .scriptui-close-btn:hover {
-    color: #fff;
+    color: #ffffff;
 }
 
 .scriptui-window-body {
-    padding: 12px;
+    padding: 8px 10px 10px 10px;
 }
 
 .scriptui-panel {
-    border: 1px solid #404040;
-    border-radius: 4px;
-    padding: 10px;
-    margin-bottom: 8px;
+    border: 1px solid #363636;
+    border-radius: 3px;
+    padding: 6px 8px 8px 8px;
+    margin-bottom: 6px;
+    background: transparent;
 }
 
 .scriptui-panel legend {
-    padding: 0 6px;
-    color: #bbb;
+    padding: 0 4px;
+    color: #aaaaaa;
     font-size: 11px;
+    font-weight: 500;
 }
 
-/* ScriptUI TabbedPanel & Tabs */
+/* ScriptUI TabbedPanel & Tabs (Flat Native AE Style) */
 .scriptui-tabbedpanel {
     display: flex;
     flex-direction: column;
     width: 100%;
-    margin-top: 4px;
-    margin-bottom: 8px;
-    border: 1px solid #383838;
-    border-radius: 5px;
-    background: #1e1e1e;
-    overflow: hidden;
+    margin-top: 2px;
+    margin-bottom: 6px;
+    border: none;
+    border-radius: 0;
+    background: transparent;
+    overflow: visible;
 }
 
 .scriptui-tab-bar {
     display: flex;
-    background: #181818;
-    border-bottom: 1px solid #333333;
-    padding: 5px 6px 0 6px;
-    gap: 4px;
+    background: transparent;
+    border-bottom: 1px solid #383838;
+    padding: 0 2px;
+    gap: 2px;
 }
 
 .scriptui-tab-btn {
-    background: #252525;
+    background: transparent;
     color: #888888;
-    border: 1px solid #333333;
+    border: 1px solid transparent;
     border-bottom: none;
-    border-top-left-radius: 4px;
-    border-top-right-radius: 4px;
-    padding: 6px 14px;
+    border-top-left-radius: 3px;
+    border-top-right-radius: 3px;
+    padding: 3px 10px;
     font-size: 11px;
-    font-weight: 600;
+    font-weight: 500;
     cursor: pointer;
-    transition: all 0.15s ease;
+    transition: color 0.15s ease, background-color 0.15s ease;
     user-select: none;
 }
 
 .scriptui-tab-btn:hover {
-    background: #2e2e2e;
+    background: #2a2a2a;
     color: #cccccc;
 }
 
 .scriptui-tab-btn.active {
-    background: #262626;
-    color: #ffffff;
-    border-color: #4a4a4a #4a4a4a transparent #4a4a4a;
-    font-weight: 700;
+    background: #282828;
+    color: #f0f0f0;
+    border: 1px solid #383838;
+    border-bottom: 1px solid #282828;
+    font-weight: 600;
     position: relative;
-    top: 1px;
-    box-shadow: 0 -2px 4px rgba(0,0,0,0.4);
+    bottom: -1px;
+    box-shadow: none;
 }
 
 .scriptui-tab-body {
-    padding: 10px;
-    background: #262626;
+    padding: 4px 0 0 0;
+    background: transparent;
 }
 
 .scriptui-tab-content {
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 6px;
 }
 
 .scriptui-group {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 6px;
     width: 100%;
+    min-height: 22px;
+}
+
+.scriptui-statictext {
+    font-size: 11px;
+    color: #cccccc;
+    line-height: 18px;
+    user-select: none;
 }
 
 .scriptui-button {
-    background: #383838;
-    color: #eee;
-    border: 1px solid #555;
+    background: #252525;
+    color: #cccccc;
+    border: 1px solid #383838;
     border-radius: 3px;
-    padding: 6px 14px;
-    font-size: 12px;
+    padding: 3px 10px;
+    font-size: 11px;
+    font-weight: 500;
+    font-family: var(--font-ui);
     cursor: pointer;
+    transition: background-color 0.1s ease, border-color 0.1s ease, color 0.1s ease;
+    user-select: none;
+    line-height: 16px;
+    min-height: 22px;
 }
 .scriptui-button:hover {
-    background: #484848;
+    background: #323232;
+    border-color: #484848;
+    color: #ffffff;
+}
+.scriptui-button:active {
+    background: #1c1c1c;
+    border-color: #303030;
 }
 
 .scriptui-edittext {
-    background: #1a1a1a;
-    color: #fff;
-    border: 1px solid #555;
-    border-radius: 3px;
-    padding: 4px 8px;
-    font-size: 12px;
+    background: #181818;
+    color: #d8d8d8;
+    border: 1px solid #383838;
+    border-radius: 2px;
+    padding: 0 4px;
+    font-size: 11px;
+    font-family: var(--font-ui);
+    height: 20px;
+    line-height: 20px;
     outline: none;
     user-select: text;
+    text-align: center;
+    box-sizing: border-box;
 }
 .scriptui-edittext:focus {
-    border-color: var(--ae-blue);
+    border-color: #1473e6;
+    background: #141414;
+    color: #ffffff;
 }
 
+/* Custom Native Adobe CC Dark Slider */
 .scriptui-slider-container {
     display: flex;
     align-items: center;
-    width: 100%;
+    flex: 1;
+    min-width: 60px;
+    height: 20px;
 }
 
 .scriptui-slider {
-    flex: 1;
-    accent-color: var(--ae-blue);
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 2px;
+    background: #161616;
+    border-radius: 1px;
+    border-top: 1px solid #111111;
+    border-bottom: 1px solid #303030;
+    outline: none;
+    cursor: pointer;
+    margin: 0;
+    padding: 0;
+}
+
+.scriptui-slider::-webkit-slider-runnable-track {
+    width: 100%;
+    height: 2px;
+    cursor: pointer;
+    background: #161616;
+    border-radius: 1px;
+    border-top: 1px solid #111111;
+    border-bottom: 1px solid #303030;
+}
+
+.scriptui-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #4d4d4d;
+    border: 1px solid #282828;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+    cursor: pointer;
+    margin-top: -4px;
+    transition: background 0.1s ease;
+}
+
+.scriptui-slider::-webkit-slider-thumb:hover {
+    background: #626262;
+}
+
+.scriptui-slider:active::-webkit-slider-thumb {
+    background: #757575;
+}
+
+.scriptui-slider::-moz-range-track {
+    width: 100%;
+    height: 2px;
+    cursor: pointer;
+    background: #161616;
+    border-radius: 1px;
+    border: 1px solid #303030;
+}
+
+.scriptui-slider::-moz-range-thumb {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #4d4d4d;
+    border: 1px solid #282828;
     cursor: pointer;
 }
 
+.scriptui-slider:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+}
+
+.scriptui-slider:disabled::-webkit-slider-thumb {
+    background: #333333;
+    border-color: #222222;
+    cursor: not-allowed;
+}
+
+/* Checkbox & Radio */
 .scriptui-checkbox-label, .scriptui-radio-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    font-size: 11px;
+    color: #cccccc;
+    user-select: none;
+    min-height: 20px;
+}
+
+.scriptui-checkbox-label input[type="checkbox"],
+.scriptui-radio-label input[type="radio"] {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 12px;
+    height: 12px;
+    margin: 0;
+    background: #181818;
+    border: 1px solid #424242;
+    border-radius: 2px;
+    outline: none;
+    cursor: pointer;
+    position: relative;
     display: flex;
     align-items: center;
-    gap: 8px;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.scriptui-checkbox-label input[type="checkbox"]:hover,
+.scriptui-radio-label input[type="radio"]:hover {
+    border-color: #555555;
+    background: #202020;
+}
+
+.scriptui-checkbox-label input[type="checkbox"]:checked {
+    background: #181818;
+    border-color: #555555;
+}
+
+.scriptui-checkbox-label input[type="checkbox"]:checked::after {
+    content: "";
+    position: absolute;
+    left: 3px;
+    top: 1px;
+    width: 3px;
+    height: 6px;
+    border: solid #d8d8d8;
+    border-width: 0 1.5px 1.5px 0;
+    transform: rotate(45deg);
+}
+
+.scriptui-radio-label input[type="radio"] {
+    border-radius: 50%;
+}
+
+.scriptui-radio-label input[type="radio"]:checked::after {
+    content: "";
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: #d8d8d8;
+}
+
+.scriptui-dropdown {
+    background: #181818;
+    color: #d8d8d8;
+    border: 1px solid #383838;
+    border-radius: 2px;
+    padding: 1px 4px;
+    font-size: 11px;
+    height: 20px;
+    outline: none;
     cursor: pointer;
-    font-size: 12px;
+}
+.scriptui-dropdown:focus {
+    border-color: #1473e6;
 }
 
 /* Subtle ScriptUI Footer Links */
 .scriptui-statictext.scriptui-link {
-    color: #64b5f6 !important;
-    font-size: 11px;
+    color: #888888 !important;
+    font-size: 10px;
     cursor: pointer !important;
-    text-decoration: underline;
-    opacity: 0.7;
-    transition: opacity 0.15s ease, color 0.15s ease;
+    text-decoration: none;
+    opacity: 0.8;
+    transition: color 0.15s ease, opacity 0.15s ease;
     display: inline-block;
-    padding: 2px 4px;
+    padding: 1px 2px;
 }
 
 .scriptui-statictext.scriptui-link:hover {
-    color: #90caf9 !important;
+    color: #bbbbbb !important;
+    text-decoration: underline;
     opacity: 1;
 }
 
@@ -1451,3 +1635,357 @@ body.is-resizing-h .ae-resizer-h {
     color: #2f80ed;
     text-shadow: 0 0 4px rgba(47, 128, 237, 0.6);
 }
+
+/* =============================================================================
+   SCRIPTUI COLOR SWATCH BUTTONS (Matches native AE look)
+   ============================================================================= */
+.scriptui-button.color-swatch,
+.scriptui-color-swatch-btn,
+button.scriptui-color-swatch {
+    min-width: 36px !important;
+    max-width: 36px !important;
+    width: 36px !important;
+    height: 22px !important;
+    min-height: 22px !important;
+    padding: 0 !important;
+    border: 1px solid #5a5a5a !important;
+    border-radius: 2px !important;
+    box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.45) !important;
+    cursor: pointer !important;
+    outline: none !important;
+    transition: border-color 0.15s ease, transform 0.1s ease !important;
+}
+.scriptui-button.color-swatch:hover,
+.scriptui-color-swatch-btn:hover,
+button.scriptui-color-swatch:hover {
+    border-color: #999999 !important;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.25), 0 0 4px rgba(0, 0, 0, 0.4) !important;
+}
+
+/* =============================================================================
+   WINDOWS COLOR PICKER MODAL (High-Fidelity Windows ChooseColor Dialog)
+   ============================================================================= */
+.win-color-modal-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.55);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 999999;
+    font-family: 'Segoe UI', Tahoma, Arial, sans-serif;
+    user-select: none;
+}
+
+.win-color-dialog {
+    background: #f0f0f0;
+    color: #000000;
+    border: 1px solid #707070;
+    border-radius: 8px;
+    box-shadow: 0 12px 36px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(255, 255, 255, 0.2);
+    width: 486px;
+    font-size: 12px;
+    overflow: hidden;
+    animation: winDialogPop 0.12s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes winDialogPop {
+    from { opacity: 0; transform: scale(0.96); }
+    to { opacity: 1; transform: scale(1); }
+}
+
+.win-dialog-titlebar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 12px;
+    background: #ffffff;
+    border-bottom: 1px solid #e2e2e2;
+    font-size: 12px;
+    font-weight: 600;
+    color: #1a1a1a;
+}
+
+.win-dialog-title {
+    font-size: 12px;
+}
+
+.win-dialog-close {
+    background: transparent;
+    border: none;
+    font-size: 13px;
+    color: #666666;
+    cursor: pointer;
+    width: 28px;
+    height: 22px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    transition: background-color 0.1s, color 0.1s;
+}
+.win-dialog-close:hover {
+    background: #e81123;
+    color: #ffffff;
+}
+
+.win-dialog-body {
+    display: flex;
+    padding: 12px 14px 10px 14px;
+    gap: 16px;
+}
+
+.win-color-left-pane {
+    width: 196px;
+    flex-shrink: 0;
+}
+
+.win-color-section-title {
+    font-size: 12px;
+    color: #000000;
+    margin-bottom: 4px;
+}
+
+.win-basic-grid,
+.win-custom-grid {
+    display: grid;
+    grid-template-columns: repeat(8, 22px);
+    gap: 2px;
+}
+
+.win-swatch {
+    width: 22px;
+    height: 18px;
+    border: 1px solid #7a7a7a;
+    box-sizing: border-box;
+    cursor: pointer;
+    background-color: #ffffff;
+    box-shadow: inset 1px 1px 0 rgba(255,255,255,0.4), inset -1px -1px 0 rgba(0,0,0,0.2);
+}
+.win-swatch:hover {
+    outline: 1px solid #0078d7;
+    z-index: 1;
+}
+.win-swatch.selected {
+    outline: 1px dotted #000000;
+    outline-offset: 1px;
+    box-shadow: 0 0 0 2px #ffffff;
+    z-index: 2;
+}
+
+.win-color-right-pane {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.win-spectrum-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    margin-bottom: 10px;
+}
+
+.win-spectrum-box {
+    position: relative;
+    width: 180px;
+    height: 180px;
+    border: 1px solid #7a7a7a;
+    box-sizing: border-box;
+    cursor: crosshair;
+    box-shadow: inset 1px 1px 0 rgba(0,0,0,0.2);
+}
+
+#win-spectrum-canvas {
+    display: block;
+    width: 178px;
+    height: 178px;
+}
+
+.win-spectrum-crosshair {
+    position: absolute;
+    width: 11px;
+    height: 11px;
+    margin-left: -5px;
+    margin-top: -5px;
+    pointer-events: none;
+    box-sizing: border-box;
+}
+.win-spectrum-crosshair::before,
+.win-spectrum-crosshair::after {
+    content: '';
+    position: absolute;
+    background: #000000;
+    box-shadow: 0 0 1px #ffffff;
+}
+.win-spectrum-crosshair::before {
+    top: 5px;
+    left: 0;
+    width: 11px;
+    height: 1px;
+}
+.win-spectrum-crosshair::after {
+    top: 0;
+    left: 5px;
+    width: 1px;
+    height: 11px;
+}
+
+.win-lum-box {
+    position: relative;
+    width: 16px;
+    height: 180px;
+    border: 1px solid #7a7a7a;
+    box-sizing: border-box;
+    cursor: pointer;
+    box-shadow: inset 1px 1px 0 rgba(0,0,0,0.2);
+}
+
+#win-lum-canvas {
+    display: block;
+    width: 14px;
+    height: 178px;
+}
+
+.win-lum-arrow {
+    position: absolute;
+    left: 17px;
+    font-size: 10px;
+    line-height: 1;
+    color: #000000;
+    pointer-events: none;
+    transform: translateY(-50%);
+}
+
+.win-inputs-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 8px;
+}
+
+.win-preview-col {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 58px;
+}
+
+.win-preview-box {
+    width: 58px;
+    height: 42px;
+    border: 1px solid #7a7a7a;
+    box-sizing: border-box;
+    background: #2288ee;
+    box-shadow: inset 1px 1px 0 rgba(0,0,0,0.2);
+    margin-bottom: 2px;
+}
+
+.win-preview-label {
+    font-size: 10px;
+    color: #444444;
+}
+
+.win-fields-col {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.win-field-row {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 4px;
+}
+.win-field-row label {
+    font-size: 11px;
+    color: #000000;
+    min-width: 32px;
+    text-align: right;
+}
+
+.win-field-input {
+    width: 44px;
+    height: 20px;
+    padding: 1px 4px;
+    border: 1px solid #7a7a7a;
+    background: #ffffff;
+    font-size: 11px;
+    font-family: 'Segoe UI', Tahoma, Arial, sans-serif;
+    color: #000000;
+    box-sizing: border-box;
+    text-align: right;
+}
+.win-field-input:focus {
+    border-color: #0078d7;
+    outline: 1px solid #0078d7;
+}
+
+.win-actions-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-top: 4px;
+}
+
+.win-hex-row {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+.win-hex-row label {
+    font-size: 11px;
+    color: #000000;
+}
+.win-field-hex {
+    width: 66px !important;
+    text-align: left !important;
+    font-family: Consolas, monospace !important;
+    font-size: 11px !important;
+}
+
+.win-dialog-footer {
+    display: flex;
+    justify-content: flex-start;
+    padding: 8px 14px 12px 14px;
+    gap: 8px;
+    background: #f0f0f0;
+}
+
+.win-btn {
+    background: #e1e1e1;
+    color: #000000;
+    border: 1px solid #adadad;
+    padding: 3px 12px;
+    font-size: 11px;
+    border-radius: 2px;
+    cursor: pointer;
+    min-width: 75px;
+    height: 23px;
+    box-sizing: border-box;
+    font-family: 'Segoe UI', Tahoma, Arial, sans-serif;
+}
+.win-btn:hover {
+    background: #e5f1fb;
+    border-color: #0078d7;
+}
+.win-btn:active {
+    background: #cce4f7;
+    border-color: #005499;
+}
+
+.win-btn-default {
+    border-color: #0078d7;
+    outline: 1px solid #0078d7;
+}
+
+.win-btn-wide {
+    width: 100%;
+    margin-top: 8px;
+}
+

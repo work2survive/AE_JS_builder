@@ -16,13 +16,27 @@
     function buildUI(thisObj) {
         var panel = (thisObj instanceof Panel)
             ? thisObj
-            : new Window("palette", "Pie / Slice Generator - v4.0", undefined, { resizeable: true });
-        panel.text = "Pie / Slice Generator - v4.0";
+            : new Window("palette", "Pie / Slice Generator", undefined, { resizeable: true });
+        if (!(thisObj instanceof Panel)) {
+            panel.text = "Pie / Slice Generator";
+        }
 
         panel.orientation = "column";
         panel.alignChildren = ["fill", "top"];
         panel.spacing = 8;
         panel.margins = 12;
+
+        // ---------------------------------------------------------------------
+        // UI Header (Panel Title + Version & Description)
+        // ---------------------------------------------------------------------
+        var pnlHeader = panel.add("panel", undefined, "Pie / Slice Generator");
+        pnlHeader.orientation = "column";
+        pnlHeader.alignChildren = ["fill", "top"];
+        pnlHeader.alignment = ["fill", "top"];
+        pnlHeader.spacing = 3;
+        pnlHeader.margins = [10, 8, 10, 8];
+
+        var lblDesc = pnlHeader.add("statictext", undefined, "v4.1 - Procedural Bézier Shape Layer pie & slice sector generator.");
 
         // ---------- Dimensions ----------
         var grpRadius = panel.add("panel", undefined, "Dimensions");
@@ -93,6 +107,8 @@
         };
 
         var btnCreate = panel.add("button", undefined, "Create Pie Slice Shape Layer");
+        btnCreate.alignment = ["fill", "top"];
+        btnCreate.preferredSize = [-1, 36];
 
         function numberFromField(field, fallback) {
             var n = parseFloat(field.text);

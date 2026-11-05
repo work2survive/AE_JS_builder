@@ -7,7 +7,7 @@
     'use strict';
 
     // -------------------------------------------------------------
-    // Daily Version Management (Starts at 1.0.0 on 2026-11-05)
+    // Daily Version Management (v1.1.x)
     // -------------------------------------------------------------
     function computeDailyVersion() {
         const launchYear = 2026;
@@ -19,7 +19,7 @@
         const currentUtc = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate());
         const dayDifference = Math.max(0, Math.floor((currentUtc - startUtc) / (1000 * 60 * 60 * 24)));
 
-        return `1.0.${dayDifference}`;
+        return `1.1.${dayDifference}`;
     }
 
     const APP_VERSION = computeDailyVersion();

@@ -97,10 +97,35 @@
 
         add(type, bounds, text, properties) {
             // ScriptUI signature: container.add(type, bounds, text, properties)
+            // For Slider/Scrollbar/Progressbar, ExtendScript supports:
+            // container.add("slider", bounds, value, minvalue, maxvalue, properties)
             let childText = '';
             let childProps = {};
 
-            if (typeof bounds === 'string') {
+            const tLower = (type || '').toLowerCase();
+            if (tLower === 'slider' || tLower === 'scrollbar' || tLower === 'progressbar') {
+                const initialVal = (typeof text === 'number') ? text : 0;
+                let minVal = 0;
+                let maxVal = 100;
+
+                if (typeof properties === 'number') {
+                    minVal = properties;
+                    if (arguments.length >= 5 && typeof arguments[4] === 'number') {
+                        maxVal = arguments[4];
+                    }
+                    if (arguments.length >= 6 && typeof arguments[5] === 'object') {
+                        childProps = arguments[5] || {};
+                    }
+                } else if (properties && typeof properties === 'object') {
+                    childProps = properties;
+                    if (properties.minvalue !== undefined) minVal = properties.minvalue;
+                    if (properties.maxvalue !== undefined) maxVal = properties.maxvalue;
+                }
+
+                childProps.minvalue = minVal;
+                childProps.maxvalue = maxVal;
+                childText = initialVal;
+            } else if (typeof bounds === 'string') {
                 childText = bounds;
                 childProps = text || {};
             } else {
@@ -123,6 +148,7 @@
                     child = new Tab(childText, this, childProps);
                     break;
                 case 'button':
+                case 'custombutton':
                     child = new Button(childText, this, childProps);
                     break;
                 case 'statictext':
@@ -179,7 +205,11 @@
         }
 
         applyCommonStyles(el) {
-            if (this.orientation === 'row') {
+            if (this.type === 'checkbox' || this.type === 'radiobutton') {
+                el.style.display = 'inline-flex';
+                el.style.flexDirection = 'row';
+                el.style.alignItems = 'center';
+            } else if (this.orientation === 'row') {
                 el.style.display = 'flex';
                 el.style.flexDirection = 'row';
                 el.style.alignItems = 'center';
@@ -187,26 +217,39 @@
                 el.style.display = 'flex';
                 el.style.flexDirection = 'column';
             }
-            if (this.spacing !== undefined) {
+            if (this.spacing !== undefined && (this.orientation === 'row' || this.orientation === 'column')) {
                 el.style.gap = `${this.spacing}px`;
             }
-            if (this.margins !== undefined) {
+            if (this.margins !== undefined && this.type !== 'statictext' && this.type !== 'button' && this.type !== 'edittext' && this.type !== 'slider') {
                 if (Array.isArray(this.margins)) {
                     el.style.padding = `${this.margins[1]}px ${this.margins[2]}px ${this.margins[3]}px ${this.margins[0]}px`;
-                } else {
+                } else if (typeof this.margins === 'number' && this.margins > 0) {
                     el.style.padding = `${this.margins}px`;
                 }
             }
             if (this.preferredSize && this.preferredSize[0] > 0) {
                 el.style.width = `${this.preferredSize[0]}px`;
+                if (el.tagName === 'SPAN') {
+                    el.style.display = 'inline-block';
+                    el.style.flexShrink = '0';
+                }
             }
             if (this.preferredSize && this.preferredSize[1] > 0) {
                 el.style.height = `${this.preferredSize[1]}px`;
             }
             if (this.alignment) {
-                if (Array.isArray(this.alignment) && this.alignment[0] === 'fill') {
-                    el.style.width = '100%';
-                    el.style.boxSizing = 'border-box';
+                if (Array.isArray(this.alignment)) {
+                    if (this.alignment[0] === 'fill') {
+                        el.style.width = '100%';
+                        el.style.boxSizing = 'border-box';
+                        el.style.flex = '1';
+                    } else if (this.alignment[0] === 'left') {
+                        el.style.alignSelf = 'flex-start';
+                    } else if (this.alignment[0] === 'right') {
+                        el.style.alignSelf = 'flex-end';
+                    } else if (this.alignment[0] === 'center') {
+                        el.style.alignSelf = 'center';
+                    }
                 }
             }
             if (this.alignChildren && Array.isArray(this.alignChildren)) {
@@ -222,7 +265,7 @@
                 if (el.tagName === 'INPUT' || el.tagName === 'BUTTON' || el.tagName === 'SELECT') {
                     el.disabled = true;
                 } else {
-                    el.style.opacity = '0.4';
+                    el.style.opacity = '0.35';
                     el.style.pointerEvents = 'none';
                 }
             }
@@ -233,7 +276,7 @@
         constructor(text, container, properties) {
             super('group', text, container, properties);
             this.orientation = 'row';
-            this.spacing = 8;
+            this.spacing = 6;
             this.margins = 0;
         }
 
@@ -253,8 +296,8 @@
         constructor(text, container, properties) {
             super('panel', text, container, properties);
             this.orientation = 'column';
-            this.spacing = 8;
-            this.margins = 10;
+            this.spacing = 6;
+            this.margins = [6, 8, 8, 8];
         }
 
         renderDOM() {
@@ -390,8 +433,8 @@
             super('tab', text, container, properties);
             this.orientation = 'column';
             this.alignChildren = ['fill', 'top'];
-            this.spacing = 8;
-            this.margins = 8;
+            this.spacing = 6;
+            this.margins = [4, 2, 4, 2];
         }
 
         get index() {
@@ -434,6 +477,9 @@
                 btn.style.color = '#64b5f6';
             }
             btn.textContent = this.text || '';
+            if (!this.text && (this.preferredSize[0] <= 45 || typeof this.onDraw === 'function' || (this.helpTip && this.helpTip.toLowerCase().includes('color')))) {
+                btn.classList.add('scriptui-color-swatch-btn');
+            }
             btn.onclick = () => {
                 if (this.onClick) this.onClick();
             };
@@ -453,6 +499,7 @@
         renderDOM() {
             const span = document.createElement('span');
             span.className = 'scriptui-statictext';
+            this.applyCommonStyles(span);
             if (this.text && (this.text.includes('🔵') || this.text.includes('🟡'))) {
                 span.style.color = '#64b5f6';
                 span.style.fontWeight = '600';
@@ -512,6 +559,8 @@
             }
             if (this.characters > 0) {
                 input.size = this.characters;
+                input.style.width = `${Math.max(36, this.characters * 7 + 16)}px`;
+                input.style.flexShrink = '0';
             }
             input.oninput = () => {
                 this._text = input.value;
@@ -529,9 +578,27 @@
     class Slider extends UIElement {
         constructor(text, container, properties) {
             super('slider', text, container, properties);
-            this.minvalue = (properties && properties.minvalue !== undefined) ? properties.minvalue : 0;
-            this.maxvalue = (properties && properties.maxvalue !== undefined) ? properties.maxvalue : 100;
-            this._value = (typeof text === 'number') ? text : this.minvalue;
+            this._minvalue = (properties && properties.minvalue !== undefined) ? Number(properties.minvalue) : 0;
+            this._maxvalue = (properties && properties.maxvalue !== undefined) ? Number(properties.maxvalue) : 100;
+            this._value = (typeof text === 'number') ? text : this._minvalue;
+        }
+
+        get minvalue() {
+            return this._minvalue !== undefined ? this._minvalue : 0;
+        }
+
+        set minvalue(val) {
+            this._minvalue = Number(val);
+            if (this.domElement) this.domElement.min = this._minvalue;
+        }
+
+        get maxvalue() {
+            return this._maxvalue !== undefined ? this._maxvalue : 100;
+        }
+
+        set maxvalue(val) {
+            this._maxvalue = Number(val);
+            if (this.domElement) this.domElement.max = this._maxvalue;
         }
 
         get value() {
@@ -546,6 +613,7 @@
         renderDOM() {
             const container = document.createElement('div');
             container.className = 'scriptui-slider-container';
+            this.applyCommonStyles(container);
 
             const slider = document.createElement('input');
             slider.type = 'range';
@@ -553,6 +621,9 @@
             slider.min = this.minvalue;
             slider.max = this.maxvalue;
             slider.value = this._value;
+            if (this.enabled === false) {
+                slider.disabled = true;
+            }
 
             slider.oninput = () => {
                 this._value = parseFloat(slider.value);
@@ -572,6 +643,7 @@
     class Checkbox extends UIElement {
         constructor(text, container, properties) {
             super('checkbox', text, container, properties);
+            this.orientation = 'row';
             this._value = false;
         }
 
@@ -587,10 +659,14 @@
         renderDOM() {
             const label = document.createElement('label');
             label.className = 'scriptui-checkbox-label';
+            this.applyCommonStyles(label);
 
             const chk = document.createElement('input');
             chk.type = 'checkbox';
             chk.checked = this._value;
+            if (this.enabled === false) {
+                chk.disabled = true;
+            }
             const handleToggle = () => {
                 this._value = chk.checked;
                 if (this.onClick) this.onClick();
@@ -619,6 +695,7 @@
     class RadioButton extends UIElement {
         constructor(text, container, properties) {
             super('radiobutton', text, container, properties);
+            this.orientation = 'row';
             this._value = false;
         }
 
@@ -634,11 +711,15 @@
         renderDOM() {
             const label = document.createElement('label');
             label.className = 'scriptui-radio-label';
+            this.applyCommonStyles(label);
 
             const radio = document.createElement('input');
             radio.type = 'radio';
             radio.name = this.container ? `radio_${this.container.type}` : 'radio_group';
             radio.checked = this._value;
+            if (this.enabled === false) {
+                radio.disabled = true;
+            }
             radio.onchange = () => {
                 this._value = radio.checked;
                 if (this.onClick) this.onClick();
@@ -818,6 +899,9 @@
             super('window', title, null, properties);
             this.windowType = type; // 'palette', 'dialog', 'window'
             this.title = title;
+            this.orientation = 'column';
+            this.spacing = 6;
+            this.margins = 0;
             this.layout = {
                 layout: () => this.updateLayout(),
                 resize: () => this.updateLayout()
