@@ -69,6 +69,7 @@ Supports the core AE vector shapes:
 - **File Dialog**: Click the **`📂 Open .JSX`** button in the top bar to open any `.jsx` or `.js` file from your disk.
 - **Drag & Drop**: Drag `.jsx` files directly from your file manager into the code editor panel.
 - **Auto-Execution**: The loaded script is automatically loaded into the editor and executed in the 3D comp, displaying real-time console output in the drawer.
+- **Deep Linking & URL Routing**: The active script name is automatically synchronized with the URL (e.g., `?jsx=cylinder_maker.jsx` or `?jsx=extruded_round_rectangle.jsx`). Loading a link with a `?jsx=` parameter auto-detects and runs that tool immediately. Pressing the **Clear** button removes the URL parameter and resets the stage.
 - Comes with a sample test script: [`test_script.jsx`](file:///g:/My%20Drive/_openProjects/My_AE_assets/AE_JS_builder/test_script.jsx).
 
 ### 9. ScriptUI Panel & Dialog Emulator

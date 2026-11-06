@@ -1041,6 +1041,160 @@
         const presetSelect = document.getElementById('ae-preset-select');
         const codeTextarea = document.getElementById('ae-code-editor');
         const currentFilenameEl = document.getElementById('current-filename');
+        const jsxFiles = new Map();
+
+        // -------------------------------------------------------------
+        // URL Parameter Routing (Direct Deep Linking for .JSX files)
+        // -------------------------------------------------------------
+        function updateURLForJSX(filename, isPush) {
+            if (!filename) return;
+            try {
+                const url = new URL(window.location.href);
+                url.searchParams.set('jsx', filename);
+                if (url.hash && url.hash.includes('jsx=')) {
+                    url.hash = '';
+                }
+                if (isPush) {
+                    window.history.pushState({ jsx: filename }, '', url.toString());
+                } else {
+                    window.history.replaceState({ jsx: filename }, '', url.toString());
+                }
+            } catch (e) {
+                try {
+                    window.location.hash = `jsx=${encodeURIComponent(filename)}`;
+                } catch (err) {}
+            }
+        }
+
+        function removeJSXFromURL() {
+            try {
+                const url = new URL(window.location.href);
+                url.searchParams.delete('jsx');
+                url.searchParams.delete('file');
+                url.searchParams.delete('preset');
+                url.hash = '';
+                const cleanUrl = url.origin + url.pathname + (url.search ? url.search : '');
+                window.history.pushState({}, '', cleanUrl);
+            } catch (e) {
+                try {
+                    window.location.hash = '';
+                } catch (err) {}
+            }
+        }
+
+        function getRequestedJSXFromURL() {
+            try {
+                const urlParams = new URLSearchParams(window.location.search);
+                let target = urlParams.get('jsx') || urlParams.get('file') || urlParams.get('preset');
+                if (!target && window.location.hash) {
+                    const hash = window.location.hash.replace(/^#\/?/, '');
+                    const hashParams = new URLSearchParams(hash);
+                    target = hashParams.get('jsx') || hashParams.get('file') || hashParams.get('preset') || hash;
+                }
+                if (target) {
+                    target = decodeURIComponent(target).trim().replace(/^["']|["']$/g, '');
+                }
+                return target || null;
+            } catch (e) {
+                return null;
+            }
+        }
+
+        function findMatchingOption(target) {
+            if (!target) return null;
+            const cleanTarget = target.toLowerCase().replace(/\.jsx$/, '').replace(/[\s\-_]/g, '');
+
+            // 1. Direct match on option value
+            for (let i = 0; i < presetSelect.options.length; i++) {
+                const opt = presetSelect.options[i];
+                if (opt.value === `jsx:${target}` || opt.value === `preset:${target}`) {
+                    return opt.value;
+                }
+            }
+
+            // 2. Normalized match (without .jsx and ignoring case/symbols)
+            for (let i = 0; i < presetSelect.options.length; i++) {
+                const opt = presetSelect.options[i];
+                if (opt.value.startsWith('jsx:')) {
+                    const fname = opt.value.slice(4);
+                    const cleanFname = fname.toLowerCase().replace(/\.jsx$/, '').replace(/[\s\-_]/g, '');
+                    if (fname.toLowerCase() === target.toLowerCase() || cleanFname === cleanTarget) {
+                        return opt.value;
+                    }
+                } else if (opt.value.startsWith('preset:')) {
+                    const key = opt.value.slice(7);
+                    const cleanKey = key.toLowerCase().replace(/[\s\-_]/g, '');
+                    if (key.toLowerCase() === target.toLowerCase() || cleanKey === cleanTarget) {
+                        return opt.value;
+                    }
+                }
+            }
+
+            // 3. Substring match
+            for (let i = 0; i < presetSelect.options.length; i++) {
+                const opt = presetSelect.options[i];
+                if (opt.value.startsWith('jsx:')) {
+                    const fname = opt.value.slice(4);
+                    const cleanFname = fname.toLowerCase().replace(/\.jsx$/, '').replace(/[\s\-_]/g, '');
+                    if (cleanFname.includes(cleanTarget) || cleanTarget.includes(cleanFname)) {
+                        return opt.value;
+                    }
+                } else if (opt.value.startsWith('preset:')) {
+                    const key = opt.value.slice(7);
+                    const cleanKey = key.toLowerCase().replace(/[\s\-_]/g, '');
+                    if (cleanKey.includes(cleanTarget) || cleanTarget.includes(cleanKey)) {
+                        return opt.value;
+                    }
+                }
+            }
+
+            return null;
+        }
+
+        async function loadPresetOrJSX(val, updateUrl, isPush) {
+            if (!val) return;
+            presetSelect.value = val;
+            if (val.startsWith('jsx:')) {
+                const fname = val.slice(4);
+                const fileObj = jsxFiles.get(fname);
+                let code = (fname === 'cube_maker.jsx' && PRESETS.cubeMaker) ? PRESETS.cubeMaker.code : 
+                           ((fname === 'cylinder_maker.jsx' && PRESETS.cylinderMaker) ? PRESETS.cylinderMaker.code : 
+                           ((fname === 'Pie_Slice_Generator.jsx' && PRESETS.pieSlice) ? PRESETS.pieSlice.code : 
+                           ((fname === 'custom_rounded_rect.jsx' && PRESETS.customRoundedRect) ? PRESETS.customRoundedRect.code : 
+                           ((fname === 'extruded_round_rectangle.jsx' && PRESETS.extrudedRoundRectangle) ? PRESETS.extrudedRoundRectangle.code : 
+                           (fileObj ? fileObj.code : null)))));
+
+                // If over HTTP or if code not cached, fetch fresh from disk
+                if (window.location.protocol.startsWith('http') || !code) {
+                    try {
+                        const resp = await fetch(`jsx/${encodeURIComponent(fname)}`);
+                        if (resp.ok) {
+                            code = await resp.text();
+                            if (fileObj) fileObj.code = code;
+                        }
+                    } catch(e) {
+                        console.warn('Could not fetch fresh jsx file, using cached version.');
+                    }
+                }
+
+                if (code) {
+                    codeTextarea.value = code;
+                    if (currentFilenameEl) currentFilenameEl.textContent = fname;
+                    appendConsole(`Selected "${fname}" from jsx/ folder. Executing...`);
+                    if (updateUrl) updateURLForJSX(fname, isPush);
+                    runUserScript(code);
+                }
+            } else if (val.startsWith('preset:')) {
+                const key = val.slice(7);
+                if (PRESETS[key]) {
+                    codeTextarea.value = PRESETS[key].code;
+                    if (currentFilenameEl) currentFilenameEl.textContent = PRESETS[key].name;
+                    appendConsole(`Selected preset "${PRESETS[key].name}". Executing...`);
+                    if (updateUrl) updateURLForJSX(key, isPush);
+                    runUserScript(PRESETS[key].code);
+                }
+            }
+        }
 
         async function populatePresetsDropdown() {
             presetSelect.innerHTML = '';
@@ -1049,7 +1203,6 @@
             const jsxGroup = document.createElement('optgroup');
             jsxGroup.label = '📁 Detected in jsx/ folder';
 
-            const jsxFiles = new Map();
             if (window.JSX_FOLDER_FILES && Array.isArray(window.JSX_FOLDER_FILES)) {
                 window.JSX_FOLDER_FILES.forEach(item => {
                     const fname = typeof item === 'string' ? item : item.filename;
@@ -1107,53 +1260,49 @@
             presetSelect.appendChild(presetGroup);
 
             // Handler for selection change
-            presetSelect.onchange = async () => {
-                const val = presetSelect.value;
-                if (val.startsWith('jsx:')) {
-                    const fname = val.slice(4);
-                    const fileObj = jsxFiles.get(fname);
-                    let code = (fname === 'cube_maker.jsx' && PRESETS.cubeMaker) ? PRESETS.cubeMaker.code : ((fname === 'cylinder_maker.jsx' && PRESETS.cylinderMaker) ? PRESETS.cylinderMaker.code : (fileObj ? fileObj.code : null));
-                    // If over HTTP or if code not cached, fetch fresh from disk
-                    if (window.location.protocol.startsWith('http') || !code) {
-                        try {
-                            const resp = await fetch(`jsx/${encodeURIComponent(fname)}`);
-                            if (resp.ok) {
-                                code = await resp.text();
-                                if (fileObj) fileObj.code = code;
-                            }
-                        } catch(e) {
-                            console.warn('Could not fetch fresh jsx file, using cached version.');
-                        }
-                    }
-
-                    if (code) {
-                        codeTextarea.value = code;
-                        if (currentFilenameEl) currentFilenameEl.textContent = fname;
-                        appendConsole(`Selected "${fname}" from jsx/ folder. Executing...`);
-                        runUserScript(code);
-                    }
-                } else if (val.startsWith('preset:')) {
-                    const key = val.slice(7);
-                    if (PRESETS[key]) {
-                        codeTextarea.value = PRESETS[key].code;
-                        if (currentFilenameEl) currentFilenameEl.textContent = PRESETS[key].name;
-                        appendConsole(`Selected preset "${PRESETS[key].name}". Executing...`);
-                        runUserScript(PRESETS[key].code);
-                    }
-                }
+            presetSelect.onchange = () => {
+                loadPresetOrJSX(presetSelect.value, true, true);
             };
         }
 
-        populatePresetsDropdown().then(() => {
-            const defaultOpt = presetSelect.querySelector('option[value="jsx:cube_maker.jsx"]');
-            if (defaultOpt) {
-                presetSelect.value = 'jsx:cube_maker.jsx';
+        populatePresetsDropdown().then(async () => {
+            const requested = getRequestedJSXFromURL();
+            let targetVal = null;
+            if (requested) {
+                targetVal = findMatchingOption(requested);
+                if (targetVal) {
+                    appendConsole(`Detected "${requested}" in URL. Auto-loading...`);
+                } else {
+                    appendConsole(`Requested file "${requested}" from URL was not found in presets.`, true);
+                }
+            }
+
+            if (!targetVal && !requested) {
+                const defaultOpt = presetSelect.querySelector('option[value="jsx:cube_maker.jsx"]');
+                targetVal = defaultOpt ? 'jsx:cube_maker.jsx' : (presetSelect.options[0] ? presetSelect.options[0].value : null);
+            }
+
+            if (targetVal) {
+                await loadPresetOrJSX(targetVal, true, false);
             }
         });
 
-        // Load Cube Maker by default
-        codeTextarea.value = PRESETS.cubeMaker.code;
-        if (currentFilenameEl) currentFilenameEl.textContent = 'cube_maker.jsx';
+        // Listen for browser Back/Forward navigation
+        window.addEventListener('popstate', () => {
+            const requested = getRequestedJSXFromURL();
+            if (requested) {
+                const matched = findMatchingOption(requested);
+                if (matched && matched !== presetSelect.value) {
+                    loadPresetOrJSX(matched, false, false);
+                }
+            } else {
+                while (comp.layers.length > 0) {
+                    comp.layers.remove(comp.layers[0]);
+                }
+                renderTimeline();
+                if (currentFilenameEl) currentFilenameEl.textContent = 'None';
+            }
+        });
 
         // File Open Dialog & Loader
         const btnOpenJSX = document.getElementById('btn-open-jsx');
@@ -1168,6 +1317,11 @@
                 codeTextarea.value = content;
                 if (currentFilenameEl) currentFilenameEl.textContent = file.name;
                 appendConsole(`Loaded file "${file.name}" (${file.size} bytes). Executing...`);
+                updateURLForJSX(file.name, true);
+                const matched = findMatchingOption(file.name);
+                if (matched) {
+                    presetSelect.value = matched;
+                }
                 // Automatically execute the loaded script
                 runUserScript(content);
             };
@@ -1297,7 +1451,13 @@
                 comp.layers.remove(comp.layers[0]);
             }
             renderTimeline();
-            appendConsole('Cleared all layers in composition.');
+            removeJSXFromURL();
+            if (currentFilenameEl) currentFilenameEl.textContent = 'None';
+            const scriptUIView = document.getElementById('scriptui-dock-host');
+            if (scriptUIView) {
+                scriptUIView.innerHTML = '<div style="color: #888; font-size: 12px; text-align: center; margin-top: 40px;">No active ScriptUI panel. Select or run a script.</div>';
+            }
+            appendConsole('Cleared all layers in composition and removed URL parameters.');
         };
 
         // Keyboard Shortcut: Ctrl+Enter to Run
@@ -1422,8 +1582,6 @@
 
         initPanelResizers();
 
-        // Run Cube Maker immediately on startup!
-        runUserScript(PRESETS.cubeMaker.code);
         renderTimeline();
     });
 
