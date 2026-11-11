@@ -2663,6 +2663,139 @@
         txtType.enabled = en;
     };
 
+    // Shared cross-platform URL opener helper
+    function openURL(url) {
+        if (!url) return;
+        try {
+            if (typeof window !== "undefined" && window.open) {
+                window.open(url, "_blank");
+                return;
+            }
+        } catch(eW) {}
+        try {
+            if (typeof $ !== "undefined" && $.os && $.os.indexOf("Windows") !== -1) {
+                system.callSystem('explorer "' + url + '"');
+            } else if (typeof system !== "undefined" && system.callSystem) {
+                system.callSystem('open "' + url + '"');
+            }
+        } catch(eSys) {}
+    }
+
+    // =========================================================================
+    // TAB 4: HELP (Instructions, Font Links, JSON Presets & Links)
+    // =========================================================================
+    var tabHelp = tpanel.add("tab", undefined, "Help");
+    tabHelp.orientation = "column";
+    tabHelp.alignChildren = ["fill", "top"];
+    tabHelp.spacing = 8;
+    tabHelp.margins = 8;
+
+    // --- Panel: Quick Instructions ---
+    var pnlHelpGuide = tabHelp.add("panel", undefined, "Quick Instructions & Workflow");
+    pnlHelpGuide.orientation = "column";
+    pnlHelpGuide.alignChildren = ["fill", "top"];
+    pnlHelpGuide.spacing = 4;
+    pnlHelpGuide.margins = [10, 8, 10, 8];
+
+    pnlHelpGuide.add("statictext", undefined, "1. Message: Type text (up to 250 chars). Emojis are fully supported.");
+    pnlHelpGuide.add("statictext", undefined, "2. Platform: Pick preset (iOS, RCS, WhatsApp, etc.), direction & theme.");
+    pnlHelpGuide.add("statictext", undefined, "3. Generate: Click 'Create Message Bubble' to build expression-rigged layers.");
+    pnlHelpGuide.add("statictext", undefined, "4. Live Update: Select an existing bubble precomp & click 'Update Message Bubble'.");
+    pnlHelpGuide.add("statictext", undefined, "5. Animation: Adjust bubble grow, typewriter and iOS 18 text effects in Animation tab.");
+
+    // --- Panel: Typography & Emojis ---
+    var pnlHelpFonts = tabHelp.add("panel", undefined, "Typography & Needed Fonts");
+    pnlHelpFonts.orientation = "column";
+    pnlHelpFonts.alignChildren = ["fill", "top"];
+    pnlHelpFonts.spacing = 6;
+    pnlHelpFonts.margins = [10, 8, 10, 8];
+
+    var lblEmojiDesc = pnlHelpFonts.add("statictext", undefined, "Emojis always use Google's Noto Color Emoji, falling back to Segoe UI Emoji (Windows) or Apple Color Emoji (macOS) if not installed.", { multiline: true });
+    lblEmojiDesc.preferredSize = [-1, 32];
+
+    var grpFontBtns1 = pnlHelpFonts.add("group");
+    grpFontBtns1.orientation = "row";
+    grpFontBtns1.spacing = 4;
+    grpFontBtns1.alignChildren = ["fill", "center"];
+
+    var btnNotoFont = grpFontBtns1.add("button", undefined, "🎨 Noto Color Emoji (Google)");
+    btnNotoFont.preferredSize = [170, 24];
+    btnNotoFont.helpTip = "Download Google Noto Color Emoji font (https://fonts.google.com/noto/specimen/Noto+Color+Emoji)";
+    btnNotoFont.onClick = function() {
+        openURL("https://fonts.google.com/noto/specimen/Noto+Color+Emoji");
+    };
+
+    var btnRobotoFont = grpFontBtns1.add("button", undefined, "Roboto (Android RCS)");
+    btnRobotoFont.preferredSize = [135, 24];
+    btnRobotoFont.helpTip = "Download Roboto font (https://fonts.google.com/specimen/Roboto)";
+    btnRobotoFont.onClick = function() {
+        openURL("https://fonts.google.com/specimen/Roboto");
+    };
+
+    var grpFontBtns2 = pnlHelpFonts.add("group");
+    grpFontBtns2.orientation = "row";
+    grpFontBtns2.spacing = 4;
+    grpFontBtns2.alignChildren = ["fill", "center"];
+
+    var btnInterFont = grpFontBtns2.add("button", undefined, "Inter (Discord)");
+    btnInterFont.preferredSize = [100, 24];
+    btnInterFont.helpTip = "Download Inter font (https://fonts.google.com/specimen/Inter)";
+    btnInterFont.onClick = function() {
+        openURL("https://fonts.google.com/specimen/Inter");
+    };
+
+    var btnOpenSansFont = grpFontBtns2.add("button", undefined, "Open Sans (Telegram)");
+    btnOpenSansFont.preferredSize = [130, 24];
+    btnOpenSansFont.helpTip = "Download Open Sans font (https://fonts.google.com/specimen/Open+Sans)";
+    btnOpenSansFont.onClick = function() {
+        openURL("https://fonts.google.com/specimen/Open+Sans");
+    };
+
+    var btnAppleFont = grpFontBtns2.add("button", undefined, "SF Pro (Apple / iOS)");
+    btnAppleFont.preferredSize = [120, 24];
+    btnAppleFont.helpTip = "Apple Developer Fonts (https://developer.apple.com/fonts/)";
+    btnAppleFont.onClick = function() {
+        openURL("https://developer.apple.com/fonts/");
+    };
+
+    // --- Panel: JSON Presets Management ---
+    var pnlHelpPresets = tabHelp.add("panel", undefined, "Custom JSON Presets & Folder");
+    pnlHelpPresets.orientation = "column";
+    pnlHelpPresets.alignChildren = ["fill", "top"];
+    pnlHelpPresets.spacing = 4;
+    pnlHelpPresets.margins = [10, 8, 10, 8];
+
+    pnlHelpPresets.add("statictext", undefined, "• Presets are stored in 'message bubble presets/presets.json' on disk.");
+    pnlHelpPresets.add("statictext", undefined, "• Edit colors, tail types (modern/ios/classic/none), radii, fonts and delivery styles.");
+    pnlHelpPresets.add("statictext", undefined, "• Click '↻' in the Message tab to instantly reload presets without restarting AE.");
+    pnlHelpPresets.add("statictext", undefined, "• Click '📂' in the Message tab to open the presets folder in Explorer / Finder.");
+
+    // --- Panel: Repository & Emulator Links ---
+    var pnlHelpLinks = tabHelp.add("panel", undefined, "Repository & Live Web Simulator");
+    pnlHelpLinks.orientation = "column";
+    pnlHelpLinks.alignChildren = ["fill", "top"];
+    pnlHelpLinks.spacing = 6;
+    pnlHelpLinks.margins = [10, 8, 10, 8];
+
+    var grpLinkBtns = pnlHelpLinks.add("group");
+    grpLinkBtns.orientation = "row";
+    grpLinkBtns.spacing = 6;
+    grpLinkBtns.alignChildren = ["fill", "center"];
+
+    var btnRepoHelp = grpLinkBtns.add("button", undefined, "⭐ GitHub Repository");
+    btnRepoHelp.preferredSize = [145, 26];
+    btnRepoHelp.helpTip = "https://github.com/work2survive/AE_message_bubble";
+    btnRepoHelp.onClick = function() {
+        openURL("https://github.com/work2survive/AE_message_bubble");
+    };
+
+    var btnEmulatorHelp = grpLinkBtns.add("button", undefined, "🌐 Live Web Simulator");
+    btnEmulatorHelp.preferredSize = [145, 26];
+    btnEmulatorHelp.helpTip = "https://work2survive.github.io/AE_JS_builder/?jsx=message_bubble.jsx&autobuild=true";
+    btnEmulatorHelp.onClick = function() {
+        openURL("https://work2survive.github.io/AE_JS_builder/?jsx=message_bubble.jsx&autobuild=true");
+    };
+
     tpanel.selection = tabMessage; // Default to Message tab
 
 
@@ -4322,14 +4455,7 @@
     var lblRepoLink = grpRepoLink.add("statictext", undefined, "GitHub: work2survive/AE_message_bubble");
     lblRepoLink.helpTip = "https://github.com/work2survive/AE_message_bubble";
     lblRepoLink.onClick = function() {
-        var url = "https://github.com/work2survive/AE_message_bubble";
-        if (typeof window !== "undefined" && window.open) {
-            window.open(url, "_blank");
-        } else if ($.os.indexOf("Windows") !== -1) {
-            system.callSystem('explorer "' + url + '"');
-        } else {
-            system.callSystem('open "' + url + '"');
-        }
+        openURL("https://github.com/work2survive/AE_message_bubble");
     };
 
     // Initialize layout & live selection state
