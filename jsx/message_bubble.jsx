@@ -210,7 +210,7 @@
         "Custom style"
     ]);
     dropPlatform.selection = 1; // Default: iOS message style
-    dropPlatform.preferredSize = [160, 22];
+    dropPlatform.preferredSize = [185, 26];
 
     // Direction Switch: Received (Left) vs Sent (Right)
     var grpDirection = pnlStyle.add("group");
@@ -298,44 +298,168 @@
     lblTimeVal.helpTip = "Timestamps are randomized for now. A dedicated custom time dialog will be added in a future update.";
 
     var btnRerollTime = pnlTime.add("button", undefined, "🎲 Re-roll Time");
-    btnRerollTime.preferredSize = [100, 24];
+    btnRerollTime.preferredSize = [135, 26];
     btnRerollTime.onClick = function() {
         currentRandomTime = generateRandomTime();
         lblTimeVal.text = "Time: " + currentRandomTime;
     };
 
     // -------------------------------------------------------------------------
-    // 8. Custom Colors Section (Revealed when Custom style is active)
+    // 8. Color Picker Helper & Live Colors Panel
     // -------------------------------------------------------------------------
-    var pnlCustom = win.add("panel", undefined, "Custom Colors");
-    pnlCustom.orientation = "column";
-    pnlCustom.alignChildren = ["fill", "top"];
-    pnlCustom.spacing = 6;
-    pnlCustom.margins = 10;
-    pnlCustom.visible = false;
+    function createColorPicker(parent, defaultHex, labelText, labelWidth) {
+        var grp = parent.add("group");
+        grp.orientation = "row";
+        grp.spacing = 8;
+        grp.alignChildren = ["left", "center"];
 
-    var grpCustomBubble = pnlCustom.add("group");
-    grpCustomBubble.orientation = "row";
-    grpCustomBubble.alignChildren = ["left", "center"];
-    grpCustomBubble.add("statictext", undefined, "Bubble Color:").preferredSize = [95, -1];
-    var txtCustomBubble = grpCustomBubble.add("edittext", undefined, "#2563EB");
-    txtCustomBubble.characters = 8;
+        if (labelText) {
+            var lbl = grp.add("statictext", undefined, labelText);
+            lbl.preferredSize = [labelWidth || 95, -1];
+        }
 
-    var grpCustomText = pnlCustom.add("group");
-    grpCustomText.orientation = "row";
-    grpCustomText.alignChildren = ["left", "center"];
-    grpCustomText.add("statictext", undefined, "Text Color:").preferredSize = [95, -1];
-    var txtCustomText = grpCustomText.add("edittext", undefined, "#FFFFFF");
-    txtCustomText.characters = 8;
+        var btnSwatch = grp.add("button", undefined, "");
+        btnSwatch.preferredSize = [36, 22];
+        btnSwatch.helpTip = "Click to pick color (Native / Windows Color Picker)";
 
-    // Toggle custom panel visibility when style changes
-    function checkCustomPanel() {
-        var selIdx = dropPlatform.selection ? dropPlatform.selection.index : 0;
-        pnlCustom.visible = (selIdx === 3); // 3 = Custom style
-        win.layout.layout(true);
+        var txtHex = grp.add("edittext", undefined, defaultHex);
+        txtHex.preferredSize = [75, 22];
+        txtHex.characters = 7;
+        txtHex.helpTip = "Direct hex color input (e.g. #2288EE)";
+
+        var picker = {
+            group: grp,
+            button: btnSwatch,
+            edittext: txtHex,
+            _color: defaultHex,
+            value: defaultHex,
+            onChange: null
+        };
+
+        btnSwatch.onDraw = function() {
+            try {
+                var g = this.graphics;
+                var rgb = hexToRgb(picker._color);
+                var brush = g.newBrush(g.BrushType.SOLID_COLOR, [rgb[0], rgb[1], rgb[2], 1.0]);
+                var pen = g.newPen(g.PenType.SOLID_COLOR, [0.7, 0.7, 0.7, 1.0], 1);
+                g.newPath();
+                g.rectPath(0, 0, this.size ? this.size[0] : 36, this.size ? this.size[1] : 22);
+                g.fillPath(brush);
+                g.strokePath(pen);
+            } catch(e) {}
+        };
+
+        function setColor(newHex, triggerChange) {
+            if (!newHex) return;
+            if (newHex.indexOf("#") !== 0) newHex = "#" + newHex;
+            picker._color = newHex;
+            picker.value = newHex;
+            txtHex.text = newHex.toUpperCase();
+
+            try {
+                if (btnSwatch.notify) {
+                    btnSwatch.notify("onDraw");
+                }
+            } catch(e) {}
+
+            if (btnSwatch.domElement) {
+                btnSwatch.domElement.style.backgroundColor = newHex;
+                btnSwatch.domElement.style.border = "1px solid #777";
+                btnSwatch.domElement.style.borderRadius = "3px";
+            }
+
+            if (triggerChange && typeof picker.onChange === "function") {
+                picker.onChange(newHex);
+            }
+        }
+
+        btnSwatch.onClick = function() {
+            var curHex = picker._color || "#2288EE";
+            if (typeof window !== "undefined" && typeof window.openWindowsColorPicker === "function") {
+                window.openWindowsColorPicker(curHex, function(selectedHex) {
+                    setColor(selectedHex, true);
+                });
+                return;
+            }
+
+            var hexNum = parseInt(curHex.replace("#", ""), 16);
+            var result = -1;
+            if (typeof $.colorPicker === "function") {
+                result = $.colorPicker(hexNum, function(selectedHex) {
+                    setColor(selectedHex, true);
+                });
+            }
+            if (result !== -1 && result !== undefined && result !== null) {
+                var hexStr = Number(result).toString(16);
+                while (hexStr.length < 6) hexStr = "0" + hexStr;
+                setColor("#" + hexStr, true);
+            }
+        };
+
+        txtHex.onChange = function() {
+            var val = txtHex.text.replace(/^\s+|\s+$/g, "");
+            if (val.indexOf("#") !== 0) val = "#" + val;
+            if (/^#[0-9A-Fa-f]{6}$/.test(val)) {
+                setColor(val, true);
+            } else {
+                txtHex.text = picker._color.toUpperCase();
+            }
+        };
+
+        setColor(defaultHex, false);
+        picker.setColor = setColor;
+        return picker;
     }
+
+    // Colors & Appearance Panel (Always shown, with live color swatch buttons & hex inputs)
+    var pnlColors = win.add("panel", undefined, "Colors & Appearance");
+    pnlColors.orientation = "column";
+    pnlColors.alignChildren = ["fill", "top"];
+    pnlColors.spacing = 8;
+    pnlColors.margins = 10;
+
+    var cpBubble = createColorPicker(pnlColors, "#007AFF", "Bubble Color:", 95);
+    var cpText = createColorPicker(pnlColors, "#FFFFFF", "Text Color:", 95);
+
+    function syncColorsFromPlatform() {
+        var selIdx = dropPlatform.selection ? dropPlatform.selection.index : 0;
+        var platformKeys = ["Android RCS", "iOS Message", "WhatsApp", "Custom"];
+        var platformName = platformKeys[selIdx] || "iOS Message";
+        if (platformName === "Custom") return;
+
+        var isSent = radSent.value;
+        var isDark = radDark.value;
+        var themeKey = isDark ? "dark" : "light";
+        var dirKey = isSent ? "sent" : "received";
+        var colorSet = PLATFORMS[platformName][themeKey][dirKey];
+
+        if (colorSet) {
+            cpBubble.setColor(colorSet.bubble, false);
+            cpText.setColor(colorSet.text, false);
+        }
+    }
+
     dropPlatform.onChange = function() {
-        checkCustomPanel();
+        syncColorsFromPlatform();
+    };
+    radSent.onClick = function() {
+        syncColorsFromPlatform();
+    };
+    radReceived.onClick = function() {
+        syncColorsFromPlatform();
+    };
+    radLight.onClick = function() {
+        syncColorsFromPlatform();
+    };
+    radDark.onClick = function() {
+        syncColorsFromPlatform();
+    };
+
+    cpBubble.onChange = function() {
+        dropPlatform.selection = 3; // Switch to Custom style
+    };
+    cpText.onChange = function() {
+        dropPlatform.selection = 3; // Switch to Custom style
     };
 
     // -------------------------------------------------------------------------
@@ -443,15 +567,9 @@
             var dirKey = isSent ? "sent" : "received";
             var colorSet = platformCfg[themeKey][dirKey];
 
-            // If custom style, override colors with user inputs
-            if (platformName === "Custom") {
-                colorSet = {
-                    bubble: txtCustomBubble.text || "#2563EB",
-                    text: txtCustomText.text || "#FFFFFF",
-                    time: isDark ? "#9ca3af" : "#6b7280",
-                    check: ""
-                };
-            }
+            var bubbleColor = hexToRgb(cpBubble.value);
+            var textColor = hexToRgb(cpText.value);
+            var timeColor = hexToRgb(colorSet ? colorSet.time : "#888888");
 
             var screenW = parseFloat(txtWidth.text) || 420;
             var textSize = parseFloat(txtSize.text) || 20;
@@ -528,7 +646,7 @@
                 if (effBH) { effBH.name = "Bubble Height"; effBH.property(1).setValue(bubbleH); }
 
                 var effCol = parade.addProperty("ADBE Color Control");
-                if (effCol) { effCol.name = "Bubble Color"; effCol.property(1).setValue(hexToRgb(colorSet.bubble)); }
+                if (effCol) { effCol.name = "Bubble Color"; effCol.property(1).setValue(bubbleColor); }
             }
 
             // 2. Bubble Vector Shape Layer
@@ -547,7 +665,7 @@
             rect.property("Roundness").setValue(cornerRadius);
 
             var fill = grpContents.addProperty("ADBE Vector Graphic - Fill");
-            fill.property("Color").setValue(hexToRgb(colorSet.bubble));
+            fill.property("Color").setValue(bubbleColor);
 
             // 3. Message Text Layer
             var textLayer = null;
@@ -562,7 +680,7 @@
             textLayer.name = "Message_Text";
             textLayer.parent = master;
             textLayer.fontSize = textSize;
-            textLayer.fontColor = hexToRgb(colorSet.text);
+            textLayer.fontColor = textColor;
             textLayer.justification = "left";
             textLayer.transform.position.setValue([textLeftX, textTopY, 0]);
 
@@ -579,7 +697,7 @@
             timeLayer.name = "Timestamp_Text";
             timeLayer.parent = master;
             timeLayer.fontSize = timeFontSize;
-            timeLayer.fontColor = hexToRgb(colorSet.time);
+            timeLayer.fontColor = timeColor;
             timeLayer.justification = "right";
             timeLayer.transform.position.setValue([timeX, timeY, 0]);
 
@@ -626,7 +744,7 @@
 
     // Initialize layout
     updateCharCount();
-    checkCustomPanel();
+    syncColorsFromPlatform();
 
     win.layout.layout(true);
     win.onResizing = win.onResize = function() {

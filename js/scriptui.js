@@ -205,26 +205,29 @@
         }
 
         applyCommonStyles(el) {
+            const isContainer = (this.type === 'panel' || this.type === 'group' || this.type === 'tabbedpanel' || this.type === 'tab' || this.type === 'window' || this.type === 'palette');
             if (this.type === 'checkbox' || this.type === 'radiobutton') {
                 el.style.display = 'inline-flex';
                 el.style.flexDirection = 'row';
                 el.style.alignItems = 'center';
-            } else if (this.orientation === 'row') {
-                el.style.display = 'flex';
-                el.style.flexDirection = 'row';
-                el.style.alignItems = 'center';
-            } else if (this.orientation === 'column') {
-                el.style.display = 'flex';
-                el.style.flexDirection = 'column';
-            }
-            if (this.spacing !== undefined && (this.orientation === 'row' || this.orientation === 'column')) {
-                el.style.gap = `${this.spacing}px`;
-            }
-            if (this.margins !== undefined && this.type !== 'statictext' && this.type !== 'button' && this.type !== 'edittext' && this.type !== 'slider') {
-                if (Array.isArray(this.margins)) {
-                    el.style.padding = `${this.margins[1]}px ${this.margins[2]}px ${this.margins[3]}px ${this.margins[0]}px`;
-                } else if (typeof this.margins === 'number' && this.margins > 0) {
-                    el.style.padding = `${this.margins}px`;
+            } else if (isContainer) {
+                if (this.orientation === 'row') {
+                    el.style.display = 'flex';
+                    el.style.flexDirection = 'row';
+                    el.style.alignItems = 'center';
+                } else if (this.orientation === 'column') {
+                    el.style.display = 'flex';
+                    el.style.flexDirection = 'column';
+                }
+                if (this.spacing !== undefined) {
+                    el.style.gap = `${this.spacing}px`;
+                }
+                if (this.margins !== undefined) {
+                    if (Array.isArray(this.margins)) {
+                        el.style.padding = `${this.margins[1]}px ${this.margins[2]}px ${this.margins[3]}px ${this.margins[0]}px`;
+                    } else if (typeof this.margins === 'number' && this.margins > 0) {
+                        el.style.padding = `${this.margins}px`;
+                    }
                 }
             }
             if (this.preferredSize && this.preferredSize[0] > 0) {

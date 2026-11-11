@@ -686,6 +686,11 @@ body.is-resizing-h .ae-resizer-h {
     user-select: none;
     line-height: 16px;
     min-height: 22px;
+    white-space: nowrap;
+    box-sizing: border-box;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
 }
 .scriptui-button:hover {
     background: #323232;
@@ -881,14 +886,19 @@ body.is-resizing-h .ae-resizer-h {
 
 .scriptui-dropdown {
     background: #181818;
-    color: #d8d8d8;
+    color: #e0e0e0;
     border: 1px solid #383838;
-    border-radius: 2px;
-    padding: 1px 4px;
-    font-size: 11px;
-    height: 20px;
+    border-radius: 3px;
+    padding: 2px 6px;
+    font-size: 12px;
+    font-family: var(--font-ui, system-ui, -apple-system, sans-serif);
+    height: 26px;
+    min-height: 26px;
+    line-height: 20px;
     outline: none;
     cursor: pointer;
+    box-sizing: border-box;
+    vertical-align: middle;
 }
 .scriptui-dropdown:focus {
     border-color: #1473e6;
