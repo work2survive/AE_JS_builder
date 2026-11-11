@@ -160,13 +160,26 @@ The emulator includes production-ready After Effects ScriptUI tools as well as q
      - **Imitate Corner Segments Checkbox**: "Imitate segments of extruded round corners" (enabled by default) dynamically facets the front and back caps' rounded corners to match the extruded corner wall segments vertex-for-vertex, completely eliminating any Bézier curvature gaps or color leaks.
    - **Live Rigging**: Builds 33 native 3D Shape Layers precomposed into an auto-rigged subcomp driven by 18 Master Effect Controls on the parent layer with continuous rasterization.
 
+6. **Message Bubble Generator (`jsx/message_bubble.jsx` - v1.0)**:
+   - **Dedicated Standalone Repository**: [work2survive/AE_message_bubble](https://github.com/work2survive/AE_message_bubble)
+   - **Interactive Chat Bubble Engine**: Generates authentic, parametric 2D vector chat bubbles imitating modern mobile messaging platforms (**iOS Messages**, **Android RCS**, **WhatsApp**, **Instagram Direct**, **Facebook Messenger**, and **Custom** themes).
+   - **Appearance Tab**:
+     - **Layout & Typography**: Font family selector (`SF Pro`, `Roboto`, `Segoe UI`, `Helvetica Neue`, `Arial`, `Inter`, `Open Sans`, `System Default`), responsive screen width ($300\text{ to }1920\text{ px}$ with automatic word-wrapping), text size ($12\text{ to }60\text{ px}$), inner padding ($-10\text{ to }+10\text{ px}$), and leading ($50\%\text{ to }150\%$).
+     - **Colors & Appearance**: Interactive color swatches paired with direct hex inputs for bubble and text colors.
+     - **Status & Timestamp**: Circled RCS receipts (`○✓`, `○○✓✓`, `●●✓✓`), standard checks (`✓`, `✓✓`), intelligent auto-timing read duration simulation, and randomized timestamps with re-roll. Automatically sets receipts to `None` for Received messages.
+     - **Bubble Tail & Direction**: Toggle bottom corner pointer/tail for consecutive multi-message chaining; switch between Sent (Right) and Received (Left).
+   - **Animation Tab**:
+     - **Entrance Animations**: Independent sliders for Bubble Grow ($0\text{ to }20\text{ frames}$, snappy `easeOutBack` expansion) and Typewriter Reveal ($0\text{ to }20\text{ frames}$, character-by-character reveal).
+     - **iOS 18 Animated Text Effects**: 8 continuous looping presets (Big, Small, Shake, Nod, Explode, Ripple, Bloom, Jitter) with speed ($50\%\text{--}200\%$) and intensity ($20\%\text{--}200\%$) modulation.
+   - **Live Rigging**: Generates parametric vector shape layers and text layers driven by `Bubble_Master_Controller` with native Effect Controls.
+
 #### B. Quick Verification Presets
 
-6. **Test 1: 3D Cube (200x200px) with Wiggle**:
+7. **Test 1: 3D Cube (200x200px) with Wiggle**:
    - Baseline 6-face cube demonstration with active `wiggle()` expressions on position, rotation, and dimensions.
-7. **Test 2: ScriptUI Cube Builder Panel**:
+8. **Test 2: ScriptUI Cube Builder Panel**:
    - Baseline ScriptUI window demonstration showing button callbacks, edit texts, and layer hierarchy creation.
-8. **Test 3: Squares, Circles & Bézier Paths**:
+9. **Test 3: Squares, Circles & Bézier Paths**:
    - 2D vector primitives demonstration showing rounded rectangles, circle shapes, and 5-point Bézier star paths with curved control tangents.
 
 ---
