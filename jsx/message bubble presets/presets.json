@@ -1,0 +1,127 @@
+﻿{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "description": "After Effects Message Bubble Generator - Platform Style Presets",
+  "version": "1.0",
+  "presets": {
+    "Android RCS": {
+      "label": "Android RCS style",
+      "radius": 18,
+      "tailType": "modern",
+      "font": "Roboto (Google / Android)",
+      "statusStyle": "rcs",
+      "light": {
+        "sent": { "bubble": "#0b57d0", "text": "#ffffff", "time": "rgba(255,255,255,0.75)", "check": "" },
+        "received": { "bubble": "#f1f3f4", "text": "#1f1f1f", "time": "#70757a", "check": "" }
+      },
+      "dark": {
+        "sent": { "bubble": "#a8c7fa", "text": "#041e49", "time": "rgba(4,30,73,0.75)", "check": "" },
+        "received": { "bubble": "#303134", "text": "#e3e3e3", "time": "#9aa0a6", "check": "" }
+      }
+    },
+    "iOS Message": {
+      "label": "iOS message style",
+      "radius": 18,
+      "tailType": "ios",
+      "font": "SF Pro (Apple / iOS)",
+      "statusStyle": "standard",
+      "light": {
+        "sent": { "bubble": "#007aff", "text": "#ffffff", "time": "rgba(255,255,255,0.70)", "check": "" },
+        "received": { "bubble": "#e9e9eb", "text": "#000000", "time": "#8e8e93", "check": "" }
+      },
+      "dark": {
+        "sent": { "bubble": "#0a84ff", "text": "#ffffff", "time": "rgba(255,255,255,0.70)", "check": "" },
+        "received": { "bubble": "#26252a", "text": "#ffffff", "time": "#8e8e93", "check": "" }
+      }
+    },
+    "WhatsApp": {
+      "label": "WhatsApp style",
+      "radius": 10,
+      "tailType": "whatsapp",
+      "font": "Helvetica Neue",
+      "statusStyle": "standard",
+      "light": {
+        "sent": { "bubble": "#d9fdd3", "text": "#111b21", "time": "#667781", "check": "✓✓" },
+        "received": { "bubble": "#ffffff", "text": "#111b21", "time": "#667781", "check": "" }
+      },
+      "dark": {
+        "sent": { "bubble": "#005c4b", "text": "#e9edef", "time": "#8696a0", "check": "✓✓" },
+        "received": { "bubble": "#202c33", "text": "#e9edef", "time": "#8696a0", "check": "" }
+      }
+    },
+    "Instagram": {
+      "label": "Instagram style",
+      "radius": 20,
+      "tailType": "instagram",
+      "font": "SF Pro (Apple / iOS)",
+      "statusStyle": "standard",
+      "light": {
+        "sent": { "bubble": "#7839ee", "text": "#ffffff", "time": "rgba(255,255,255,0.70)", "check": "" },
+        "received": { "bubble": "#efefef", "text": "#000000", "time": "#8e8e93", "check": "" }
+      },
+      "dark": {
+        "sent": { "bubble": "#7c3aed", "text": "#ffffff", "time": "rgba(255,255,255,0.70)", "check": "" },
+        "received": { "bubble": "#262626", "text": "#f5f5f5", "time": "#a8a8a8", "check": "" }
+      }
+    },
+    "Facebook Messenger": {
+      "label": "Facebook Messenger style",
+      "radius": 18,
+      "tailType": "messenger",
+      "font": "Segoe UI (Windows)",
+      "statusStyle": "standard",
+      "light": {
+        "sent": { "bubble": "#0084ff", "text": "#ffffff", "time": "rgba(255,255,255,0.70)", "check": "✓" },
+        "received": { "bubble": "#e4e6eb", "text": "#050505", "time": "#65676b", "check": "" }
+      },
+      "dark": {
+        "sent": { "bubble": "#0084ff", "text": "#ffffff", "time": "rgba(255,255,255,0.70)", "check": "✓" },
+        "received": { "bubble": "#303030", "text": "#e4e6eb", "time": "#b0b3b8", "check": "" }
+      }
+    },
+    "Telegram": {
+      "label": "Telegram style",
+      "radius": 16,
+      "tailType": "modern",
+      "font": "SF Pro (Apple / iOS)",
+      "statusStyle": "standard",
+      "light": {
+        "sent": { "bubble": "#effdde", "text": "#000000", "time": "#4fae4e", "check": "✓✓" },
+        "received": { "bubble": "#ffffff", "text": "#000000", "time": "#a0acb6", "check": "" }
+      },
+      "dark": {
+        "sent": { "bubble": "#2b5278", "text": "#ffffff", "time": "rgba(255,255,255,0.70)", "check": "✓✓" },
+        "received": { "bubble": "#182533", "text": "#ffffff", "time": "#708499", "check": "" }
+      }
+    },
+    "Discord": {
+      "label": "Discord style",
+      "radius": 14,
+      "tailType": "modern",
+      "font": "Inter",
+      "statusStyle": "standard",
+      "light": {
+        "sent": { "bubble": "#5865f2", "text": "#ffffff", "time": "rgba(255,255,255,0.75)", "check": "" },
+        "received": { "bubble": "#f2f3f5", "text": "#2e3338", "time": "#747f8d", "check": "" }
+      },
+      "dark": {
+        "sent": { "bubble": "#5865f2", "text": "#ffffff", "time": "rgba(255,255,255,0.75)", "check": "" },
+        "received": { "bubble": "#2b2d31", "text": "#dbdee1", "time": "#949ba4", "check": "" }
+      }
+    },
+    "Custom": {
+      "label": "Custom style",
+      "radius": 16,
+      "tailType": "modern",
+      "font": "System Default",
+      "statusStyle": "standard",
+      "light": {
+        "sent": { "bubble": "#2563eb", "text": "#ffffff", "time": "rgba(255,255,255,0.70)", "check": "" },
+        "received": { "bubble": "#f3f4f6", "text": "#111827", "time": "#6b7280", "check": "" }
+      },
+      "dark": {
+        "sent": { "bubble": "#3b82f6", "text": "#ffffff", "time": "rgba(255,255,255,0.70)", "check": "" },
+        "received": { "bubble": "#1f2937", "text": "#f9fafb", "time": "#9ca3af", "check": "" }
+      }
+    }
+  }
+}

@@ -462,6 +462,18 @@
     class Button extends UIElement {
         constructor(text, container, properties) {
             super('button', text, container, properties);
+            this._text = text || '';
+        }
+
+        get text() {
+            return this._text !== undefined ? this._text : '';
+        }
+
+        set text(val) {
+            this._text = String(val);
+            if (this.domElement) {
+                this.domElement.textContent = this._text;
+            }
         }
 
         renderDOM() {
@@ -798,10 +810,24 @@
             if (type === 'item') {
                 const item = { text: text, index: this.items.length };
                 this.items.push(item);
+                if (this.domElement) {
+                    const opt = document.createElement('option');
+                    opt.value = item.index;
+                    opt.textContent = item.text;
+                    this.domElement.appendChild(opt);
+                }
                 if (this.items.length === 1 && !this._selection) {
                     this._selection = item;
                 }
                 return item;
+            }
+        }
+
+        removeAll() {
+            this.items = [];
+            this._selection = null;
+            if (this.domElement) {
+                this.domElement.innerHTML = '';
             }
         }
 

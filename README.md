@@ -79,7 +79,7 @@ Supports the core AE vector shapes:
 - **File Dialog**: Click the **`📂 Open .JSX`** button in the top bar to open any `.jsx` or `.js` file from your disk.
 - **Drag & Drop**: Drag `.jsx` files directly from your file manager into the code editor panel.
 - **Auto-Execution**: The loaded script is automatically loaded into the editor and executed in the 3D comp, displaying real-time console output in the drawer.
-- **Deep Linking & URL Routing**: The active script name is automatically synchronized with the URL (e.g., `?jsx=cylinder_maker.jsx` or `?jsx=extruded_round_rectangle.jsx`). Loading a link with a `?jsx=` parameter auto-detects and runs that tool immediately. Pressing the **Clear** button removes the URL parameter and resets the stage.
+- **Deep Linking & URL Routing**: The active script name is automatically synchronized with the URL (e.g., `?jsx=cylinder_maker.jsx&autobuild=true` or `?jsx=extruded_round_rectangle.jsx&autobuild=true`). Loading a link with a `?jsx=` parameter auto-detects and runs that tool immediately. Pressing the **Clear** button removes the URL parameter and resets the stage.
 - Comes with a sample test script: [`test_script.jsx`](file:///g:/My%20Drive/_openProjects/My_AE_assets/AE_JS_builder/test_script.jsx).
 
 ### 9. ScriptUI Panel & Dialog Emulator
@@ -101,32 +101,32 @@ The simulator includes standalone production-ready After Effects ScriptUI tools 
 1. **[Cube Maker 3D](https://github.com/work2survive/AE-Cube-Maker-3D)** (`jsx/cube_maker.jsx` - v1.3):
    - Parametric 3D cube generator with independent face colors, opacity, stroke controls, and collapsed-transformation master rigging.
    - **Repository**: [work2survive/AE-Cube-Maker-3D](https://github.com/work2survive/AE-Cube-Maker-3D)
-   - **Live Demo**: [https://work2survive.github.io/AE_JS_builder/?jsx=cube_maker.jsx](https://work2survive.github.io/AE_JS_builder/?jsx=cube_maker.jsx)
+   - **Live Demo**: [https://work2survive.github.io/AE_JS_builder/?jsx=cube_maker.jsx&autobuild=true](https://work2survive.github.io/AE_JS_builder/?jsx=cube_maker.jsx&autobuild=true)
 
 2. **[Cylinder Maker 3D](https://github.com/work2survive/AE-Cylinder-Maker-3D)** (`jsx/cylinder_maker.jsx` - v1.4):
    - Parametric 3D cylinder and circular slice sector generator with auto-rigged wall facets, tri-color palette, and inner cap seams protection.
    - **Repository**: [work2survive/AE-Cylinder-Maker-3D](https://github.com/work2survive/AE-Cylinder-Maker-3D)
-   - **Live Demo**: [https://work2survive.github.io/AE_JS_builder/?jsx=cylinder_maker.jsx](https://work2survive.github.io/AE_JS_builder/?jsx=cylinder_maker.jsx)
+   - **Live Demo**: [https://work2survive.github.io/AE_JS_builder/?jsx=cylinder_maker.jsx&autobuild=true](https://work2survive.github.io/AE_JS_builder/?jsx=cylinder_maker.jsx&autobuild=true)
 
 3. **[Pie / Slice Generator](https://github.com/work2survive/AE-Pie-Slice-Tool)** (`jsx/Pie_Slice_Generator.jsx` - v4.1):
    - Expression-driven parametric circular and elliptical pie slices, arcs, and wedges with independent 3-corner rounding and overlap collision protection.
    - **Repository**: [work2survive/AE-Pie-Slice-Tool](https://github.com/work2survive/AE-Pie-Slice-Tool)
-   - **Live Demo**: [https://work2survive.github.io/AE_JS_builder/?jsx=Pie_Slice_Generator.jsx](https://work2survive.github.io/AE_JS_builder/?jsx=Pie_Slice_Generator.jsx)
+   - **Live Demo**: [https://work2survive.github.io/AE_JS_builder/?jsx=Pie_Slice_Generator.jsx&autobuild=true](https://work2survive.github.io/AE_JS_builder/?jsx=Pie_Slice_Generator.jsx&autobuild=true)
 
-4. **[Custom Rounded Rect](https://github.com/work2survive/AECustomRoundedRect)** (`jsx/custom_rounded_rect.jsx` - v1.1):
+4. **[Custom Rounded Rect](https://github.com/work2survive/AE_Custom_Rounded_Rect)** (`jsx/custom_rounded_rect.jsx` - v1.1):
    - Native 2D shape layer generator with 4 independent corner radii, quick presets, and W3C CSS Backgrounds & Borders Level 3 proportional overlap protection.
-   - **Repository**: [work2survive/AECustomRoundedRect](https://github.com/work2survive/AECustomRoundedRect)
-   - **Live Demo**: [https://work2survive.github.io/AE_JS_builder/?jsx=custom_rounded_rect.jsx](https://work2survive.github.io/AE_JS_builder/?jsx=custom_rounded_rect.jsx)
+   - **Repository**: [work2survive/AE_Custom_Rounded_Rect](https://github.com/work2survive/AE_Custom_Rounded_Rect)
+   - **Live Demo**: [https://work2survive.github.io/AE_JS_builder/?jsx=custom_rounded_rect.jsx&autobuild=true](https://work2survive.github.io/AE_JS_builder/?jsx=custom_rounded_rect.jsx&autobuild=true)
 
-5. **[Extruded Round Rectangle 3D](https://github.com/work2survive/Extruded-Round-Corners-Maker)** (`jsx/extruded_round_rectangle.jsx` - v1.3):
+5. **[Extruded Round Rectangle 3D](https://github.com/work2survive/AE_Extruded_Round_corners)** (`jsx/extruded_round_rectangle.jsx` - v1.3):
    - Parametric 3D extruded rounded rectangle with faceted corner walls, tri-color palette, airtight inner caps, and master rigging.
-   - **Repository**: [work2survive/Extruded-Round-Corners-Maker](https://github.com/work2survive/Extruded-Round-Corners-Maker)
-   - **Live Demo**: [https://work2survive.github.io/AE_JS_builder/?jsx=extruded_round_rectangle.jsx](https://work2survive.github.io/AE_JS_builder/?jsx=extruded_round_rectangle.jsx)
+   - **Repository**: [work2survive/AE_Extruded_Round_corners](https://github.com/work2survive/AE_Extruded_Round_corners)
+   - **Live Demo**: [https://work2survive.github.io/AE_JS_builder/?jsx=extruded_round_rectangle.jsx&autobuild=true](https://work2survive.github.io/AE_JS_builder/?jsx=extruded_round_rectangle.jsx&autobuild=true)
 
 6. **[Message Bubble Generator](https://github.com/work2survive/AE_message_bubble)** (`jsx/message_bubble.jsx` - v1.0):
    - Authentic 2D vector chat bubble generator imitating iOS Messages, Android RCS, WhatsApp, Instagram, Messenger, and Custom themes with auto-timing receipts and iOS 18 text animations.
    - **Repository**: [work2survive/AE_message_bubble](https://github.com/work2survive/AE_message_bubble)
-   - **Live Demo**: [https://work2survive.github.io/AE_JS_builder/?jsx=message_bubble.jsx](https://work2survive.github.io/AE_JS_builder/?jsx=message_bubble.jsx)
+   - **Live Demo**: [https://work2survive.github.io/AE_JS_builder/?jsx=message_bubble.jsx&autobuild=true](https://work2survive.github.io/AE_JS_builder/?jsx=message_bubble.jsx&autobuild=true)
 
 #### B. Quick Verification Presets
 
@@ -160,8 +160,8 @@ The production tools built and tested inside this simulator are also available a
 - **[AE Cube Maker 3D](https://github.com/work2survive/AE-Cube-Maker-3D)**: Parametric 3D cube generator with independent face colors, opacity, stroke controls, and collapsed-transformation master rigging (v1.3).
 - **[AE Cylinder Maker 3D](https://github.com/work2survive/AE-Cylinder-Maker-3D)**: Parametric 3D cylinder and circular slice sector generator with auto-rigged wall facets, tri-color palette, and inner cap seams protection (v1.4).
 - **[AE Pie Slice Tool](https://github.com/work2survive/AE-Pie-Slice-Tool)**: Parametric circular sectors, arcs, and pie slices with corner rounding and collision protection (v4.1).
-- **[AECustomRoundedRect](https://github.com/work2survive/AECustomRoundedRect)**: Independent 4-corner parametric rounded rectangle generator with W3C CSS proportional overlap protection (v1.1).
-- **[Extruded-Round-Corners-Maker](https://github.com/work2survive/Extruded-Round-Corners-Maker)**: Parametric 3D extruded rounded rectangle with faceted corner walls, tri-color palette, airtight inner caps, and master rigging (v1.3 / v2.0).
+- **[AE_Custom_Rounded_Rect](https://github.com/work2survive/AE_Custom_Rounded_Rect)**: Independent 4-corner parametric rounded rectangle generator with W3C CSS proportional overlap protection (v1.1).
+- **[AE_Extruded_Round_corners](https://github.com/work2survive/AE_Extruded_Round_corners)**: Parametric 3D extruded rounded rectangle with faceted corner walls, tri-color palette, airtight inner caps, and master rigging (v1.3 / v2.0).
 - **[AE Message Bubble Generator](https://github.com/work2survive/AE_message_bubble)**: Authentic chat and text message bubble generator for iOS, Android RCS, WhatsApp, Instagram, Messenger, and Custom themes (v1.0).
 
 ---

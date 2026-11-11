@@ -1199,8 +1199,104 @@
     window.clearCompLayers = clearCompLayers;
 
     // -------------------------------------------------------------
-    // JSX Script Runner Engine
+    // JSX Script Runner Engine & Auto-build
     // -------------------------------------------------------------
+    function isAutoBuildRequested() {
+        try {
+            const chk = document.getElementById('chk-autobuild');
+            if (chk && chk.dataset.initialized === 'true') {
+                return chk.checked;
+            }
+            const url = new URL(window.location.href);
+            if (url.searchParams.has('autobuild')) {
+                const v = (url.searchParams.get('autobuild') || '').toLowerCase();
+                return v === '' || v === 'true' || v === '1' || v === 'yes';
+            }
+            if (url.hash) {
+                const hash = url.hash.replace(/^#\/?/, '').trim();
+                const hp = new URLSearchParams(hash);
+                if (hp.has('autobuild')) {
+                    const hv = (hp.get('autobuild') || '').toLowerCase();
+                    return hv === '' || hv === 'true' || hv === '1' || hv === 'yes';
+                }
+                if (hash.includes('autobuild=true') || hash.includes('autobuild=1')) return true;
+            }
+            if (chk) return chk.checked;
+            return false;
+        } catch (e) {
+            return false;
+        }
+    }
+
+    function setAutoBuildInURL(active) {
+        try {
+            const url = new URL(window.location.href);
+            if (active) {
+                url.searchParams.set('autobuild', 'true');
+            } else {
+                url.searchParams.delete('autobuild');
+            }
+            if (url.hash) {
+                const hash = url.hash.replace(/^#\/?/, '').trim();
+                const hp = new URLSearchParams(hash);
+                hp.delete('autobuild');
+                if (active) hp.set('autobuild', 'true');
+                const cleanHash = hp.toString();
+                url.hash = cleanHash ? `#${cleanHash}` : '';
+            }
+            const cleanUrl = url.origin + url.pathname + (url.search ? url.search : '') + (url.hash ? url.hash : '');
+            window.history.replaceState({ autobuild: active }, '', cleanUrl);
+        } catch (e) {
+            try {
+                if (active) {
+                    window.location.hash = (window.location.hash ? window.location.hash + '&' : '') + 'autobuild=true';
+                }
+            } catch (err) {}
+        }
+    }
+
+    function findMainBuildButton() {
+        const dock = document.getElementById('scriptui-dock-host') || document.body;
+        const buttons = Array.from(dock.querySelectorAll('button.scriptui-button, button'));
+        if (buttons.length === 0) return null;
+
+        // 1. Look for button with text containing "build"
+        const buildBtn = buttons.slice().reverse().find(b => (b.textContent || '').toLowerCase().includes('build'));
+        if (buildBtn) return buildBtn;
+
+        // 2. Look for button with text containing "create" or "generate"
+        const createBtn = buttons.slice().reverse().find(b => {
+            const txt = (b.textContent || '').toLowerCase();
+            return txt.includes('create') || txt.includes('generate');
+        });
+        if (createBtn) return createBtn;
+
+        // 3. Fallback to the last button in the dock host that isn't a helper button
+        for (let i = buttons.length - 1; i >= 0; i--) {
+            const txt = (buttons[i].textContent || '').trim().toLowerCase();
+            if (txt && !['help', 'info', 'presets...', 'cancel', 'reset', 'browse', 'open', 'save'].includes(txt)) {
+                return buttons[i];
+            }
+        }
+        return buttons[buttons.length - 1];
+    }
+
+    function triggerAutoBuild(retryCount = 0) {
+        if (!isAutoBuildRequested()) return;
+        setTimeout(() => {
+            const btn = findMainBuildButton();
+            if (btn) {
+                appendConsole(`[Autobuild] Automatically triggering build: "${btn.textContent.trim()}"`);
+                btn.click();
+                renderTimeline();
+            } else if (retryCount < 4) {
+                triggerAutoBuild(retryCount + 1);
+            } else {
+                appendConsole('[Autobuild] Notice: No build button found in panel to trigger automatically.', false);
+            }
+        }, retryCount === 0 ? 120 : 150);
+    }
+
     function runUserScript(code) {
         try {
             clearCompLayers();
@@ -1213,6 +1309,7 @@
             scriptFunc.call(window, app, $, CompItem, Shape, Window, Panel, Group, TabbedPanel, Tab, Mat4);
             appendConsole('Script executed successfully!');
             renderTimeline();
+            triggerAutoBuild();
         } catch (err) {
             console.error(err);
             appendConsole(`Script Error: ${err.message}`, true);
@@ -1230,6 +1327,30 @@
         if (versionBadge) {
             versionBadge.textContent = 'v' + APP_VERSION;
             versionBadge.title = `Daily Incremental Version: v${APP_VERSION} (Started at v1.0.0 on 2026-11-05)`;
+        }
+
+        // Initialize Auto Build Switch from URL parameters
+        const chkAutobuild = document.getElementById('chk-autobuild');
+        const toggleAutobuild = document.getElementById('ae-autobuild-toggle');
+        if (chkAutobuild) {
+            const urlAutoBuildActive = isAutoBuildRequested();
+            chkAutobuild.checked = urlAutoBuildActive;
+            chkAutobuild.dataset.initialized = 'true';
+            if (toggleAutobuild) {
+                toggleAutobuild.classList.toggle('active', urlAutoBuildActive);
+            }
+
+            chkAutobuild.onchange = () => {
+                const active = chkAutobuild.checked;
+                if (toggleAutobuild) {
+                    toggleAutobuild.classList.toggle('active', active);
+                }
+                setAutoBuildInURL(active);
+                appendConsole(active ? 'Auto Build ON: Scripts will build layers automatically (&autobuild=true).' : 'Auto Build OFF.');
+                if (active) {
+                    triggerAutoBuild();
+                }
+            };
         }
 
         const comp = app.project.activeItem;
@@ -1267,22 +1388,29 @@
             if (!filename) return;
             try {
                 const url = new URL(window.location.href);
+                const autoActive = isAutoBuildRequested();
                 // Clean any legacy/bare params before setting canonical jsx parameter
                 for (const key of Array.from(url.searchParams.keys())) {
-                    if (key !== 'jsx') url.searchParams.delete(key);
+                    if (key !== 'jsx' && key !== 'autobuild') url.searchParams.delete(key);
                 }
                 url.searchParams.set('jsx', filename);
+                if (autoActive) {
+                    url.searchParams.set('autobuild', 'true');
+                } else {
+                    url.searchParams.delete('autobuild');
+                }
                 if (url.hash && url.hash.includes('jsx=')) {
                     url.hash = '';
                 }
                 if (isPush) {
-                    window.history.pushState({ jsx: filename }, '', url.toString());
+                    window.history.pushState({ jsx: filename, autobuild: autoActive }, '', url.toString());
                 } else {
-                    window.history.replaceState({ jsx: filename }, '', url.toString());
+                    window.history.replaceState({ jsx: filename, autobuild: autoActive }, '', url.toString());
                 }
             } catch (e) {
                 try {
-                    window.location.hash = `jsx=${encodeURIComponent(filename)}`;
+                    const autoActive = isAutoBuildRequested();
+                    window.location.hash = `jsx=${encodeURIComponent(filename)}` + (autoActive ? '&autobuild=true' : '');
                 } catch (err) {}
             }
         }
@@ -1294,6 +1422,11 @@
                 url.searchParams.delete('file');
                 url.searchParams.delete('preset');
                 url.searchParams.delete('script');
+                if (isAutoBuildRequested()) {
+                    url.searchParams.set('autobuild', 'true');
+                } else {
+                    url.searchParams.delete('autobuild');
+                }
                 url.hash = '';
                 const cleanUrl = url.origin + url.pathname + (url.search ? url.search : '');
                 window.history.replaceState({}, '', cleanUrl);
@@ -1566,6 +1699,15 @@
 
         // Listen for browser Back/Forward navigation
         window.addEventListener('popstate', () => {
+            if (chkAutobuild) {
+                delete chkAutobuild.dataset.initialized;
+                const autoActive = isAutoBuildRequested();
+                chkAutobuild.checked = autoActive;
+                chkAutobuild.dataset.initialized = 'true';
+                if (toggleAutobuild) {
+                    toggleAutobuild.classList.toggle('active', autoActive);
+                }
+            }
             const requested = getRequestedJSXFromURL();
             if (requested) {
                 const matched = findMatchingOption(requested);

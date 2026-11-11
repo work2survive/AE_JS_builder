@@ -12,12 +12,11 @@
 //   1. Message Text Input (Up to 250 characters, supports emojis).
 //   2. Live Character Counter (with automatic 250-character limit enforcement).
 //   3. Messaging Platform Preset Styles:
-//      - Android RCS Style (Google Messages Material You)
-//      - iOS Message Style (Apple iMessage)
-//      - WhatsApp Style (with delivery checkmarks)
-//      - Instagram Style (Instagram Direct signature vibrant violet/purple & pill capsules)
-//      - Facebook Messenger Style (Facebook Messenger iconic blue & soft grey cards)
-//      - Custom Style (fully customizable bubble and text colors)
+//      - Stored in a separate JSON file: "message bubble presets/presets.json".
+//      - If not existing, automatically created on launch with platform presets.
+//      - Quick-Reload (↻) and Open Presets Folder (📂) controls.
+//      - Includes Android RCS, iOS Messages, WhatsApp, Instagram Direct, Facebook Messenger,
+//        Telegram, Discord, and Custom themes.
 //   4. Screen Width (px):
 //      - Controls the layout boundary and drives automatic word-wrapping so the
 //        text line splits naturally without overflowing the mobile screen ratio.
@@ -79,6 +78,99 @@
         return String(str).replace(/^\s+/, "");
     }
 
+    // -------------------------------------------------------------------------
+    // ExtendScript ES3 JSON Polyfill (Crockford json2 compliant)
+    // -------------------------------------------------------------------------
+    var JSONPolyfill = (function() {
+        if (typeof JSON !== "undefined" && JSON && typeof JSON.parse === "function" && typeof JSON.stringify === "function") {
+            return JSON;
+        }
+        var escapable = /[\\\"\x00-\x1f\x7f-\x9f\u00ad\u0600-\u0604\u070f\u17b4\u17b5\u200c-\u200f\u2028-\u202f\u2060-\u206f\ufeff\ufff0-\uffff]/g;
+        var meta = {
+            '\b': '\\b',
+            '\t': '\\t',
+            '\n': '\\n',
+            '\f': '\\f',
+            '\r': '\\r',
+            '"': '\\"',
+            '\\': '\\\\'
+        };
+        function quote(string) {
+            escapable.lastIndex = 0;
+            return escapable.test(string) ? '"' + string.replace(escapable, function(a) {
+                var c = meta[a];
+                return typeof c === 'string' ? c : '\\u' + ('0000' + a.charCodeAt(0).toString(16)).slice(-4);
+            }) + '"' : '"' + string + '"';
+        }
+        var repSpace = '';
+        function str(key, holder, gap, rep) {
+            var value = holder[key];
+            if (value && typeof value === 'object' && typeof value.toJSON === 'function') {
+                value = value.toJSON(key);
+            }
+            if (typeof rep === 'function') {
+                value = rep.call(holder, key, value);
+            }
+            switch (typeof value) {
+                case 'string': return quote(value);
+                case 'number': return isFinite(value) ? String(value) : 'null';
+                case 'boolean':
+                case 'null': return String(value);
+                case 'object':
+                    if (!value) return 'null';
+                    var mind = gap;
+                    gap += repSpace;
+                    var partial = [];
+                    if (Object.prototype.toString.apply(value) === '[object Array]') {
+                        var length = value.length;
+                        for (var i = 0; i < length; i += 1) {
+                            partial[i] = str(i, value, gap, rep) || 'null';
+                        }
+                        var v = partial.length === 0 ? '[]' : gap ? '[\n' + gap + partial.join(',\n' + gap) + '\n' + mind + ']' : '[' + partial.join(',') + ']';
+                        gap = mind;
+                        return v;
+                    }
+                    for (var k in value) {
+                        if (Object.prototype.hasOwnProperty.call(value, k)) {
+                            var res = str(k, value, gap, rep);
+                            if (res) {
+                                partial.push((gap ? quote(k) + ': ' : quote(k) + ':') + res);
+                            }
+                        }
+                    }
+                    var result = partial.length === 0 ? '{}' : gap ? '{\n' + gap + partial.join(',\n' + gap) + '\n' + mind + '}' : '{' + partial.join(',') + '}';
+                    gap = mind;
+                    return result;
+            }
+            return undefined;
+        }
+        return {
+            stringify: function(value, replacer, space) {
+                repSpace = '';
+                if (typeof space === 'number') {
+                    for (var i = 0; i < space; i += 1) repSpace += ' ';
+                } else if (typeof space === 'string') {
+                    repSpace = space;
+                }
+                return str('', {'': value}, '', replacer);
+            },
+            parse: function(text) {
+                if (!text) return null;
+                var rx_one = /^[\],:{}\s]*$/;
+                var rx_two = /\\(?:["\\\/bfnrt]|u[0-9a-fA-F]{4})/g;
+                var rx_three = /"[^"\\\n\r]*"|true|false|null|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?/g;
+                var rx_four = /(?:^|:|,)(?:\s*\[)+/g;
+                if (rx_one.test(text.replace(rx_two, '@').replace(rx_three, ']').replace(rx_four, ''))) {
+                    return eval('(' + text + ')');
+                }
+                throw new SyntaxError('JSON.parse: Invalid JSON string');
+            }
+        };
+    })();
+    if (typeof JSON === "undefined") {
+        JSON = JSONPolyfill;
+    }
+
     var SCRIPT_VERSION = "v1.0";
     var MAX_CHARS = 250;
 
@@ -98,10 +190,15 @@
     win.margins = 12;
 
     // -------------------------------------------------------------------------
-    // 2. Color Palettes by Platform, Direction & Theme
+    // 2. Color Palettes by Platform, Direction & Theme (Defaults)
     // -------------------------------------------------------------------------
-    var PLATFORMS = {
+    var DEFAULT_PLATFORMS = {
         "Android RCS": {
+            label: "Android RCS style",
+            radius: 18,
+            tailType: "modern",
+            font: "Roboto (Google / Android)",
+            statusStyle: "rcs",
             light: {
                 sent:     { bubble: "#0b57d0", text: "#ffffff", time: "rgba(255,255,255,0.75)", check: "" },
                 received: { bubble: "#f1f3f4", text: "#1f1f1f", time: "#70757a", check: "" }
@@ -109,11 +206,14 @@
             dark: {
                 sent:     { bubble: "#a8c7fa", text: "#041e49", time: "rgba(4,30,73,0.75)", check: "" },
                 received: { bubble: "#303134", text: "#e3e3e3", time: "#9aa0a6", check: "" }
-            },
-            radius: 18,
-            tailType: "modern"
+            }
         },
         "iOS Message": {
+            label: "iOS message style",
+            radius: 18,
+            tailType: "ios",
+            font: "SF Pro (Apple / iOS)",
+            statusStyle: "standard",
             light: {
                 sent:     { bubble: "#007aff", text: "#ffffff", time: "rgba(255,255,255,0.70)", check: "" },
                 received: { bubble: "#e9e9eb", text: "#000000", time: "#8e8e93", check: "" }
@@ -121,11 +221,14 @@
             dark: {
                 sent:     { bubble: "#0a84ff", text: "#ffffff", time: "rgba(255,255,255,0.70)", check: "" },
                 received: { bubble: "#26252a", text: "#ffffff", time: "#8e8e93", check: "" }
-            },
-            radius: 18,
-            tailType: "ios"
+            }
         },
         "WhatsApp": {
+            label: "WhatsApp style",
+            radius: 10,
+            tailType: "whatsapp",
+            font: "Helvetica Neue",
+            statusStyle: "standard",
             light: {
                 sent:     { bubble: "#d9fdd3", text: "#111b21", time: "#667781", check: "✓✓" },
                 received: { bubble: "#ffffff", text: "#111b21", time: "#667781", check: "" }
@@ -133,11 +236,14 @@
             dark: {
                 sent:     { bubble: "#005c4b", text: "#e9edef", time: "#8696a0", check: "✓✓" },
                 received: { bubble: "#202c33", text: "#e9edef", time: "#8696a0", check: "" }
-            },
-            radius: 10,
-            tailType: "whatsapp"
+            }
         },
         "Instagram": {
+            label: "Instagram style",
+            radius: 20,
+            tailType: "instagram",
+            font: "SF Pro (Apple / iOS)",
+            statusStyle: "standard",
             light: {
                 sent:     { bubble: "#7839ee", text: "#ffffff", time: "rgba(255,255,255,0.70)", check: "" },
                 received: { bubble: "#efefef", text: "#000000", time: "#8e8e93", check: "" }
@@ -145,11 +251,14 @@
             dark: {
                 sent:     { bubble: "#7c3aed", text: "#ffffff", time: "rgba(255,255,255,0.70)", check: "" },
                 received: { bubble: "#262626", text: "#f5f5f5", time: "#a8a8a8", check: "" }
-            },
-            radius: 20,
-            tailType: "instagram"
+            }
         },
         "Facebook Messenger": {
+            label: "Facebook Messenger style",
+            radius: 18,
+            tailType: "messenger",
+            font: "Segoe UI (Windows)",
+            statusStyle: "standard",
             light: {
                 sent:     { bubble: "#0084ff", text: "#ffffff", time: "rgba(255,255,255,0.70)", check: "✓" },
                 received: { bubble: "#e4e6eb", text: "#050505", time: "#65676b", check: "" }
@@ -157,11 +266,44 @@
             dark: {
                 sent:     { bubble: "#0084ff", text: "#ffffff", time: "rgba(255,255,255,0.70)", check: "✓" },
                 received: { bubble: "#303030", text: "#e4e6eb", time: "#b0b3b8", check: "" }
+            }
+        },
+        "Telegram": {
+            label: "Telegram style",
+            radius: 16,
+            tailType: "modern",
+            font: "SF Pro (Apple / iOS)",
+            statusStyle: "standard",
+            light: {
+                sent:     { bubble: "#effdde", text: "#000000", time: "#4fae4e", check: "✓✓" },
+                received: { bubble: "#ffffff", text: "#000000", time: "#a0acb6", check: "" }
             },
-            radius: 18,
-            tailType: "messenger"
+            dark: {
+                sent:     { bubble: "#2b5278", text: "#ffffff", time: "rgba(255,255,255,0.70)", check: "✓✓" },
+                received: { bubble: "#182533", text: "#ffffff", time: "#708499", check: "" }
+            }
+        },
+        "Discord": {
+            label: "Discord style",
+            radius: 14,
+            tailType: "modern",
+            font: "Inter",
+            statusStyle: "standard",
+            light: {
+                sent:     { bubble: "#5865f2", text: "#ffffff", time: "rgba(255,255,255,0.75)", check: "" },
+                received: { bubble: "#f2f3f5", text: "#2e3338", time: "#747f8d", check: "" }
+            },
+            dark: {
+                sent:     { bubble: "#5865f2", text: "#ffffff", time: "rgba(255,255,255,0.75)", check: "" },
+                received: { bubble: "#2b2d31", text: "#dbdee1", "time": "#949ba4", check: "" }
+            }
         },
         "Custom": {
+            label: "Custom style",
+            radius: 16,
+            tailType: "modern",
+            font: "System Default",
+            statusStyle: "standard",
             light: {
                 sent:     { bubble: "#2563eb", text: "#ffffff", time: "rgba(255,255,255,0.70)", check: "" },
                 received: { bubble: "#f3f4f6", text: "#111827", time: "#6b7280", check: "" }
@@ -169,11 +311,220 @@
             dark: {
                 sent:     { bubble: "#3b82f6", text: "#ffffff", time: "rgba(255,255,255,0.70)", check: "" },
                 received: { bubble: "#1f2937", text: "#f9fafb", time: "#9ca3af", check: "" }
-            },
-            radius: 16,
-            tailType: "modern"
+            }
         }
     };
+
+    // -------------------------------------------------------------------------
+    // External Preset File & Folder Management (Auto-Creation with Permission Fallback)
+    // -------------------------------------------------------------------------
+    var PRESETS_FOLDER_NAME = "message bubble presets";
+    var PRESETS_FILE_NAME = "presets.json";
+    var currentPresetsFolder = null;
+    var currentPresetsFile = null;
+    var warnedSecurityPref = false;
+
+    function checkScriptSecurityPreference() {
+        if (warnedSecurityPref) return;
+        warnedSecurityPref = true;
+        try {
+            if (typeof app !== "undefined" && app && app.preferences) {
+                var allowed = app.preferences.getPrefAsLong("Main Pref Section", "Pref_SCRIPTING_FILE_NETWORK_SECURITY");
+                if (allowed === 0) {
+                    alert("Notice: After Effects security is currently blocking scripts from writing files.\n\n" +
+                          "To allow Message Bubble Generator to create presets on disk, please enable:\n" +
+                          "Preferences > Scripting & Expressions > 'Allow Scripts to Write Files and Access Network'.\n\n" +
+                          "Built-in default presets will be used in memory for now.");
+                }
+            }
+        } catch(ePref) {}
+    }
+
+    function getPresetsFolder() {
+        if (typeof Folder === "undefined") return null;
+
+        var candidates = [];
+        var scriptParent = null;
+
+        try {
+            if (typeof $.fileName !== "undefined" && $.fileName) {
+                var sFile = new File($.fileName);
+                if (sFile && sFile.exists) {
+                    scriptParent = sFile.parent;
+                    if (scriptParent && scriptParent.exists) {
+                        candidates.push(new Folder(scriptParent.fsName + "/" + PRESETS_FOLDER_NAME));
+                        if (scriptParent.parent && scriptParent.parent.exists) {
+                            candidates.push(new Folder(scriptParent.parent.fsName + "/" + PRESETS_FOLDER_NAME));
+                        }
+                    }
+                }
+            }
+        } catch(e1) {}
+
+        // User AppData folder (Guaranteed writable without Administrator privileges)
+        var userAppDataFolder = null;
+        try {
+            if (Folder.userData) {
+                userAppDataFolder = new Folder(Folder.userData.fsName + "/Adobe/After Effects/" + PRESETS_FOLDER_NAME);
+                candidates.push(userAppDataFolder);
+            }
+        } catch(e2) {}
+
+        // User Documents folder
+        var userDocsFolder = null;
+        try {
+            if (Folder.myDocuments) {
+                userDocsFolder = new Folder(Folder.myDocuments.fsName + "/Adobe/After Effects/" + PRESETS_FOLDER_NAME);
+                candidates.push(userDocsFolder);
+            }
+        } catch(e3) {}
+
+        // Current working directory
+        try {
+            if (Folder.current) {
+                candidates.push(new Folder(Folder.current.fsName + "/" + PRESETS_FOLDER_NAME));
+            }
+        } catch(e4) {}
+
+        // 1. If any candidate folder exists and contains presets.json, use it
+        for (var i = 0; i < candidates.length; i++) {
+            var cand = candidates[i];
+            if (cand && cand.exists) {
+                var testF = new File(cand.fsName + "/" + PRESETS_FILE_NAME);
+                var testAlt = new File(cand.fsName + "/message_bubble_presets.json");
+                if (testF.exists || testAlt.exists) {
+                    return cand;
+                }
+            }
+        }
+
+        // 2. If any candidate folder already exists (even if empty), use it
+        for (var j = 0; j < candidates.length; j++) {
+            if (candidates[j] && candidates[j].exists) {
+                return candidates[j];
+            }
+        }
+
+        // 3. Attempt creation: First next to script file
+        if (scriptParent && scriptParent.exists) {
+            try {
+                var localF = new Folder(scriptParent.fsName + "/" + PRESETS_FOLDER_NAME);
+                if (localF.create()) {
+                    return localF;
+                }
+            } catch(eLoc) {}
+        }
+
+        // 4. Fallback creation: User AppData folder (handles Program Files installs where write is blocked)
+        if (userAppDataFolder) {
+            try {
+                if (userAppDataFolder.create()) {
+                    return userAppDataFolder;
+                }
+            } catch(eUsr) {}
+        }
+
+        // 5. Fallback creation: Documents folder
+        if (userDocsFolder) {
+            try {
+                if (userDocsFolder.create()) {
+                    return userDocsFolder;
+                }
+            } catch(eDoc) {}
+        }
+
+        return candidates.length > 0 ? candidates[0] : null;
+    }
+
+    function ensurePresetsFile(folder) {
+        if (!folder || typeof File === "undefined") return null;
+        var pFile = new File(folder.fsName + "/" + PRESETS_FILE_NAME);
+        if (pFile.exists) return pFile;
+
+        var altFile = new File(folder.fsName + "/message_bubble_presets.json");
+        if (altFile.exists) return altFile;
+
+        try {
+            if (!folder.exists) {
+                if (!folder.create()) {
+                    checkScriptSecurityPreference();
+                }
+            }
+            pFile.encoding = "UTF-8";
+            if (pFile.open("w")) {
+                var dataObj = {
+                    "$schema": "https://json-schema.org/draft/2020-12/schema",
+                    "description": "After Effects Message Bubble Generator - Platform Style Presets",
+                    "version": "1.0",
+                    "presets": DEFAULT_PLATFORMS
+                };
+                pFile.write(JSONPolyfill.stringify(dataObj, null, 2));
+                pFile.close();
+            } else {
+                checkScriptSecurityPreference();
+            }
+        } catch(eWrite) {
+            checkScriptSecurityPreference();
+        }
+        return pFile;
+    }
+
+    function loadPresetsFromFile() {
+        currentPresetsFolder = getPresetsFolder();
+        if (!currentPresetsFolder) return 0;
+        currentPresetsFile = ensurePresetsFile(currentPresetsFolder);
+        if (!currentPresetsFile || !currentPresetsFile.exists) return 0;
+
+        try {
+            currentPresetsFile.encoding = "UTF-8";
+            if (currentPresetsFile.open("r")) {
+                var content = currentPresetsFile.read();
+                currentPresetsFile.close();
+                if (content && trimStr(content).length > 0) {
+                    var parsed = JSONPolyfill.parse(content);
+                    if (parsed && typeof parsed === "object") {
+                        var rawMap = parsed.presets ? parsed.presets : parsed;
+                        var count = 0;
+                        var newPresets = {};
+                        for (var k in rawMap) {
+                            if (rawMap.hasOwnProperty(k) && k.charAt(0) !== "$" && k !== "version" && k !== "description") {
+                                newPresets[k] = rawMap[k];
+                                count++;
+                            }
+                        }
+                        if (count > 0) {
+                            if (!newPresets["Custom"] && DEFAULT_PLATFORMS["Custom"]) {
+                                newPresets["Custom"] = DEFAULT_PLATFORMS["Custom"];
+                            }
+                            PLATFORMS = newPresets;
+                            return count;
+                        }
+                    }
+                }
+            }
+        } catch(eLoad) {}
+        return 0;
+    }
+
+    // Active platforms map (loaded from JSON, with default fallback)
+    var PLATFORMS = {};
+    for (var kDef in DEFAULT_PLATFORMS) {
+        if (DEFAULT_PLATFORMS.hasOwnProperty(kDef)) {
+            PLATFORMS[kDef] = DEFAULT_PLATFORMS[kDef];
+        }
+    }
+    loadPresetsFromFile();
+
+    var platformKeys = [];
+    function updatePlatformKeys() {
+        platformKeys = [];
+        for (var pKey in PLATFORMS) {
+            if (PLATFORMS.hasOwnProperty(pKey) && pKey.charAt(0) !== "$" && pKey !== "version" && pKey !== "description") {
+                platformKeys.push(pKey);
+            }
+        }
+    }
+    updatePlatformKeys();
 
     // -------------------------------------------------------------------------
     // Common Messaging App Fonts & System Typography
@@ -203,6 +554,39 @@
             ((num >> 8) & 255) / 255,
             (num & 255) / 255
         ];
+    }
+
+    // Helper: AE float color array to hex string
+    function rgbToHex(rgb) {
+        if (!rgb || !rgb.length) return "#FFFFFF";
+        var r = Math.round(Math.max(0, Math.min(1, rgb[0])) * 255).toString(16);
+        var g = Math.round(Math.max(0, Math.min(1, rgb[1])) * 255).toString(16);
+        var b = Math.round(Math.max(0, Math.min(1, rgb[2])) * 255).toString(16);
+        if (r.length < 2) r = "0" + r;
+        if (g.length < 2) g = "0" + g;
+        if (b.length < 2) b = "0" + b;
+        return ("#" + r + g + b).toUpperCase();
+    }
+
+    function getLayer(comp, nameOrIndex) {
+        if (!comp) return null;
+        if (typeof comp.layer === "function") {
+            try { return comp.layer(nameOrIndex); } catch (e) {}
+        }
+        if (comp.layers) {
+            try {
+                if (typeof nameOrIndex === "number") return comp.layers[nameOrIndex - 1] || comp.layers[nameOrIndex];
+                if (typeof comp.layers.byName === "function") return comp.layers.byName(nameOrIndex);
+                if (typeof comp.layers.find === "function") {
+                    return comp.layers.find(function(l) { return l.name === nameOrIndex; }) || null;
+                }
+                for (var li = 1; li <= comp.layers.length; li++) {
+                    var l = comp.layers[li];
+                    if (l && l.name === nameOrIndex) return l;
+                }
+            } catch (e2) {}
+        }
+        return null;
     }
 
     // Helper: Generate a realistic random timestamp (e.g. "10:42 AM" or "18:25")
@@ -1475,23 +1859,73 @@
     pnlStyle.spacing = 8;
     pnlStyle.margins = 10;
 
-    // Platform Pull Down (Dropdown)
+    // Platform Pull Down (Dropdown) & Preset Actions
     var grpPlatform = pnlStyle.add("group");
     grpPlatform.orientation = "row";
     grpPlatform.alignChildren = ["left", "center"];
     var lblPlatform = grpPlatform.add("statictext", undefined, "Style Preset:");
     lblPlatform.preferredSize = [115, -1];
 
-    var dropPlatform = grpPlatform.add("dropdownlist", undefined, [
-        "Android RCS style",
-        "iOS message style",
-        "WhatsApp style",
-        "Instagram style",
-        "Facebook Messenger style",
-        "Custom style"
-    ]);
-    dropPlatform.selection = 1; // Default: iOS message style
-    dropPlatform.preferredSize = [185, 26];
+    var dropPlatform = grpPlatform.add("dropdownlist", undefined, []);
+    dropPlatform.preferredSize = [155, 26];
+
+    var btnReloadPresets = grpPlatform.add("button", undefined, "↻");
+    btnReloadPresets.preferredSize = [26, 26];
+    btnReloadPresets.helpTip = "Reload presets from JSON file in 'message bubble presets' folder.";
+
+    var btnOpenPresets = grpPlatform.add("button", undefined, "📂");
+    btnOpenPresets.preferredSize = [26, 26];
+    btnOpenPresets.helpTip = "Open 'message bubble presets' folder in File Explorer / Finder.";
+
+    function populatePlatformDropdown(selectedKey) {
+        updatePlatformKeys();
+        if (typeof dropPlatform.removeAll === "function") {
+            dropPlatform.removeAll();
+        } else {
+            dropPlatform.items = [];
+            if (dropPlatform.domElement) dropPlatform.domElement.innerHTML = "";
+        }
+        var selectIndex = 0;
+        for (var i = 0; i < platformKeys.length; i++) {
+            var key = platformKeys[i];
+            var cfg = PLATFORMS[key] || DEFAULT_PLATFORMS[key];
+            var label = (cfg && cfg.label) ? cfg.label : (key + " style");
+            dropPlatform.add("item", label);
+            if (selectedKey && key === selectedKey) {
+                selectIndex = i;
+            } else if (!selectedKey && key === "iOS Message") {
+                selectIndex = i;
+            }
+        }
+        if (dropPlatform.items.length > 0) {
+            dropPlatform.selection = selectIndex;
+        }
+    }
+
+    populatePlatformDropdown("iOS Message");
+
+    btnReloadPresets.onClick = function() {
+        var curKey = (dropPlatform.selection && platformKeys[dropPlatform.selection.index])
+            ? platformKeys[dropPlatform.selection.index]
+            : "iOS Message";
+        var c = loadPresetsFromFile();
+        populatePlatformDropdown(curKey);
+        syncColorsFromPlatform();
+        if (c > 0 && currentPresetsFile) {
+            alert("Reloaded " + c + " presets from:\n" + currentPresetsFile.fsName);
+        } else {
+            alert("Presets reloaded from defaults.");
+        }
+    };
+
+    btnOpenPresets.onClick = function() {
+        if (!currentPresetsFolder) currentPresetsFolder = getPresetsFolder();
+        if (currentPresetsFolder && currentPresetsFolder.exists) {
+            currentPresetsFolder.execute();
+        } else {
+            alert("Presets folder:\n" + (currentPresetsFolder ? currentPresetsFolder.fsName : PRESETS_FOLDER_NAME));
+        }
+    };
 
     // Direction Switch: Received (Left) vs Sent (Right)
     var grpDirection = pnlStyle.add("group");
@@ -1965,7 +2399,6 @@
 
     function syncColorsFromPlatform() {
         var selIdx = dropPlatform.selection ? dropPlatform.selection.index : 0;
-        var platformKeys = ["Android RCS", "iOS Message", "WhatsApp", "Instagram", "Facebook Messenger", "Custom"];
         var platformName = platformKeys[selIdx] || "iOS Message";
         if (platformName === "Custom") return;
 
@@ -1973,24 +2406,41 @@
         var isDark = radDark.value;
         var themeKey = isDark ? "dark" : "light";
         var dirKey = isSent ? "sent" : "received";
-        var colorSet = PLATFORMS[platformName][themeKey][dirKey];
+        var platformCfg = PLATFORMS[platformName] || DEFAULT_PLATFORMS[platformName];
+        if (!platformCfg) return;
+
+        var colorSet = (platformCfg[themeKey] && platformCfg[themeKey][dirKey]) ? platformCfg[themeKey][dirKey] : null;
 
         if (colorSet) {
-            cpBubble.setColor(colorSet.bubble, false);
-            cpText.setColor(colorSet.text, false);
+            if (colorSet.bubble) cpBubble.setColor(colorSet.bubble, false);
+            if (colorSet.text) cpText.setColor(colorSet.text, false);
         }
 
         if (typeof dropFont !== "undefined" && dropFont) {
-            if (platformName === "Android RCS") dropFont.selection = 1; // Roboto
-            else if (platformName === "iOS Message" || platformName === "Instagram") dropFont.selection = 0; // SF Pro
-            else if (platformName === "WhatsApp") dropFont.selection = 3; // Helvetica Neue
-            else if (platformName === "Facebook Messenger") dropFont.selection = 2; // Segoe UI
+            if (typeof platformCfg.fontIndex === "number" && platformCfg.fontIndex < FONTS.length) {
+                dropFont.selection = platformCfg.fontIndex;
+            } else if (platformCfg.font) {
+                for (var fi = 0; fi < FONTS.length; fi++) {
+                    if (FONTS[fi].name.toLowerCase().indexOf(platformCfg.font.toLowerCase()) !== -1 ||
+                        platformCfg.font.toLowerCase().indexOf(FONTS[fi].name.toLowerCase()) !== -1) {
+                        dropFont.selection = fi;
+                        break;
+                    }
+                }
+            } else {
+                if (platformName === "Android RCS") dropFont.selection = 1; // Roboto
+                else if (platformName === "iOS Message" || platformName === "Instagram") dropFont.selection = 0; // SF Pro
+                else if (platformName === "WhatsApp") dropFont.selection = 3; // Helvetica Neue
+                else if (platformName === "Facebook Messenger") dropFont.selection = 2; // Segoe UI
+            }
         }
 
         if (typeof dropStatusStyle !== "undefined" && dropStatusStyle) {
-            if (platformName === "Android RCS") {
+            if (typeof platformCfg.statusStyleIndex === "number") {
+                dropStatusStyle.selection = platformCfg.statusStyleIndex;
+            } else if (platformCfg.statusStyle === "rcs" || platformName === "Android RCS") {
                 dropStatusStyle.selection = 0; // RCS Circled Checks (○✓)
-            } else if (platformName === "WhatsApp") {
+            } else {
                 dropStatusStyle.selection = 1; // Standard Checks (✓✓)
             }
         }
@@ -2020,11 +2470,19 @@
         syncColorsFromPlatform();
     };
 
+    function selectCustomPlatformStyle() {
+        for (var i = 0; i < platformKeys.length; i++) {
+            if (platformKeys[i] === "Custom") {
+                dropPlatform.selection = i;
+                break;
+            }
+        }
+    }
     cpBubble.onChange = function() {
-        dropPlatform.selection = 5; // Switch to Custom style
+        selectCustomPlatformStyle();
     };
     cpText.onChange = function() {
-        dropPlatform.selection = 5; // Switch to Custom style
+        selectCustomPlatformStyle();
     };
 
     // -------------------------------------------------------------------------
@@ -2122,9 +2580,8 @@
             }
 
             var selStyleIdx = dropPlatform.selection ? dropPlatform.selection.index : 0;
-            var platformKeys = ["Android RCS", "iOS Message", "WhatsApp", "Instagram", "Facebook Messenger", "Custom"];
             var platformName = platformKeys[selStyleIdx] || "iOS Message";
-            var platformCfg = PLATFORMS[platformName] || PLATFORMS["iOS Message"];
+            var platformCfg = PLATFORMS[platformName] || DEFAULT_PLATFORMS[platformName] || DEFAULT_PLATFORMS["iOS Message"];
 
             var isSent = radSent.value;
             var isDark = radDark.value;
@@ -2146,6 +2603,8 @@
             var selAnimIdx = dropAnim.selection ? dropAnim.selection.index : 0;
             var animSpeed = parseFloat(txtSpeed.text) || 100;
             var animAmp = parseFloat(txtAmp.text) || 100;
+            var growFVal = (typeof sldGrow !== "undefined" && sldGrow) ? Math.max(0, Math.min(20, Math.round(sldGrow.value))) : 5;
+            var typeFVal = (typeof sldType !== "undefined" && sldType) ? Math.max(0, Math.min(20, Math.round(sldType.value))) : 5;
 
             var fontIdx = dropFont.selection ? dropFont.selection.index : 0;
             var selectedFont = FONTS[fontIdx] || FONTS[0];
@@ -2317,14 +2776,12 @@
 
                 var effGrowF = parade.addProperty("ADBE Slider Control");
                 if (effGrowF) {
-                    var growFVal = (typeof sldGrow !== "undefined" && sldGrow) ? Math.max(0, Math.min(20, Math.round(sldGrow.value))) : 5;
                     effGrowF.name = "Bubble Grow Duration (frames)";
                     effGrowF.property(1).setValue(growFVal);
                 }
 
                 var effTypeF = parade.addProperty("ADBE Slider Control");
                 if (effTypeF) {
-                    var typeFVal = (typeof sldType !== "undefined" && sldType) ? Math.max(0, Math.min(20, Math.round(sldType.value))) : 5;
                     effTypeF.name = "Typewriter Duration (frames)";
                     effTypeF.property(1).setValue(typeFVal);
                 }
@@ -2709,11 +3166,698 @@
                 }
             }
 
-            // Select master controller
-            master.selected = true;
+            // 6. Precompose all created layers into "message_" + random hex number
+            var randHex = Math.floor(Math.random() * 0x10000).toString(16).toLowerCase();
+            while (randHex.length < 4) randHex = "0" + randHex;
+            var precompName = "message_" + randHex;
+
+            var createdLayers = [master, bubbleLayer, textLayer, timeLayer];
+            if (hasStatus && statusLayerText) createdLayers.push(statusLayerText);
+            if (hasStatus && statusLayerRCS) createdLayers.push(statusLayerRCS);
+
+            var preCompItem = null;
+            var precompLayer = null;
+
+            if (comp.layers && typeof comp.layers.precompose === "function") {
+                try {
+                    var indicesMap = {};
+                    for (var ci = 0; ci < createdLayers.length; ci++) {
+                        if (createdLayers[ci] && createdLayers[ci].index) {
+                            indicesMap[createdLayers[ci].index] = true;
+                        }
+                    }
+                    var indices = [];
+                    for (var kIdx in indicesMap) {
+                        if (indicesMap.hasOwnProperty(kIdx)) {
+                            indices.push(parseInt(kIdx, 10));
+                        }
+                    }
+                    indices.sort(function(a, b) { return a - b; });
+
+                    preCompItem = comp.layers.precompose(indices, precompName, true);
+
+                    // Find the precomp representation layer in parent comp
+                    for (var pli = 1; pli <= comp.layers.length; pli++) {
+                        var testL = comp.layer(pli);
+                        if (testL && (testL.source === preCompItem || testL.name === precompName)) {
+                            precompLayer = testL;
+                            break;
+                        }
+                    }
+                    if (!precompLayer) {
+                        precompLayer = getLayer(comp, precompName) || getLayer(comp, 1);
+                    }
+                } catch(ePrecomp) {}
+            }
+
+            if (precompLayer) {
+                precompLayer.name = precompName;
+                precompLayer.label = 1; // Red / Accent
+                precompLayer.colorLabel = "#ff3b30";
+                precompLayer.notShyable = true;
+                if ("collapseTransformation" in precompLayer) {
+                    precompLayer.collapseTransformation = true; // Continuous rasterization preserves vector sharpness
+                }
+
+                // 7. Add all animable Effect Controls to the precomp's parent layer
+                function addParentEffect(type, name, val) {
+                    var p = precompLayer.property("ADBE Effect Parade") || precompLayer.property("Effects");
+                    if (!p || !p.addProperty) return null;
+                    var eff = p.addProperty(type);
+                    if (eff) {
+                        eff.name = name;
+                        var prop = eff.property(1);
+                        if (prop && typeof prop.setValue === "function") {
+                            prop.setValue(val);
+                        }
+                    }
+                    return eff;
+                }
+
+                addParentEffect("ADBE Color Control", "Bubble Color", bubbleColor);
+                addParentEffect("ADBE Checkbox Control", "Animate Entrance", chkEntrance.value ? 1 : 0);
+                addParentEffect("ADBE Slider Control", "Bubble Grow Duration (frames)", growFVal);
+                addParentEffect("ADBE Slider Control", "Typewriter Duration (frames)", typeFVal);
+                addParentEffect("ADBE Slider Control", "Animation Effect Type", selAnimIdx);
+                addParentEffect("ADBE Slider Control", "Animation Speed", animSpeed);
+                addParentEffect("ADBE Slider Control", "Animation Intensity", animAmp);
+                addParentEffect("ADBE Slider Control", "Delivered Time (s)", deliveredTime);
+                addParentEffect("ADBE Slider Control", "Read Time (s)", readTime);
+                addParentEffect("ADBE Slider Control", "Status Icon Mode", selStatusIdx);
+                addParentEffect("ADBE Slider Control", "Status Icon Style", selStatusStyleIdx);
+                addParentEffect("ADBE Color Control", "Status Neutral Color", timeColor);
+                addParentEffect("ADBE Color Control", "Status Read Color", readColor);
+                addParentEffect("ADBE Color Control", "Status Read Check Color", rcsReadCheckCol);
+                addParentEffect("ADBE Slider Control", "Bubble Width", bubbleW);
+                addParentEffect("ADBE Slider Control", "Bubble Height", bubbleH);
+                addParentEffect("ADBE Slider Control", "Inner Padding Offset", padOffset);
+                addParentEffect("ADBE Slider Control", "Leading Percent", leadingPercent);
+                addParentEffect("ADBE Checkbox Control", "Show Tail", hasTail ? 1 : 0);
+                addParentEffect("ADBE Slider Control", "Screen Width", screenW);
+                addParentEffect("ADBE Slider Control", "Text Size", textSize);
+
+                precompLayer.selected = true;
+
+                // 8. Link Master Controller inside the precomp to parent precomp layer
+                var safeParentCompName = comp.name.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+                var safePrecompName = precompName.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+
+                function linkPreMaster(effectName, isColor) {
+                    if (!master) return;
+                    var eff = master.effect(effectName);
+                    if (!eff || !eff.property(1)) return;
+                    var valStr = isColor ? "" : ".value";
+                    var expr = 'try {\n' +
+                               '    comp("' + safeParentCompName + '").layer("' + safePrecompName + '").effect("' + effectName + '")(1)' + valStr + ';\n' +
+                               '} catch (err) {\n' +
+                               '    value;\n' +
+                               '}';
+                    eff.property(1).expression = expr;
+                }
+
+                linkPreMaster("Bubble Color", true);
+                linkPreMaster("Animate Entrance", false);
+                linkPreMaster("Bubble Grow Duration (frames)", false);
+                linkPreMaster("Typewriter Duration (frames)", false);
+                linkPreMaster("Animation Effect Type", false);
+                linkPreMaster("Animation Speed", false);
+                linkPreMaster("Animation Intensity", false);
+                linkPreMaster("Delivered Time (s)", false);
+                linkPreMaster("Read Time (s)", false);
+                linkPreMaster("Status Icon Mode", false);
+                linkPreMaster("Status Icon Style", false);
+                linkPreMaster("Status Neutral Color", true);
+                linkPreMaster("Status Read Color", true);
+                linkPreMaster("Status Read Check Color", true);
+                linkPreMaster("Bubble Width", false);
+                linkPreMaster("Bubble Height", false);
+                linkPreMaster("Inner Padding Offset", false);
+                linkPreMaster("Leading Percent", false);
+                linkPreMaster("Show Tail", false);
+                linkPreMaster("Screen Width", false);
+                linkPreMaster("Text Size", false);
+
+                if (fill && fill.property && fill.property("Color")) {
+                    fill.property("Color").expression = 'try {\n' +
+                        '    comp("' + safeParentCompName + '").layer("' + safePrecompName + '").effect("Bubble Color")(1);\n' +
+                        '} catch (err) {\n' +
+                        '    try { thisComp.layer("Bubble_Master_Controller").effect("Bubble Color")(1); } catch (e) { value; }\n' +
+                        '}';
+                }
+            } else {
+                master.selected = true;
+            }
 
         } catch (err) {
             alert("Could not generate Message Bubble:\n" + err.toString());
+        } finally {
+            if (app.endUndoGroup) {
+                app.endUndoGroup();
+            }
+        }
+    }
+
+    // -------------------------------------------------------------------------
+    // Selection Detection & Live Update Engine (Precomp Tracking)
+    // -------------------------------------------------------------------------
+    function isMessageBubbleLayer(lyr) {
+        if (!lyr) return false;
+        if (lyr.name && /^message_[0-9a-fA-F]+/i.test(lyr.name)) return true;
+        if (lyr.source && lyr.source instanceof CompItem) {
+            if (/^message_[0-9a-fA-F]+/i.test(lyr.source.name)) return true;
+            if (isMessageBubbleComp(lyr.source)) return true;
+        }
+        if (lyr.effect && lyr.effect("Bubble Color") && lyr.effect("Bubble Width")) {
+            return true;
+        }
+        return false;
+    }
+
+    function isMessageBubbleComp(compItem) {
+        if (!compItem || !(compItem instanceof CompItem)) return false;
+        if (compItem.name && /^message_[0-9a-fA-F]+/i.test(compItem.name)) return true;
+        if (getLayer(compItem, "Bubble_Master_Controller")) return true;
+        return false;
+    }
+
+    function getSelectedMessageBubblePrecomp() {
+        var comp = app.project ? app.project.activeItem : null;
+        if (!comp || !(comp instanceof CompItem)) return null;
+
+        var sel = comp.selectedLayers;
+        if (sel && sel.length > 0) {
+            for (var i = 0; i < sel.length; i++) {
+                var lyr = sel[i];
+                if (isMessageBubbleLayer(lyr)) {
+                    var srcComp = (lyr.source && lyr.source instanceof CompItem) ? lyr.source : null;
+                    return {
+                        parentComp: comp,
+                        precompLayer: lyr,
+                        preCompItem: srcComp
+                    };
+                }
+            }
+        }
+
+        if (isMessageBubbleComp(comp)) {
+            return {
+                parentComp: null,
+                precompLayer: null,
+                preCompItem: comp
+            };
+        }
+
+        return null;
+    }
+
+    var lastTargetLayer = null;
+
+    function loadSettingsFromPrecomp(target) {
+        if (!target) return;
+        var pLayer = target.precompLayer;
+        var pComp = target.preCompItem;
+
+        if (pComp) {
+            var txtL = getLayer(pComp, "Message_Text");
+            if (txtL) {
+                var raw = "";
+                if (txtL.property && txtL.property("Source Text")) {
+                    try {
+                        var doc = txtL.property("Source Text").value;
+                        if (doc && doc.text) raw = doc.text;
+                    } catch(e1) {}
+                }
+                if (!raw && txtL.text) raw = txtL.text;
+                if (raw) {
+                    txtMessage.text = raw;
+                    updateCharCount();
+                }
+            }
+        }
+
+        var effSource = pLayer || (pComp ? getLayer(pComp, "Bubble_Master_Controller") : null);
+        if (effSource && effSource.effect) {
+            try {
+                var eCol = effSource.effect("Bubble Color");
+                if (eCol && eCol.property(1)) {
+                    var valCol = eCol.property(1).value;
+                    if (valCol) cpBubble.setColor(rgbToHex(valCol), false);
+                }
+            } catch(eC) {}
+
+            try {
+                var eW = effSource.effect("Screen Width");
+                if (eW && eW.property(1)) txtWidth.text = String(Math.round(eW.property(1).value));
+            } catch(eW2) {}
+
+            try {
+                var eS = effSource.effect("Text Size");
+                if (eS && eS.property(1)) txtSize.text = String(Math.round(eS.property(1).value));
+            } catch(eS2) {}
+
+            try {
+                var ePad = effSource.effect("Inner Padding Offset");
+                if (ePad && ePad.property(1)) txtPad.text = String(Math.round(ePad.property(1).value));
+            } catch(ePad2) {}
+
+            try {
+                var eLead = effSource.effect("Leading Percent");
+                if (eLead && eLead.property(1)) txtLeading.text = String(Math.round(eLead.property(1).value));
+            } catch(eLead2) {}
+
+            try {
+                var eTail = effSource.effect("Show Tail");
+                if (eTail && eTail.property(1)) chkTail.value = (eTail.property(1).value >= 1);
+            } catch(eTail2) {}
+
+            try {
+                var eEnt = effSource.effect("Animate Entrance");
+                if (eEnt && eEnt.property(1)) chkEntrance.value = (eEnt.property(1).value >= 1);
+            } catch(eEnt2) {}
+
+            try {
+                var eGrow = effSource.effect("Bubble Grow Duration (frames)");
+                if (eGrow && eGrow.property(1) && typeof sldGrow !== "undefined" && sldGrow) {
+                    var gVal = Math.round(eGrow.property(1).value);
+                    sldGrow.value = gVal;
+                    if (txtGrow) txtGrow.text = String(gVal);
+                }
+            } catch(eG2) {}
+
+            try {
+                var eType = effSource.effect("Typewriter Duration (frames)");
+                if (eType && eType.property(1) && typeof sldType !== "undefined" && sldType) {
+                    var tVal = Math.round(eType.property(1).value);
+                    sldType.value = tVal;
+                    if (txtType) txtType.text = String(tVal);
+                }
+            } catch(eT2) {}
+
+            try {
+                var eAnim = effSource.effect("Animation Effect Type");
+                if (eAnim && eAnim.property(1) && dropAnim) {
+                    var aVal = Math.round(eAnim.property(1).value);
+                    if (aVal >= 0 && aVal < animOptions.length) {
+                        dropAnim.selection = aVal;
+                    }
+                }
+            } catch(eA2) {}
+
+            try {
+                var eSpeed = effSource.effect("Animation Speed");
+                if (eSpeed && eSpeed.property(1)) txtSpeed.text = String(Math.round(eSpeed.property(1).value));
+            } catch(eSp2) {}
+
+            try {
+                var eAmp = effSource.effect("Animation Intensity");
+                if (eAmp && eAmp.property(1)) txtAmp.text = String(Math.round(eAmp.property(1).value));
+            } catch(eAmp2) {}
+
+            try {
+                var eStat = effSource.effect("Status Icon Mode");
+                if (eStat && eStat.property(1) && dropStatus) {
+                    var sVal = Math.round(eStat.property(1).value);
+                    if (sVal >= 0 && sVal < 5) dropStatus.selection = sVal;
+                }
+            } catch(eSt2) {}
+
+            try {
+                var eStatStyle = effSource.effect("Status Icon Style");
+                if (eStatStyle && eStatStyle.property(1) && dropStatusStyle) {
+                    var ssVal = Math.round(eStatStyle.property(1).value);
+                    if (ssVal >= 0 && ssVal < 2) dropStatusStyle.selection = ssVal;
+                }
+            } catch(eSs2) {}
+        }
+
+        if (pComp) {
+            if (getLayer(pComp, "Bubble_Sent")) {
+                radSent.value = true;
+                radReceived.value = false;
+            } else if (getLayer(pComp, "Bubble_Received")) {
+                radReceived.value = true;
+                radSent.value = false;
+            }
+        }
+    }
+
+    function checkSelectionState() {
+        try {
+            var target = getSelectedMessageBubblePrecomp();
+            if (target) {
+                var targetName = (target.precompLayer ? target.precompLayer.name : (target.preCompItem ? target.preCompItem.name : ""));
+                var updateText = targetName ? ("Update Message Bubble (" + targetName + ")") : "Update Message Bubble";
+                if (btnBuild.text !== updateText) {
+                    btnBuild.text = updateText;
+                }
+
+                var currentKey = target.precompLayer || target.preCompItem;
+                if (currentKey && currentKey !== lastTargetLayer) {
+                    lastTargetLayer = currentKey;
+                    loadSettingsFromPrecomp(target);
+                }
+            } else {
+                if (btnBuild.text !== "Create Message Bubble") {
+                    btnBuild.text = "Create Message Bubble";
+                }
+                lastTargetLayer = null;
+            }
+        } catch(e) {}
+    }
+
+    function updateExistingMessageBubble(activeTarget) {
+        var parentComp = activeTarget.parentComp || (app.project ? app.project.activeItem : null);
+        var precompLayer = activeTarget.precompLayer;
+        var preCompItem = activeTarget.preCompItem;
+
+        if (!preCompItem && precompLayer && precompLayer.source instanceof CompItem) {
+            preCompItem = precompLayer.source;
+        }
+
+        if (app.beginUndoGroup) {
+            app.beginUndoGroup("Update Message Bubble");
+        }
+
+        try {
+            var msgText = txtMessage.text || "Hello! 👋";
+            if (msgText.length > MAX_CHARS) {
+                msgText = msgText.substring(0, MAX_CHARS);
+            }
+
+            var selStyleIdx = dropPlatform.selection ? dropPlatform.selection.index : 0;
+            var platformName = platformKeys[selStyleIdx] || "iOS Message";
+            var platformCfg = PLATFORMS[platformName] || DEFAULT_PLATFORMS[platformName] || DEFAULT_PLATFORMS["iOS Message"];
+
+            var isSent = radSent.value;
+            var isDark = radDark.value;
+            var themeKey = isDark ? "dark" : "light";
+            var dirKey = isSent ? "sent" : "received";
+            var colorSet = platformCfg[themeKey][dirKey];
+
+            var bubbleColor = hexToRgb(cpBubble.value);
+            var textColor = hexToRgb(cpText.value);
+            var timeColor = hexToRgb(colorSet ? colorSet.time : "#888888");
+
+            var screenW = parseFloat(txtWidth.text) || 420;
+            var textSize = parseFloat(txtSize.text) || 20;
+
+            var padOffset = parseFloat(txtPad.text) || 0;
+            var leadingPercent = parseFloat(txtLeading.text) || 100;
+            var leadingFactor = leadingPercent / 100;
+
+            var selAnimIdx = dropAnim.selection ? dropAnim.selection.index : 0;
+            var animSpeed = parseFloat(txtSpeed.text) || 100;
+            var animAmp = parseFloat(txtAmp.text) || 100;
+            var growFVal = (typeof sldGrow !== "undefined" && sldGrow) ? Math.max(0, Math.min(20, Math.round(sldGrow.value))) : 5;
+            var typeFVal = (typeof sldType !== "undefined" && sldType) ? Math.max(0, Math.min(20, Math.round(sldType.value))) : 5;
+
+            var fontIdx = dropFont.selection ? dropFont.selection.index : 0;
+            var selectedFont = FONTS[fontIdx] || FONTS[0];
+
+            var maxBubbleW = Math.max(120, screenW * 0.72);
+            var padX = Math.max(4, Math.round(textSize * 0.75) + padOffset);
+            var padY = Math.max(4, Math.round(textSize * 0.55) + padOffset);
+            var maxTextW = maxBubbleW - (padX * 2);
+
+            var lines = wrapTextToLines(msgText, maxTextW, textSize);
+            var wrappedString = lines.join("\n");
+            var measuredTextW = getLinesPixelBounds(lines, textSize);
+
+            var lineH = Math.round(textSize * 1.35 * leadingFactor);
+            var textBlockH = lines.length * lineH;
+
+            var selStatusIdx = dropStatus.selection ? dropStatus.selection.index : 0;
+            var isAutoStatus = (selStatusIdx === 0);
+            var selStatusStyleIdx = (typeof dropStatusStyle !== "undefined" && dropStatusStyle && dropStatusStyle.selection)
+                ? dropStatusStyle.selection.index
+                : (platformCfg.statusStyle === "rcs" || platformName === "Android RCS" ? 0 : 1);
+            var isRCSStyle = (selStatusStyleIdx === 0);
+
+            var deliveredTime = 0.8;
+            var readDuration = calculateReadDuration(msgText);
+            var readTime = Math.round((deliveredTime + readDuration) * 10) / 10;
+
+            var isDarkBubble = (bubbleColor[0] * 0.299 + bubbleColor[1] * 0.587 + bubbleColor[2] * 0.114) < 0.55;
+            var rcsReadCircleCol = isDarkBubble ? [1.0, 1.0, 1.0] : [0.18, 0.19, 0.21];
+            var rcsReadCheckCol = isDarkBubble ? bubbleColor : [1.0, 1.0, 1.0];
+            var standardReadColor = isDark ? [0.33, 0.74, 0.92] : [0.20, 0.72, 0.95];
+            var readColor = isRCSStyle ? rcsReadCircleCol : standardReadColor;
+            var statusColor = timeColor;
+
+            var statusString = "";
+            if (isSent && selStatusIdx !== 4) {
+                if (selStatusIdx === 0 || selStatusIdx === 1 || selStatusIdx === 2) {
+                    statusString = "✓✓";
+                } else if (selStatusIdx === 3) {
+                    statusString = "✓";
+                }
+            }
+
+            var timeString = currentRandomTime;
+            var timeFontSize = Math.max(10, Math.round(textSize * 0.58));
+            var timeW = Math.round(timeString.length * timeFontSize * 0.55);
+            var statusW = (isSent && selStatusIdx !== 4)
+                ? (isRCSStyle ? Math.round(timeFontSize * 1.55) : Math.round(timeFontSize * 1.35))
+                : 0;
+            var statusSpacing = statusW > 0 ? 6 : 0;
+            var timeRowW = timeW + statusSpacing + statusW;
+
+            var singleLine = (lines.length === 1);
+            var bubbleW = 0;
+            var bubbleH = 0;
+
+            var scalePadFactor = (selAnimIdx === 1) ? 1.24 : ((selAnimIdx === 5) ? 1.30 : 1.0);
+            var effMeasuredW = Math.round(measuredTextW * scalePadFactor);
+            var effTextH = Math.round(textBlockH * scalePadFactor);
+
+            if (singleLine && (effMeasuredW + timeRowW + padX * 2 + 16 < maxBubbleW)) {
+                bubbleW = effMeasuredW + timeRowW + (padX * 2) + 16;
+                bubbleH = effTextH + (padY * 2);
+            } else {
+                bubbleW = Math.max(effMeasuredW, timeRowW) + (padX * 2);
+                bubbleH = effTextH + (padY * 2) + timeFontSize + 6;
+            }
+
+            var hasTail = chkTail.value;
+            var cornerRadius = platformCfg.radius || 18;
+
+            var rTL = cornerRadius;
+            var rTR = cornerRadius;
+            var rBR = cornerRadius;
+            var rBL = cornerRadius;
+
+            if (hasTail) {
+                if (isSent) {
+                    rBR = 4;
+                } else {
+                    rBL = 4;
+                }
+            }
+
+            // 1. Update Master Effects on precompLayer (in parent comp)
+            if (precompLayer && precompLayer.effect) {
+                function setEffVal(name, val) {
+                    try {
+                        var eff = precompLayer.effect(name);
+                        if (eff && eff.property(1) && typeof eff.property(1).setValue === "function") {
+                            eff.property(1).setValue(val);
+                        }
+                    } catch(eEff) {}
+                }
+                setEffVal("Bubble Color", bubbleColor);
+                setEffVal("Animate Entrance", chkEntrance.value ? 1 : 0);
+                setEffVal("Bubble Grow Duration (frames)", growFVal);
+                setEffVal("Typewriter Duration (frames)", typeFVal);
+                setEffVal("Animation Effect Type", selAnimIdx);
+                setEffVal("Animation Speed", animSpeed);
+                setEffVal("Animation Intensity", animAmp);
+                setEffVal("Delivered Time (s)", deliveredTime);
+                setEffVal("Read Time (s)", readTime);
+                setEffVal("Status Icon Mode", selStatusIdx);
+                setEffVal("Status Icon Style", selStatusStyleIdx);
+                setEffVal("Status Neutral Color", timeColor);
+                setEffVal("Status Read Color", readColor);
+                setEffVal("Status Read Check Color", rcsReadCheckCol);
+                setEffVal("Bubble Width", bubbleW);
+                setEffVal("Bubble Height", bubbleH);
+                setEffVal("Inner Padding Offset", padOffset);
+                setEffVal("Leading Percent", leadingPercent);
+                setEffVal("Show Tail", hasTail ? 1 : 0);
+                setEffVal("Screen Width", screenW);
+                setEffVal("Text Size", textSize);
+            }
+
+            // 2. Update layers inside precomp
+            if (preCompItem) {
+                var compCenter = [preCompItem.width / 2, preCompItem.height / 2, 0];
+                var screenMargin = Math.round(screenW * 0.04);
+                var halfScreenW = screenW / 2;
+                var posX = isSent
+                    ? (compCenter[0] + halfScreenW - screenMargin - (bubbleW / 2))
+                    : (compCenter[0] - halfScreenW + screenMargin + (bubbleW / 2));
+                var posY = compCenter[1];
+
+                // Master controller inside precomp
+                var master = getLayer(preCompItem, "Bubble_Master_Controller");
+                if (master && master.transform && master.transform.position) {
+                    master.transform.position.setValue([posX, posY, 0]);
+                }
+
+                // Bubble Shape layer
+                var bubbleLayer = getLayer(preCompItem, "Bubble_Sent") || getLayer(preCompItem, "Bubble_Received");
+                if (bubbleLayer) {
+                    bubbleLayer.name = isSent ? "Bubble_Sent" : "Bubble_Received";
+                    var originX = isSent ? (bubbleW / 2) : -(bubbleW / 2);
+                    var originY = (bubbleH / 2);
+                    var bAnchor = bubbleLayer.transform.anchorPoint || (bubbleLayer.property && bubbleLayer.property("ADBE Transform Group") && bubbleLayer.property("ADBE Transform Group").property("ADBE Anchor Point"));
+                    if (bAnchor) bAnchor.setValue([originX, originY, 0]);
+                    if (bubbleLayer.transform && bubbleLayer.transform.position) {
+                        bubbleLayer.transform.position.setValue([originX, originY, 0]);
+                    }
+
+                    // Update base shape outline
+                    var baseShapeData = computeShapeData(bubbleW, bubbleH, rTL, rTR, rBR, rBL, true);
+                    var pathProp = null;
+                    try {
+                        pathProp = bubbleLayer.property("Contents").property("Bubble Base Outline").property("Contents").property("ADBE Vector Shape - Group").property("Path");
+                    } catch(eP) {
+                        try {
+                            pathProp = bubbleLayer.property("ADBE Root Vectors Group").property("Bubble Base Outline").property("ADBE Vectors Group").property("ADBE Vector Shape - Group").property(1);
+                        } catch(eP2) {}
+                    }
+                    if (pathProp && typeof Shape !== "undefined") {
+                        try {
+                            var sObj = new Shape();
+                            sObj.vertices = baseShapeData.points;
+                            sObj.inTangents = baseShapeData.inTangents;
+                            sObj.outTangents = baseShapeData.outTangents;
+                            sObj.closed = true;
+                            pathProp.setValue(sObj);
+                        } catch(eSObj) {}
+                    }
+
+                    // Update tail pointer shape
+                    if (hasTail) {
+                        var tailShapeData = computeTailData(bubbleW, bubbleH, isSent);
+                        var pathTailProp = null;
+                        try {
+                            pathTailProp = bubbleLayer.property("Contents").property("Tail Pointer").property("Contents").property("ADBE Vector Shape - Group").property("Path");
+                        } catch(eTP) {
+                            try {
+                                pathTailProp = bubbleLayer.property("ADBE Root Vectors Group").property("Tail Pointer").property("ADBE Vectors Group").property("ADBE Vector Shape - Group").property(1);
+                            } catch(eTP2) {}
+                        }
+                        if (pathTailProp && typeof Shape !== "undefined") {
+                            try {
+                                var sObjTail = new Shape();
+                                sObjTail.vertices = tailShapeData.points;
+                                sObjTail.inTangents = tailShapeData.inTangents;
+                                sObjTail.outTangents = tailShapeData.outTangents;
+                                sObjTail.closed = true;
+                                pathTailProp.setValue(sObjTail);
+                            } catch(eSTail) {}
+                        }
+                    }
+
+                    // Update fill color
+                    try {
+                        var fillProp = bubbleLayer.property("Contents").property("ADBE Vector Graphic - Fill").property("Color");
+                        if (fillProp) fillProp.setValue(bubbleColor);
+                    } catch(eF) {}
+                }
+
+                // Update Message Text layer
+                var textLayer = getLayer(preCompItem, "Message_Text");
+                var textTopY = -(bubbleH / 2) + padY;
+                var textLeftX = -(bubbleW / 2) + padX;
+                if (textLayer) {
+                    textLayer.fontSize = textSize;
+                    textLayer.fontColor = textColor;
+                    textLayer.fontFamily = selectedFont.css;
+                    textLayer.leading = lineH;
+                    textLayer.leadingPercent = leadingPercent;
+                    if (textLayer.transform && textLayer.transform.position) {
+                        textLayer.transform.position.setValue([textLeftX, textTopY, -0.5]);
+                    }
+                    if (textLayer.property && textLayer.property("Source Text")) {
+                        try {
+                            var tDoc = textLayer.property("Source Text").value;
+                            if (tDoc) {
+                                tDoc.text = wrappedString;
+                                tDoc.fontSize = textSize;
+                                tDoc.leading = lineH;
+                                tDoc.autoLeading = false;
+                                if (selectedFont.ae) {
+                                    try { tDoc.font = selectedFont.ae; } catch(eFnt) {}
+                                }
+                                textLayer.property("Source Text").setValue(tDoc);
+                            }
+                        } catch(eTDoc) {}
+                    }
+                    if (textLayer.text !== undefined) {
+                        textLayer.text = wrappedString;
+                    }
+                }
+
+                // Update Timestamp Text layer
+                var timeRowRightX = (bubbleW / 2) - padX;
+                var timeY = (bubbleH / 2) - Math.round(padY * 0.6) - timeFontSize;
+                var statusX = timeRowRightX;
+                var timeX = (statusW > 0) ? (timeRowRightX - statusW - statusSpacing) : timeRowRightX;
+                var statusCenterX = timeRowRightX - (statusW / 2);
+                var statusCenterY = timeY + Math.round(timeFontSize * 0.44);
+
+                var timeLayer = getLayer(preCompItem, "Timestamp_Text");
+                if (timeLayer) {
+                    timeLayer.fontSize = timeFontSize;
+                    timeLayer.fontColor = timeColor;
+                    timeLayer.fontFamily = selectedFont.css;
+                    if (timeLayer.transform && timeLayer.transform.position) {
+                        timeLayer.transform.position.setValue([timeX, timeY, -0.5]);
+                    }
+                }
+
+                // Update Status text layer
+                var statusLayerText = getLayer(preCompItem, "Status_Icon_Text");
+                if (statusLayerText) {
+                    statusLayerText.fontSize = timeFontSize;
+                    statusLayerText.fontColor = statusColor;
+                    statusLayerText.fontFamily = selectedFont.css;
+                    if (statusLayerText.transform && statusLayerText.transform.position) {
+                        statusLayerText.transform.position.setValue([statusX, timeY, -0.5]);
+                    }
+                    if (statusLayerText.sourceText) {
+                        try {
+                            var sDoc = statusLayerText.sourceText.value;
+                            if (sDoc) {
+                                sDoc.text = statusString || "✓✓";
+                                statusLayerText.sourceText.setValue(sDoc);
+                            }
+                        } catch(eSDoc) {}
+                    }
+                }
+
+                // Update Status RCS layer
+                var statusLayerRCS = getLayer(preCompItem, "Status_Icon_RCS");
+                if (statusLayerRCS && statusLayerRCS.transform && statusLayerRCS.transform.position) {
+                    statusLayerRCS.transform.position.setValue([statusCenterX, statusCenterY, -0.5]);
+                }
+
+                if (typeof preCompItem._onChanged === "function") {
+                    preCompItem._onChanged();
+                }
+            }
+
+            if (parentComp && typeof parentComp._notify === "function") {
+                parentComp._notify();
+            }
+
+            if (precompLayer) {
+                precompLayer.selected = true;
+            }
+
+        } catch(err) {
+            alert("Could not update Message Bubble:\n" + err.toString());
         } finally {
             if (app.endUndoGroup) {
                 app.endUndoGroup();
@@ -2728,7 +3872,12 @@
     btnBuild.alignment = ["fill", "top"];
     btnBuild.preferredSize = [-1, 36];
     btnBuild.onClick = function() {
-        buildMessageBubble();
+        var activeTarget = getSelectedMessageBubblePrecomp();
+        if (activeTarget) {
+            updateExistingMessageBubble(activeTarget);
+        } else {
+            buildMessageBubble();
+        }
     };
 
     // --- Bottom Subtle Repository Link ---
@@ -2750,9 +3899,39 @@
         }
     };
 
-    // Initialize layout
+    // Initialize layout & live selection state
     updateCharCount();
     syncColorsFromPlatform();
+    checkSelectionState();
+
+    win.onActivate = function() {
+        checkSelectionState();
+    };
+    try {
+        win.addEventListener("mouseover", function() { checkSelectionState(); });
+        win.addEventListener("focus", function() { checkSelectionState(); });
+    } catch(eEvt) {}
+
+    var pollTimerId = null;
+    if (typeof window !== "undefined" && typeof window.setInterval === "function") {
+        pollTimerId = window.setInterval(checkSelectionState, 300);
+    }
+
+    var aeTaskId = 0;
+    if (typeof app !== "undefined" && typeof app.scheduleTask === "function") {
+        try {
+            aeTaskId = app.scheduleTask("checkSelectionState()", 350, true);
+        } catch(eTask) {}
+    }
+
+    win.onClose = function() {
+        if (pollTimerId !== null && typeof window !== "undefined" && typeof window.clearInterval === "function") {
+            try { window.clearInterval(pollTimerId); } catch(eC1) {}
+        }
+        if (aeTaskId && typeof app !== "undefined" && typeof app.cancelTask === "function") {
+            try { app.cancelTask(aeTaskId); } catch(eC2) {}
+        }
+    };
 
     win.layout.layout(true);
     win.onResizing = win.onResize = function() {

@@ -534,10 +534,10 @@
     grpRepoLink.alignment = ["fill", "bottom"];
     grpRepoLink.alignChildren = ["center", "center"];
     grpRepoLink.margins = [0, 4, 0, 0];
-    var lblRepoLink = grpRepoLink.add("statictext", undefined, "GitHub: work2survive/AECustomRoundedRect");
-    lblRepoLink.helpTip = "https://github.com/work2survive/AECustomRoundedRect";
+    var lblRepoLink = grpRepoLink.add("statictext", undefined, "GitHub: work2survive/AE_Custom_Rounded_Rect");
+    lblRepoLink.helpTip = "https://github.com/work2survive/AE_Custom_Rounded_Rect";
     lblRepoLink.onClick = function() {
-        var url = "https://github.com/work2survive/AECustomRoundedRect";
+        var url = "https://github.com/work2survive/AE_Custom_Rounded_Rect";
         if (typeof window !== "undefined" && window.open) {
             window.open(url, "_blank");
         } else if ($.os.indexOf("Windows") !== -1) {
