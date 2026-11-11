@@ -1,4 +1,4 @@
-\xef\xbb\xbf// Co-authored & architected with Google DeepMind Antigravity.
+﻿// Co-authored & architected with Google DeepMind Antigravity.
 // =============================================================================
 // ADOBE AFTER EFFECTS EXTENDSCRIPT & SCRIPTUI PANEL: MESSAGE BUBBLE GENERATOR
 // =============================================================================
