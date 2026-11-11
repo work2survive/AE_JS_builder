@@ -5,7 +5,7 @@
 // PURPOSE:
 //   An interactive ScriptUI panel for Adobe After Effects that generates authentic,
 //   expression-rigged chat and text message bubbles imitating modern messaging
-//   platforms (Android RCS, iOS Messages, WhatsApp, and Custom themes).
+//   platforms (Android RCS, iOS Messages, WhatsApp, Instagram Direct, Facebook Messenger, and Custom themes).
 //
 // FEATURES & WORKFLOW:
 //   1. Message Text Input (Up to 250 characters, supports emojis).
@@ -14,6 +14,8 @@
 //      - Android RCS Style (Google Messages Material You)
 //      - iOS Message Style (Apple iMessage)
 //      - WhatsApp Style (with delivery checkmarks)
+//      - Instagram Style (Instagram Direct signature vibrant violet/purple & pill capsules)
+//      - Facebook Messenger Style (Facebook Messenger iconic blue & soft grey cards)
 //      - Custom Style (fully customizable bubble and text colors)
 //   4. Screen Width (px):
 //      - Controls the layout boundary and drives automatic word-wrapping so the
@@ -98,6 +100,30 @@
             },
             radius: 10,
             tailType: "whatsapp"
+        },
+        "Instagram": {
+            light: {
+                sent:     { bubble: "#7839ee", text: "#ffffff", time: "rgba(255,255,255,0.70)", check: "" },
+                received: { bubble: "#efefef", text: "#000000", time: "#8e8e93", check: "" }
+            },
+            dark: {
+                sent:     { bubble: "#7c3aed", text: "#ffffff", time: "rgba(255,255,255,0.70)", check: "" },
+                received: { bubble: "#262626", text: "#f5f5f5", time: "#a8a8a8", check: "" }
+            },
+            radius: 20,
+            tailType: "instagram"
+        },
+        "Facebook Messenger": {
+            light: {
+                sent:     { bubble: "#0084ff", text: "#ffffff", time: "rgba(255,255,255,0.70)", check: "✓" },
+                received: { bubble: "#e4e6eb", text: "#050505", time: "#65676b", check: "" }
+            },
+            dark: {
+                sent:     { bubble: "#0084ff", text: "#ffffff", time: "rgba(255,255,255,0.70)", check: "✓" },
+                received: { bubble: "#303030", text: "#e4e6eb", time: "#b0b3b8", check: "" }
+            },
+            radius: 18,
+            tailType: "messenger"
         },
         "Custom": {
             light: {
@@ -368,7 +394,7 @@
     pnlHeader.spacing = 3;
     pnlHeader.margins = [10, 8, 10, 8];
 
-    pnlHeader.add("statictext", undefined, "Chat bubble generator for Android RCS, iOS, WhatsApp & Custom.");
+    pnlHeader.add("statictext", undefined, "Chat bubble generator for iOS, Android RCS, WhatsApp, Instagram & Messenger.");
 
     // -------------------------------------------------------------------------
     // 4. Message Text Panel (Max 250 characters, Emoji support)
@@ -426,6 +452,8 @@
         "Android RCS style",
         "iOS message style",
         "WhatsApp style",
+        "Instagram style",
+        "Facebook Messenger style",
         "Custom style"
     ]);
     dropPlatform.selection = 1; // Default: iOS message style
@@ -670,7 +698,7 @@
 
     function syncColorsFromPlatform() {
         var selIdx = dropPlatform.selection ? dropPlatform.selection.index : 0;
-        var platformKeys = ["Android RCS", "iOS Message", "WhatsApp", "Custom"];
+        var platformKeys = ["Android RCS", "iOS Message", "WhatsApp", "Instagram", "Facebook Messenger", "Custom"];
         var platformName = platformKeys[selIdx] || "iOS Message";
         if (platformName === "Custom") return;
 
@@ -703,10 +731,10 @@
     };
 
     cpBubble.onChange = function() {
-        dropPlatform.selection = 3; // Switch to Custom style
+        dropPlatform.selection = 5; // Switch to Custom style
     };
     cpText.onChange = function() {
-        dropPlatform.selection = 3; // Switch to Custom style
+        dropPlatform.selection = 5; // Switch to Custom style
     };
 
     // -------------------------------------------------------------------------
@@ -804,7 +832,7 @@
             }
 
             var selStyleIdx = dropPlatform.selection ? dropPlatform.selection.index : 0;
-            var platformKeys = ["Android RCS", "iOS Message", "WhatsApp", "Custom"];
+            var platformKeys = ["Android RCS", "iOS Message", "WhatsApp", "Instagram", "Facebook Messenger", "Custom"];
             var platformName = platformKeys[selStyleIdx] || "iOS Message";
             var platformCfg = PLATFORMS[platformName] || PLATFORMS["iOS Message"];
 
