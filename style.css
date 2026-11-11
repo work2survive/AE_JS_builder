@@ -1182,6 +1182,80 @@ body.is-resizing-h .ae-resizer-h {
     font-family: monospace;
 }
 
+/* Per-Property Toggle Expression Switch (=) */
+.ae-prop-expr-toggle {
+    width: 15px;
+    height: 15px;
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 2px;
+    color: #666666;
+    font-size: 11px;
+    font-weight: bold;
+    font-family: monospace;
+    line-height: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    margin-right: 4px;
+    padding: 0;
+    transition: all 0.15s ease;
+    user-select: none;
+    vertical-align: middle;
+    flex-shrink: 0;
+}
+.ae-prop-expr-toggle:hover {
+    color: #ffd166;
+    background: rgba(255, 209, 102, 0.15);
+    border-color: rgba(255, 209, 102, 0.4);
+}
+.ae-prop-expr-toggle.active {
+    color: #ffd166;
+    background: rgba(255, 209, 102, 0.12);
+    border-color: rgba(255, 209, 102, 0.35);
+}
+.ae-prop-expr-toggle.disabled {
+    color: #555555;
+    opacity: 0.6;
+}
+.ae-prop-expr-toggle .ae-expr-icon {
+    font-size: 11px;
+}
+
+/* Expression Formula Badge in Timeline */
+.ae-expr-badge {
+    background: #332608;
+    color: #ffd166;
+    border: 1px solid #664d10;
+    border-radius: 3px;
+    padding: 0 5px;
+    font-size: 9.5px;
+    font-family: var(--font-mono, monospace);
+    font-weight: 500;
+    cursor: pointer;
+    margin-left: 6px;
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    max-width: 220px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    vertical-align: middle;
+    line-height: 15px;
+    height: 16px;
+    box-sizing: border-box;
+}
+.ae-expr-badge:hover {
+    background: #4a380d;
+    border-color: #ffd166;
+}
+.ae-expr-badge-icon {
+    font-weight: 900;
+    color: #ffd166;
+}
+
 /* Compact 2:1 Sequential Property Evaluation Switch */
 .ae-prop-eval-btn {
     width: 32px;

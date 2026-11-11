@@ -145,11 +145,14 @@
         if (!prop || !prop._id) return '';
         const isColor = isColorProperty(prop);
         const modesList = isColor ? EVAL_MODES_COLOR : EVAL_MODES_STANDARD;
-        const defaultMode = isColor ? 'orig' : (prop.expression ? 'rand' : 'base');
+        const defaultMode = isColor ? 'orig' : (prop.expression ? 'wiggle' : 'base');
         let mode = prop.animMode || defaultMode;
         if (isColor && (mode === 'base' || !prop.animMode)) {
             mode = 'orig';
             prop.animMode = 'orig';
+        } else if (!isColor && prop.expression && prop.expressionEnabled && (!prop.animMode || mode === 'base')) {
+            mode = 'wiggle';
+            prop.animMode = 'wiggle';
         }
         let cfg = modesList.find(m => m.mode === mode);
         if (!cfg) {
@@ -171,6 +174,22 @@
         `;
     }
     const render4WaySwitch = renderEvalModeSwitch;
+
+    // Per-Property Toggle Expression Switch (= / ≠)
+    function renderPropExprToggle(prop) {
+        if (!prop || !prop._expression || !prop._expression.trim()) return '';
+        const isEnabled = Boolean(prop.expressionEnabled);
+        return `<button class="ae-prop-expr-toggle ${isEnabled ? 'active' : 'disabled'}" data-action="toggle-prop-expression" data-prop-id="${prop._id}" title="${isEnabled ? 'Toggle Expression: ON (Click to disable)' : 'Toggle Expression: OFF (Click to enable)'}"><span class="ae-expr-icon">${isEnabled ? '=' : '≠'}</span></button>`;
+    }
+
+    // Expression Formula Badge in Timeline (= formula)
+    function renderPropExprBadge(prop) {
+        if (!prop || !prop._expression || !prop._expression.trim()) return '';
+        if (!expressionsVisible || !prop.expressionEnabled) return '';
+        const safeExpr = escapeAttr(prop._expression);
+        const text = escapeHtml(prop._expression);
+        return `<span class="ae-expr-badge" title="${safeExpr}" data-action="edit-expression" data-prop-id="${prop._id}"><span class="ae-expr-badge-icon">=</span> ${text}</span>`;
+    }
 
     function renderTimeline() {
         const treeEl = document.getElementById('ae-layers-tree');
@@ -419,10 +438,12 @@
                         ${render4WaySwitch(item.size)}
                         <span class="ae-badge-type animatable" title="Animatable in AE timeline">[ANIM]</span>
                         <span class="ae-prop-stopwatch">&#9201;</span>
+                        ${renderPropExprToggle(item.size)}
                         <span class="ae-prop-name">Rectangle Size</span>
                         <div class="ae-prop-val-container">
                             <span class="ae-scrub-val" data-prop="rect-size-x" data-val="${size[0]}">${size[0]}</span>,
                             <span class="ae-scrub-val" data-prop="rect-size-y" data-val="${size[1]}">${size[1]}</span> px
+                            ${renderPropExprBadge(item.size)}
                         </div>
                     </div>
                 `;
@@ -433,10 +454,12 @@
                         ${render4WaySwitch(item.size)}
                         <span class="ae-badge-type animatable" title="Animatable in AE timeline">[ANIM]</span>
                         <span class="ae-prop-stopwatch">&#9201;</span>
+                        ${renderPropExprToggle(item.size)}
                         <span class="ae-prop-name">Ellipse Size</span>
                         <div class="ae-prop-val-container">
                             <span class="ae-scrub-val" data-prop="ellipse-size-x" data-val="${size[0]}">${size[0]}</span>,
                             <span class="ae-scrub-val" data-prop="ellipse-size-y" data-val="${size[1]}">${size[1]}</span> px
+                            ${renderPropExprBadge(item.size)}
                         </div>
                     </div>
                 `;
@@ -446,9 +469,11 @@
                         ${render4WaySwitch(item.path)}
                         <span class="ae-badge-type animatable" title="Animatable in AE timeline">[ANIM]</span>
                         <span class="ae-prop-stopwatch">&#9201;</span>
+                        ${renderPropExprToggle(item.path)}
                         <span class="ae-prop-name">Path</span>
                         <div class="ae-prop-val-container">
                             <span style="color: #888;">Shape Bézier Path</span>
+                            ${renderPropExprBadge(item.path)}
                         </div>
                     </div>
                 `;
@@ -459,6 +484,7 @@
                         ${render4WaySwitch(item.color)}
                         <span class="ae-badge-type animatable" title="Animatable in AE timeline">[ANIM]</span>
                         <span class="ae-prop-stopwatch">&#9201;</span>
+                        ${renderPropExprToggle(item.color)}
                         <span class="ae-prop-name">Fill Color</span>
                         <div class="ae-prop-val-container">
                             <label class="ae-color-picker-label" title="Click to pick fill color">
@@ -466,6 +492,7 @@
                                 <span class="ae-color-swatch-box" style="background-color: ${info.hex};"></span>
                             </label>
                             <span class="ae-color-rgb-val" title="RGB Code: ${info.rgbStr}">${info.rgbStr}</span>
+                            ${renderPropExprBadge(item.color)}
                         </div>
                     </div>
                 `;
@@ -477,6 +504,7 @@
                         ${render4WaySwitch(item.color)}
                         <span class="ae-badge-type animatable" title="Animatable in AE timeline">[ANIM]</span>
                         <span class="ae-prop-stopwatch">&#9201;</span>
+                        ${renderPropExprToggle(item.color)}
                         <span class="ae-prop-name">Stroke Color</span>
                         <div class="ae-prop-val-container">
                             <label class="ae-color-picker-label" title="Click to pick stroke color">
@@ -484,15 +512,18 @@
                                 <span class="ae-color-swatch-box" style="background-color: ${colInfo.hex};"></span>
                             </label>
                             <span class="ae-color-rgb-val" title="RGB Code: ${colInfo.rgbStr}">${colInfo.rgbStr}</span>
+                            ${renderPropExprBadge(item.color)}
                         </div>
                     </div>
                     <div class="ae-prop-row ae-prop-animatable">
                         ${render4WaySwitch(item.strokeWidth)}
                         <span class="ae-badge-type animatable" title="Animatable in AE timeline">[ANIM]</span>
                         <span class="ae-prop-stopwatch">&#9201;</span>
+                        ${renderPropExprToggle(item.strokeWidth)}
                         <span class="ae-prop-name">Stroke Width</span>
                         <div class="ae-prop-val-container">
                             <span class="ae-scrub-val" data-layer-idx="${layerIdx}" data-prop="stroke-width" data-val="${w}">${w} px</span>
+                            ${renderPropExprBadge(item.strokeWidth)}
                         </div>
                     </div>
                 `;
@@ -525,13 +556,14 @@
                             <span class="ae-badge-type animatable" title="Animatable in AE timeline">[ANIM]</span>
                             <span class="ae-badge-ui-locked" title="Defined in .JSX UI panel">UI</span>
                             <span class="ae-prop-stopwatch ${hasWiggle ? 'active' : ''}" title="${safeTitle}" data-action="toggle-wiggle-effect" data-effect-name="${safeEffectName}" data-prop-name="${safePropName}">&#9201;</span>
+                            ${renderPropExprToggle(prop)}
                             <span class="ae-prop-name">${displayName}</span>
                             <div class="ae-prop-val-container">
                                 <label style="display:inline-flex; align-items:center; gap:4px; cursor:pointer;">
                                     <input type="checkbox" ${isChecked ? 'checked' : ''} data-effect-name="${safeEffectName}" data-prop-name="${safePropName}" class="ae-effect-checkbox" />
                                     <span style="font-family:monospace; color:${isChecked ? 'var(--ae-blue)' : '#888'}; font-size:11px;">${isChecked ? '1 (true)' : '0 (false)'}</span>
                                 </label>
-                                ${(hasWiggle && expressionsVisible) ? `<span class="ae-wiggle-badge" title="${safeExpr}">wiggle</span>` : ''}
+                                ${renderPropExprBadge(prop)}
                             </div>
                         </div>
                     `;
@@ -544,10 +576,11 @@
                             <span class="ae-badge-type animatable" title="Animatable in AE timeline">[ANIM]</span>
                             <span class="ae-badge-ui-locked" title="Defined in .JSX UI panel">UI</span>
                             <span class="ae-prop-stopwatch ${hasWiggle ? 'active' : ''}" title="${safeTitle}" data-action="toggle-wiggle-effect" data-effect-name="${safeEffectName}" data-prop-name="${safePropName}">&#9201;</span>
+                            ${renderPropExprToggle(prop)}
                             <span class="ae-prop-name">${displayName}</span>
                             <div class="ae-prop-val-container">
                                 <span class="ae-scrub-val" data-effect-name="${safeEffectName}" data-prop="${safePropName}">${val}${unit}</span>
-                                ${(hasWiggle && expressionsVisible) ? `<span class="ae-wiggle-badge" title="${safeExpr}">wiggle</span>` : ''}
+                                ${renderPropExprBadge(prop)}
                             </div>
                         </div>
                     `;
@@ -559,6 +592,7 @@
                             <span class="ae-badge-type animatable" title="Animatable in AE timeline">[ANIM]</span>
                             <span class="ae-badge-ui-locked" title="Defined in .JSX UI panel">UI</span>
                             <span class="ae-prop-stopwatch ${hasWiggle ? 'active' : ''}" title="${safeTitle}" data-action="toggle-wiggle-effect" data-effect-name="${safeEffectName}" data-prop-name="${safePropName}">&#9201;</span>
+                            ${renderPropExprToggle(prop)}
                             <span class="ae-prop-name">${displayName}</span>
                             <div class="ae-prop-val-container">
                                 <label class="ae-color-picker-label" title="Click to pick color">
@@ -566,7 +600,7 @@
                                     <span class="ae-color-swatch-box" style="background-color: ${info.hex};"></span>
                                 </label>
                                 <span class="ae-color-rgb-val" title="RGB Code: ${info.rgbStr}">${info.rgbStr}</span>
-                                ${(hasWiggle && expressionsVisible) ? `<span class="ae-wiggle-badge" title="${safeExpr}">wiggle</span>` : ''}
+                                ${renderPropExprBadge(prop)}
                             </div>
                         </div>
                     `;
@@ -633,10 +667,11 @@
                     ${!isStatic ? render4WaySwitch(prop) : ''}
                     <span class="ae-badge-type ${isStatic ? 'static' : 'animatable'}" title="${isStatic ? 'Defined once on creation' : 'Animatable in AE timeline'}">${isStatic ? '[STATIC]' : '[ANIM]'}</span>
                     <span class="ae-prop-stopwatch ${hasWiggle ? 'active' : ''}" title="${safeTitle}" data-action="toggle-wiggle" data-prop-name="${safePropName}">&#9201;</span>
+                    ${renderPropExprToggle(prop)}
                     <span class="ae-prop-name">${safeLabel}</span>
                     <div class="ae-prop-val-container">
                         ${valSpans} ${units}
-                        ${(hasWiggle && expressionsVisible) ? `<span class="ae-wiggle-badge" title="${safeExpr}">wiggle</span>` : ''}
+                        ${renderPropExprBadge(prop)}
                     </div>
                 </div>
             `;
@@ -1004,6 +1039,44 @@
                     prop.expressionEnabled = Boolean(prop.expression);
                     renderTimeline();
                     appendConsole(`Set expression on Effect [${effName}].${propName} = "${prop.expression}"`);
+                }
+            });
+        });
+
+        // Dedicated Per-Property Toggle Expression Switch (= / ≠)
+        document.querySelectorAll('[data-action="toggle-prop-expression"]').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const propId = btn.dataset.propId;
+                const prop = (typeof Property !== 'undefined' && Property.getById) ? Property.getById(propId) : null;
+                if (!prop) return;
+                prop.expressionEnabled = !prop.expressionEnabled;
+                if (prop.expressionEnabled) {
+                    if (!prop.animMode || prop.animMode === 'base') {
+                        prop.animMode = (prop.type === 'color' || isColorProperty(prop)) ? 'orig' : 'wiggle';
+                    }
+                }
+                prop.clearCache();
+                renderTimeline();
+                appendConsole(`Toggled expression on ${prop.name || 'property'}: ${prop.expressionEnabled ? 'ON' : 'OFF'}`);
+            });
+        });
+
+        // Expression Formula Badge Edit Click
+        document.querySelectorAll('[data-action="edit-expression"]').forEach(badge => {
+            badge.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const propId = badge.dataset.propId;
+                const prop = (typeof Property !== 'undefined' && Property.getById) ? Property.getById(propId) : null;
+                if (!prop) return;
+                const currentExpr = prop.expression || '';
+                const newExpr = prompt(`Edit Expression for ${prop.name || 'property'}:\n(Leave empty to remove)`, currentExpr);
+                if (newExpr !== null) {
+                    prop.expression = newExpr.trim();
+                    prop.expressionEnabled = Boolean(prop.expression);
+                    prop.clearCache();
+                    renderTimeline();
+                    appendConsole(`Updated expression on ${prop.name || 'property'} = "${prop.expression}"`);
                 }
             });
         });
@@ -1608,6 +1681,7 @@
         // Global Expression Hide/Show Button (= symbol only)
         const btnGlobalExpr = document.getElementById('btn-global-expr');
         if (btnGlobalExpr) {
+            btnGlobalExpr.classList.toggle('active', expressionsVisible);
             btnGlobalExpr.onclick = () => {
                 expressionsVisible = !expressionsVisible;
                 btnGlobalExpr.classList.toggle('active', expressionsVisible);

@@ -179,12 +179,13 @@
         set expression(val) {
             this._expression = String(val || '');
             if (this._expression.trim()) {
+                this.expressionEnabled = true;
                 if (this.type === 'color') {
                     if (!this.animMode || this.animMode === 'base') {
                         this.animMode = 'orig';
                     }
-                } else if (this.animMode === 'base') {
-                    this.animMode = 'rand';
+                } else if (!this.animMode || this.animMode === 'base') {
+                    this.animMode = 'wiggle';
                 }
             }
             this.clearCache();
@@ -395,15 +396,15 @@
         evaluateExpression(time) {
             const base = this._clone(this._baseValue);
             const expr = this._expression.trim();
-            if (!expr) return base;
+            if (!expr || !this.expressionEnabled) return base;
 
             const layer = this.getLayer();
             const rootComp = this.getRootComp();
             const isColor = (this.type === 'color');
-            const animMode = this.animMode || (isColor ? 'orig' : 'rand');
+            const animMode = this.animMode || (isColor ? 'orig' : (expr ? 'wiggle' : 'base'));
 
-            // BASE/ORIG mode: return static base value without evaluating animation, UNLESS it's a procedural path expression or color expression
-            if (animMode === 'base' && this.type !== 'shape') {
+            // BASE/ORIG mode: return static base value without evaluating animation, UNLESS it's a procedural path expression, color expression, or enabled expression
+            if (animMode === 'base' && this.type !== 'shape' && !this.expressionEnabled) {
                 return base;
             }
 
