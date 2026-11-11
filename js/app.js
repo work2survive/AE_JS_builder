@@ -263,7 +263,7 @@
                         <div class="ae-prop-group-header">
                             <span class="ae-twirl open" data-action="toggle-group">&#9656;</span>
                             <span class="ae-prop-group-title">${isNotShyable ? 'Effects (UI Defined Properties)' : 'Effects'}</span>
-                            ${isNotShyable ? `<span class="ae-badge-ui-locked" style="margin-left:8px;" title="All properties defined in .JSX UI are always shown and cannot be shied">ALWAYS SHOWN • CANNOT SHY</span>` : ''}
+                            ${isNotShyable ? `<span class="ae-badge-ui-locked ae-badge-eye" style="margin-left:8px;" title="Always Visible / Cannot Shy: All properties defined in .JSX UI remain visible at all times and cannot be hidden when Shy mode is active"><svg viewBox="0 0 16 12" width="14" height="10" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M 1 6 C 3.2 2.2, 12.8 2.2, 15 6 C 12.8 9.8, 3.2 9.8, 1 6 Z"/><circle cx="8" cy="6" r="2.1" fill="currentColor"/></svg></span>` : ''}
                         </div>
                         <div class="ae-prop-items" id="layer-effects-${idx}" style="display: block;">
                             ${renderEffectsProperties(layer.effects, idx)}
