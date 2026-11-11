@@ -1,5 +1,5 @@
 // =============================================================================
-// ADOBE AFTER EFFECTS EXTENDSCRIPT & SCRIPTUI PANEL: CYLINDER MAKER 3D
+// ADOBE AFTER EFFECTS EXTENDSCRIPT & SCRIPTUI PANEL: CYLINDER MAKER 3D v1.4
 // =============================================================================
 //
 // PURPOSE:
@@ -36,14 +36,16 @@
 (function(thisObj) {
     "use strict";
 
+    var SCRIPT_VERSION = "v1.4";
+
     // -------------------------------------------------------------------------
     // 1. ScriptUI Window / Dockable Panel Initialization
     // -------------------------------------------------------------------------
     var win = (thisObj instanceof Panel)
         ? thisObj
-        : new Window("palette", "Cylinder Maker 3D", undefined, { resizeable: true });
+        : new Window("palette", "Cylinder Maker 3D " + SCRIPT_VERSION, undefined, { resizeable: true });
     if (!(thisObj instanceof Panel)) {
-        win.text = "Cylinder Maker 3D";
+        win.text = "Cylinder Maker 3D " + SCRIPT_VERSION;
     }
 
     var currentPrecompName = "";
@@ -215,7 +217,7 @@
     // -------------------------------------------------------------------------
     // 3. UI Header (Panel Title + Version & Description)
     // -------------------------------------------------------------------------
-    var pnlHeader = win.add("panel", undefined, "Cylinder Maker 3D");
+    var pnlHeader = win.add("panel", undefined, "Cylinder Maker 3D " + SCRIPT_VERSION);
     pnlHeader.orientation = "column";
     pnlHeader.alignChildren = ["fill", "top"];
     pnlHeader.alignment = ["fill", "top"];

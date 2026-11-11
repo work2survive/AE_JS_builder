@@ -1032,7 +1032,7 @@
         cylinderMaker: {
         name: "⚙️ Cylinder Maker 3D (Radius, Extrude, Segments, Slice, Colors)",
         code: `// =============================================================================
-// ADOBE AFTER EFFECTS EXTENDSCRIPT & SCRIPTUI PANEL: CYLINDER MAKER 3D
+// ADOBE AFTER EFFECTS EXTENDSCRIPT & SCRIPTUI PANEL: CYLINDER MAKER 3D v1.4
 // =============================================================================
 //
 // PURPOSE:
@@ -1069,14 +1069,16 @@
 (function(thisObj) {
     "use strict";
 
+    var SCRIPT_VERSION = "v1.4";
+
     // -------------------------------------------------------------------------
     // 1. ScriptUI Window / Dockable Panel Initialization
     // -------------------------------------------------------------------------
     var win = (thisObj instanceof Panel)
         ? thisObj
-        : new Window("palette", "Cylinder Maker 3D", undefined, { resizeable: true });
+        : new Window("palette", "Cylinder Maker 3D " + SCRIPT_VERSION, undefined, { resizeable: true });
     if (!(thisObj instanceof Panel)) {
-        win.text = "Cylinder Maker 3D";
+        win.text = "Cylinder Maker 3D " + SCRIPT_VERSION;
     }
 
     var currentPrecompName = "";
@@ -1248,7 +1250,7 @@
     // -------------------------------------------------------------------------
     // 3. UI Header (Panel Title + Version & Description)
     // -------------------------------------------------------------------------
-    var pnlHeader = win.add("panel", undefined, "Cylinder Maker 3D");
+    var pnlHeader = win.add("panel", undefined, "Cylinder Maker 3D " + SCRIPT_VERSION);
     pnlHeader.orientation = "column";
     pnlHeader.alignChildren = ["fill", "top"];
     pnlHeader.alignment = ["fill", "top"];
@@ -2844,7 +2846,7 @@ $.writeln("Shapes showcase created: Square, Circle, and Bézier Star!");
         extrudedRoundRectangle: {
         name: "📦 Extruded Round Rectangle (3D Caps, Walls & Cylindrical Corners)",
         code: `// =============================================================================
-// ADOBE AFTER EFFECTS EXTENDSCRIPT & SCRIPTUI PANEL: EXTRUDED ROUND RECTANGLE
+// ADOBE AFTER EFFECTS EXTENDSCRIPT & SCRIPTUI PANEL: EXTRUDED ROUND RECTANGLE v1.3
 // =============================================================================
 //
 // PURPOSE:
@@ -2876,14 +2878,16 @@ $.writeln("Shapes showcase created: Square, Circle, and Bézier Star!");
 (function(thisObj) {
     "use strict";
 
+    var SCRIPT_VERSION = "v1.3";
+
     // -------------------------------------------------------------------------
     // 1. ScriptUI Window / Dockable Panel Initialization
     // -------------------------------------------------------------------------
     var win = (thisObj instanceof Panel)
         ? thisObj
-        : new Window("palette", "Extruded Round Rectangle", undefined, { resizeable: true });
+        : new Window("palette", "Extruded Round Rectangle " + SCRIPT_VERSION, undefined, { resizeable: true });
     if (!(thisObj instanceof Panel)) {
-        win.text = "Extruded Round Rectangle";
+        win.text = "Extruded Round Rectangle " + SCRIPT_VERSION;
     }
 
     var currentPrecompName = "";
@@ -2983,7 +2987,7 @@ $.writeln("Shapes showcase created: Square, Circle, and Bézier Star!");
     // -------------------------------------------------------------------------
     // 3. UI Header (Panel Title + Version & Description)
     // -------------------------------------------------------------------------
-    var pnlHeader = win.add("panel", undefined, "Extruded Round Rectangle");
+    var pnlHeader = win.add("panel", undefined, "Extruded Round Rectangle " + SCRIPT_VERSION);
     pnlHeader.orientation = "column";
     pnlHeader.alignChildren = ["fill", "top"];
     pnlHeader.alignment = ["fill", "top"];
@@ -4477,7 +4481,7 @@ $.writeln("Shapes showcase created: Square, Circle, and Bézier Star!");
     customRoundedRect: {
         name: "🔲 Custom Rounded Rect (Individual Radii & Overlap Protection)",
         code: `// =============================================================================
-// ADOBE AFTER EFFECTS EXTENDSCRIPT & SCRIPTUI PANEL: CUSTOM ROUNDED RECTANGLE
+// ADOBE AFTER EFFECTS EXTENDSCRIPT & SCRIPTUI PANEL: CUSTOM ROUNDED RECTANGLE v1.1
 // =============================================================================
 //
 // PURPOSE:
@@ -4513,14 +4517,16 @@ $.writeln("Shapes showcase created: Square, Circle, and Bézier Star!");
 (function(thisObj) {
     "use strict";
 
+    var SCRIPT_VERSION = "v1.1";
+
     // -------------------------------------------------------------------------
     // 1. ScriptUI Window / Dockable Panel Initialization
     // -------------------------------------------------------------------------
     var win = (thisObj instanceof Panel)
         ? thisObj
-        : new Window("palette", "Custom Rounded Rect", undefined, { resizeable: true });
+        : new Window("palette", "Custom Rounded Rect " + SCRIPT_VERSION, undefined, { resizeable: true });
     if (!(thisObj instanceof Panel)) {
-        win.text = "Custom Rounded Rect";
+        win.text = "Custom Rounded Rect " + SCRIPT_VERSION;
     }
 
     var currentLayerName = "Custom_Rounded_Rect";
@@ -4581,7 +4587,7 @@ $.writeln("Shapes showcase created: Square, Circle, and Bézier Star!");
     // -------------------------------------------------------------------------
     // 3. UI Header (Panel Title + Version & Description)
     // -------------------------------------------------------------------------
-    var pnlHeader = win.add("panel", undefined, "Custom Rounded Rect");
+    var pnlHeader = win.add("panel", undefined, "Custom Rounded Rect " + SCRIPT_VERSION);
     pnlHeader.orientation = "column";
     pnlHeader.alignChildren = ["fill", "top"];
     pnlHeader.alignment = ["fill", "top"];

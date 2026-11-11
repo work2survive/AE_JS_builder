@@ -1,5 +1,5 @@
 // =============================================================================
-// ADOBE AFTER EFFECTS EXTENDSCRIPT & SCRIPTUI PANEL: EXTRUDED ROUND RECTANGLE
+// ADOBE AFTER EFFECTS EXTENDSCRIPT & SCRIPTUI PANEL: EXTRUDED ROUND RECTANGLE v1.3
 // =============================================================================
 //
 // PURPOSE:
@@ -31,14 +31,16 @@
 (function(thisObj) {
     "use strict";
 
+    var SCRIPT_VERSION = "v1.3";
+
     // -------------------------------------------------------------------------
     // 1. ScriptUI Window / Dockable Panel Initialization
     // -------------------------------------------------------------------------
     var win = (thisObj instanceof Panel)
         ? thisObj
-        : new Window("palette", "Extruded Round Rectangle", undefined, { resizeable: true });
+        : new Window("palette", "Extruded Round Rectangle " + SCRIPT_VERSION, undefined, { resizeable: true });
     if (!(thisObj instanceof Panel)) {
-        win.text = "Extruded Round Rectangle";
+        win.text = "Extruded Round Rectangle " + SCRIPT_VERSION;
     }
 
     var currentPrecompName = "";
@@ -138,7 +140,7 @@
     // -------------------------------------------------------------------------
     // 3. UI Header (Panel Title + Version & Description)
     // -------------------------------------------------------------------------
-    var pnlHeader = win.add("panel", undefined, "Extruded Round Rectangle");
+    var pnlHeader = win.add("panel", undefined, "Extruded Round Rectangle " + SCRIPT_VERSION);
     pnlHeader.orientation = "column";
     pnlHeader.alignChildren = ["fill", "top"];
     pnlHeader.alignment = ["fill", "top"];
