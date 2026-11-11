@@ -252,7 +252,7 @@
                         <div class="ae-switch-3d ${is3D ? 'active' : ''}" data-action="toggle-3d" title="3D Layer switch (Defined once on creation - [STATIC])">
                             <div class="ae-cube-icon"></div>
                         </div>
-                        ${parentName !== 'None' ? `<span class="ae-badge-type static" title="Parent link defined once on creation - [STATIC]">&#8618; ${safeParentName}</span>` : ''}
+                        ${parentName !== 'None' ? `<span class="ae-badge-type static ae-badge-parent" title="Parent: ${safeParentName} (Defined once on creation - [STATIC])"><svg viewBox="0 0 16 16" width="11" height="11" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M 4 3.5 V 8.5 A 2 2 0 0 0 6 10.5 H 12 M 9.5 8 L 12 10.5 L 9.5 13"/></svg></span>` : ''}
                     </div>
                 </div>
 
