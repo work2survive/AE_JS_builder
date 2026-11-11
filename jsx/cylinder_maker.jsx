@@ -189,7 +189,7 @@
     pnlHeader.spacing = 3;
     pnlHeader.margins = [10, 8, 10, 8];
 
-    var lblDesc = pnlHeader.add("statictext", undefined, "v1.2 - Parametric 3D Shape Layer Cylinder & Slice generator with live master rig.");
+    var lblDesc = pnlHeader.add("statictext", undefined, "v1.3 - Parametric 3D Shape Layer Cylinder & Slice generator with live master rig.");
 
     // -------------------------------------------------------------------------
     // 4. Tabbed Panel: Geometry vs. Appearance
@@ -449,6 +449,17 @@
     sldThick.alignment = ["fill", "center"];
     var txtThick = grpThick.add("edittext", undefined, "2");
     txtThick.characters = 3;
+
+    // Inner Sides Checkbox (Non-animatable, paints inner sides using edge/walls color)
+    var grpInnerSides = pnlStyle.add("group");
+    grpInnerSides.orientation = "row";
+    grpInnerSides.alignment = ["fill", "top"];
+    var chkInnerSides = grpInnerSides.add("checkbox", undefined, "Paint inner sides with edge color");
+    chkInnerSides.value = true;
+    chkInnerSides.helpTip = "Adds internal cap faces colored with the edge/walls color to avoid front/back colors leaking through edges at acute angles.";
+    chkInnerSides.onClick = function() {
+        buildOrUpdateCylinder(true);
+    };
 
     // Two-Way Sync for UI sliders
     function hookSliderText(sld, txt, onChangeFn, isInt) {
@@ -756,7 +767,7 @@
                 createdLayers.push(sliceEndLayer);
 
                 // 4. Create Top and Bottom Caps (using Path generator)
-                function createCapLayer(capName, yPos, xRot, capColor) {
+                function createCapLayer(capName, yPos, xRot, capColor, isInner) {
                     var cap = parentComp.layers.addShape();
                     cap.name = capName;
                     cap.threeDLayer = true;
@@ -769,7 +780,9 @@
                     var grpContents = grp.property("ADBE Vectors Group") || grp.property("Contents") || (grp.property && grp.property(2)) || (grp.property && grp.property(1));
                     grpContents.addProperty("ADBE Vector Shape - Group");
                     grpContents.addProperty("ADBE Vector Graphic - Fill");
-                    grpContents.addProperty("ADBE Vector Graphic - Stroke");
+                    if (!isInner) {
+                        grpContents.addProperty("ADBE Vector Graphic - Stroke");
+                    }
 
                     // Re-query grpContents fresh after all additions to prevent stale references in ExtendScript
                     grpContents = grp.property("ADBE Vectors Group") || grp.property("Contents") || (grp.property && grp.property(2)) || (grp.property && grp.property(1));
@@ -793,14 +806,16 @@
                         if (fOp && fOp.setValue) fOp.setValue(opacityVal);
                     }
 
-                    var stroke = grpContents.property("ADBE Vector Graphic - Stroke") || grpContents.property(3);
-                    if (stroke) {
-                        var sCol = stroke.property("ADBE Vector Stroke Color") || stroke.property("Color") || stroke.property(1);
-                        if (sCol && sCol.setValue) sCol.setValue(strokeColor);
-                        var sW = stroke.property("ADBE Vector Stroke Width") || stroke.property("Stroke Width") || stroke.property(2);
-                        if (sW && sW.setValue) sW.setValue(strokeWidth);
-                        var sOp = stroke.property("ADBE Vector Stroke Opacity") || stroke.property("Opacity") || stroke.property(3);
-                        if (sOp && sOp.setValue) sOp.setValue(strokeWidth <= 0.0001 ? 0 : opacityVal);
+                    if (!isInner) {
+                        var stroke = grpContents.property("ADBE Vector Graphic - Stroke") || grpContents.property(3);
+                        if (stroke) {
+                            var sCol = stroke.property("ADBE Vector Stroke Color") || stroke.property("Color") || stroke.property(1);
+                            if (sCol && sCol.setValue) sCol.setValue(strokeColor);
+                            var sW = stroke.property("ADBE Vector Stroke Width") || stroke.property("Stroke Width") || stroke.property(2);
+                            if (sW && sW.setValue) sW.setValue(strokeWidth);
+                            var sOp = stroke.property("ADBE Vector Stroke Opacity") || stroke.property("Opacity") || stroke.property(3);
+                            if (sOp && sOp.setValue) sOp.setValue(strokeWidth <= 0.0001 ? 0 : opacityVal);
+                        }
                     }
 
                     cap.parent = master;
@@ -812,8 +827,13 @@
                     return cap;
                 }
 
-                var capTop = createCapLayer("Cap_Top", -height / 2, 90, topColor);
-                var capBottom = createCapLayer("Cap_Bottom", height / 2, 90, bottomColor);
+                var capTop = createCapLayer("Cap_Top", -height / 2, 90, topColor, false);
+                var capBottom = createCapLayer("Cap_Bottom", height / 2, 90, bottomColor, false);
+                var paintInnerSides = (typeof chkInnerSides !== "undefined") ? chkInnerSides.value : true;
+                if (paintInnerSides) {
+                    var capTopInner = createCapLayer("Cap_Top_Inner", -height / 2 + 0.15, 90, wallsColor, true);
+                    var capBottomInner = createCapLayer("Cap_Bottom_Inner", height / 2 - 0.15, 90, wallsColor, true);
+                }
 
                 // 5. Precompose: Deduplicate and sort indices ascending (required by AE ExtendScript)
                 var indicesMap = {};
@@ -1259,6 +1279,86 @@
                                 if (bsW) bsW.expression = exprStrokeWidth;
                                 var bsOp = botSt.property("ADBE Vector Stroke Opacity") || botSt.property("Opacity") || botSt.property(3);
                                 if (bsOp) bsOp.expression = exprStrokeOpacity;
+                            }
+                        }
+                    }
+                }
+
+                // Expressions on Cap_Top_Inner
+                var preCapTopInner = getLayer(preComp, "Cap_Top_Inner");
+                if (preCapTopInner && preMaster) {
+                    preCapTopInner.parent = preMaster;
+                    setTransformVal(preCapTopInner, "Anchor Point", [0, 0, 0]);
+                    setTransformVal(preCapTopInner, "Position", [0, -height / 2 + 0.15, 0]);
+                    setTransformVal(preCapTopInner, "Orientation", [90, 0, 0]);
+
+                    var exprTopInPos = 'var m = thisComp.layer("Cylinder_Master_Controller");\n' +
+                        'var h = m.effect("Extrude Distance")(1).value;\n' +
+                        '[0, -h / 2 + 0.15, 0];';
+                    setTransformExpr(preCapTopInner, "Position", exprTopInPos);
+
+                    var topInRoot = preCapTopInner.property("ADBE Root Vectors Group") || preCapTopInner.property("Contents") || (preCapTopInner.property && preCapTopInner.property(1));
+                    var topInGrp = topInRoot ? (topInRoot.property("Cap Vector") || topInRoot.property(1)) : null;
+                    if (topInGrp) {
+                        var topInContents = topInGrp.property("ADBE Vectors Group") || topInGrp.property("Contents") || (topInGrp.property && topInGrp.property(2)) || (topInGrp.property && topInGrp.property(1));
+                        if (topInContents) {
+                            var topInShape = topInContents.property("ADBE Vector Shape - Group") || topInContents.property(1);
+                            if (topInShape) {
+                                var pPropTI = topInShape.property("ADBE Vector Shape") || topInShape.property("Path") || topInShape.property(1);
+                                if (pPropTI) {
+                                    try {
+                                        var initTIShape = computeCapShape(radius, segCount, enableSlice, startAngle, endAngle);
+                                        if (initTIShape) pPropTI.setValue(initTIShape);
+                                    } catch (eTIS) {}
+                                    pPropTI.expression = exprCapPath;
+                                }
+                            }
+                            var topInFl = topInContents.property("ADBE Vector Graphic - Fill") || topInContents.property(2);
+                            if (topInFl) {
+                                var tiCol = topInFl.property("ADBE Vector Fill Color") || topInFl.property("Color") || topInFl.property(1);
+                                if (tiCol) tiCol.expression = exprWallsColor;
+                                var tiOp = topInFl.property("ADBE Vector Fill Opacity") || topInFl.property("Opacity") || topInFl.property(2);
+                                if (tiOp) tiOp.expression = exprOpacity;
+                            }
+                        }
+                    }
+                }
+
+                // Expressions on Cap_Bottom_Inner
+                var preCapBotInner = getLayer(preComp, "Cap_Bottom_Inner");
+                if (preCapBotInner && preMaster) {
+                    preCapBotInner.parent = preMaster;
+                    setTransformVal(preCapBotInner, "Anchor Point", [0, 0, 0]);
+                    setTransformVal(preCapBotInner, "Position", [0, height / 2 - 0.15, 0]);
+                    setTransformVal(preCapBotInner, "Orientation", [90, 0, 0]);
+
+                    var exprBotInPos = 'var m = thisComp.layer("Cylinder_Master_Controller");\n' +
+                        'var h = m.effect("Extrude Distance")(1).value;\n' +
+                        '[0, h / 2 - 0.15, 0];';
+                    setTransformExpr(preCapBotInner, "Position", exprBotInPos);
+
+                    var botInRoot = preCapBotInner.property("ADBE Root Vectors Group") || preCapBotInner.property("Contents") || (preCapBotInner.property && preCapBotInner.property(1));
+                    var botInGrp = botInRoot ? (botInRoot.property("Cap Vector") || botInRoot.property(1)) : null;
+                    if (botInGrp) {
+                        var botInContents = botInGrp.property("ADBE Vectors Group") || botInGrp.property("Contents") || (botInGrp.property && botInGrp.property(2)) || (botInGrp.property && botInGrp.property(1));
+                        if (botInContents) {
+                            var botInShape = botInContents.property("ADBE Vector Shape - Group") || botInContents.property(1);
+                            if (botInShape) {
+                                var pPropBI = botInShape.property("ADBE Vector Shape") || botInShape.property("Path") || botInShape.property(1);
+                                if (pPropBI) {
+                                    try {
+                                        var initBIShape = computeCapShape(radius, segCount, enableSlice, startAngle, endAngle);
+                                        if (initBIShape) pPropBI.setValue(initBIShape);
+                                    } catch (eBIS) {}
+                                    pPropBI.expression = exprCapPath;
+                                }
+                            }
+                            var botInFl = botInContents.property("ADBE Vector Graphic - Fill") || botInContents.property(2);
+                            if (botInFl) {
+                                var biCol = botInFl.property("ADBE Vector Fill Color") || botInFl.property("Color") || botInFl.property(1);
+                                if (biCol) biCol.expression = exprWallsColor;
+                                var biOp = botInFl.property("ADBE Vector Fill Opacity") || botInFl.property("Opacity") || botInFl.property(2);
+                                if (biOp) biOp.expression = exprOpacity;
                             }
                         }
                     }

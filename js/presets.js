@@ -1222,7 +1222,7 @@
     pnlHeader.spacing = 3;
     pnlHeader.margins = [10, 8, 10, 8];
 
-    var lblDesc = pnlHeader.add("statictext", undefined, "v1.2 - Parametric 3D Shape Layer Cylinder & Slice generator with live master rig.");
+    var lblDesc = pnlHeader.add("statictext", undefined, "v1.3 - Parametric 3D Shape Layer Cylinder & Slice generator with live master rig.");
 
     // -------------------------------------------------------------------------
     // 4. Tabbed Panel: Geometry vs. Appearance
@@ -1482,6 +1482,17 @@
     sldThick.alignment = ["fill", "center"];
     var txtThick = grpThick.add("edittext", undefined, "2");
     txtThick.characters = 3;
+
+    // Inner Sides Checkbox (Non-animatable, paints inner sides using edge/walls color)
+    var grpInnerSides = pnlStyle.add("group");
+    grpInnerSides.orientation = "row";
+    grpInnerSides.alignment = ["fill", "top"];
+    var chkInnerSides = grpInnerSides.add("checkbox", undefined, "Paint inner sides with edge color");
+    chkInnerSides.value = true;
+    chkInnerSides.helpTip = "Adds internal cap faces colored with the edge/walls color to avoid front/back colors leaking through edges at acute angles.";
+    chkInnerSides.onClick = function() {
+        buildOrUpdateCylinder(true);
+    };
 
     // Two-Way Sync for UI sliders
     function hookSliderText(sld, txt, onChangeFn, isInt) {
@@ -1789,7 +1800,7 @@
                 createdLayers.push(sliceEndLayer);
 
                 // 4. Create Top and Bottom Caps (using Path generator)
-                function createCapLayer(capName, yPos, xRot, capColor) {
+                function createCapLayer(capName, yPos, xRot, capColor, isInner) {
                     var cap = parentComp.layers.addShape();
                     cap.name = capName;
                     cap.threeDLayer = true;
@@ -1802,7 +1813,9 @@
                     var grpContents = grp.property("ADBE Vectors Group") || grp.property("Contents") || (grp.property && grp.property(2)) || (grp.property && grp.property(1));
                     grpContents.addProperty("ADBE Vector Shape - Group");
                     grpContents.addProperty("ADBE Vector Graphic - Fill");
-                    grpContents.addProperty("ADBE Vector Graphic - Stroke");
+                    if (!isInner) {
+                        grpContents.addProperty("ADBE Vector Graphic - Stroke");
+                    }
 
                     // Re-query grpContents fresh after all additions to prevent stale references in ExtendScript
                     grpContents = grp.property("ADBE Vectors Group") || grp.property("Contents") || (grp.property && grp.property(2)) || (grp.property && grp.property(1));
@@ -1826,14 +1839,16 @@
                         if (fOp && fOp.setValue) fOp.setValue(opacityVal);
                     }
 
-                    var stroke = grpContents.property("ADBE Vector Graphic - Stroke") || grpContents.property(3);
-                    if (stroke) {
-                        var sCol = stroke.property("ADBE Vector Stroke Color") || stroke.property("Color") || stroke.property(1);
-                        if (sCol && sCol.setValue) sCol.setValue(strokeColor);
-                        var sW = stroke.property("ADBE Vector Stroke Width") || stroke.property("Stroke Width") || stroke.property(2);
-                        if (sW && sW.setValue) sW.setValue(strokeWidth);
-                        var sOp = stroke.property("ADBE Vector Stroke Opacity") || stroke.property("Opacity") || stroke.property(3);
-                        if (sOp && sOp.setValue) sOp.setValue(strokeWidth <= 0.0001 ? 0 : opacityVal);
+                    if (!isInner) {
+                        var stroke = grpContents.property("ADBE Vector Graphic - Stroke") || grpContents.property(3);
+                        if (stroke) {
+                            var sCol = stroke.property("ADBE Vector Stroke Color") || stroke.property("Color") || stroke.property(1);
+                            if (sCol && sCol.setValue) sCol.setValue(strokeColor);
+                            var sW = stroke.property("ADBE Vector Stroke Width") || stroke.property("Stroke Width") || stroke.property(2);
+                            if (sW && sW.setValue) sW.setValue(strokeWidth);
+                            var sOp = stroke.property("ADBE Vector Stroke Opacity") || stroke.property("Opacity") || stroke.property(3);
+                            if (sOp && sOp.setValue) sOp.setValue(strokeWidth <= 0.0001 ? 0 : opacityVal);
+                        }
                     }
 
                     cap.parent = master;
@@ -1845,8 +1860,13 @@
                     return cap;
                 }
 
-                var capTop = createCapLayer("Cap_Top", -height / 2, 90, topColor);
-                var capBottom = createCapLayer("Cap_Bottom", height / 2, 90, bottomColor);
+                var capTop = createCapLayer("Cap_Top", -height / 2, 90, topColor, false);
+                var capBottom = createCapLayer("Cap_Bottom", height / 2, 90, bottomColor, false);
+                var paintInnerSides = (typeof chkInnerSides !== "undefined") ? chkInnerSides.value : true;
+                if (paintInnerSides) {
+                    var capTopInner = createCapLayer("Cap_Top_Inner", -height / 2 + 0.15, 90, wallsColor, true);
+                    var capBottomInner = createCapLayer("Cap_Bottom_Inner", height / 2 - 0.15, 90, wallsColor, true);
+                }
 
                 // 5. Precompose: Deduplicate and sort indices ascending (required by AE ExtendScript)
                 var indicesMap = {};
@@ -2292,6 +2312,86 @@
                                 if (bsW) bsW.expression = exprStrokeWidth;
                                 var bsOp = botSt.property("ADBE Vector Stroke Opacity") || botSt.property("Opacity") || botSt.property(3);
                                 if (bsOp) bsOp.expression = exprStrokeOpacity;
+                            }
+                        }
+                    }
+                }
+
+                // Expressions on Cap_Top_Inner
+                var preCapTopInner = getLayer(preComp, "Cap_Top_Inner");
+                if (preCapTopInner && preMaster) {
+                    preCapTopInner.parent = preMaster;
+                    setTransformVal(preCapTopInner, "Anchor Point", [0, 0, 0]);
+                    setTransformVal(preCapTopInner, "Position", [0, -height / 2 + 0.15, 0]);
+                    setTransformVal(preCapTopInner, "Orientation", [90, 0, 0]);
+
+                    var exprTopInPos = 'var m = thisComp.layer("Cylinder_Master_Controller");\\n' +
+                        'var h = m.effect("Extrude Distance")(1).value;\\n' +
+                        '[0, -h / 2 + 0.15, 0];';
+                    setTransformExpr(preCapTopInner, "Position", exprTopInPos);
+
+                    var topInRoot = preCapTopInner.property("ADBE Root Vectors Group") || preCapTopInner.property("Contents") || (preCapTopInner.property && preCapTopInner.property(1));
+                    var topInGrp = topInRoot ? (topInRoot.property("Cap Vector") || topInRoot.property(1)) : null;
+                    if (topInGrp) {
+                        var topInContents = topInGrp.property("ADBE Vectors Group") || topInGrp.property("Contents") || (topInGrp.property && topInGrp.property(2)) || (topInGrp.property && topInGrp.property(1));
+                        if (topInContents) {
+                            var topInShape = topInContents.property("ADBE Vector Shape - Group") || topInContents.property(1);
+                            if (topInShape) {
+                                var pPropTI = topInShape.property("ADBE Vector Shape") || topInShape.property("Path") || topInShape.property(1);
+                                if (pPropTI) {
+                                    try {
+                                        var initTIShape = computeCapShape(radius, segCount, enableSlice, startAngle, endAngle);
+                                        if (initTIShape) pPropTI.setValue(initTIShape);
+                                    } catch (eTIS) {}
+                                    pPropTI.expression = exprCapPath;
+                                }
+                            }
+                            var topInFl = topInContents.property("ADBE Vector Graphic - Fill") || topInContents.property(2);
+                            if (topInFl) {
+                                var tiCol = topInFl.property("ADBE Vector Fill Color") || topInFl.property("Color") || topInFl.property(1);
+                                if (tiCol) tiCol.expression = exprWallsColor;
+                                var tiOp = topInFl.property("ADBE Vector Fill Opacity") || topInFl.property("Opacity") || topInFl.property(2);
+                                if (tiOp) tiOp.expression = exprOpacity;
+                            }
+                        }
+                    }
+                }
+
+                // Expressions on Cap_Bottom_Inner
+                var preCapBotInner = getLayer(preComp, "Cap_Bottom_Inner");
+                if (preCapBotInner && preMaster) {
+                    preCapBotInner.parent = preMaster;
+                    setTransformVal(preCapBotInner, "Anchor Point", [0, 0, 0]);
+                    setTransformVal(preCapBotInner, "Position", [0, height / 2 - 0.15, 0]);
+                    setTransformVal(preCapBotInner, "Orientation", [90, 0, 0]);
+
+                    var exprBotInPos = 'var m = thisComp.layer("Cylinder_Master_Controller");\\n' +
+                        'var h = m.effect("Extrude Distance")(1).value;\\n' +
+                        '[0, h / 2 - 0.15, 0];';
+                    setTransformExpr(preCapBotInner, "Position", exprBotInPos);
+
+                    var botInRoot = preCapBotInner.property("ADBE Root Vectors Group") || preCapBotInner.property("Contents") || (preCapBotInner.property && preCapBotInner.property(1));
+                    var botInGrp = botInRoot ? (botInRoot.property("Cap Vector") || botInRoot.property(1)) : null;
+                    if (botInGrp) {
+                        var botInContents = botInGrp.property("ADBE Vectors Group") || botInGrp.property("Contents") || (botInGrp.property && botInGrp.property(2)) || (botInGrp.property && botInGrp.property(1));
+                        if (botInContents) {
+                            var botInShape = botInContents.property("ADBE Vector Shape - Group") || botInContents.property(1);
+                            if (botInShape) {
+                                var pPropBI = botInShape.property("ADBE Vector Shape") || botInShape.property("Path") || botInShape.property(1);
+                                if (pPropBI) {
+                                    try {
+                                        var initBIShape = computeCapShape(radius, segCount, enableSlice, startAngle, endAngle);
+                                        if (initBIShape) pPropBI.setValue(initBIShape);
+                                    } catch (eBIS) {}
+                                    pPropBI.expression = exprCapPath;
+                                }
+                            }
+                            var botInFl = botInContents.property("ADBE Vector Graphic - Fill") || botInContents.property(2);
+                            if (botInFl) {
+                                var biCol = botInFl.property("ADBE Vector Fill Color") || botInFl.property("Color") || botInFl.property(1);
+                                if (biCol) biCol.expression = exprWallsColor;
+                                var biOp = botInFl.property("ADBE Vector Fill Opacity") || botInFl.property("Opacity") || botInFl.property(2);
+                                if (biOp) biOp.expression = exprOpacity;
                             }
                         }
                     }
@@ -2828,7 +2928,7 @@ $.writeln("Shapes showcase created: Square, Circle, and Bézier Star!");
     pnlHeader.spacing = 3;
     pnlHeader.margins = [10, 8, 10, 8];
 
-    var lblDesc = pnlHeader.add("statictext", undefined, "v1.1 - Parametric 3D extruded rounded rectangle with procedural front/back caps and cylindrical corners.");
+    var lblDesc = pnlHeader.add("statictext", undefined, "v1.2 - Parametric 3D extruded rounded rectangle with procedural front/back caps and cylindrical corners.");
 
     // -------------------------------------------------------------------------
     // 4. Tabbed Panel (Geometry vs. Appearance)
@@ -3249,6 +3349,17 @@ $.writeln("Shapes showcase created: Square, Circle, and Bézier Star!");
     sldStrokeOp.alignment = ["fill", "center"];
     var txtStrokeOp = grpStrokeOp.add("edittext", undefined, "100");
     txtStrokeOp.characters = 3;
+
+    // Inner Sides Checkbox (Non-animatable, paints inner sides using edge color)
+    var grpInnerSides = pnlStyle.add("group");
+    grpInnerSides.orientation = "row";
+    grpInnerSides.alignment = ["fill", "top"];
+    var chkInnerSides = grpInnerSides.add("checkbox", undefined, "Paint inner sides using edge color");
+    chkInnerSides.value = true;
+    chkInnerSides.helpTip = "Adds internal cap faces colored with the edge/sides color to avoid front/back colors leaking through edges at acute angles.";
+    chkInnerSides.onClick = function() {
+        buildOrUpdateExtruded(true);
+    };
 
     // Two-way slider hook helper
     function hookSliderText(sld, txt, onChangeFn, isInt) {
@@ -3687,7 +3798,7 @@ $.writeln("Shapes showcase created: Square, Circle, and Bézier Star!");
                 createCornerQuadrant("TL", function() { return [-w / 2 + rTL, -h / 2 + rTL]; }, 180, 270, rTL);
 
                 // 4. Create Front and Back Caps (Procedural Bézier Geometry)
-                function createCap(capName, zPos, xRot, capColor) {
+                function createCap(capName, zPos, xRot, capColor, isInner) {
                     var cap = parentComp.layers.addShape();
                     cap.name = capName;
                     cap.threeDLayer = true;
@@ -3700,7 +3811,9 @@ $.writeln("Shapes showcase created: Square, Circle, and Bézier Star!");
                     var contents = grp.property("ADBE Vectors Group") || grp.property("Contents") || (grp.property && grp.property(2)) || (grp.property && grp.property(1));
                     contents.addProperty("ADBE Vector Shape - Group");
                     contents.addProperty("ADBE Vector Graphic - Fill");
-                    contents.addProperty("ADBE Vector Graphic - Stroke");
+                    if (!isInner) {
+                        contents.addProperty("ADBE Vector Graphic - Stroke");
+                    }
 
                     contents = grp.property("ADBE Vectors Group") || grp.property("Contents") || (grp.property && grp.property(2)) || (grp.property && grp.property(1));
 
@@ -3730,14 +3843,16 @@ $.writeln("Shapes showcase created: Square, Circle, and Bézier Star!");
                         if (fOp && fOp.setValue) fOp.setValue(capsOpacity);
                     }
 
-                    var stroke = contents.property("ADBE Vector Graphic - Stroke") || contents.property(3);
-                    if (stroke) {
-                        var sCol = stroke.property("ADBE Vector Stroke Color") || stroke.property("Color") || stroke.property(1);
-                        if (sCol && sCol.setValue) sCol.setValue(strokeColor);
-                        var sW = stroke.property("ADBE Vector Stroke Width") || stroke.property("Stroke Width") || stroke.property(2);
-                        if (sW && sW.setValue) sW.setValue(strokeWidth);
-                        var sOp = stroke.property("ADBE Vector Stroke Opacity") || stroke.property("Opacity") || stroke.property(3);
-                        if (sOp && sOp.setValue) sOp.setValue(strokeWidth <= 0.0001 ? 0 : strokeOpacity);
+                    if (!isInner) {
+                        var stroke = contents.property("ADBE Vector Graphic - Stroke") || contents.property(3);
+                        if (stroke) {
+                            var sCol = stroke.property("ADBE Vector Stroke Color") || stroke.property("Color") || stroke.property(1);
+                            if (sCol && sCol.setValue) sCol.setValue(strokeColor);
+                            var sW = stroke.property("ADBE Vector Stroke Width") || stroke.property("Stroke Width") || stroke.property(2);
+                            if (sW && sW.setValue) sW.setValue(strokeWidth);
+                            var sOp = stroke.property("ADBE Vector Stroke Opacity") || stroke.property("Opacity") || stroke.property(3);
+                            if (sOp && sOp.setValue) sOp.setValue(strokeWidth <= 0.0001 ? 0 : strokeOpacity);
+                        }
                     }
 
                     cap.parent = master;
@@ -3748,8 +3863,13 @@ $.writeln("Shapes showcase created: Square, Circle, and Bézier Star!");
                     return cap;
                 }
 
-                var capFront = createCap("Cap_Front", -d / 2, 0, frontColor);
-                var capBack = createCap("Cap_Back", d / 2, 0, backColor);
+                var capFront = createCap("Cap_Front", -d / 2, 0, frontColor, false);
+                var capBack = createCap("Cap_Back", d / 2, 0, backColor, false);
+                var paintInnerSides = (typeof chkInnerSides !== "undefined") ? chkInnerSides.value : true;
+                if (paintInnerSides) {
+                    var capFrontInner = createCap("Cap_Front_Inner", -d / 2 + 0.15, 0, sidesColor, true);
+                    var capBackInner = createCap("Cap_Back_Inner", d / 2 - 0.15, 0, sidesColor, true);
+                }
 
                 // 5. Precompose All Sub-Layers
                 var indicesMap = {};
@@ -3937,6 +4057,18 @@ $.writeln("Shapes showcase created: Square, Circle, and Bézier Star!");
                     if (pF) pF.expression = CAP_PATH_EXPR;
                 }
 
+                var preCapFrontInner = getLayer(preComp, "Cap_Front_Inner");
+                if (preCapFrontInner) {
+                    setTransformExpr(preCapFrontInner, "Position", 'try { [0, 0, -thisComp.layer("Extruded_Rect_Master_Controller").effect("Extrude Depth")(1).value / 2 + 0.15]; } catch(e) { [0, 0, -' + (d / 2 - 0.15) + ']; }');
+                    applyCommonMaterialExprs(preCapFrontInner, "sides");
+                    var rootFI = preCapFrontInner.property("ADBE Root Vectors Group") || preCapFrontInner.property("Contents") || (preCapFrontInner.property && preCapFrontInner.property(1));
+                    var grpFI = rootFI.property(1);
+                    var contFI = grpFI.property("ADBE Vectors Group") || grpFI.property("Contents") || (grpFI.property && grpFI.property(2)) || (grpFI.property && grpFI.property(1));
+                    var shpFI = contFI.property("ADBE Vector Shape - Group") || contFI.property(1);
+                    var pFI = shpFI.property("ADBE Vector Shape") || shpFI.property("Path") || (shpFI.numProperties >= 2 ? shpFI.property(2) : shpFI.property(1));
+                    if (pFI) pFI.expression = CAP_PATH_EXPR;
+                }
+
                 var preCapBack = getLayer(preComp, "Cap_Back");
                 if (preCapBack) {
                     setTransformExpr(preCapBack, "Position", 'try { [0, 0, thisComp.layer("Extruded_Rect_Master_Controller").effect("Extrude Depth")(1).value / 2]; } catch(e) { [0, 0, ' + (d / 2) + ']; }');
@@ -3947,6 +4079,18 @@ $.writeln("Shapes showcase created: Square, Circle, and Bézier Star!");
                     var shpB = contB.property("ADBE Vector Shape - Group") || contB.property(1);
                     var pB = shpB.property("ADBE Vector Shape") || shpB.property("Path") || (shpB.numProperties >= 2 ? shpB.property(2) : shpB.property(1));
                     if (pB) pB.expression = CAP_PATH_EXPR;
+                }
+
+                var preCapBackInner = getLayer(preComp, "Cap_Back_Inner");
+                if (preCapBackInner) {
+                    setTransformExpr(preCapBackInner, "Position", 'try { [0, 0, thisComp.layer("Extruded_Rect_Master_Controller").effect("Extrude Depth")(1).value / 2 - 0.15]; } catch(e) { [0, 0, ' + (d / 2 - 0.15) + ']; }');
+                    applyCommonMaterialExprs(preCapBackInner, "sides");
+                    var rootBI = preCapBackInner.property("ADBE Root Vectors Group") || preCapBackInner.property("Contents") || (preCapBackInner.property && preCapBackInner.property(1));
+                    var grpBI = rootBI.property(1);
+                    var contBI = grpBI.property("ADBE Vectors Group") || grpBI.property("Contents") || (grpBI.property && grpBI.property(2)) || (grpBI.property && grpBI.property(1));
+                    var shpBI = contBI.property("ADBE Vector Shape - Group") || contBI.property(1);
+                    var pBI = shpBI.property("ADBE Vector Shape") || shpBI.property("Path") || (shpBI.numProperties >= 2 ? shpBI.property(2) : shpBI.property(1));
+                    if (pBI) pBI.expression = CAP_PATH_EXPR;
                 }
 
                 // Helper for wall dimensions & positions

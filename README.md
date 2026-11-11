@@ -98,7 +98,7 @@ The emulator includes production-ready After Effects ScriptUI tools as well as q
      - **Stroke Width**: Real-time slider ($0\text{ to }20\text{ px}$) with automatic stroke suppression when width is 0.
      - **Corner Roundness & Face Gap**: Scrubbable sliders for rounded bevels and inset edge spacing.
 
-2. **Cylinder Maker 3D (`jsx/cylinder_maker.jsx` - v1.2)**:
+2. **Cylinder Maker 3D (`jsx/cylinder_maker.jsx` - v1.3)**:
    - **Parametric 3D Cylinder & Slice Generator**: Generates full cylinders or customizable radial slice sectors.
    - **Geometry Tab**:
      - **Radius**: Scrubbable slider and numeric field ($1\text{ to }500\text{ px}$).
@@ -108,6 +108,7 @@ The emulator includes production-ready After Effects ScriptUI tools as well as q
    - **Appearance Tab**:
      - **Tri-Color Palette**: 3 separate color swatches with paired hex fields for Top/Front Cap, Walls, and Bottom/Back Cap.
      - **Opacity & Stroke**: Global opacity slider, stroke color swatch + hex field, and stroke width slider ($0\text{ to }20\text{ px}$) with dynamic expression to hide stroke at 0.
+     - **Inner Sides Checkbox**: "Paint inner sides with edge color" (enabled by default) adds internal backing cap faces (`Cap_Top_Inner`, `Cap_Bottom_Inner`) sharing the walls color to prevent contrasting cap colors from leaking through seams at acute viewing angles.
    - **Live Rigging**: Precomposes walls and caps into an auto-rigged subcomp driven by Master Effect Controls on the parent layer.
 
 3. **Pie / Slice Generator (`jsx/Pie_Slice_Generator.jsx` - v4.1)**:
@@ -133,7 +134,7 @@ The emulator includes production-ready After Effects ScriptUI tools as well as q
    - **Procedural Rigging**: Adds 14 native Slider/Color/Checkbox Effect Controls to the shape layer and links Bézier path points and tangents via `createPath()` expression.
    - **Credits & Reference**: Based on the AECustomRoundedRect specification by [work2survive](https://github.com/work2survive/AECustomRoundedRect).
 
-5. **Extruded Round Rectangle 3D (`jsx/extruded_round_rectangle.jsx` - v1.1)**:
+5. **Extruded Round Rectangle 3D (`jsx/extruded_round_rectangle.jsx` - v1.2)**:
    - **Parametric 3D Extruded Rounded Rectangle**: Combines the procedural front/back caps of `custom_rounded_rect` with cylindrical sector wall facets from `cylinder_maker` to form an airtight 3D solid.
    - **Geometry Tab**:
      - **Dimensions ($W \times H \times D$)**: Interactive sliders and inputs for Width ($20\text{--}1920\text{ px}$), Height ($20\text{--}1080\text{ px}$), and Extrude Depth ($10\text{--}800\text{ px}$).
@@ -145,7 +146,8 @@ The emulator includes production-ready After Effects ScriptUI tools as well as q
      - **Tri-Color Palette**: Independent live color swatches paired with hex inputs for Front Face Color, Back Face Color, and Perimeter Walls/Corners Color.
      - **Independent Opacity**: Sliders for Caps Opacity and Sides Opacity.
      - **Edge Stroke**: Color swatch + hex input and stroke width slider ($0\text{ to }30\text{ px}$) with 0-stroke suppression.
-   - **Live Rigging**: Builds 31 native 3D Shape Layers precomposed into an auto-rigged subcomp driven by 18 Master Effect Controls on the parent layer with continuous rasterization.
+     - **Inner Sides Checkbox**: "Paint inner sides using edge color" (enabled by default) adds internal backing cap faces (`Cap_Front_Inner`, `Cap_Back_Inner`) sharing the sides color to prevent opposite face colors from peeking through perimeter edges.
+   - **Live Rigging**: Builds 33 native 3D Shape Layers precomposed into an auto-rigged subcomp driven by 18 Master Effect Controls on the parent layer with continuous rasterization.
 
 #### B. Quick Verification Presets
 
