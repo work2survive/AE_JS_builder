@@ -397,6 +397,225 @@
         "})();"
     ].join("\n");
 
+    // -------------------------------------------------------------------------
+    // iOS 18 Animated Text Effects - Dynamic Expressions Engine
+    // -------------------------------------------------------------------------
+    var POS_ANIM_EXPR = [
+        "// iOS 18 Animated Text Effect - Position Expression",
+        "(function() {",
+        "    function getVal(name, fallback) {",
+        "        try {",
+        "            if (thisLayer && thisLayer.hasParent) {",
+        "                var p = thisLayer.parent.effect(name)(1);",
+        "                return (p && typeof p.value !== 'undefined') ? p.value : (p !== undefined ? p : fallback);",
+        "            }",
+        "        } catch(e) {}",
+        "        try {",
+        "            var p2 = thisComp.layer('Bubble_Master_Controller').effect(name)(1);",
+        "            return (p2 && typeof p2.value !== 'undefined') ? p2.value : (p2 !== undefined ? p2 : fallback);",
+        "        } catch(e2) {}",
+        "        try {",
+        "            var p3 = effect(name)(1);",
+        "            return (p3 && typeof p3.value !== 'undefined') ? p3.value : (p3 !== undefined ? p3 : fallback);",
+        "        } catch(e3) {}",
+        "        return fallback;",
+        "    }",
+        "",
+        "    var effectType = Math.round(getVal('Animation Effect Type', 0));",
+        "    if (effectType === 0) return value;",
+        "",
+        "    var speed = Math.max(0.1, getVal('Animation Speed', 100) / 100);",
+        "    var amp = Math.max(0, getVal('Animation Intensity', 100) / 100);",
+        "    var t = time * speed;",
+        "    var dx = 0;",
+        "    var dy = 0;",
+        "",
+        "    if (effectType === 3) {",
+        "        // 3: Shake (rapid horizontal wobble)",
+        "        var freq = 20 * speed;",
+        "        dx = Math.sin(time * freq * Math.PI * 2) * (8 * amp);",
+        "    } else if (effectType === 4) {",
+        "        // 4: Nod (rhythmic vertical bobbing)",
+        "        var freq = 2.4 * speed;",
+        "        dy = Math.sin(time * freq * Math.PI * 2) * (10 * amp);",
+        "    } else if (effectType === 6) {",
+        "        // 6: Ripple (floating wave undulating motion)",
+        "        var freq = 3.2 * speed;",
+        "        dy = Math.sin(time * freq) * (7 * amp);",
+        "        dx = Math.cos(time * freq * 0.6) * (4 * amp);",
+        "    } else if (effectType === 8) {",
+        "        // 8: Jitter (erratic twitching)",
+        "        try {",
+        "            var w = wiggle(22 * speed, 5 * amp);",
+        "            return [w[0], w[1], (value.length > 2 ? value[2] : 0)];",
+        "        } catch(eW) {",
+        "            dx = (Math.sin(time * 43 * speed) + Math.cos(time * 67 * speed)) * (2.5 * amp);",
+        "            dy = (Math.cos(time * 53 * speed) + Math.sin(time * 71 * speed)) * (2.5 * amp);",
+        "        }",
+        "    }",
+        "",
+        "    return [value[0] + dx, value[1] + dy, (value.length > 2 ? value[2] : 0)];",
+        "})();"
+    ].join("\n");
+
+    var SCALE_ANIM_EXPR = [
+        "// iOS 18 Animated Text Effect - Scale Expression",
+        "(function() {",
+        "    function getVal(name, fallback) {",
+        "        try {",
+        "            if (thisLayer && thisLayer.hasParent) {",
+        "                var p = thisLayer.parent.effect(name)(1);",
+        "                return (p && typeof p.value !== 'undefined') ? p.value : (p !== undefined ? p : fallback);",
+        "            }",
+        "        } catch(e) {}",
+        "        try {",
+        "            var p2 = thisComp.layer('Bubble_Master_Controller').effect(name)(1);",
+        "            return (p2 && typeof p2.value !== 'undefined') ? p2.value : (p2 !== undefined ? p2 : fallback);",
+        "        } catch(e2) {}",
+        "        try {",
+        "            var p3 = effect(name)(1);",
+        "            return (p3 && typeof p3.value !== 'undefined') ? p3.value : (p3 !== undefined ? p3 : fallback);",
+        "        } catch(e3) {}",
+        "        return fallback;",
+        "    }",
+        "",
+        "    var effectType = Math.round(getVal('Animation Effect Type', 0));",
+        "    if (effectType === 0) return value;",
+        "",
+        "    var speed = Math.max(0.1, getVal('Animation Speed', 100) / 100);",
+        "    var amp = Math.max(0, getVal('Animation Intensity', 100) / 100);",
+        "    var t = time * speed;",
+        "    var factor = 1.0;",
+        "",
+        "    if (effectType === 1) {",
+        "        // 1: Big (enlarge bounce pulse)",
+        "        var pulse = Math.abs(Math.sin(t * Math.PI * 1.8));",
+        "        factor = 1.0 + (0.32 * amp * pulse);",
+        "    } else if (effectType === 2) {",
+        "        // 2: Small (contracted breathing scale)",
+        "        var pulse = 0.5 + 0.5 * Math.sin(t * Math.PI * 1.5);",
+        "        factor = 1.0 - (0.22 * amp * (0.6 + 0.4 * pulse));",
+        "    } else if (effectType === 5) {",
+        "        // 5: Explode (burst expansion and decaying shockwave)",
+        "        var cycle = 1.6 / speed;",
+        "        var phase = (time % cycle) / cycle;",
+        "        var offset = 0;",
+        "        if (phase < 0.22) {",
+        "            offset = Math.sin((phase / 0.22) * Math.PI * 0.5) * (0.55 * amp);",
+        "        } else {",
+        "            var decay = Math.exp(-(phase - 0.22) * 8);",
+        "            offset = Math.cos((phase - 0.22) * Math.PI * 12) * (0.55 * amp) * decay;",
+        "        }",
+        "        factor = Math.max(0.2, 1.0 + offset);",
+        "    } else if (effectType === 6) {",
+        "        // 6: Ripple (breathing subtle scale deformation)",
+        "        factor = 1.0 + (0.06 * amp * Math.sin(t * 3.2));",
+        "    } else if (effectType === 7) {",
+        "        // 7: Bloom (radiant expanding pulse)",
+        "        var pulse = 0.5 + 0.5 * Math.sin(t * Math.PI * 2.0);",
+        "        factor = 1.0 + (0.20 * amp * pulse);",
+        "    } else if (effectType === 8) {",
+        "        // 8: Jitter (erratic scale fluctuation)",
+        "        var jScale = (Math.sin(time * 37 * speed) * 0.08) * amp;",
+        "        factor = 1.0 + jScale;",
+        "    }",
+        "",
+        "    return [value[0] * factor, value[1] * factor];",
+        "})();"
+    ].join("\n");
+
+    var ROT_ANIM_EXPR = [
+        "// iOS 18 Animated Text Effect - Rotation Expression",
+        "(function() {",
+        "    function getVal(name, fallback) {",
+        "        try {",
+        "            if (thisLayer && thisLayer.hasParent) {",
+        "                var p = thisLayer.parent.effect(name)(1);",
+        "                return (p && typeof p.value !== 'undefined') ? p.value : (p !== undefined ? p : fallback);",
+        "            }",
+        "        } catch(e) {}",
+        "        try {",
+        "            var p2 = thisComp.layer('Bubble_Master_Controller').effect(name)(1);",
+        "            return (p2 && typeof p2.value !== 'undefined') ? p2.value : (p2 !== undefined ? p2 : fallback);",
+        "        } catch(e2) {}",
+        "        try {",
+        "            var p3 = effect(name)(1);",
+        "            return (p3 && typeof p3.value !== 'undefined') ? p3.value : (p3 !== undefined ? p3 : fallback);",
+        "        } catch(e3) {}",
+        "        return fallback;",
+        "    }",
+        "",
+        "    var effectType = Math.round(getVal('Animation Effect Type', 0));",
+        "    if (effectType === 0) return value;",
+        "",
+        "    var speed = Math.max(0.1, getVal('Animation Speed', 100) / 100);",
+        "    var amp = Math.max(0, getVal('Animation Intensity', 100) / 100);",
+        "    var t = time * speed;",
+        "    var rot = 0;",
+        "",
+        "    if (effectType === 3) {",
+        "        // Shake",
+        "        rot = Math.sin(time * 20 * speed * Math.PI) * (1.8 * amp);",
+        "    } else if (effectType === 4) {",
+        "        // Nod",
+        "        rot = Math.sin(time * 2.4 * speed * Math.PI * 2) * (3.5 * amp);",
+        "    } else if (effectType === 6) {",
+        "        // Ripple",
+        "        rot = Math.sin(t * 3.2) * (2.5 * amp);",
+        "    } else if (effectType === 8) {",
+        "        // Jitter",
+        "        rot = (Math.sin(time * 47 * speed) * 3.0) * amp;",
+        "    }",
+        "",
+        "    return value + rot;",
+        "})();"
+    ].join("\n");
+
+    var OPACITY_ANIM_EXPR = [
+        "// iOS 18 Animated Text Effect - Opacity Expression",
+        "(function() {",
+        "    function getVal(name, fallback) {",
+        "        try {",
+        "            if (thisLayer && thisLayer.hasParent) {",
+        "                var p = thisLayer.parent.effect(name)(1);",
+        "                return (p && typeof p.value !== 'undefined') ? p.value : (p !== undefined ? p : fallback);",
+        "            }",
+        "        } catch(e) {}",
+        "        try {",
+        "            var p2 = thisComp.layer('Bubble_Master_Controller').effect(name)(1);",
+        "            return (p2 && typeof p2.value !== 'undefined') ? p2.value : (p2 !== undefined ? p2 : fallback);",
+        "        } catch(e2) {}",
+        "        try {",
+        "            var p3 = effect(name)(1);",
+        "            return (p3 && typeof p3.value !== 'undefined') ? p3.value : (p3 !== undefined ? p3 : fallback);",
+        "        } catch(e3) {}",
+        "        return fallback;",
+        "    }",
+        "",
+        "    var effectType = Math.round(getVal('Animation Effect Type', 0));",
+        "    if (effectType === 0) return value;",
+        "",
+        "    var speed = Math.max(0.1, getVal('Animation Speed', 100) / 100);",
+        "    var amp = Math.max(0, getVal('Animation Intensity', 100) / 100);",
+        "    var t = time * speed;",
+        "",
+        "    if (effectType === 7) {",
+        "        // Bloom: radiant glowing pulse",
+        "        var pulse = 0.5 + 0.5 * Math.sin(t * Math.PI * 2.0);",
+        "        return Math.min(100, Math.max(30, value * (0.65 + 0.35 * pulse)));",
+        "    } else if (effectType === 5) {",
+        "        // Explode: initial flash at burst",
+        "        var cycle = 1.6 / speed;",
+        "        var phase = (time % cycle) / cycle;",
+        "        if (phase < 0.15) {",
+        "            return Math.min(100, value * (0.8 + 0.2 * (phase / 0.15)));",
+        "        }",
+        "    }",
+        "",
+        "    return value;",
+        "})();"
+    ].join("\n");
+
     var currentRandomTime = generateRandomTime();
 
     // -------------------------------------------------------------------------
@@ -638,7 +857,164 @@
     };
 
     // -------------------------------------------------------------------------
-    // 7. Timestamp Section (Random time + Re-roll)
+    // 7. iOS 18 Text Effects & Animation Section
+    // -------------------------------------------------------------------------
+    var pnlAnim = win.add("panel", undefined, "Text Effects & Animation (iOS 18)");
+    pnlAnim.orientation = "column";
+    pnlAnim.alignChildren = ["fill", "top"];
+    pnlAnim.spacing = 6;
+    pnlAnim.margins = [10, 8, 10, 8];
+
+    // Effect Preset Dropdown Row
+    var grpAnimDrop = pnlAnim.add("group");
+    grpAnimDrop.orientation = "row";
+    grpAnimDrop.alignChildren = ["left", "center"];
+    var lblAnim = grpAnimDrop.add("statictext", undefined, "Animated Effect:");
+    lblAnim.preferredSize = [115, -1];
+
+    var animOptions = [
+        "None (Static)",
+        "Big (Enlarge Pulse)",
+        "Small (Contract Scale)",
+        "Shake (Horizontal Wobble)",
+        "Nod (Vertical Bobbing)",
+        "Explode (Burst & Decay)",
+        "Ripple (Wave Float)",
+        "Bloom (Radiant Glow)",
+        "Jitter (Chaotic Glitch)"
+    ];
+    var dropAnim = grpAnimDrop.add("dropdownlist", undefined, animOptions);
+    dropAnim.selection = 0; // Default: None
+    dropAnim.preferredSize = [185, 26];
+    dropAnim.helpTip = "Select iOS 18 animated text effect.";
+
+    // 8 iOS 18 Effect Preset Buttons (2 rows of 4 buttons)
+    var grpBtnRow1 = pnlAnim.add("group");
+    grpBtnRow1.orientation = "row";
+    grpBtnRow1.spacing = 4;
+    grpBtnRow1.alignChildren = ["fill", "center"];
+
+    var btnBig     = grpBtnRow1.add("button", undefined, "Big");
+    var btnSmall   = grpBtnRow1.add("button", undefined, "Small");
+    var btnShake   = grpBtnRow1.add("button", undefined, "Shake");
+    var btnNod     = grpBtnRow1.add("button", undefined, "Nod");
+    btnBig.preferredSize   = [68, 24];
+    btnSmall.preferredSize = [68, 24];
+    btnShake.preferredSize = [68, 24];
+    btnNod.preferredSize   = [68, 24];
+
+    var grpBtnRow2 = pnlAnim.add("group");
+    grpBtnRow2.orientation = "row";
+    grpBtnRow2.spacing = 4;
+    grpBtnRow2.alignChildren = ["fill", "center"];
+
+    var btnExplode = grpBtnRow2.add("button", undefined, "Explode");
+    var btnRipple  = grpBtnRow2.add("button", undefined, "Ripple");
+    var btnBloom   = grpBtnRow2.add("button", undefined, "Bloom");
+    var btnJitter  = grpBtnRow2.add("button", undefined, "Jitter");
+    btnExplode.preferredSize = [68, 24];
+    btnRipple.preferredSize  = [68, 24];
+    btnBloom.preferredSize   = [68, 24];
+    btnJitter.preferredSize  = [68, 24];
+
+    var effectButtons = [
+        { btn: btnBig,     index: 1 },
+        { btn: btnSmall,   index: 2 },
+        { btn: btnShake,   index: 3 },
+        { btn: btnNod,     index: 4 },
+        { btn: btnExplode, index: 5 },
+        { btn: btnRipple,  index: 6 },
+        { btn: btnBloom,   index: 7 },
+        { btn: btnJitter,  index: 8 }
+    ];
+
+    function updateButtonHighlights(currentIdx) {
+        for (var b = 0; b < effectButtons.length; b++) {
+            var item = effectButtons[b];
+            var isSelected = (item.index === currentIdx);
+            if (item.btn.domElement) {
+                if (isSelected) {
+                    item.btn.domElement.style.backgroundColor = "#007aff";
+                    item.btn.domElement.style.color = "#ffffff";
+                    item.btn.domElement.style.borderColor = "#005bb5";
+                    item.btn.domElement.style.fontWeight = "bold";
+                } else {
+                    item.btn.domElement.style.backgroundColor = "";
+                    item.btn.domElement.style.color = "";
+                    item.btn.domElement.style.borderColor = "";
+                    item.btn.domElement.style.fontWeight = "normal";
+                }
+            }
+        }
+    }
+
+    function selectEffect(idx) {
+        dropAnim.selection = idx;
+        updateButtonHighlights(idx);
+    }
+
+    for (var b = 0; b < effectButtons.length; b++) {
+        (function(item) {
+            item.btn.onClick = function() {
+                var cur = dropAnim.selection ? dropAnim.selection.index : 0;
+                if (cur === item.index) {
+                    selectEffect(0); // Toggle off to None
+                } else {
+                    selectEffect(item.index);
+                }
+            };
+        })(effectButtons[b]);
+    }
+
+    dropAnim.onChange = function() {
+        var cur = dropAnim.selection ? dropAnim.selection.index : 0;
+        updateButtonHighlights(cur);
+    };
+
+    // Animation Speed Row (50% to 200%)
+    var grpSpeed = pnlAnim.add("group");
+    grpSpeed.orientation = "row";
+    grpSpeed.alignChildren = ["left", "center"];
+    var lblSpeed = grpSpeed.add("statictext", undefined, "Anim Speed (%):");
+    lblSpeed.preferredSize = [115, -1];
+    var sldSpeed = grpSpeed.add("slider", undefined, 100, 50, 200);
+    sldSpeed.alignment = ["fill", "center"];
+    var txtSpeed = grpSpeed.add("edittext", undefined, "100");
+    txtSpeed.characters = 4;
+    txtSpeed.helpTip = "Animation speed / frequency multiplier from 50% (slow) to 200% (fast).";
+
+    sldSpeed.onChanging = function() {
+        txtSpeed.text = String(Math.round(sldSpeed.value));
+    };
+    txtSpeed.onChange = function() {
+        var v = Math.max(20, Math.min(300, parseFloat(txtSpeed.text) || 100));
+        sldSpeed.value = v;
+        txtSpeed.text = String(Math.round(v));
+    };
+
+    // Animation Intensity Row (20% to 200%)
+    var grpAmp = pnlAnim.add("group");
+    grpAmp.orientation = "row";
+    grpAmp.alignChildren = ["left", "center"];
+    var lblAmp = grpAmp.add("statictext", undefined, "Intensity (%):");
+    lblAmp.preferredSize = [115, -1];
+    var sldAmp = grpAmp.add("slider", undefined, 100, 20, 200);
+    sldAmp.alignment = ["fill", "center"];
+    var txtAmp = grpAmp.add("edittext", undefined, "100");
+    txtAmp.characters = 4;
+    txtAmp.helpTip = "Animation displacement and vibration amplitude.";
+
+    sldAmp.onChanging = function() {
+        txtAmp.text = String(Math.round(sldAmp.value));
+    };
+    txtAmp.onChange = function() {
+        var v = Math.max(10, Math.min(300, parseFloat(txtAmp.text) || 100));
+        sldAmp.value = v;
+        txtAmp.text = String(Math.round(v));
+    };
+
+    // -------------------------------------------------------------------------
+    // 8. Timestamp Section (Random time + Re-roll)
     // -------------------------------------------------------------------------
     var pnlTime = win.add("panel", undefined, "Timestamp (Randomized)");
     pnlTime.orientation = "row";
@@ -938,6 +1314,10 @@
             var leadingPercent = parseFloat(txtLeading.text) || 100;
             var leadingFactor = leadingPercent / 100;
 
+            var selAnimIdx = dropAnim.selection ? dropAnim.selection.index : 0;
+            var animSpeed = parseFloat(txtSpeed.text) || 100;
+            var animAmp = parseFloat(txtAmp.text) || 100;
+
             var fontIdx = dropFont.selection ? dropFont.selection.index : 0;
             var selectedFont = FONTS[fontIdx] || FONTS[0];
 
@@ -984,14 +1364,20 @@
             var singleLine = (lines.length === 1);
             var bubbleW = 0;
             var bubbleH = 0;
-            if (singleLine && (measuredTextW + timeRowW + padX * 2 + 16 < maxBubbleW)) {
+
+            // Headroom expansion for scaling effects (Big, Explode)
+            var scalePadFactor = (selAnimIdx === 1) ? 1.24 : ((selAnimIdx === 5) ? 1.30 : 1.0);
+            var effMeasuredW = Math.round(measuredTextW * scalePadFactor);
+            var effTextH = Math.round(textBlockH * scalePadFactor);
+
+            if (singleLine && (effMeasuredW + timeRowW + padX * 2 + 16 < maxBubbleW)) {
                 // Inline single line message + timestamp + status icon
-                bubbleW = measuredTextW + timeRowW + (padX * 2) + 16;
-                bubbleH = textBlockH + (padY * 2);
+                bubbleW = effMeasuredW + timeRowW + (padX * 2) + 16;
+                bubbleH = effTextH + (padY * 2);
             } else {
                 // Multiline message + bottom timestamp row
-                bubbleW = Math.max(measuredTextW, timeRowW) + (padX * 2);
-                bubbleH = textBlockH + (padY * 2) + timeFontSize + 6;
+                bubbleW = Math.max(effMeasuredW, timeRowW) + (padX * 2);
+                bubbleH = effTextH + (padY * 2) + timeFontSize + 6;
             }
 
             var hasTail = chkTail.value;
@@ -1056,6 +1442,15 @@
 
                 var effLead = parade.addProperty("ADBE Slider Control");
                 if (effLead) { effLead.name = "Leading Percent"; effLead.property(1).setValue(leadingPercent); }
+
+                var effAnim = parade.addProperty("ADBE Slider Control");
+                if (effAnim) { effAnim.name = "Animation Effect Type"; effAnim.property(1).setValue(selAnimIdx); }
+
+                var effSpeed = parade.addProperty("ADBE Slider Control");
+                if (effSpeed) { effSpeed.name = "Animation Speed"; effSpeed.property(1).setValue(animSpeed); }
+
+                var effAmp = parade.addProperty("ADBE Slider Control");
+                if (effAmp) { effAmp.name = "Animation Intensity"; effAmp.property(1).setValue(animAmp); }
 
                 var effCol = parade.addProperty("ADBE Color Control");
                 if (effCol) { effCol.name = "Bubble Color"; effCol.property(1).setValue(bubbleColor); }
@@ -1162,7 +1557,19 @@
             textLayer.leading = lineH;
             textLayer.leadingPercent = leadingPercent;
             textLayer.justification = "left";
+
+            var anchorProp = textLayer.transform.anchorPoint || (textLayer.property && textLayer.property("ADBE Transform Group") && textLayer.property("ADBE Transform Group").property("ADBE Anchor Point"));
+            if (anchorProp) {
+                anchorProp.setValue([0, 0, 0]);
+            }
             textLayer.transform.position.setValue([textLeftX, textTopY, -0.5]);
+
+            // Attach dynamic expressions for iOS 18 animated effects
+            if (textLayer.transform.position) textLayer.transform.position.expression = POS_ANIM_EXPR;
+            if (textLayer.transform.scale) textLayer.transform.scale.expression = SCALE_ANIM_EXPR;
+            var rotProp = textLayer.transform.rotation || textLayer.transform.zRotation || (textLayer.property && textLayer.property("ADBE Transform Group") && textLayer.property("ADBE Transform Group").property("ADBE Rotate Z"));
+            if (rotProp) rotProp.expression = ROT_ANIM_EXPR;
+            if (textLayer.transform.opacity) textLayer.transform.opacity.expression = OPACITY_ANIM_EXPR;
 
             if (textLayer.property && textLayer.property("Source Text")) {
                 try {
