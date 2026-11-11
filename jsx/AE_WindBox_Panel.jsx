@@ -284,24 +284,69 @@
             pathPropStar.setValue(starShape);
             finalColor = starPalette[(pIndex - 1) % starPalette.length];
 
-        } else if (sourceIndex === 3) { // ⛰️ Mountains (Low-Poly Peak Silhouette)
+        } else if (sourceIndex === 3) { // ⛰️ Mountains (Diverse Low-Poly Ridges along X Axis)
             var pathGroupMnt = contents.addProperty("ADBE Vector Shape - Group");
             var pathPropMnt = pathGroupMnt.property("ADBE Vector Shape");
             var mntShape = new Shape();
-            var mw = shapeSize, mh = shapeSize * 0.7;
-            mntShape.vertices = [
-                [-mw * 0.5, mh * 0.35],
-                [-mw * 0.22, -mh * 0.1],
-                [-mw * 0.08, mh * 0.05],
-                [0, -mh * 0.45],
-                [mw * 0.2, -mh * 0.08],
-                [mw * 0.5, mh * 0.35]
-            ];
-            mntShape.inTangents = [[0,0],[0,0],[0,0],[0,0],[0,0],[0,0]];
-            mntShape.outTangents = [[0,0],[0,0],[0,0],[0,0],[0,0],[0,0]];
+            var mw = shapeSize, mh = shapeSize * 0.65;
+            var variant = (pIndex - 1) % 4;
+
+            if (variant === 0) { // Alpine Horn Peak
+                mntShape.vertices = [
+                    [-mw * 0.5, mh * 0.4],
+                    [-mw * 0.28, -mh * 0.05],
+                    [-mw * 0.1, mh * 0.08],
+                    [0, -mh * 0.5],
+                    [mw * 0.18, -mh * 0.12],
+                    [mw * 0.35, mh * 0.1],
+                    [mw * 0.5, mh * 0.4]
+                ];
+            } else if (variant === 1) { // Twin Peak Massif
+                mntShape.vertices = [
+                    [-mw * 0.5, mh * 0.4],
+                    [-mw * 0.22, -mh * 0.42],
+                    [-mw * 0.04, -mh * 0.1],
+                    [mw * 0.18, -mh * 0.48],
+                    [mw * 0.38, -mh * 0.02],
+                    [mw * 0.5, mh * 0.4]
+                ];
+            } else if (variant === 2) { // Jagged Ridge
+                mntShape.vertices = [
+                    [-mw * 0.5, mh * 0.4],
+                    [-mw * 0.35, -mh * 0.15],
+                    [-mw * 0.18, -mh * 0.38],
+                    [0, -mh * 0.25],
+                    [mw * 0.22, -mh * 0.45],
+                    [mw * 0.38, -mh * 0.2],
+                    [mw * 0.5, mh * 0.4]
+                ];
+            } else { // Broad Horizon Mountain
+                mntShape.vertices = [
+                    [-mw * 0.5, mh * 0.4],
+                    [-mw * 0.3, -mh * 0.22],
+                    [-mw * 0.05, -mh * 0.35],
+                    [mw * 0.15, -mh * 0.28],
+                    [mw * 0.35, -mh * 0.12],
+                    [mw * 0.5, mh * 0.4]
+                ];
+            }
+            mntShape.inTangents = [];
+            mntShape.outTangents = [];
+            for (var vi = 0; vi < mntShape.vertices.length; vi++) {
+                mntShape.inTangents.push([0, 0]);
+                mntShape.outTangents.push([0, 0]);
+            }
             mntShape.closed = true;
             pathPropMnt.setValue(mntShape);
-            finalColor = [0.32, 0.38, 0.46, 1]; // Slate mountain silhouette
+
+            // Layered atmospheric slate & mountain blues
+            var mountainPalette = [
+                [0.22, 0.28, 0.36, 1], // Deep Front Mountain Slate
+                [0.28, 0.35, 0.45, 1], // Mid-Range Granite Blue
+                [0.36, 0.44, 0.54, 1], // Distant Mist Mountain
+                [0.44, 0.52, 0.62, 1]  // Atmospheric Horizon Ridge
+            ];
+            finalColor = mountainPalette[variant];
 
         } else if (sourceIndex === 4) { // ⚪ 3D Circles
             var ellipse = contents.addProperty("ADBE Vector Shape - Ellipse");
@@ -360,7 +405,19 @@
 
         headerGroup.add("statictext", undefined, "System Name:");
         var txtSysName = headerGroup.add("edittext", undefined, "WindBox");
-        txtSysName.characters = 10;
+        txtSysName.characters = 8;
+
+        headerGroup.add("statictext", undefined, "Seed:");
+        var editMasterSeed = headerGroup.add("edittext", undefined, "12345");
+        editMasterSeed.characters = 6;
+        editMasterSeed.helpTip = "Master Random Seed governing all procedural particles, sizes, and motions";
+
+        var btnRandSeed = headerGroup.add("button", undefined, "🎲");
+        btnRandSeed.maximumSize = [24, 22];
+        btnRandSeed.helpTip = "Generate new random seed";
+        btnRandSeed.onClick = function() {
+            editMasterSeed.text = String(Math.floor(Math.random() * 89999 + 10000));
+        };
 
         var btnHelp = headerGroup.add("button", undefined, "?");
         btnHelp.maximumSize = [24, 22];
@@ -482,6 +539,22 @@
         pnlCount.add("statictext", undefined, "Number of Particles:");
         var editCount = pnlCount.add("edittext", undefined, "50");
         editCount.characters = 5;
+
+        // Boundary Fade In/Out Panel
+        var pnlFade = tabFlow.add("panel", undefined, "Boundary Fade (Fade In / Out Distance) - Animatable");
+        pnlFade.orientation = "row";
+        pnlFade.alignChildren = ["fill", "center"];
+        pnlFade.spacing = 4;
+
+        pnlFade.add("statictext", undefined, "Fade In Dist (px):");
+        var editFadeInDist = pnlFade.add("edittext", undefined, "150");
+        editFadeInDist.characters = 5;
+        editFadeInDist.helpTip = "Distance from box entry boundary over which particle fades smoothly from 0 to 100% opacity";
+
+        pnlFade.add("statictext", undefined, "Fade Out Dist (px):");
+        var editFadeOutDist = pnlFade.add("edittext", undefined, "150");
+        editFadeOutDist.characters = 5;
+        editFadeOutDist.helpTip = "Distance to box exit boundary over which particle fades smoothly from 100% to 0 opacity";
 
         // ==========================================
         // TAB 2: VIRTUAL CUBE (GUIDE LAYER)
@@ -705,6 +778,30 @@
         var editPartSize = grpPartSize.add("edittext", undefined, "28");
         editPartSize.characters = 5;
 
+        // Born Size Randomness
+        var grpPartSizeRand = tabSource.add("group");
+        grpPartSizeRand.orientation = "row";
+        grpPartSizeRand.alignChildren = ["left", "center"];
+        grpPartSizeRand.add("statictext", undefined, "Size Randomness (%):");
+        var editPartSizeRand = grpPartSizeRand.add("edittext", undefined, "45");
+        editPartSizeRand.characters = 5;
+        editPartSizeRand.helpTip = "Percentage of size variation applied when particles are born (0 = identical, 100 = 0x to 2x variation)";
+        grpPartSizeRand.add("statictext", undefined, "(Variation at birth)");
+
+        // Scale Wiggle (Dynamic breathing / pulsing)
+        var pnlScaleWig = tabSource.add("panel", undefined, "Size Wiggle (Dynamic Pulsing / Breathing) - Animatable");
+        pnlScaleWig.orientation = "row";
+        pnlScaleWig.alignChildren = ["fill", "center"];
+        pnlScaleWig.spacing = 4;
+
+        pnlScaleWig.add("statictext", undefined, "Freq (Hz):");
+        var editScaleWigFreq = pnlScaleWig.add("edittext", undefined, "1.0");
+        editScaleWigFreq.characters = 4;
+
+        pnlScaleWig.add("statictext", undefined, "Amount (%):");
+        var editScaleWigAmp = pnlScaleWig.add("edittext", undefined, "15");
+        editScaleWigAmp.characters = 4;
+
         // Custom particle base color
         var grpPartCol = tabSource.add("group");
         grpPartCol.orientation = "row";
@@ -729,11 +826,14 @@
             var pIdx = dropPreset.selection.index;
             if (pIdx === 0) { // 🍃 Leaves
                 dropSource.selection = 0;
+                editMasterSeed.text = "12345";
                 editSizeX.text = "1400"; editSizeY.text = "800"; editSizeZ.text = "1000";
                 editSpeed.text = "260"; editDirX.text = "1.0"; editDirY.text = "0.3"; editDirZ.text = "0.2";
                 chkAlignWind.value = true;
                 editCount.text = "50";
-                editPartSize.text = "28";
+                editFadeInDist.text = "180"; editFadeOutDist.text = "180";
+                editPartSize.text = "28"; editPartSizeRand.text = "45";
+                editScaleWigFreq.text = "1.0"; editScaleWigAmp.text = "15";
                 cpPartColor.setColor("#44aa33", false);
                 editPosFreq.text = "1.6"; editPosAmpX.text = "70"; editPosAmpY.text = "50"; editPosAmpZ.text = "60";
                 editRotXAmp.text = "60"; editRotXFreq.text = "1.2";
@@ -742,6 +842,7 @@
 
             } else if (pIdx === 1) { // ☁️ Clouds (Wider volume, diagonal wind passing gently in front of camera)
                 dropSource.selection = 1;
+                editMasterSeed.text = "24680";
                 editSizeX.text = "3600"; // Much wider volume spanning far past viewport edges
                 editSizeY.text = "850";  // Vertical sky span
                 editSizeZ.text = "2800"; // Deep volume passing in front of and around the camera
@@ -751,7 +852,9 @@
                 editDirZ.text = "-0.65"; // Diagonal Z: drift towards camera to pass directly in front of the lens
                 chkAlignWind.value = false; // Stand facing camera as soft billboard clouds
                 editCount.text = "22";
-                editPartSize.text = "240"; // Large billowy cloud silhouettes
+                editFadeInDist.text = "350"; editFadeOutDist.text = "350";
+                editPartSize.text = "240"; editPartSizeRand.text = "50";
+                editScaleWigFreq.text = "0.3"; editScaleWigAmp.text = "10";
                 cpPartColor.setColor("#f0f4f8", false);
                 editPosFreq.text = "0.2";
                 editPosAmpX.text = "35";
@@ -763,46 +866,66 @@
 
             } else if (pIdx === 2) { // ⭐ Stars
                 dropSource.selection = 2;
+                editMasterSeed.text = "13579";
                 editSizeX.text = "1500"; editSizeY.text = "1000"; editSizeZ.text = "1500";
                 editSpeed.text = "40"; editDirX.text = "0.4"; editDirY.text = "-0.2"; editDirZ.text = "0.4";
                 chkAlignWind.value = false;
                 editCount.text = "70";
-                editPartSize.text = "18";
+                editFadeInDist.text = "150"; editFadeOutDist.text = "150";
+                editPartSize.text = "18"; editPartSizeRand.text = "60";
+                editScaleWigFreq.text = "1.5"; editScaleWigAmp.text = "35";
                 cpPartColor.setColor("#ffea00", false);
                 editPosFreq.text = "0.8"; editPosAmpX.text = "40"; editPosAmpY.text = "40"; editPosAmpZ.text = "40";
                 editRotXAmp.text = "20"; editRotXFreq.text = "0.5";
                 editRotYAmp.text = "20"; editRotYFreq.text = "0.5";
                 editRotZAmp.text = "45"; editRotZFreq.text = "0.8";
 
-            } else if (pIdx === 3) { // ⛰️ Mountains
+            } else if (pIdx === 3) { // ⛰️ Mountains (Generated around X Axis, moving via Z wind towards camera)
                 dropSource.selection = 3;
-                editSizeX.text = "2000"; editSizeY.text = "700"; editSizeZ.text = "1600";
-                editSpeed.text = "60"; editDirX.text = "-1.0"; editDirY.text = "0.0"; editDirZ.text = "0.0";
-                chkAlignWind.value = false;
-                editCount.text = "12";
-                editPartSize.text = "120";
-                cpPartColor.setColor("#4a5568", false);
-                editPosFreq.text = "0.2"; editPosAmpX.text = "20"; editPosAmpY.text = "10"; editPosAmpZ.text = "20";
-                editRotXAmp.text = "0"; editRotXFreq.text = "0.1";
-                editRotYAmp.text = "5"; editRotYFreq.text = "0.1";
-                editRotZAmp.text = "0"; editRotZFreq.text = "0.1";
+                editMasterSeed.text = "98765";
+                editSizeX.text = "3200"; // Wide horizontal horizon span along X
+                editSizeY.text = "250";  // Height constrained to horizon ground plane
+                editSizeZ.text = "3600"; // Deep depth volume corridor
+                editSpeed.text = "220";  // Forward travel speed towards camera
+                editDirX.text = "0.0";
+                editDirY.text = "0.0";
+                editDirZ.text = "-1.0";  // Move using Z wind towards the camera!
+                chkAlignWind.value = false; // Stand upright facing the camera as billboard cards
+                editCount.text = "24";
+                editFadeInDist.text = "300"; editFadeOutDist.text = "300";
+                editPartSize.text = "380"; editPartSizeRand.text = "35";
+                editScaleWigFreq.text = "0.0"; editScaleWigAmp.text = "0";
+                cpPartColor.setColor("#3a4a5e", false);
+                editPosFreq.text = "0.1";
+                editPosAmpX.text = "20";
+                editPosAmpY.text = "0";  // Ground anchored, no vertical bobbing
+                editPosAmpZ.text = "0";
+                editRotXAmp.text = "0"; editRotXFreq.text = "0.0";
+                editRotYAmp.text = "0"; editRotYFreq.text = "0.0";
+                editRotZAmp.text = "0"; editRotZFreq.text = "0.0";
 
             } else if (pIdx === 4) { // ⚪ 3D Circles
                 dropSource.selection = 4;
+                editMasterSeed.text = "54321";
                 editSizeX.text = "1200"; editSizeY.text = "800"; editSizeZ.text = "1000";
                 editSpeed.text = "200"; editDirX.text = "1.0"; editDirY.text = "0.0"; editDirZ.text = "0.0";
                 chkAlignWind.value = false;
                 editCount.text = "60";
-                editPartSize.text = "14";
+                editFadeInDist.text = "120"; editFadeOutDist.text = "120";
+                editPartSize.text = "14"; editPartSizeRand.text = "50";
+                editScaleWigFreq.text = "0.8"; editScaleWigAmp.text = "20";
                 cpPartColor.setColor("#ffffff", false);
 
             } else if (pIdx === 5) { // ⬛ 3D Squares
                 dropSource.selection = 5;
+                editMasterSeed.text = "67890";
                 editSizeX.text = "1200"; editSizeY.text = "800"; editSizeZ.text = "1000";
                 editSpeed.text = "250"; editDirX.text = "1.0"; editDirY.text = "0.2"; editDirZ.text = "0.1";
                 chkAlignWind.value = true;
                 editCount.text = "60";
-                editPartSize.text = "14";
+                editFadeInDist.text = "120"; editFadeOutDist.text = "120";
+                editPartSize.text = "14"; editPartSizeRand.text = "40";
+                editScaleWigFreq.text = "1.2"; editScaleWigAmp.text = "25";
                 cpPartColor.setColor("#ff3b30", false);
 
             } else if (pIdx === 6) { // 🎬 Project Comp
@@ -917,6 +1040,7 @@
             var sysName = txtSysName.text.replace(/^\s+|\s+$/g, "");
             if (sysName.length === 0) sysName = "WindBox";
 
+            var masterSeed = Math.floor(getNum(editMasterSeed, 12345));
             var sizeX = Math.max(10, getNum(editSizeX, 1400));
             var sizeY = Math.max(10, getNum(editSizeY, 800));
             var sizeZ = Math.max(10, getNum(editSizeZ, 1000));
@@ -926,6 +1050,11 @@
             var dirZ = getNum(editDirZ, 0.2);
             var alignToWind = chkAlignWind.value;
             var numParticles = Math.max(1, Math.round(getNum(editCount, 50)));
+            var fadeInDist = Math.max(0, getNum(editFadeInDist, 150));
+            var fadeOutDist = Math.max(0, getNum(editFadeOutDist, 150));
+            var partSizeRand = Math.max(0, Math.min(100, getNum(editPartSizeRand, 45)));
+            var scaleWigFreq = Math.max(0, getNum(editScaleWigFreq, 1.0));
+            var scaleWigAmp = Math.max(0, getNum(editScaleWigAmp, 15));
 
             var posFreq = Math.max(0, getNum(editPosFreq, 1.6));
             var posAmpX = Math.max(0, getNum(editPosAmpX, 70));
@@ -992,6 +1121,9 @@
                 setTransformVal(ctrlLayer, "Anchor Point", [0, 0, 0]);
 
                 // 2. Add Expression Controls to Controller
+                // Master Random Seed
+                addSlider(ctrlLayer, "WindBox - Random Seed", masterSeed);
+
                 // Size controls
                 addSlider(ctrlLayer, "WindBox - Size X", sizeX);
                 addSlider(ctrlLayer, "WindBox - Size Y", sizeY);
@@ -1005,6 +1137,15 @@
                 addSlider(ctrlLayer, "WindBox - Direction Z", dirZ);
                 addCheckbox(ctrlLayer, "WindBox - Align to Wind", alignToWind ? 1 : 0);
                 addSlider(ctrlLayer, "WindBox - Particle Type", particleType);
+
+                // Boundary Fade Controls
+                addSlider(ctrlLayer, "WindBox - Fade In Distance", fadeInDist);
+                addSlider(ctrlLayer, "WindBox - Fade Out Distance", fadeOutDist);
+
+                // Particle Size Randomness & Size Wiggle Controls
+                addSlider(ctrlLayer, "WindBox - Size Random (%)", partSizeRand);
+                addSlider(ctrlLayer, "WindBox - Scale Wiggle Freq", scaleWigFreq);
+                addSlider(ctrlLayer, "WindBox - Scale Wiggle Amp (%)", scaleWigAmp);
 
                 // Cube appearance & Guide layer controls
                 addCheckbox(ctrlLayer, "WindBox - Cube Guide Layer", isCubeGuide ? 1 : 0);
@@ -1139,7 +1280,9 @@
                     'var dir = (len > 0.0001) ? [dX / len, dY / len, dZ / len] : [1, 0, 0];',
                     '',
                     'var pIndex = effect("WindBox Particle Index")(1).value;',
-                    'seedRandom(pIndex * 9973 + 17, true);',
+                    'var seed = 12345;',
+                    'try { seed = ctrl.effect("WindBox - Random Seed")(1).value; } catch(e) {}',
+                    'seedRandom(seed + pIndex * 9973 + 17, true);',
                     'var pType = 0;',
                     'try { pType = ctrl.effect("WindBox - Particle Type")(1).value; } catch(e) {}',
                     'var isMnt = (pType === 3);',
@@ -1226,14 +1369,84 @@
                     'var ctrl = thisComp.layer("' + ctrlName + '");',
                     'var activeCount = ctrl.effect("WindBox - Number of Particles")(1).value;',
                     'var pIndex = effect("WindBox Particle Index")(1).value;',
-                    '(pIndex <= activeCount) ? value : 0;'
+                    'if (pIndex > activeCount) { 0; } else {',
+                    '    var fadeIn = 0, fadeOut = 0;',
+                    '    try { fadeIn = Math.max(0, ctrl.effect("WindBox - Fade In Distance")(1).value); } catch(e) {}',
+                    '    try { fadeOut = Math.max(0, ctrl.effect("WindBox - Fade Out Distance")(1).value); } catch(e) {}',
+                    '    if (fadeIn <= 0 && fadeOut <= 0) { value; } else {',
+                    '        var sX = Math.max(1, ctrl.effect("WindBox - Size X")(1).value);',
+                    '        var sY = Math.max(1, ctrl.effect("WindBox - Size Y")(1).value);',
+                    '        var sZ = Math.max(1, ctrl.effect("WindBox - Size Z")(1).value);',
+                    '        var spd = ctrl.effect("WindBox - Wind Speed")(1).value;',
+                    '        var dX = ctrl.effect("WindBox - Direction X")(1).value;',
+                    '        var dY = ctrl.effect("WindBox - Direction Y")(1).value;',
+                    '        var dZ = ctrl.effect("WindBox - Direction Z")(1).value;',
+                    '        var len = Math.sqrt(dX * dX + dY * dY + dZ * dZ);',
+                    '        var dir = (len > 0.0001) ? [dX / len, dY / len, dZ / len] : [1, 0, 0];',
+                    '        var seed = 12345;',
+                    '        try { seed = ctrl.effect("WindBox - Random Seed")(1).value; } catch(e) {}',
+                    '        seedRandom(seed + pIndex * 9973 + 17, true);',
+                    '        var pType = 0;',
+                    '        try { pType = ctrl.effect("WindBox - Particle Type")(1).value; } catch(e) {}',
+                    '        var isMnt = (pType === 3);',
+                    '        var isCloud = (pType === 1);',
+                    '        var initY = isMnt ? (sY * 0.35 + (random() - 0.5) * (sY * 0.1)) : (isCloud ? (-sY * 0.12 + (random() - 0.5) * (sY * 0.75)) : ((random() - 0.5) * sY));',
+                    '        var initPos = [(random() - 0.5) * sX, initY, (random() - 0.5) * sZ];',
+                    '        var dist = spd * time;',
+                    '        function wrapAxis(val, size) {',
+                    '            var shifted = val + size * 0.5;',
+                    '            var m = shifted % size;',
+                    '            if (m < 0) m += size;',
+                    '            return m - size * 0.5;',
+                    '        }',
+                    '        var bx = wrapAxis(initPos[0] + dir[0] * dist, sX);',
+                    '        var by = wrapAxis(initPos[1] + dir[1] * dist, sY);',
+                    '        var bz = wrapAxis(initPos[2] + dir[2] * dist, sZ);',
+                    '        var dIn = 999999, dOut = 999999;',
+                    '        if (Math.abs(dir[0]) > 0.001) {',
+                    '            var inX = (dir[0] > 0) ? (bx + sX * 0.5) : (sX * 0.5 - bx);',
+                    '            var outX = (dir[0] > 0) ? (sX * 0.5 - bx) : (bx + sX * 0.5);',
+                    '            dIn = Math.min(dIn, inX / Math.abs(dir[0]));',
+                    '            dOut = Math.min(dOut, outX / Math.abs(dir[0]));',
+                    '        }',
+                    '        if (Math.abs(dir[1]) > 0.001) {',
+                    '            var inY = (dir[1] > 0) ? (by + sY * 0.5) : (sY * 0.5 - by);',
+                    '            var outY = (dir[1] > 0) ? (sY * 0.5 - by) : (by + sY * 0.5);',
+                    '            dIn = Math.min(dIn, inY / Math.abs(dir[1]));',
+                    '            dOut = Math.min(dOut, outY / Math.abs(dir[1]));',
+                    '        }',
+                    '        if (Math.abs(dir[2]) > 0.001) {',
+                    '            var inZ = (dir[2] > 0) ? (bz + sZ * 0.5) : (sZ * 0.5 - bz);',
+                    '            var outZ = (dir[2] > 0) ? (sZ * 0.5 - bz) : (bz + sZ * 0.5);',
+                    '            dIn = Math.min(dIn, inZ / Math.abs(dir[2]));',
+                    '            dOut = Math.min(dOut, outZ / Math.abs(dir[2]));',
+                    '        }',
+                    '        var fIn = (fadeIn > 0) ? Math.min(1, Math.max(0, dIn / fadeIn)) : 1;',
+                    '        var fOut = (fadeOut > 0) ? Math.min(1, Math.max(0, dOut / fadeOut)) : 1;',
+                    '        value * (fIn * fOut);',
+                    '    }',
+                    '}'
                 ].join("\n");
 
                 var scaleExpr = [
                     'var ctrl = thisComp.layer("' + ctrlName + '");',
                     'var activeCount = ctrl.effect("WindBox - Number of Particles")(1).value;',
                     'var pIndex = effect("WindBox Particle Index")(1).value;',
-                    '(pIndex <= activeCount) ? value : [0, 0, 0];'
+                    'if (pIndex > activeCount) { [0, 0, 0]; } else {',
+                    '    var seed = 12345;',
+                    '    try { seed = ctrl.effect("WindBox - Random Seed")(1).value; } catch(e) {}',
+                    '    seedRandom(seed + pIndex * 9973 + 43, true);',
+                    '    var szRand = 0;',
+                    '    try { szRand = Math.max(0, ctrl.effect("WindBox - Size Random (%)")(1).value) / 100; } catch(e) {}',
+                    '    var randMult = (szRand > 0) ? (1 + (random() - 0.5) * 2 * szRand) : 1;',
+                    '    randMult = Math.max(0.05, randMult);',
+                    '    var sFreq = 0, sAmp = 0;',
+                    '    try { sFreq = ctrl.effect("WindBox - Scale Wiggle Freq")(1).value; } catch(e) {}',
+                    '    try { sAmp = ctrl.effect("WindBox - Scale Wiggle Amp (%)")(1).value; } catch(e) {}',
+                    '    var w = (sFreq > 0 && sAmp > 0) ? (wiggle(sFreq, sAmp)[0] - value[0]) : 0;',
+                    '    var s = Math.max(0.1, value[0] * randMult * (1 + w / 100));',
+                    '    [s, s, s];',
+                    '}'
                 ].join("\n");
 
                 // 5. GENERATE PARTICLE LAYERS
@@ -1352,6 +1565,12 @@
                 setColorVal("WindBox - Cube Stroke Color", hexToRgb(cpCubeStroke.value));
                 setSliderVal("WindBox - Cube Stroke Width", Math.max(0.5, getNum(editCubeStrokeW, 1.5)));
                 setSliderVal("WindBox - Cube Stroke Opacity", Math.max(0, Math.min(100, getNum(editCubeStrokeOp, 85))));
+                setSliderVal("WindBox - Random Seed", Math.floor(getNum(editMasterSeed, 12345)));
+                setSliderVal("WindBox - Fade In Distance", Math.max(0, getNum(editFadeInDist, 150)));
+                setSliderVal("WindBox - Fade Out Distance", Math.max(0, getNum(editFadeOutDist, 150)));
+                setSliderVal("WindBox - Size Random (%)", Math.max(0, Math.min(100, getNum(editPartSizeRand, 45))));
+                setSliderVal("WindBox - Scale Wiggle Freq", Math.max(0, getNum(editScaleWigFreq, 1.0)));
+                setSliderVal("WindBox - Scale Wiggle Amp (%)", Math.max(0, getNum(editScaleWigAmp, 15)));
                 setSliderVal("WindBox - Wind Speed", getNum(editSpeed, 260));
                 setSliderVal("WindBox - Number of Particles", Math.max(1, getNum(editCount, 50)));
                 setSliderVal("WindBox - Direction X", getNum(editDirX, 1.0));
@@ -1435,6 +1654,12 @@
             cpCubeStroke.setColor(getColorVal("WindBox - Cube Stroke Color", "#FFFFFF"), false);
             editCubeStrokeW.text = getSliderVal("WindBox - Cube Stroke Width", 1.5).toString();
             editCubeStrokeOp.text = Math.round(getSliderVal("WindBox - Cube Stroke Opacity", 85)).toString();
+            editMasterSeed.text = Math.floor(getSliderVal("WindBox - Random Seed", 12345)).toString();
+            editFadeInDist.text = getSliderVal("WindBox - Fade In Distance", 150).toString();
+            editFadeOutDist.text = getSliderVal("WindBox - Fade Out Distance", 150).toString();
+            editPartSizeRand.text = getSliderVal("WindBox - Size Random (%)", 45).toString();
+            editScaleWigFreq.text = getSliderVal("WindBox - Scale Wiggle Freq", 1.0).toString();
+            editScaleWigAmp.text = getSliderVal("WindBox - Scale Wiggle Amp (%)", 15).toString();
             editSpeed.text = getSliderVal("WindBox - Wind Speed", 260).toString();
             editCount.text = Math.round(getSliderVal("WindBox - Number of Particles", 50)).toString();
             editDirX.text = getSliderVal("WindBox - Direction X", 1.0).toString();

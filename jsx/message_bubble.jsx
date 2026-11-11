@@ -261,9 +261,9 @@
             tailType: "modern",
             font: "Roboto (Google / Android)",
             fontIndex: 1,
-            fontFamily: "Roboto, 'Google Sans', 'Segoe UI', Arial, sans-serif",
-            fonts: ["Roboto", "Google Sans", "Segoe UI", "Arial", "sans-serif"],
-            aeFontCandidates: ["Roboto-Regular", "GoogleSans-Regular", "SegoeUI", "ArialMT", "Arial"],
+            fontFamily: "Roboto, 'Google Sans', 'Segoe UI', Arial, 'Noto Color Emoji', 'Apple Color Emoji', 'Segoe UI Emoji', sans-serif",
+            fonts: ["Roboto", "Google Sans", "Segoe UI", "Arial", "Noto Color Emoji", "sans-serif"],
+            aeFontCandidates: ["Roboto-Regular", "GoogleSans-Regular", "SegoeUI", "ArialMT", "Arial", "NotoColorEmoji"],
             statusStyle: "rcs",
             light: {
                 sent:     { bubble: "#0b57d0", text: "#ffffff", time: "rgba(255,255,255,0.75)", check: "" },
@@ -280,9 +280,9 @@
             tailType: "ios",
             font: "SF Pro (Apple / iOS)",
             fontIndex: 0,
-            fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display', 'Helvetica Neue', Arial, sans-serif",
-            fonts: ["SF Pro Text", "SF Pro Display", "-apple-system", "BlinkMacSystemFont", "Helvetica Neue", "Arial", "sans-serif"],
-            aeFontCandidates: ["SFProText-Regular", "SFProDisplay-Regular", "HelveticaNeue", "ArialMT", "Arial"],
+            fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display', 'Helvetica Neue', Arial, 'Noto Color Emoji', 'Apple Color Emoji', 'Segoe UI Emoji', sans-serif",
+            fonts: ["SF Pro Text", "SF Pro Display", "-apple-system", "BlinkMacSystemFont", "Helvetica Neue", "Arial", "Noto Color Emoji", "sans-serif"],
+            aeFontCandidates: ["SFProText-Regular", "SFProDisplay-Regular", "HelveticaNeue", "ArialMT", "Arial", "NotoColorEmoji"],
             statusStyle: "standard",
             light: {
                 sent:     { bubble: "#007aff", text: "#ffffff", time: "rgba(255,255,255,0.75)", check: "" },
@@ -299,9 +299,9 @@
             tailType: "classic",
             font: "Helvetica Neue",
             fontIndex: 3,
-            fontFamily: "'Helvetica Neue', Helvetica, Arial, sans-serif",
-            fonts: ["Helvetica Neue", "Helvetica", "Arial", "sans-serif"],
-            aeFontCandidates: ["HelveticaNeue", "Helvetica", "ArialMT", "Arial"],
+            fontFamily: "'Helvetica Neue', Helvetica, Arial, 'Noto Color Emoji', 'Apple Color Emoji', 'Segoe UI Emoji', sans-serif",
+            fonts: ["Helvetica Neue", "Helvetica", "Arial", "Noto Color Emoji", "sans-serif"],
+            aeFontCandidates: ["HelveticaNeue", "Helvetica", "ArialMT", "Arial", "NotoColorEmoji"],
             statusStyle: "standard",
             light: {
                 sent:     { bubble: "#d9fdd3", text: "#111b21", time: "#667781", check: "#53bdeb" },
@@ -318,9 +318,9 @@
             tailType: "none",
             font: "SF Pro (Apple / iOS)",
             fontIndex: 0,
-            fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Instagram Sans', 'Helvetica Neue', Arial, sans-serif",
-            fonts: ["SF Pro Text", "Instagram Sans", "Helvetica Neue", "Arial", "sans-serif"],
-            aeFontCandidates: ["SFProText-Regular", "HelveticaNeue", "ArialMT", "Arial"],
+            fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Instagram Sans', 'Helvetica Neue', Arial, 'Noto Color Emoji', 'Apple Color Emoji', 'Segoe UI Emoji', sans-serif",
+            fonts: ["SF Pro Text", "Instagram Sans", "Helvetica Neue", "Arial", "Noto Color Emoji", "sans-serif"],
+            aeFontCandidates: ["SFProText-Regular", "HelveticaNeue", "ArialMT", "Arial", "NotoColorEmoji"],
             statusStyle: "standard",
             light: {
                 sent:     { bubble: "#3797f0", text: "#ffffff", time: "rgba(255,255,255,0.7)", check: "" },
@@ -337,9 +337,9 @@
             tailType: "none",
             font: "Segoe UI (Windows)",
             fontIndex: 2,
-            fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, Arial, sans-serif",
-            fonts: ["Segoe UI", "Tahoma", "Geneva", "Arial", "sans-serif"],
-            aeFontCandidates: ["SegoeUI", "Tahoma", "ArialMT", "Arial"],
+            fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, Arial, 'Noto Color Emoji', 'Apple Color Emoji', 'Segoe UI Emoji', sans-serif",
+            fonts: ["Segoe UI", "Tahoma", "Geneva", "Arial", "Noto Color Emoji", "sans-serif"],
+            aeFontCandidates: ["SegoeUI", "Tahoma", "ArialMT", "Arial", "NotoColorEmoji"],
             statusStyle: "standard",
             light: {
                 sent:     { bubble: "#0084ff", text: "#ffffff", time: "rgba(255,255,255,0.75)", check: "#0084ff" },
@@ -356,9 +356,9 @@
             tailType: "classic",
             font: "Open Sans",
             fontIndex: 6,
-            fontFamily: "'Open Sans', 'Segoe UI', Roboto, Arial, sans-serif",
-            fonts: ["Open Sans", "Segoe UI", "Roboto", "Arial", "sans-serif"],
-            aeFontCandidates: ["OpenSans-Regular", "OpenSans", "SegoeUI", "ArialMT", "Arial"],
+            fontFamily: "'Open Sans', 'Segoe UI', Roboto, Arial, 'Noto Color Emoji', 'Apple Color Emoji', 'Segoe UI Emoji', sans-serif",
+            fonts: ["Open Sans", "Segoe UI", "Roboto", "Arial", "Noto Color Emoji", "sans-serif"],
+            aeFontCandidates: ["OpenSans-Regular", "OpenSans", "SegoeUI", "ArialMT", "Arial", "NotoColorEmoji"],
             statusStyle: "standard",
             light: {
                 sent:     { bubble: "#effdde", text: "#000000", time: "#4fae4e", check: "#4fae4e" },
@@ -375,9 +375,9 @@
             tailType: "none",
             font: "Inter",
             fontIndex: 5,
-            fontFamily: "Inter, 'gg sans', 'Segoe UI', Arial, sans-serif",
-            fonts: ["Inter", "gg sans", "Segoe UI", "Arial", "sans-serif"],
-            aeFontCandidates: ["Inter-Regular", "Inter", "SegoeUI", "ArialMT", "Arial"],
+            fontFamily: "Inter, 'gg sans', 'Segoe UI', Arial, 'Noto Color Emoji', 'Apple Color Emoji', 'Segoe UI Emoji', sans-serif",
+            fonts: ["Inter", "gg sans", "Segoe UI", "Arial", "Noto Color Emoji", "sans-serif"],
+            aeFontCandidates: ["Inter-Regular", "Inter", "SegoeUI", "ArialMT", "Arial", "NotoColorEmoji"],
             statusStyle: "standard",
             light: {
                 sent:     { bubble: "#5865f2", text: "#ffffff", time: "rgba(255,255,255,0.75)", check: "" },
@@ -394,9 +394,9 @@
             tailType: "modern",
             font: "System Default",
             fontIndex: 7,
-            fontFamily: "system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
-            fonts: ["system-ui", "-apple-system", "Segoe UI", "Roboto", "Arial", "sans-serif"],
-            aeFontCandidates: ["ArialMT", "Arial", "HelveticaNeue", "SegoeUI"],
+            fontFamily: "system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, 'Noto Color Emoji', 'Apple Color Emoji', 'Segoe UI Emoji', sans-serif",
+            fonts: ["system-ui", "-apple-system", "Segoe UI", "Roboto", "Arial", "Noto Color Emoji", "sans-serif"],
+            aeFontCandidates: ["ArialMT", "Arial", "HelveticaNeue", "SegoeUI", "NotoColorEmoji"],
             statusStyle: "standard",
             light: {
                 sent:     { bubble: "#007aff", text: "#ffffff", time: "rgba(255,255,255,0.75)", check: "" },
@@ -626,51 +626,57 @@
     var FONTS = [
         {
             name: "SF Pro (Apple / iOS)",
-            css: "-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display', 'Helvetica Neue', Arial, sans-serif",
+            css: "-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display', 'Helvetica Neue', Arial, 'Noto Color Emoji', 'Apple Color Emoji', 'Segoe UI Emoji', sans-serif",
             ae: "SFProText-Regular",
             aeFallbacks: ["SFProText-Regular", "SFProDisplay-Regular", "HelveticaNeue", "ArialMT", "Arial"]
         },
         {
             name: "Roboto (Google / Android)",
-            css: "Roboto, 'Google Sans', 'Segoe UI', Arial, sans-serif",
+            css: "Roboto, 'Google Sans', 'Segoe UI', Arial, 'Noto Color Emoji', 'Apple Color Emoji', 'Segoe UI Emoji', sans-serif",
             ae: "Roboto-Regular",
             aeFallbacks: ["Roboto-Regular", "GoogleSans-Regular", "SegoeUI", "ArialMT", "Arial"]
         },
         {
             name: "Segoe UI (Windows)",
-            css: "'Segoe UI', Tahoma, Geneva, Verdana, Arial, sans-serif",
+            css: "'Segoe UI', Tahoma, Geneva, Verdana, Arial, 'Noto Color Emoji', 'Apple Color Emoji', 'Segoe UI Emoji', sans-serif",
             ae: "SegoeUI",
             aeFallbacks: ["SegoeUI", "Tahoma", "ArialMT", "Arial"]
         },
         {
             name: "Helvetica Neue",
-            css: "'Helvetica Neue', Helvetica, Arial, sans-serif",
+            css: "'Helvetica Neue', Helvetica, Arial, 'Noto Color Emoji', 'Apple Color Emoji', 'Segoe UI Emoji', sans-serif",
             ae: "HelveticaNeue",
             aeFallbacks: ["HelveticaNeue", "Helvetica", "ArialMT", "Arial"]
         },
         {
             name: "Arial",
-            css: "Arial, Helvetica, sans-serif",
+            css: "Arial, Helvetica, 'Noto Color Emoji', 'Apple Color Emoji', 'Segoe UI Emoji', sans-serif",
             ae: "ArialMT",
             aeFallbacks: ["ArialMT", "Arial", "Helvetica"]
         },
         {
             name: "Inter",
-            css: "Inter, 'Segoe UI', Arial, sans-serif",
+            css: "Inter, 'Segoe UI', Arial, 'Noto Color Emoji', 'Apple Color Emoji', 'Segoe UI Emoji', sans-serif",
             ae: "Inter-Regular",
             aeFallbacks: ["Inter-Regular", "SegoeUI", "ArialMT", "Arial"]
         },
         {
             name: "Open Sans",
-            css: "'Open Sans', 'Segoe UI', Arial, sans-serif",
+            css: "'Open Sans', 'Segoe UI', Arial, 'Noto Color Emoji', 'Apple Color Emoji', 'Segoe UI Emoji', sans-serif",
             ae: "OpenSans-Regular",
             aeFallbacks: ["OpenSans-Regular", "SegoeUI", "ArialMT", "Arial"]
         },
         {
             name: "System Default",
-            css: "system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
+            css: "system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, 'Noto Color Emoji', 'Apple Color Emoji', 'Segoe UI Emoji', sans-serif",
             ae: "ArialMT",
             aeFallbacks: ["ArialMT", "Arial", "HelveticaNeue", "SegoeUI"]
+        },
+        {
+            name: "Noto Color Emoji (Google)",
+            css: "'Noto Color Emoji', 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', sans-serif",
+            ae: "NotoColorEmoji",
+            aeFallbacks: ["NotoColorEmoji", "NotoColorEmoji-Regular", "AppleColorEmoji", "SegoeUIEmoji", "SegoeUISymbol"]
         }
     ];
 
@@ -2269,20 +2275,14 @@
     var lblFont = grpFont.add("statictext", undefined, "Font Family:");
     lblFont.preferredSize = [115, -1];
 
-    var fontOptions = [
-        "SF Pro (Apple / iOS)",
-        "Roboto (Google / Android)",
-        "Segoe UI (Windows)",
-        "Helvetica Neue",
-        "Arial",
-        "Inter",
-        "Open Sans",
-        "System Default"
-    ];
+    var fontOptions = [];
+    for (var fo = 0; fo < FONTS.length; fo++) {
+        fontOptions.push(FONTS[fo].name);
+    }
     var dropFont = grpFont.add("dropdownlist", undefined, fontOptions);
     dropFont.selection = 0; // Default: SF Pro
     dropFont.preferredSize = [185, 26];
-    dropFont.helpTip = "Select font family commonly used across mobile messaging platforms.";
+    dropFont.helpTip = "Select font family commonly used across mobile messaging platforms (Emojis always use Noto Color Emoji / Apple Color Emoji / Segoe UI Emoji).";
 
     // Screen Width Row (Determines where text line splits)
     var grpWidth = pnlDim.add("group");
@@ -2693,6 +2693,17 @@
 
     function getActiveFontCandidates() {
         var candidates = [];
+        var fIdx = (dropFont && dropFont.selection) ? dropFont.selection.index : 0;
+        var curFont = FONTS[fIdx] || FONTS[0];
+
+        // If user specifically picked Noto Color Emoji, prioritize it
+        if (curFont && curFont.name && curFont.name.indexOf("Noto Color Emoji") !== -1) {
+            candidates.push("NotoColorEmoji");
+            candidates.push("NotoColorEmoji-Regular");
+            candidates.push("AppleColorEmoji");
+            candidates.push("SegoeUIEmoji");
+        }
+
         var selIdx = (dropPlatform && dropPlatform.selection) ? dropPlatform.selection.index : 0;
         var pKey = platformKeys[selIdx] || "iOS Message";
         var pCfg = PLATFORMS[pKey] || DEFAULT_PLATFORMS[pKey];
@@ -2701,8 +2712,6 @@
                 if (pCfg.aeFontCandidates[c]) candidates.push(pCfg.aeFontCandidates[c]);
             }
         }
-        var fIdx = (dropFont && dropFont.selection) ? dropFont.selection.index : 0;
-        var curFont = FONTS[fIdx] || FONTS[0];
         if (curFont && curFont.aeFallbacks) {
             for (var f = 0; f < curFont.aeFallbacks.length; f++) {
                 if (curFont.aeFallbacks[f]) candidates.push(curFont.aeFallbacks[f]);
@@ -2710,6 +2719,14 @@
         } else if (curFont && curFont.ae) {
             candidates.push(curFont.ae);
         }
+
+        // Always provide Noto Color Emoji and system emoji fallbacks
+        candidates.push("NotoColorEmoji");
+        candidates.push("NotoColorEmoji-Regular");
+        candidates.push("AppleColorEmoji");
+        candidates.push("SegoeUIEmoji");
+        candidates.push("SegoeUISymbol");
+
         return candidates;
     }
 

@@ -2,6 +2,8 @@
    After Effects Dark Theme CSS & 3D Comp Viewport Styling
    ========================================================= */
 
+@import url('https://fonts.googleapis.com/css2?family=Noto+Color+Emoji&display=swap');
+
 :root {
     --bg-darkest: #181818;
     --bg-darker: #202020;
@@ -19,7 +21,7 @@
     --ae-red: #ff4757;
     --ae-green: #2ed573;
     --accent: #1473e6;
-    --font-ui: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --font-ui: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, "Noto Color Emoji", "Apple Color Emoji", "Segoe UI Emoji", sans-serif;
     --font-mono: "Cascadia Code", "Fira Code", Consolas, Monaco, monospace;
 }
 

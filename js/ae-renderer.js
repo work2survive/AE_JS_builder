@@ -587,9 +587,13 @@
                         ? layer.leading
                         : (fs * 1.35 * ((layer.leadingPercent || 100) / 100));
                     const tspans = lines.map((l, li) => `<tspan x="0" dy="${li === 0 ? 0 : lineStep}">${escapeXml(l)}</tspan>`).join('');
+                    const emojiFontStack = "'Noto Color Emoji', 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', sans-serif";
+                    const renderedFont = layer.fontFamily
+                        ? (layer.fontFamily.indexOf('Noto Color Emoji') !== -1 ? layer.fontFamily : `${layer.fontFamily}, ${emojiFontStack}`)
+                        : `system-ui, -apple-system, ${emojiFontStack}`;
                     layerEl.innerHTML = `
                         <svg class="ae-layer-svg" style="overflow: visible;">
-                            <text x="0" y="${fs * 0.9}" fill="${fill}" font-size="${fs}px" font-family="${layer.fontFamily || 'system-ui, -apple-system, sans-serif'}" text-anchor="${textAnchor}" style="user-select:none; font-weight:400;">
+                            <text x="0" y="${fs * 0.9}" fill="${fill}" font-size="${fs}px" font-family="${renderedFont}" text-anchor="${textAnchor}" style="user-select:none; font-weight:400;">
                                 ${tspans}
                             </text>
                         </svg>
