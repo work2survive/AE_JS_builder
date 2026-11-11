@@ -1426,9 +1426,130 @@
     };
 
     // -------------------------------------------------------------------------
-    // 6. Dimensions & Typography (Screen Width, Fonts, Padding, Leading)
+    // 6. Color Picker Helper Function
     // -------------------------------------------------------------------------
-    var pnlDim = win.add("panel", undefined, "Layout & Typography");
+    function createColorPicker(parent, defaultHex, labelText, labelWidth) {
+        var grp = parent.add("group");
+        grp.orientation = "row";
+        grp.spacing = 8;
+        grp.alignChildren = ["left", "center"];
+
+        if (labelText) {
+            var lbl = grp.add("statictext", undefined, labelText);
+            lbl.preferredSize = [labelWidth || 95, -1];
+        }
+
+        var btnSwatch = grp.add("button", undefined, "");
+        btnSwatch.preferredSize = [36, 22];
+        btnSwatch.helpTip = "Click to pick color (Native / Windows Color Picker)";
+
+        var txtHex = grp.add("edittext", undefined, defaultHex);
+        txtHex.preferredSize = [75, 22];
+        txtHex.characters = 7;
+        txtHex.helpTip = "Direct hex color input (e.g. #2288EE)";
+
+        var picker = {
+            group: grp,
+            button: btnSwatch,
+            edittext: txtHex,
+            _color: defaultHex,
+            value: defaultHex,
+            onChange: null
+        };
+
+        btnSwatch.onDraw = function() {
+            try {
+                var g = this.graphics;
+                var rgb = hexToRgb(picker._color);
+                var brush = g.newBrush(g.BrushType.SOLID_COLOR, [rgb[0], rgb[1], rgb[2], 1.0]);
+                var pen = g.newPen(g.PenType.SOLID_COLOR, [0.7, 0.7, 0.7, 1.0], 1);
+                g.newPath();
+                g.rectPath(0, 0, this.size ? this.size[0] : 36, this.size ? this.size[1] : 22);
+                g.fillPath(brush);
+                g.strokePath(pen);
+            } catch(e) {}
+        };
+
+        function setColor(newHex, triggerChange) {
+            if (!newHex) return;
+            if (newHex.indexOf("#") !== 0) newHex = "#" + newHex;
+            picker._color = newHex;
+            picker.value = newHex;
+            txtHex.text = newHex.toUpperCase();
+
+            try {
+                if (btnSwatch.notify) {
+                    btnSwatch.notify("onDraw");
+                }
+            } catch(e) {}
+
+            if (btnSwatch.domElement) {
+                btnSwatch.domElement.style.backgroundColor = newHex;
+                btnSwatch.domElement.style.border = "1px solid #777";
+                btnSwatch.domElement.style.borderRadius = "3px";
+            }
+
+            if (triggerChange && typeof picker.onChange === "function") {
+                picker.onChange(newHex);
+            }
+        }
+
+        btnSwatch.onClick = function() {
+            var curHex = picker._color || "#2288EE";
+            if (typeof window !== "undefined" && typeof window.openWindowsColorPicker === "function") {
+                window.openWindowsColorPicker(curHex, function(selectedHex) {
+                    setColor(selectedHex, true);
+                });
+                return;
+            }
+
+            var hexNum = parseInt(curHex.replace("#", ""), 16);
+            var result = -1;
+            if (typeof $.colorPicker === "function") {
+                result = $.colorPicker(hexNum, function(selectedHex) {
+                    setColor(selectedHex, true);
+                });
+            }
+            if (result !== -1 && result !== undefined && result !== null) {
+                var hexStr = Number(result).toString(16);
+                while (hexStr.length < 6) hexStr = "0" + hexStr;
+                setColor("#" + hexStr, true);
+            }
+        };
+
+        txtHex.onChange = function() {
+            var val = txtHex.text.replace(/^\s+|\s+$/g, "");
+            if (val.indexOf("#") !== 0) val = "#" + val;
+            if (/^#[0-9A-Fa-f]{6}$/.test(val)) {
+                setColor(val, true);
+            } else {
+                txtHex.text = picker._color.toUpperCase();
+            }
+        };
+
+        setColor(defaultHex, false);
+        picker.setColor = setColor;
+        return picker;
+    }
+
+    // -------------------------------------------------------------------------
+    // 7. Tabbed Panel Navigation: Appearance & Animation
+    // -------------------------------------------------------------------------
+    var tpanel = win.add("tabbedpanel", undefined);
+    tpanel.alignChildren = ["fill", "top"];
+    tpanel.alignment = ["fill", "top"];
+
+    // =========================================================================
+    // TAB 1: APPEARANCE (Layout & Typography, Colors & Appearance, Timestamp)
+    // =========================================================================
+    var tabAppearance = tpanel.add("tab", undefined, "Appearance");
+    tabAppearance.orientation = "column";
+    tabAppearance.alignChildren = ["fill", "top"];
+    tabAppearance.spacing = 8;
+    tabAppearance.margins = 8;
+
+    // --- Panel: Layout & Typography ---
+    var pnlDim = tabAppearance.add("panel", undefined, "Layout & Typography");
     pnlDim.orientation = "column";
     pnlDim.alignChildren = ["fill", "top"];
     pnlDim.spacing = 8;
@@ -1539,10 +1660,45 @@
         txtLeading.text = String(Math.round(v));
     };
 
-    // -------------------------------------------------------------------------
-    // 7. iOS 18 Text Effects & Animation Section
-    // -------------------------------------------------------------------------
-    var pnlAnim = win.add("panel", undefined, "Text Effects & Animation (iOS 18)");
+    // --- Panel: Colors & Appearance ---
+    var pnlColors = tabAppearance.add("panel", undefined, "Colors & Appearance");
+    pnlColors.orientation = "column";
+    pnlColors.alignChildren = ["fill", "top"];
+    pnlColors.spacing = 8;
+    pnlColors.margins = 10;
+
+    var cpBubble = createColorPicker(pnlColors, "#007AFF", "Bubble Color:", 95);
+    var cpText = createColorPicker(pnlColors, "#FFFFFF", "Text Color:", 95);
+
+    // --- Panel: Timestamp (Randomized) ---
+    var pnlTime = tabAppearance.add("panel", undefined, "Timestamp (Randomized)");
+    pnlTime.orientation = "row";
+    pnlTime.alignChildren = ["fill", "center"];
+    pnlTime.spacing = 8;
+    pnlTime.margins = [10, 8, 10, 8];
+
+    var lblTimeVal = pnlTime.add("statictext", undefined, "Time: " + currentRandomTime);
+    lblTimeVal.alignment = ["fill", "center"];
+    lblTimeVal.helpTip = "Timestamps are randomized for now. A dedicated custom time dialog will be added in a future update.";
+
+    var btnRerollTime = pnlTime.add("button", undefined, "🎲 Re-roll Time");
+    btnRerollTime.preferredSize = [135, 26];
+    btnRerollTime.onClick = function() {
+        currentRandomTime = generateRandomTime();
+        lblTimeVal.text = "Time: " + currentRandomTime;
+    };
+
+    // =========================================================================
+    // TAB 2: ANIMATION (Text Effects & Animation)
+    // =========================================================================
+    var tabAnimation = tpanel.add("tab", undefined, "Animation");
+    tabAnimation.orientation = "column";
+    tabAnimation.alignChildren = ["fill", "top"];
+    tabAnimation.spacing = 8;
+    tabAnimation.margins = 8;
+
+    // --- Panel: Text Effects & Animation ---
+    var pnlAnim = tabAnimation.add("panel", undefined, "Text Effects & Animation (iOS 18)");
     pnlAnim.orientation = "column";
     pnlAnim.alignChildren = ["fill", "top"];
     pnlAnim.spacing = 6;
@@ -1704,142 +1860,7 @@
     chkEntrance.value = true; // Default: Enabled
     chkEntrance.helpTip = "Animate the bubble growing from left/right (5 frames), followed by a 5-frame typewriter text reveal.";
 
-    // -------------------------------------------------------------------------
-    // 8. Timestamp Section (Random time + Re-roll)
-    // -------------------------------------------------------------------------
-    var pnlTime = win.add("panel", undefined, "Timestamp (Randomized)");
-    pnlTime.orientation = "row";
-    pnlTime.alignChildren = ["fill", "center"];
-    pnlTime.spacing = 8;
-    pnlTime.margins = [10, 8, 10, 8];
-
-    var lblTimeVal = pnlTime.add("statictext", undefined, "Time: " + currentRandomTime);
-    lblTimeVal.alignment = ["fill", "center"];
-    lblTimeVal.helpTip = "Timestamps are randomized for now. A dedicated custom time dialog will be added in a future update.";
-
-    var btnRerollTime = pnlTime.add("button", undefined, "🎲 Re-roll Time");
-    btnRerollTime.preferredSize = [135, 26];
-    btnRerollTime.onClick = function() {
-        currentRandomTime = generateRandomTime();
-        lblTimeVal.text = "Time: " + currentRandomTime;
-    };
-
-    // -------------------------------------------------------------------------
-    // 8. Color Picker Helper & Live Colors Panel
-    // -------------------------------------------------------------------------
-    function createColorPicker(parent, defaultHex, labelText, labelWidth) {
-        var grp = parent.add("group");
-        grp.orientation = "row";
-        grp.spacing = 8;
-        grp.alignChildren = ["left", "center"];
-
-        if (labelText) {
-            var lbl = grp.add("statictext", undefined, labelText);
-            lbl.preferredSize = [labelWidth || 95, -1];
-        }
-
-        var btnSwatch = grp.add("button", undefined, "");
-        btnSwatch.preferredSize = [36, 22];
-        btnSwatch.helpTip = "Click to pick color (Native / Windows Color Picker)";
-
-        var txtHex = grp.add("edittext", undefined, defaultHex);
-        txtHex.preferredSize = [75, 22];
-        txtHex.characters = 7;
-        txtHex.helpTip = "Direct hex color input (e.g. #2288EE)";
-
-        var picker = {
-            group: grp,
-            button: btnSwatch,
-            edittext: txtHex,
-            _color: defaultHex,
-            value: defaultHex,
-            onChange: null
-        };
-
-        btnSwatch.onDraw = function() {
-            try {
-                var g = this.graphics;
-                var rgb = hexToRgb(picker._color);
-                var brush = g.newBrush(g.BrushType.SOLID_COLOR, [rgb[0], rgb[1], rgb[2], 1.0]);
-                var pen = g.newPen(g.PenType.SOLID_COLOR, [0.7, 0.7, 0.7, 1.0], 1);
-                g.newPath();
-                g.rectPath(0, 0, this.size ? this.size[0] : 36, this.size ? this.size[1] : 22);
-                g.fillPath(brush);
-                g.strokePath(pen);
-            } catch(e) {}
-        };
-
-        function setColor(newHex, triggerChange) {
-            if (!newHex) return;
-            if (newHex.indexOf("#") !== 0) newHex = "#" + newHex;
-            picker._color = newHex;
-            picker.value = newHex;
-            txtHex.text = newHex.toUpperCase();
-
-            try {
-                if (btnSwatch.notify) {
-                    btnSwatch.notify("onDraw");
-                }
-            } catch(e) {}
-
-            if (btnSwatch.domElement) {
-                btnSwatch.domElement.style.backgroundColor = newHex;
-                btnSwatch.domElement.style.border = "1px solid #777";
-                btnSwatch.domElement.style.borderRadius = "3px";
-            }
-
-            if (triggerChange && typeof picker.onChange === "function") {
-                picker.onChange(newHex);
-            }
-        }
-
-        btnSwatch.onClick = function() {
-            var curHex = picker._color || "#2288EE";
-            if (typeof window !== "undefined" && typeof window.openWindowsColorPicker === "function") {
-                window.openWindowsColorPicker(curHex, function(selectedHex) {
-                    setColor(selectedHex, true);
-                });
-                return;
-            }
-
-            var hexNum = parseInt(curHex.replace("#", ""), 16);
-            var result = -1;
-            if (typeof $.colorPicker === "function") {
-                result = $.colorPicker(hexNum, function(selectedHex) {
-                    setColor(selectedHex, true);
-                });
-            }
-            if (result !== -1 && result !== undefined && result !== null) {
-                var hexStr = Number(result).toString(16);
-                while (hexStr.length < 6) hexStr = "0" + hexStr;
-                setColor("#" + hexStr, true);
-            }
-        };
-
-        txtHex.onChange = function() {
-            var val = txtHex.text.replace(/^\s+|\s+$/g, "");
-            if (val.indexOf("#") !== 0) val = "#" + val;
-            if (/^#[0-9A-Fa-f]{6}$/.test(val)) {
-                setColor(val, true);
-            } else {
-                txtHex.text = picker._color.toUpperCase();
-            }
-        };
-
-        setColor(defaultHex, false);
-        picker.setColor = setColor;
-        return picker;
-    }
-
-    // Colors & Appearance Panel (Always shown, with live color swatch buttons & hex inputs)
-    var pnlColors = win.add("panel", undefined, "Colors & Appearance");
-    pnlColors.orientation = "column";
-    pnlColors.alignChildren = ["fill", "top"];
-    pnlColors.spacing = 8;
-    pnlColors.margins = 10;
-
-    var cpBubble = createColorPicker(pnlColors, "#007AFF", "Bubble Color:", 95);
-    var cpText = createColorPicker(pnlColors, "#FFFFFF", "Text Color:", 95);
+    tpanel.selection = tabAppearance; // Default to Appearance tab
 
     function syncColorsFromPlatform() {
         var selIdx = dropPlatform.selection ? dropPlatform.selection.index : 0;
