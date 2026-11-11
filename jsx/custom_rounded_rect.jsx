@@ -744,7 +744,13 @@
         if (forceRebuild || !existingLayer) {
             if (app.beginUndoGroup) app.beginUndoGroup("Create Custom Rounded Rectangle");
             try {
-                if (existingLayer) removeLayer(comp, existingLayer);
+                // Clean up all previous layers from composition on build
+                for (var p = comp.layers.length; p >= 1; p--) {
+                    var oldL = getLayer(comp, p);
+                    if (oldL) {
+                        removeLayer(comp, oldL);
+                    }
+                }
 
                 var layer = comp.layers.addShape();
                 layer.name = currentLayerName;

@@ -48,13 +48,22 @@ Supports the core AE vector shapes:
 - **Reveal All**: Click the **`Shy (UI Focus)`** button in the header or the banner link to toggle Shy mode OFF and inspect all comp layers and properties in full detail.
 - **Layer Shy Switches**: Each layer row features its own Shy switch icon matching After Effects.
 
-### 6. Global Expression Switch & 4-Way Evaluation Switch
+### 6. Global Expression Switch & Sequential Evaluation Switch
 - **Global Expressions Switch**: Located in the timeline switches header (`[=] Expressions: Shown/Hidden`). Click to hide/show expression formulas and badges.
-- **4-Way Layer Evaluation Switch**: Positioned on the left of each timeline layer row:
-  - **🎲 Rand (Default)**: Jitters and randomizes dynamic values with high-frequency noise.
-  - **〰️ Wiggle**: Smooth, harmonic After Effects continuous wiggle.
-  - **⏹️ Stop**: Freezes/stops the animation at its current evaluated value.
-  - **⏮️ Base**: Resets to the original static base value defined in the script without animation.
+- **Sequential Evaluation Mode Switch**: A compact, single-button switch on each animatable property row designed with a **2:1 aspect ratio** ($28\times 14\text{ px}$) that cycles sequentially through evaluation states on click. The capital letter is positioned on the left side alongside a status toggle indicator on the right:
+  - **Standard Properties (Position, Scale, Rotation, Dimensions, Sliders)**:
+    - 🟩 **`[R]` Rand (Green)**: Jitters and randomizes dynamic values with high-frequency noise.
+    - 🟨 **`[W]` Wiggle (Gold)**: Smooth, harmonic After Effects continuous sine wiggle.
+    - 🟥 **`[S]` Stop (Red)**: Freezes/stops the animation at its current evaluated value.
+    - ⬜ **`[B]` Base (Slate Gray)**: Resets to the original static base value defined in the script without animation.
+  - **Color Properties & Effects (Color Controls, Fill Colors, Stroke Colors)**:
+    - 🟦 **`[O]` Original (Blue)**: Resets to original color from the UI panel.
+    - 🟪 **`[R]` Random (Pink)**: Generates a fixed vibrant random color.
+    - 🌈 **`[C]` Circle RGB (Rainbow)**: Continuously cycles through the full RGB color wheel (360° hue loop).
+    - 🟨 **`[W]` Wiggle (Gold)**: Smooth harmonic color shifts on RGB channels.
+    - 🟪 **`[H]` 50% Opacity (Purple / Semi-Transparent Grid)**: Sets opacity to 50% semi-transparent.
+    - ⬛ **`[T]` Transparent (Dark Checkerboard)**: Sets opacity to 0% (100% transparent / hidden).
+  - *Click to cycle sequentially forward. Right-click (`contextmenu`) to cycle in reverse.*
 
 ### 7. Dual Classification Color Coding (Timeline vs .JSX UI)
 - **In the AE Timeline**:

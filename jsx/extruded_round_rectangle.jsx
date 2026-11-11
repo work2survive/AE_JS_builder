@@ -1015,6 +1015,14 @@
                 var precompName = "extruded_rect_" + randNum;
                 currentPrecompName = precompName;
 
+                // Clean up all previous layers from parent composition on build
+                for (var p = parentComp.layers.length; p >= 1; p--) {
+                    var oldL = getLayer(parentComp, p);
+                    if (oldL) {
+                        removeLayer(parentComp, oldL);
+                    }
+                }
+
                 // 1. Create Master Controller Layer
                 var master = parentComp.layers.addShape();
                 master.name = "Extruded_Rect_Master_Controller";

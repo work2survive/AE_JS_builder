@@ -1182,7 +1182,130 @@ body.is-resizing-h .ae-resizer-h {
     font-family: monospace;
 }
 
-/* Compact Property-level 4-Way Evaluation Mode Switch */
+/* Compact 2:1 Sequential Property Evaluation Switch */
+.ae-prop-eval-btn {
+    width: 28px;
+    height: 14px;
+    background: #181818;
+    border: 1px solid #3c3c3c;
+    border-radius: 3px;
+    padding: 0;
+    margin: 0 6px 0 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: all 0.15s ease;
+    user-select: none;
+    box-sizing: border-box;
+    vertical-align: middle;
+    overflow: hidden;
+}
+
+.ae-prop-eval-btn:hover {
+    border-color: #888888;
+}
+
+.ae-prop-eval-btn:active {
+    transform: scale(0.94);
+}
+
+.ae-eval-color-box {
+    width: 100%;
+    height: 100%;
+    border-radius: 2px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 2px 0 3px;
+    box-sizing: border-box;
+    pointer-events: none;
+    overflow: hidden;
+    position: relative;
+    transition: background 0.15s ease, background-color 0.15s ease;
+}
+
+.ae-eval-letter {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-size: 8.5px;
+    font-weight: 900;
+    line-height: 1;
+    text-align: left;
+    pointer-events: none;
+    user-select: none;
+    text-shadow: 0 0 2px rgba(0, 0, 0, 0.7);
+}
+
+.ae-eval-knob {
+    width: 6.5px;
+    height: 6.5px;
+    border-radius: 50%;
+    background: #ffffff;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+    flex-shrink: 0;
+    pointer-events: none;
+}
+
+/* Semi-transparent pattern for 50% opacity state */
+.ae-eval-color-box.is-half {
+    background-image: linear-gradient(45deg, rgba(0, 0, 0, 0.35) 25%, transparent 25%),
+                      linear-gradient(-45deg, rgba(0, 0, 0, 0.35) 25%, transparent 25%),
+                      linear-gradient(45deg, transparent 75%, rgba(0, 0, 0, 0.35) 75%),
+                      linear-gradient(-45deg, transparent 75%, rgba(0, 0, 0, 0.35) 75%);
+    background-size: 4px 4px;
+    background-position: 0 0, 0 2px, 2px -2px, -2px 0px;
+}
+.ae-eval-color-box.is-half .ae-eval-knob {
+    background: rgba(255, 255, 255, 0.85);
+}
+
+/* Checkerboard pattern for transparent state */
+.ae-eval-color-box.is-transparent {
+    background: repeating-conic-gradient(#222 0% 25%, #444 0% 50%) 50% / 4px 4px !important;
+    border: 1px dashed rgba(255, 255, 255, 0.45);
+}
+.ae-eval-color-box.is-transparent .ae-eval-knob {
+    background: transparent;
+    border: 1.2px solid #cbd5e1;
+    box-shadow: none;
+}
+
+/* Hover glow per mode */
+.ae-prop-eval-btn[data-mode="rand"]:hover {
+    border-color: #00e676;
+    box-shadow: 0 0 4px rgba(0, 230, 118, 0.35);
+}
+.ae-prop-eval-btn[data-mode="wiggle"]:hover {
+    border-color: #ffd166;
+    box-shadow: 0 0 4px rgba(255, 209, 102, 0.35);
+}
+.ae-prop-eval-btn[data-mode="stop"]:hover {
+    border-color: #ff5252;
+    box-shadow: 0 0 4px rgba(255, 82, 82, 0.35);
+}
+.ae-prop-eval-btn[data-mode="base"]:hover {
+    border-color: #8b949e;
+    box-shadow: 0 0 4px rgba(139, 148, 158, 0.35);
+}
+.ae-prop-eval-btn[data-mode="orig"]:hover {
+    border-color: #2563eb;
+    box-shadow: 0 0 4px rgba(37, 99, 235, 0.35);
+}
+.ae-prop-eval-btn[data-mode="circle"]:hover {
+    border-color: #00ffcc;
+    box-shadow: 0 0 4px rgba(0, 255, 204, 0.35);
+}
+.ae-prop-eval-btn[data-mode="half"]:hover {
+    border-color: #8b5cf6;
+    box-shadow: 0 0 4px rgba(139, 92, 246, 0.35);
+}
+.ae-prop-eval-btn[data-mode="transparent"]:hover {
+    border-color: #94a3b8;
+    box-shadow: 0 0 4px rgba(148, 163, 184, 0.35);
+}
+
+/* Legacy 4-Way Switch fallback support */
 .ae-prop-4way-switch {
     display: inline-flex;
     align-items: center;
@@ -1194,7 +1317,6 @@ body.is-resizing-h .ae-resizer-h {
     flex-shrink: 0;
     height: 16px;
 }
-
 .ae-prop-4way-btn {
     background: none;
     border: none;
@@ -1213,26 +1335,6 @@ body.is-resizing-h .ae-resizer-h {
 }
 .ae-prop-4way-btn:last-child {
     border-right: none;
-}
-.ae-prop-4way-btn:hover {
-    color: #fff;
-    background: #2a2a2a;
-}
-.ae-prop-4way-btn.active[data-mode="rand"] {
-    background: #1c3b66;
-    color: #64b5f6;
-}
-.ae-prop-4way-btn.active[data-mode="wiggle"] {
-    background: #473a10;
-    color: var(--ae-gold);
-}
-.ae-prop-4way-btn.active[data-mode="stop"] {
-    background: #552222;
-    color: #ff7675;
-}
-.ae-prop-4way-btn.active[data-mode="base"] {
-    background: #2d3436;
-    color: #dfe6e9;
 }
 
 /* -------------------------------------------------------------

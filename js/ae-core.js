@@ -209,8 +209,77 @@
             return this.value;
         }
 
+        _isColor255() {
+            if (Array.isArray(this._baseValue) && this._baseValue.length >= 3) {
+                return Math.max(this._baseValue[0] || 0, this._baseValue[1] || 0, this._baseValue[2] || 0) > 1.0;
+            }
+            return false;
+        }
+
+        _makeRandomFixedColor() {
+            const is255 = this._isColor255();
+            const scale = is255 ? 255 : 1.0;
+            const hue = Math.random();
+            const rgb = Property.hsvToRgb(hue, 0.85, 0.95);
+            return [rgb[0] * scale, rgb[1] * scale, rgb[2] * scale, scale];
+        }
+
+        _makeCircleColor(time) {
+            const is255 = this._isColor255();
+            const scale = is255 ? 255 : 1.0;
+            // Complete circle cycle every 3 seconds
+            const hue = ((time * 0.333) % 1.0 + 1.0) % 1.0;
+            const rgb = Property.hsvToRgb(hue, 0.9, 0.95);
+            return [rgb[0] * scale, rgb[1] * scale, rgb[2] * scale, scale];
+        }
+
+        _makeWiggleColor(time) {
+            const is255 = this._isColor255();
+            const scale = is255 ? 255 : 1.0;
+            const base = Array.isArray(this._baseValue) ? this._baseValue : [1, 1, 1];
+            const nr = (base[0] || 0) / scale;
+            const ng = (base[1] || 0) / scale;
+            const nb = (base[2] || 0) / scale;
+
+            const wr = Math.max(0, Math.min(1, nr + wiggleGen.wiggle(0.75, 0.35, time, 10)));
+            const wg = Math.max(0, Math.min(1, ng + wiggleGen.wiggle(0.75, 0.35, time, 11)));
+            const wb = Math.max(0, Math.min(1, nb + wiggleGen.wiggle(0.75, 0.35, time, 12)));
+            return [wr * scale, wg * scale, wb * scale, scale];
+        }
+
+        _makeHalfOpacityColor() {
+            const is255 = this._isColor255();
+            const base = Array.isArray(this._baseValue) ? this._clone(this._baseValue) : [1, 1, 1];
+            return [base[0] || 0, base[1] || 0, base[2] || 0, is255 ? 128 : 0.5];
+        }
+
+        _makeTransparentColor() {
+            const base = Array.isArray(this._baseValue) ? this._clone(this._baseValue) : [1, 1, 1];
+            return [base[0] || 0, base[1] || 0, base[2] || 0, 0.0];
+        }
+
+        static hsvToRgb(h, s, v) {
+            let r = 0, g = 0, b = 0;
+            const i = Math.floor(h * 6);
+            const f = h * 6 - i;
+            const p = v * (1 - s);
+            const q = v * (1 - f * s);
+            const t = v * (1 - (1 - f) * s);
+            switch (i % 6) {
+                case 0: r = v; g = t; b = p; break;
+                case 1: r = q; g = v; b = p; break;
+                case 2: r = p; g = v; b = t; break;
+                case 3: r = p; g = q; b = v; break;
+                case 4: r = t; g = p; b = v; break;
+                case 5: r = v; g = p; b = q; break;
+            }
+            return [r, g, b];
+        }
+
         getValueAtTime(time) {
-            const mode = this.animMode || 'base';
+            const isColor = (this.type === 'color');
+            const defaultMode = isColor ? 'orig' : 'base';
+            const mode = this.animMode || defaultMode;
 
             // 1. Frozen / Stop mode
             if (mode === 'stop') {
@@ -220,13 +289,39 @@
                 time = (this._frozenTime !== null) ? this._frozenTime : 0;
             }
 
-            // 2. Has expression and enabled
+            // 2. Color Property special modes (Orig | Rand | Circle | Wiggle | Half | Transparent)
+            if (isColor) {
+                if (mode === 'rand') {
+                    if (!this._randomFixedColor) {
+                        this._randomFixedColor = this._makeRandomFixedColor();
+                    }
+                    return this._clone(this._randomFixedColor);
+                }
+                if (mode === 'circle') {
+                    return this._makeCircleColor(time);
+                }
+                if (mode === 'wiggle') {
+                    return this._makeWiggleColor(time);
+                }
+                if (mode === 'half') {
+                    return this._makeHalfOpacityColor();
+                }
+                if (mode === 'transparent') {
+                    return this._makeTransparentColor();
+                }
+                // 'orig' mode: if has expression, evaluate expression below; otherwise return _baseValue
+                if (mode === 'orig' && (!this._expression || !this.expressionEnabled)) {
+                    return this._clone(this._baseValue);
+                }
+            }
+
+            // 3. Has expression and enabled
             if (this._expression && this.expressionEnabled) {
                 return this.evaluateExpression(time);
             }
 
-            // 3. BASE mode without expression
-            if (mode === 'base' || mode === 'stop') {
+            // 4. BASE mode without expression
+            if (mode === 'base' || mode === 'stop' || mode === 'orig') {
                 return this._clone(this._baseValue);
             }
 

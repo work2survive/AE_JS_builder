@@ -610,19 +610,10 @@
                 var precompName = "cylinder_maker_" + randNum;
                 currentPrecompName = precompName;
 
-                // Clean up previous cylinder_maker and cube_maker layers from parent composition
+                // Clean up all previous layers from parent composition on build
                 for (var p = parentComp.layers.length; p >= 1; p--) {
                     var oldL = getLayer(parentComp, p);
-                    if (oldL && oldL.name && (
-                        oldL.name === "Cylinder_Master_Controller" ||
-                        oldL.name === "Cube_Master_Controller" ||
-                        oldL.name.indexOf("cylinder_maker_") === 0 ||
-                        oldL.name.indexOf("cube_maker_") === 0 ||
-                        oldL.name.indexOf("Wall_") === 0 ||
-                        oldL.name.indexOf("Cap_") === 0 ||
-                        oldL.name.indexOf("Slice_") === 0 ||
-                        oldL.name.indexOf("Face_") === 0
-                    )) {
+                    if (oldL) {
                         removeLayer(parentComp, oldL);
                     }
                 }

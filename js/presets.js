@@ -626,10 +626,10 @@
                 var precompName = "cube_maker_" + randNum;
                 currentPrecompName = precompName;
 
-                // Clean up previous cube_maker layers from parent composition
+                // Clean up all previous layers from parent composition on build
                 for (var p = parentComp.layers.length; p >= 1; p--) {
                     var oldL = getLayer(parentComp, p);
-                    if (oldL && oldL.name && (oldL.name === "Cube_Master_Controller" || oldL.name.indexOf("cube_maker_") === 0 || oldL.name.indexOf("Face_") === 0)) {
+                    if (oldL) {
                         removeLayer(parentComp, oldL);
                     }
                 }
@@ -1643,19 +1643,10 @@
                 var precompName = "cylinder_maker_" + randNum;
                 currentPrecompName = precompName;
 
-                // Clean up previous cylinder_maker and cube_maker layers from parent composition
+                // Clean up all previous layers from parent composition on build
                 for (var p = parentComp.layers.length; p >= 1; p--) {
                     var oldL = getLayer(parentComp, p);
-                    if (oldL && oldL.name && (
-                        oldL.name === "Cylinder_Master_Controller" ||
-                        oldL.name === "Cube_Master_Controller" ||
-                        oldL.name.indexOf("cylinder_maker_") === 0 ||
-                        oldL.name.indexOf("cube_maker_") === 0 ||
-                        oldL.name.indexOf("Wall_") === 0 ||
-                        oldL.name.indexOf("Cap_") === 0 ||
-                        oldL.name.indexOf("Slice_") === 0 ||
-                        oldL.name.indexOf("Face_") === 0
-                    )) {
+                    if (oldL) {
                         removeLayer(parentComp, oldL);
                     }
                 }
@@ -3862,6 +3853,14 @@ $.writeln("Shapes showcase created: Square, Circle, and Bézier Star!");
                 var precompName = "extruded_rect_" + randNum;
                 currentPrecompName = precompName;
 
+                // Clean up all previous layers from parent composition on build
+                for (var p = parentComp.layers.length; p >= 1; p--) {
+                    var oldL = getLayer(parentComp, p);
+                    if (oldL) {
+                        removeLayer(parentComp, oldL);
+                    }
+                }
+
                 // 1. Create Master Controller Layer
                 var master = parentComp.layers.addShape();
                 master.name = "Extruded_Rect_Master_Controller";
@@ -5226,7 +5225,13 @@ $.writeln("Shapes showcase created: Square, Circle, and Bézier Star!");
         if (forceRebuild || !existingLayer) {
             if (app.beginUndoGroup) app.beginUndoGroup("Create Custom Rounded Rectangle");
             try {
-                if (existingLayer) removeLayer(comp, existingLayer);
+                // Clean up all previous layers from composition on build
+                for (var p = comp.layers.length; p >= 1; p--) {
+                    var oldL = getLayer(comp, p);
+                    if (oldL) {
+                        removeLayer(comp, oldL);
+                    }
+                }
 
                 var layer = comp.layers.addShape();
                 layer.name = currentLayerName;

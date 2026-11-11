@@ -615,10 +615,10 @@
                 var precompName = "cube_maker_" + randNum;
                 currentPrecompName = precompName;
 
-                // Clean up previous cube_maker layers from parent composition
+                // Clean up all previous layers from parent composition on build
                 for (var p = parentComp.layers.length; p >= 1; p--) {
                     var oldL = getLayer(parentComp, p);
-                    if (oldL && oldL.name && (oldL.name === "Cube_Master_Controller" || oldL.name.indexOf("cube_maker_") === 0 || oldL.name.indexOf("Face_") === 0)) {
+                    if (oldL) {
                         removeLayer(parentComp, oldL);
                     }
                 }

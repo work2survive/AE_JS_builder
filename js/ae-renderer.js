@@ -324,21 +324,37 @@
                     if (prop instanceof VectorGraphicFill) {
                         const col = prop.color.getValueAtTime(time);
                         const rawOp = prop.opacity.getValueAtTime(time);
-                        const op = (rawOp !== undefined && rawOp !== null && !isNaN(rawOp)) ? Math.max(0, Math.min(1, rawOp / 100)) : 1;
-                        const r = Math.round((col[0] || 0) * 255);
-                        const g = Math.round((col[1] || 0) * 255);
-                        const b = Math.round((col[2] || 0) * 255);
-                        localFill = { color: `rgba(${r}, ${g}, ${b}, ${op})`, opacity: op };
+                        let op = (rawOp !== undefined && rawOp !== null && !isNaN(rawOp)) ? Math.max(0, Math.min(1, rawOp / 100)) : 1;
+                        if (col && col.length >= 4 && col[3] !== undefined) {
+                            const colAlpha = (col[3] > 1.0) ? (col[3] / 255) : col[3];
+                            op *= Math.max(0, Math.min(1, colAlpha));
+                        }
+                        if (op > 0.0001 && col) {
+                            const maxVal = Math.max(col[0] || 0, col[1] || 0, col[2] || 0);
+                            const scale = (maxVal <= 1.0) ? 255 : 1.0;
+                            const r = Math.round((col[0] || 0) * scale);
+                            const g = Math.round((col[1] || 0) * scale);
+                            const b = Math.round((col[2] || 0) * scale);
+                            localFill = { color: `rgba(${r}, ${g}, ${b}, ${op})`, opacity: op };
+                        } else {
+                            localFill = null;
+                        }
                     } else if (prop instanceof VectorGraphicStroke) {
                         const col = prop.color.getValueAtTime(time);
                         const rawOp = prop.opacity.getValueAtTime(time);
-                        const op = (rawOp !== undefined && rawOp !== null && !isNaN(rawOp)) ? Math.max(0, Math.min(1, rawOp / 100)) : 1;
+                        let op = (rawOp !== undefined && rawOp !== null && !isNaN(rawOp)) ? Math.max(0, Math.min(1, rawOp / 100)) : 1;
+                        if (col && col.length >= 4 && col[3] !== undefined) {
+                            const colAlpha = (col[3] > 1.0) ? (col[3] / 255) : col[3];
+                            op *= Math.max(0, Math.min(1, colAlpha));
+                        }
                         const rawSw = prop.strokeWidth.getValueAtTime(time);
                         const sw = (rawSw !== undefined && rawSw !== null && !isNaN(rawSw)) ? Math.max(0, Number(rawSw)) : 0;
-                        if (sw > 0.0001 && op > 0.0001) {
-                            const r = Math.round((col[0] || 0) * 255);
-                            const g = Math.round((col[1] || 0) * 255);
-                            const b = Math.round((col[2] || 0) * 255);
+                        if (sw > 0.0001 && op > 0.0001 && col) {
+                            const maxVal = Math.max(col[0] || 0, col[1] || 0, col[2] || 0);
+                            const scale = (maxVal <= 1.0) ? 255 : 1.0;
+                            const r = Math.round((col[0] || 0) * scale);
+                            const g = Math.round((col[1] || 0) * scale);
+                            const b = Math.round((col[2] || 0) * scale);
                             localStroke = { color: `rgba(${r}, ${g}, ${b}, ${op})`, width: sw, opacity: op };
                         } else {
                             localStroke = null;

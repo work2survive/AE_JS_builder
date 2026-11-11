@@ -481,6 +481,17 @@
                 btn.classList.add('scriptui-color-swatch-btn');
             }
             btn.onclick = () => {
+                const btnText = (this.text || '').toLowerCase();
+                if (btnText.includes('build')) {
+                    if (typeof window !== 'undefined' && typeof window.clearCompLayers === 'function') {
+                        window.clearCompLayers();
+                    } else if (typeof app !== 'undefined' && app.project && app.project.activeItem) {
+                        const comp = app.project.activeItem;
+                        while (comp.layers && comp.layers.length > 0) {
+                            comp.layers.remove(comp.layers[0]);
+                        }
+                    }
+                }
                 if (this.onClick) this.onClick();
             };
             this.domElement = btn;

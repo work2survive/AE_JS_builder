@@ -90,18 +90,60 @@
     // -------------------------------------------------------------
     // Timeline Inspector UI Generation (Matches AE Look Exactly)
     // -------------------------------------------------------------
-    function render4WaySwitch(prop) {
+    const EVAL_MODES_STANDARD = [
+        { mode: 'rand', letter: 'R', label: 'Rand', desc: 'Randomize on tick', color: '#00e676', textColor: '#0a3d1b' },
+        { mode: 'wiggle', letter: 'W', label: 'Wiggle', desc: 'Smooth Harmonic Wiggle', color: '#ffd166', textColor: '#3d2c00' },
+        { mode: 'stop', letter: 'S', label: 'Stop', desc: 'Freeze evaluated value', color: '#ff5252', textColor: '#ffffff' },
+        { mode: 'base', letter: 'B', label: 'Base', desc: 'Static base value (reset)', color: '#8b949e', textColor: '#ffffff' }
+    ];
+
+    const EVAL_MODES_COLOR = [
+        { mode: 'orig', letter: 'O', label: 'Original', desc: 'Original color (UI panel)', color: '#2563eb', textColor: '#ffffff' },
+        { mode: 'rand', letter: 'R', label: 'Random', desc: 'Random fixed color', color: '#db2777', textColor: '#ffffff' },
+        { mode: 'circle', letter: 'C', label: 'Circle RGB', desc: 'Circle RGB colors (hue wheel)', color: 'linear-gradient(135deg, #ff0055, #00ffcc, #3300ff)', isGradient: true, textColor: '#ffffff' },
+        { mode: 'wiggle', letter: 'W', label: 'Wiggle', desc: 'Wiggle color (harmonic shift)', color: '#ffd166', textColor: '#3d2c00' },
+        { mode: 'half', letter: 'H', label: '50% Opacity', desc: '50% opacity (semi-transparent)', color: '#8b5cf6', textColor: '#ffffff' },
+        { mode: 'transparent', letter: 'T', label: 'Transparent', desc: '100% transparent (hidden)', color: '#334155', textColor: '#cbd5e1' }
+    ];
+
+    function isColorProperty(prop) {
+        if (!prop) return false;
+        if (prop.type === 'color') return true;
+        const name = (prop.name || '').toLowerCase();
+        if (name === 'color' || name.includes('color') || name.includes('tint')) return true;
+        return false;
+    }
+
+    function getEvalModesForProp(prop) {
+        return isColorProperty(prop) ? EVAL_MODES_COLOR : EVAL_MODES_STANDARD;
+    }
+
+    function renderEvalModeSwitch(prop) {
         if (!prop || !prop._id) return '';
-        const mode = prop.animMode || (prop.expression ? 'rand' : 'base');
+        const isColor = isColorProperty(prop);
+        const modesList = isColor ? EVAL_MODES_COLOR : EVAL_MODES_STANDARD;
+        const defaultMode = isColor ? 'orig' : (prop.expression ? 'rand' : 'base');
+        let mode = prop.animMode || defaultMode;
+        let cfg = modesList.find(m => m.mode === mode);
+        if (!cfg) {
+            mode = defaultMode;
+            cfg = modesList[0];
+        }
+
+        const cycleHint = modesList.map(m => m.letter).join(' → ');
+        const title = `Evaluation: [${cfg.letter}] ${cfg.label} (${cfg.desc}) - Click to cycle: ${cycleHint}`;
+        const bgStyle = cfg.isGradient ? `background: ${cfg.color};` : `background-color: ${cfg.color};`;
+
         return `
-            <div class="ae-prop-4way-switch" title="Property Evaluation: Rand | Wiggle | Stop | Base">
-                <button class="ae-prop-4way-btn ${mode === 'rand' ? 'active' : ''}" data-action="set-prop-mode" data-mode="rand" data-prop-id="${prop._id}" title="🎲 Randomize on tick (Default for animated props)">🎲</button>
-                <button class="ae-prop-4way-btn ${mode === 'wiggle' ? 'active' : ''}" data-action="set-prop-mode" data-mode="wiggle" data-prop-id="${prop._id}" title="〰️ Smooth Harmonic Wiggle">〰️</button>
-                <button class="ae-prop-4way-btn ${mode === 'stop' ? 'active' : ''}" data-action="set-prop-mode" data-mode="stop" data-prop-id="${prop._id}" title="⏹️ Freeze / Stop value">⏹️</button>
-                <button class="ae-prop-4way-btn ${mode === 'base' ? 'active' : ''}" data-action="set-prop-mode" data-mode="base" data-prop-id="${prop._id}" title="⏮️ Static Base Value (Reset)">⏮️</button>
-            </div>
+            <button class="ae-prop-eval-btn ${isColor ? 'ae-eval-btn-color' : ''}" data-action="cycle-prop-mode" data-is-color="${isColor ? '1' : '0'}" data-mode="${mode}" data-prop-id="${prop._id}" title="${title}">
+                <span class="ae-eval-color-box ${mode === 'transparent' ? 'is-transparent' : ''} ${mode === 'half' ? 'is-half' : ''}" style="${bgStyle} color: ${cfg.textColor};">
+                    <span class="ae-eval-letter">${cfg.letter}</span>
+                    <span class="ae-eval-knob"></span>
+                </span>
+            </button>
         `;
     }
+    const render4WaySwitch = renderEvalModeSwitch;
 
     function renderTimeline() {
         const treeEl = document.getElementById('ae-layers-tree');
@@ -240,25 +282,47 @@
                 };
             }
 
-            // Property-level 4-Way Evaluation Switch Handler (Rand | Wiggle | Stop | Base)
-            row.querySelectorAll('[data-action="set-prop-mode"]').forEach(btn => {
-                btn.onclick = (e) => {
+            // Sequential Evaluation Mode Switch Handler
+            row.querySelectorAll('[data-action="cycle-prop-mode"], [data-action="set-prop-mode"]').forEach(btn => {
+                const handleCycle = (e, reverse = false) => {
                     e.stopPropagation();
-                    const mode = btn.dataset.mode;
+                    const currentMode = btn.dataset.mode;
                     const propId = btn.dataset.propId;
                     const prop = (typeof Property !== 'undefined' && Property.getById) ? Property.getById(propId) : null;
                     if (prop) {
-                        prop.animMode = mode;
-                        if (mode === 'stop') {
+                        const isColor = isColorProperty(prop);
+                        const modesList = isColor ? EVAL_MODES_COLOR : EVAL_MODES_STANDARD;
+                        const modeKeys = modesList.map(m => m.mode);
+                        const curIdx = modeKeys.indexOf(currentMode);
+                        const step = reverse ? -1 : 1;
+                        const nextIdx = (curIdx >= 0) ? ((curIdx + step + modeKeys.length) % modeKeys.length) : (reverse ? modeKeys.length - 1 : 0);
+                        const nextMode = modeKeys[nextIdx];
+                        prop.animMode = nextMode;
+
+                        if (nextMode === 'stop') {
                             prop._frozenTime = comp.time;
                             prop._frozenValue = prop.getValueAtTime(comp.time);
                         } else {
                             prop._frozenTime = null;
                             prop._frozenValue = null;
                         }
+
+                        // When entering random fixed color mode, generate a new fixed color
+                        if (isColor && nextMode === 'rand') {
+                            prop._randomFixedColor = prop._makeRandomFixedColor ? prop._makeRandomFixedColor() : null;
+                        }
+
                         renderTimeline();
-                        appendConsole(`Property [${prop.name}] mode set to [${mode.toUpperCase()}]`);
+                        if (comp && comp._onChanged) comp._onChanged();
+                        const nextCfg = modesList[nextIdx];
+                        appendConsole(`Property [${prop.name}] evaluation mode set to [${nextCfg.label.toUpperCase()}] (${nextCfg.letter})`);
                     }
+                };
+
+                btn.onclick = (e) => handleCycle(e, false);
+                btn.oncontextmenu = (e) => {
+                    e.preventDefault();
+                    handleCycle(e, true);
                 };
             });
 
@@ -996,11 +1060,27 @@
     }
 
     // -------------------------------------------------------------
+    // Composition Clear Helper (Runs on new script or build)
+    // -------------------------------------------------------------
+    function clearCompLayers() {
+        const comp = (typeof app !== 'undefined' && app.project) ? app.project.activeItem : null;
+        if (comp && comp.layers) {
+            while (comp.layers.length > 0) {
+                comp.layers.remove(comp.layers[0]);
+            }
+            if (comp._onChanged) comp._onChanged();
+        }
+        if (typeof renderTimeline === 'function') renderTimeline();
+    }
+    window.clearCompLayers = clearCompLayers;
+
+    // -------------------------------------------------------------
     // JSX Script Runner Engine
     // -------------------------------------------------------------
     function runUserScript(code) {
         try {
-            appendConsole('Executing JSX script...');
+            clearCompLayers();
+            appendConsole('Cleared composition. Executing JSX script...');
             // Sandbox execution with After Effects globals
             const scriptFunc = new Function(
                 'app', '$', 'CompItem', 'Shape', 'Window', 'Panel', 'Group', 'TabbedPanel', 'Tab', 'Mat4',
