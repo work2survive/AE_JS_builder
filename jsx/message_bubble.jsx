@@ -1309,67 +1309,7 @@
     };
 
     // -------------------------------------------------------------------------
-    // 5. Platform Style & Theme Configuration
-    // -------------------------------------------------------------------------
-    var pnlStyle = win.add("panel", undefined, "Platform & Appearance");
-    pnlStyle.orientation = "column";
-    pnlStyle.alignChildren = ["fill", "top"];
-    pnlStyle.spacing = 8;
-    pnlStyle.margins = 10;
-
-    // Platform Pull Down (Dropdown)
-    var grpPlatform = pnlStyle.add("group");
-    grpPlatform.orientation = "row";
-    grpPlatform.alignChildren = ["left", "center"];
-    var lblPlatform = grpPlatform.add("statictext", undefined, "Style Preset:");
-    lblPlatform.preferredSize = [95, -1];
-
-    var dropPlatform = grpPlatform.add("dropdownlist", undefined, [
-        "Android RCS style",
-        "iOS message style",
-        "WhatsApp style",
-        "Instagram style",
-        "Facebook Messenger style",
-        "Custom style"
-    ]);
-    dropPlatform.selection = 1; // Default: iOS message style
-    dropPlatform.preferredSize = [185, 26];
-
-    // Direction Switch: Received (Left) vs Sent (Right)
-    var grpDirection = pnlStyle.add("group");
-    grpDirection.orientation = "row";
-    grpDirection.alignChildren = ["left", "center"];
-    var lblDirection = grpDirection.add("statictext", undefined, "Message Type:");
-    lblDirection.preferredSize = [95, -1];
-
-    var radSent = grpDirection.add("radiobutton", undefined, "Sent (Right)");
-    var radReceived = grpDirection.add("radiobutton", undefined, "Received (Left)");
-    radSent.value = true; // Default: Sent
-
-    // Theme Switch: Light vs Dark Theme
-    var grpTheme = pnlStyle.add("group");
-    grpTheme.orientation = "row";
-    grpTheme.alignChildren = ["left", "center"];
-    var lblTheme = grpTheme.add("statictext", undefined, "Color Theme:");
-    lblTheme.preferredSize = [95, -1];
-
-    var radLight = grpTheme.add("radiobutton", undefined, "Light Theme");
-    var radDark = grpTheme.add("radiobutton", undefined, "Dark Theme");
-    radLight.value = true; // Default: Light Theme
-
-    // Tail / Pointer Switch
-    var grpTail = pnlStyle.add("group");
-    grpTail.orientation = "row";
-    grpTail.alignChildren = ["left", "center"];
-    var lblTail = grpTail.add("statictext", undefined, "Bubble Tail:");
-    lblTail.preferredSize = [95, -1];
-
-    var chkTail = grpTail.add("checkbox", undefined, "Show Tail / Pointer");
-    chkTail.value = true; // Default: Show Tail
-    chkTail.helpTip = "Toggle the chat pointer / tail at the bottom corner of the message bubble.";
-
-    // -------------------------------------------------------------------------
-    // 6. Color Picker Helper Function
+    // 5. Color Picker Helper Function
     // -------------------------------------------------------------------------
     function createColorPicker(parent, defaultHex, labelText, labelWidth) {
         var grp = parent.add("group");
@@ -1476,14 +1416,99 @@
     }
 
     // -------------------------------------------------------------------------
-    // 7. Tabbed Panel Navigation: Appearance & Animation
+    // 6. Tabbed Panel Navigation: Message, Appearance & Animation
     // -------------------------------------------------------------------------
     var tpanel = win.add("tabbedpanel", undefined);
     tpanel.alignChildren = ["fill", "top"];
     tpanel.alignment = ["fill", "top"];
 
     // =========================================================================
-    // TAB 1: APPEARANCE (Layout & Typography, Colors & Appearance, Timestamp)
+    // TAB 1: MESSAGE (Platform & Appearance, Timestamp)
+    // =========================================================================
+    var tabMessage = tpanel.add("tab", undefined, "Message");
+    tabMessage.orientation = "column";
+    tabMessage.alignChildren = ["fill", "top"];
+    tabMessage.spacing = 8;
+    tabMessage.margins = 8;
+
+    // --- Panel: Platform & Appearance ---
+    var pnlStyle = tabMessage.add("panel", undefined, "Platform & Appearance");
+    pnlStyle.orientation = "column";
+    pnlStyle.alignChildren = ["fill", "top"];
+    pnlStyle.spacing = 8;
+    pnlStyle.margins = 10;
+
+    // Platform Pull Down (Dropdown)
+    var grpPlatform = pnlStyle.add("group");
+    grpPlatform.orientation = "row";
+    grpPlatform.alignChildren = ["left", "center"];
+    var lblPlatform = grpPlatform.add("statictext", undefined, "Style Preset:");
+    lblPlatform.preferredSize = [115, -1];
+
+    var dropPlatform = grpPlatform.add("dropdownlist", undefined, [
+        "Android RCS style",
+        "iOS message style",
+        "WhatsApp style",
+        "Instagram style",
+        "Facebook Messenger style",
+        "Custom style"
+    ]);
+    dropPlatform.selection = 1; // Default: iOS message style
+    dropPlatform.preferredSize = [185, 26];
+
+    // Direction Switch: Received (Left) vs Sent (Right)
+    var grpDirection = pnlStyle.add("group");
+    grpDirection.orientation = "row";
+    grpDirection.alignChildren = ["left", "center"];
+    var lblDirection = grpDirection.add("statictext", undefined, "Message Type:");
+    lblDirection.preferredSize = [115, -1];
+
+    var radSent = grpDirection.add("radiobutton", undefined, "Sent (Right)");
+    var radReceived = grpDirection.add("radiobutton", undefined, "Received (Left)");
+    radSent.value = true; // Default: Sent
+
+    // Theme Switch: Light vs Dark Theme
+    var grpTheme = pnlStyle.add("group");
+    grpTheme.orientation = "row";
+    grpTheme.alignChildren = ["left", "center"];
+    var lblTheme = grpTheme.add("statictext", undefined, "Color Theme:");
+    lblTheme.preferredSize = [115, -1];
+
+    var radLight = grpTheme.add("radiobutton", undefined, "Light Theme");
+    var radDark = grpTheme.add("radiobutton", undefined, "Dark Theme");
+    radLight.value = true; // Default: Light Theme
+
+    // Tail / Pointer Switch
+    var grpTail = pnlStyle.add("group");
+    grpTail.orientation = "row";
+    grpTail.alignChildren = ["left", "center"];
+    var lblTail = grpTail.add("statictext", undefined, "Bubble Tail:");
+    lblTail.preferredSize = [115, -1];
+
+    var chkTail = grpTail.add("checkbox", undefined, "Show Tail / Pointer");
+    chkTail.value = true; // Default: Show Tail
+    chkTail.helpTip = "Toggle the chat pointer / tail at the bottom corner of the message bubble.";
+
+    // --- Panel: Timestamp (Randomized) ---
+    var pnlTime = tabMessage.add("panel", undefined, "Timestamp (Randomized)");
+    pnlTime.orientation = "row";
+    pnlTime.alignChildren = ["fill", "center"];
+    pnlTime.spacing = 8;
+    pnlTime.margins = [10, 8, 10, 8];
+
+    var lblTimeVal = pnlTime.add("statictext", undefined, "Time: " + currentRandomTime);
+    lblTimeVal.alignment = ["fill", "center"];
+    lblTimeVal.helpTip = "Timestamps are randomized for now. A dedicated custom time dialog will be added in a future update.";
+
+    var btnRerollTime = pnlTime.add("button", undefined, "🎲 Re-roll Time");
+    btnRerollTime.preferredSize = [135, 26];
+    btnRerollTime.onClick = function() {
+        currentRandomTime = generateRandomTime();
+        lblTimeVal.text = "Time: " + currentRandomTime;
+    };
+
+    // =========================================================================
+    // TAB 2: APPEARANCE (Layout & Typography, Colors & Appearance, Status Icon)
     // =========================================================================
     var tabAppearance = tpanel.add("tab", undefined, "Appearance");
     tabAppearance.orientation = "column";
@@ -1613,15 +1638,15 @@
     var cpBubble = createColorPicker(pnlColors, "#007AFF", "Bubble Color:", 115);
     var cpText = createColorPicker(pnlColors, "#FFFFFF", "Text Color:", 115);
 
-    // --- Panel: Status & Timestamp ---
-    var pnlStatusTime = tabAppearance.add("panel", undefined, "Status & Timestamp");
-    pnlStatusTime.orientation = "column";
-    pnlStatusTime.alignChildren = ["fill", "top"];
-    pnlStatusTime.spacing = 6;
-    pnlStatusTime.margins = [10, 8, 10, 8];
+    // --- Panel: Status & Delivery Receipts ---
+    var pnlStatus = tabAppearance.add("panel", undefined, "Status & Delivery Receipts");
+    pnlStatus.orientation = "column";
+    pnlStatus.alignChildren = ["fill", "top"];
+    pnlStatus.spacing = 6;
+    pnlStatus.margins = [10, 8, 10, 8];
 
     // Status Icon Style (RCS Circled Checks vs Standard Checks)
-    var grpStatusStyle = pnlStatusTime.add("group");
+    var grpStatusStyle = pnlStatus.add("group");
     grpStatusStyle.orientation = "row";
     grpStatusStyle.alignChildren = ["left", "center"];
     var lblStatusStyle = grpStatusStyle.add("statictext", undefined, "Icon Style:");
@@ -1636,7 +1661,7 @@
     dropStatusStyle.helpTip = "Choose between Google Messages / Android RCS circled checkmarks (outline/filled) or standard checks.";
 
     // Status Icon (Sent / Received / Read / Auto Timing)
-    var grpStatus = pnlStatusTime.add("group");
+    var grpStatus = pnlStatus.add("group");
     grpStatus.orientation = "row";
     grpStatus.alignChildren = ["left", "center"];
     var lblStatus = grpStatus.add("statictext", undefined, "Status Icon:");
@@ -1653,7 +1678,7 @@
     dropStatus.preferredSize = [185, 26];
     dropStatus.helpTip = "Auto: simulates sent -> delivered -> read timing based on text reading speed. Or choose static status.";
 
-    grpStatusInfo = pnlStatusTime.add("group");
+    grpStatusInfo = pnlStatus.add("group");
     grpStatusInfo.orientation = "row";
     grpStatusInfo.alignChildren = ["left", "center"];
     var lblStatusInfoPad = grpStatusInfo.add("statictext", undefined, "");
@@ -1669,27 +1694,10 @@
         }
     };
 
-    // Timestamp Row
-    var grpTime = pnlStatusTime.add("group");
-    grpTime.orientation = "row";
-    grpTime.alignChildren = ["fill", "center"];
-    var lblTimeLabel = grpTime.add("statictext", undefined, "Timestamp:");
-    lblTimeLabel.preferredSize = [115, -1];
-    var lblTimeVal = grpTime.add("statictext", undefined, "Time: " + currentRandomTime);
-    lblTimeVal.alignment = ["fill", "center"];
-    lblTimeVal.helpTip = "Timestamps are randomized for now. A dedicated custom time dialog will be added in a future update.";
-
-    var btnRerollTime = grpTime.add("button", undefined, "🎲 Re-roll Time");
-    btnRerollTime.preferredSize = [135, 26];
-    btnRerollTime.onClick = function() {
-        currentRandomTime = generateRandomTime();
-        lblTimeVal.text = "Time: " + currentRandomTime;
-    };
-
     updateCharCount(); // Initialize auto-read timing text
 
     // =========================================================================
-    // TAB 2: ANIMATION (Text Effects & Animation)
+    // TAB 3: ANIMATION (Text Effects & Animation)
     // =========================================================================
     var tabAnimation = tpanel.add("tab", undefined, "Animation");
     tabAnimation.orientation = "column";
@@ -1916,7 +1924,7 @@
         txtType.enabled = en;
     };
 
-    tpanel.selection = tabAppearance; // Default to Appearance tab
+    tpanel.selection = tabMessage; // Default to Message tab
 
     function syncColorsFromPlatform() {
         var selIdx = dropPlatform.selection ? dropPlatform.selection.index : 0;
