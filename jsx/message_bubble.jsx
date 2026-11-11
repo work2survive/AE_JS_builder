@@ -736,6 +736,7 @@
     // Core Geometry Engine: Custom Rounded Rectangle & Tail Pointer
     // -------------------------------------------------------------------------
     function computeShapeData(w, h, rTL, rTR, rBR, rBL, hasTail, isSent, tailType) {
+        tailType = tailType || "modern";
         w = Math.max(20, w);
         h = Math.max(20, h);
         rTL = Math.max(0, rTL);
@@ -3112,6 +3113,7 @@
 
             var hasTail = chkTail.value;
             var cornerRadius = platformCfg.radius || 18;
+            var tailType = platformCfg.tailType || "modern";
 
             // Corner radii based on direction and tail setting (Custom Rounded Rect engine)
             var rTL = cornerRadius;
@@ -4069,6 +4071,7 @@
 
             var hasTail = chkTail.value;
             var cornerRadius = platformCfg.radius || 18;
+            var tailType = platformCfg.tailType || "modern";
 
             var rTL = cornerRadius;
             var rTR = cornerRadius;
