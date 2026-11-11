@@ -22,6 +22,7 @@
 
         <div class="ae-topbar-center">
             <button id="btn-open-jsx" class="ae-btn" title="Upload and load a .JSX file from disk">📂 Upload .JSX</button>
+            <button id="btn-url-jsx" class="ae-btn" title="Load a .JSX script from a web URL or GitHub link">🌐 Load from URL</button>
             <input type="file" id="file-input-jsx" accept=".jsx,.js,.txt" style="display: none;">
             <button id="btn-download-jsx" class="ae-btn" title="Download current .JSX code to disk">💾 Download .JSX</button>
             <label style="color:#aaa; font-size:11px; margin-left:6px;">Presets:</label>
@@ -115,6 +116,40 @@
             </div>
         </section>
     </main>
+
+    <!-- Load .JSX from URL Dialog Modal -->
+    <div id="ae-url-modal" class="ae-modal-backdrop" style="display: none;">
+        <div class="ae-url-dialog" role="dialog" aria-modal="true" aria-labelledby="ae-url-dialog-title">
+            <div class="ae-url-dialog-header">
+                <span id="ae-url-dialog-title" class="ae-url-dialog-title">
+                    <svg viewBox="0 0 16 16" width="14" height="14" fill="currentColor">
+                        <path d="M4.715 6.542 3.343 7.914a3 3 0 1 0 4.243 4.243l1.828-1.829A3 3 0 0 0 8.586 5.5L8 6.086a1 1 0 0 0-.154.199 2 2 0 0 1 .861 3.337L6.88 11.45a2 2 0 1 1-2.83-2.83l.793-.792a4 4 0 0 1-.128-1.287z"/>
+                        <path d="M6.586 1A2 2 0 0 0 4.865 3.045l.793.792c.04-.42.17-.83.428-1.196l1.828-1.829a2 2 0 1 1 2.83 2.83l-.793.793c-.04.42-.17.83-.428 1.196l-1.828 1.829a3 3 0 0 0 4.243-4.243L10.05 1.05A2 2 0 0 0 6.586 1z"/>
+                    </svg>
+                    Load .JSX from URL
+                </span>
+                <button type="button" id="ae-url-close" class="ae-url-dialog-close" title="Close (Esc)">&#x2715;</button>
+            </div>
+            <div class="ae-url-dialog-body">
+                <div class="ae-url-dialog-desc">
+                    Paste a direct URL to an Adobe After Effects <code>.jsx</code> file to load and execute it in the emulator:
+                </div>
+                <div class="ae-url-input-wrap">
+                    <input type="url" id="ae-url-input" class="ae-url-input" placeholder="https://raw.githubusercontent.com/.../script.jsx" spellcheck="false" autocomplete="off">
+                    <div id="ae-url-error" class="ae-url-error"></div>
+                </div>
+                <div class="ae-url-dialog-hint">
+                    Supports direct web URLs, GitHub Raw links, and standard GitHub URLs (e.g. <code>github.com/.../blob/...</code>).
+                </div>
+            </div>
+            <div class="ae-url-dialog-footer">
+                <button type="button" id="ae-url-cancel" class="ae-btn">Cancel</button>
+                <button type="button" id="ae-url-submit" class="ae-btn ae-btn-primary">
+                    <span id="ae-url-submit-text">Load &amp; Run</span>
+                </button>
+            </div>
+        </div>
+    </div>
 
     <!-- JavaScript Modules -->
     <script src="js/ae-core.js"></script>

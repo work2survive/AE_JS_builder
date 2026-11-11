@@ -1307,7 +1307,7 @@
             try {
                 const url = new URL(window.location.href);
                 const urlParams = url.searchParams;
-                let target = urlParams.get('jsx') || urlParams.get('file') || urlParams.get('preset') || urlParams.get('script');
+                let target = urlParams.get('jsx') || urlParams.get('url') || urlParams.get('file') || urlParams.get('preset') || urlParams.get('script');
                 
                 // If not found in named parameters, check bare query param (e.g., ?cylinder_maker.jsx or ?cylinder)
                 if (!target && url.search) {
@@ -1402,6 +1402,14 @@
 
         async function loadPresetOrJSX(val, updateUrl, isPush) {
             if (!val) return;
+            if (val.startsWith('http://') || val.startsWith('https://')) {
+                try {
+                    await loadAndRunJSXFromURL(val);
+                } catch (e) {
+                    appendConsole(`Failed to load script from URL ${val}: ${e.message}`, true);
+                }
+                return;
+            }
             presetSelect.value = val;
             if (val.startsWith('jsx:')) {
                 const fname = val.slice(4);
@@ -1612,6 +1620,160 @@
                 }
             };
         }
+
+        // -------------------------------------------------------------
+        // Load JSX from Web URL Dialog & Fetcher
+        // -------------------------------------------------------------
+        async function loadAndRunJSXFromURL(urlStr) {
+            if (!urlStr || typeof urlStr !== 'string') throw new Error('Please enter a valid URL.');
+            let cleanUrl = urlStr.trim();
+            if (!cleanUrl) throw new Error('Please enter a valid URL.');
+
+            // Auto-convert standard GitHub blob URLs to raw.githubusercontent.com
+            const ghBlobMatch = cleanUrl.match(/^https?:\/\/github\.com\/([^/]+)\/([^/]+)\/blob\/(.+)$/i);
+            if (ghBlobMatch) {
+                cleanUrl = `https://raw.githubusercontent.com/${ghBlobMatch[1]}/${ghBlobMatch[2]}/${ghBlobMatch[3]}`;
+            }
+
+            // Ensure protocol
+            if (!/^https?:\/\//i.test(cleanUrl)) {
+                cleanUrl = 'https://' + cleanUrl;
+            }
+
+            appendConsole(`Fetching JSX from URL: ${cleanUrl}...`);
+            const response = await fetch(cleanUrl);
+            if (!response.ok) {
+                throw new Error(`Failed to fetch script: HTTP ${response.status} ${response.statusText}`);
+            }
+
+            const code = await response.text();
+            if (!code || code.trim().length === 0) {
+                throw new Error('The URL returned an empty response.');
+            }
+
+            // Detect if an HTML error page was returned instead of raw code
+            const trimmed = code.trim().toLowerCase();
+            if (trimmed.startsWith('<!doctype html') || trimmed.startsWith('<html') || trimmed.includes('<title>404: not found</title>')) {
+                throw new Error('The URL returned an HTML page instead of a raw script. If using GitHub, make sure to use the Raw link.');
+            }
+
+            // Determine script filename
+            let filename = '';
+            try {
+                const parsedUrl = new URL(cleanUrl);
+                filename = decodeURIComponent(parsedUrl.pathname.split('/').pop() || '');
+            } catch(e) {}
+            if (!filename || (!filename.toLowerCase().endsWith('.jsx') && !filename.toLowerCase().endsWith('.js'))) {
+                filename = (filename ? filename.replace(/[^a-zA-Z0-9_\-]/g, '_') : 'remote_script') + '.jsx';
+            }
+
+            codeTextarea.value = code;
+            if (currentFilenameEl) currentFilenameEl.textContent = filename;
+            appendConsole(`Loaded "${filename}" from URL (${code.length} characters). Executing...`);
+            updateURLForJSX(filename, true);
+
+            // Execute script
+            runUserScript(code);
+            return filename;
+        }
+
+        const btnUrlJSX = document.getElementById('btn-url-jsx');
+        const modalUrl = document.getElementById('ae-url-modal');
+        const inputUrl = document.getElementById('ae-url-input');
+        const btnUrlClose = document.getElementById('ae-url-close');
+        const btnUrlCancel = document.getElementById('ae-url-cancel');
+        const btnUrlSubmit = document.getElementById('ae-url-submit');
+        const txtUrlSubmit = document.getElementById('ae-url-submit-text');
+        const errUrl = document.getElementById('ae-url-error');
+
+        function openUrlModal() {
+            if (!modalUrl) return;
+            modalUrl.style.display = 'flex';
+            if (errUrl) {
+                errUrl.style.display = 'none';
+                errUrl.textContent = '';
+            }
+            if (btnUrlSubmit) btnUrlSubmit.disabled = false;
+            if (txtUrlSubmit) txtUrlSubmit.textContent = 'Load & Run';
+            setTimeout(() => {
+                if (inputUrl) {
+                    inputUrl.focus();
+                    inputUrl.select();
+                }
+            }, 50);
+        }
+
+        function closeUrlModal() {
+            if (!modalUrl) return;
+            modalUrl.style.display = 'none';
+            if (errUrl) {
+                errUrl.style.display = 'none';
+                errUrl.textContent = '';
+            }
+        }
+
+        async function submitUrlModal() {
+            if (!inputUrl) return;
+            const url = inputUrl.value.trim();
+            if (!url) {
+                if (errUrl) {
+                    errUrl.textContent = 'Please enter or paste a .jsx URL.';
+                    errUrl.style.display = 'block';
+                }
+                inputUrl.focus();
+                return;
+            }
+
+            if (errUrl) {
+                errUrl.style.display = 'none';
+                errUrl.textContent = '';
+            }
+            if (btnUrlSubmit) btnUrlSubmit.disabled = true;
+            if (txtUrlSubmit) txtUrlSubmit.textContent = 'Fetching...';
+
+            try {
+                await loadAndRunJSXFromURL(url);
+                closeUrlModal();
+            } catch (err) {
+                if (errUrl) {
+                    errUrl.textContent = err.message || 'Error loading URL.';
+                    errUrl.style.display = 'block';
+                }
+                appendConsole(`Error loading URL: ${err.message}`, true);
+            } finally {
+                if (btnUrlSubmit) btnUrlSubmit.disabled = false;
+                if (txtUrlSubmit) txtUrlSubmit.textContent = 'Load & Run';
+            }
+        }
+
+        if (btnUrlJSX) btnUrlJSX.onclick = openUrlModal;
+        if (btnUrlClose) btnUrlClose.onclick = closeUrlModal;
+        if (btnUrlCancel) btnUrlCancel.onclick = closeUrlModal;
+        if (btnUrlSubmit) btnUrlSubmit.onclick = submitUrlModal;
+
+        if (inputUrl) {
+            inputUrl.onkeydown = (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    submitUrlModal();
+                } else if (e.key === 'Escape') {
+                    e.preventDefault();
+                    closeUrlModal();
+                }
+            };
+        }
+
+        if (modalUrl) {
+            modalUrl.onclick = (e) => {
+                if (e.target === modalUrl) closeUrlModal();
+            };
+        }
+
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && modalUrl && modalUrl.style.display !== 'none') {
+                closeUrlModal();
+            }
+        });
 
         // File Download Handler ("Download .JSX")
         const btnDownloadJSX = document.getElementById('btn-download-jsx');
