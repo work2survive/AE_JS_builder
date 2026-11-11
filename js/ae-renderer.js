@@ -469,11 +469,12 @@
         renderLayers(time) {
             if (!this.layersContainer) return;
 
-            // Sync layer DOM elements with comp.layers
+            // Sync layer DOM elements with comp.layers (AE layers are ordered 1..N top-to-bottom,
+            // so we iterate from bottom to top to ensure correct DOM stacking order)
             const layers = this.comp.layers;
             const currentIds = new Set();
 
-            for (let i = 0; i < layers.length; i++) {
+            for (let i = layers.length - 1; i >= 0; i--) {
                 const layer = layers[i];
                 if (!layer.enabled) continue;
 
@@ -485,8 +486,10 @@
                     layerEl = document.createElement('div');
                     layerEl.id = layerId;
                     layerEl.className = 'ae-layer';
-                    this.layersContainer.appendChild(layerEl);
                 }
+                // Ensure DOM order matches AE stacking order (layer 0 is topmost/last child)
+                this.layersContainer.appendChild(layerEl);
+                layerEl.style.zIndex = layers.length - i;
 
                 // 3D Matrix & CSS Transformation
                 const worldMat = layer.getWorldMatrix(time);

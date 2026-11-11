@@ -138,6 +138,225 @@
         return hour + ":" + minStr + " " + ampm;
     }
 
+    // -------------------------------------------------------------------------
+    // Core Geometry Engine: Custom Rounded Rectangle & Tail Pointer
+    // -------------------------------------------------------------------------
+    function computeShapeData(w, h, rTL, rTR, rBR, rBL, preventOverlap) {
+        w = Math.max(0, w);
+        h = Math.max(0, h);
+        rTL = Math.max(0, rTL);
+        rTR = Math.max(0, rTR);
+        rBR = Math.max(0, rBR);
+        rBL = Math.max(0, rBL);
+
+        if (preventOverlap) {
+            var topSum    = rTL + rTR;
+            var bottomSum = rBL + rBR;
+            var leftSum   = rTL + rBL;
+            var rightSum  = rTR + rBR;
+
+            var f = 1.0;
+            if (topSum > w && topSum > 0)       f = Math.min(f, w / topSum);
+            if (bottomSum > w && bottomSum > 0) f = Math.min(f, w / bottomSum);
+            if (leftSum > h && leftSum > 0)     f = Math.min(f, h / leftSum);
+            if (rightSum > h && rightSum > 0)   f = Math.min(f, h / rightSum);
+
+            rTL *= f;
+            rTR *= f;
+            rBR *= f;
+            rBL *= f;
+        }
+
+        var K = 0.5522847498307936;
+        var halfW = w / 2;
+        var halfH = h / 2;
+        var xMin = -halfW;
+        var xMax =  halfW;
+        var yMin = -halfH;
+        var yMax =  halfH;
+
+        var points = [
+            [xMin + rTL, yMin],        // P0: Top edge, TL curve end
+            [xMax - rTR, yMin],        // P1: Top edge, TR curve start
+            [xMax, yMin + rTR],        // P2: Right edge, TR curve end
+            [xMax, yMax - rBR],        // P3: Right edge, BR curve start
+            [xMax - rBR, yMax],        // P4: Bottom edge, BR curve end
+            [xMin + rBL, yMax],        // P5: Bottom edge, BL curve start
+            [xMin, yMax - rBL],        // P6: Left edge, BL curve end
+            [xMin, yMin + rTL]         // P7: Left edge, TL curve start
+        ];
+
+        var inTangents = [
+            [-rTL * K, 0],
+            [0, 0],
+            [0, -rTR * K],
+            [0, 0],
+            [rBR * K, 0],
+            [0, 0],
+            [0, rBL * K],
+            [0, 0]
+        ];
+
+        var outTangents = [
+            [0, 0],
+            [rTR * K, 0],
+            [0, 0],
+            [0, rBR * K],
+            [0, 0],
+            [-rBL * K, 0],
+            [0, 0],
+            [0, -rTL * K]
+        ];
+
+        return {
+            points: points,
+            inTangents: inTangents,
+            outTangents: outTangents
+        };
+    }
+
+    function computeTailData(w, h, isSent) {
+        var halfW = w / 2;
+        var halfH = h / 2;
+        if (isSent) {
+            // Sent message: tail extends at bottom-right
+            return {
+                points: [
+                    [halfW, halfH - 18],
+                    [halfW + 7, halfH - 2],
+                    [halfW + 8, halfH],
+                    [halfW + 2, halfH],
+                    [halfW - 16, halfH],
+                    [halfW - 4, halfH - 12]
+                ],
+                inTangents: [
+                    [0, 0],
+                    [-2, -4],
+                    [0, -1],
+                    [2, 0],
+                    [4, 0],
+                    [0, 0]
+                ],
+                outTangents: [
+                    [1, 5],
+                    [1, 1],
+                    [-2, 0],
+                    [-4, 0],
+                    [0, 0],
+                    [0, 0]
+                ]
+            };
+        } else {
+            // Received message: tail extends at bottom-left (mirrored on X)
+            return {
+                points: [
+                    [-halfW, halfH - 18],
+                    [-halfW - 7, halfH - 2],
+                    [-halfW - 8, halfH],
+                    [-halfW - 2, halfH],
+                    [-halfW + 16, halfH],
+                    [-halfW + 4, halfH - 12]
+                ],
+                inTangents: [
+                    [0, 0],
+                    [2, -4],
+                    [0, -1],
+                    [-2, 0],
+                    [-4, 0],
+                    [0, 0]
+                ],
+                outTangents: [
+                    [-1, 5],
+                    [-1, 1],
+                    [2, 0],
+                    [4, 0],
+                    [0, 0],
+                    [0, 0]
+                ]
+            };
+        }
+    }
+
+    var PATH_EXPR = [
+        "// Custom Rounded Rectangle Base Expression (W3C CSS Proportional Overlap)",
+        "(function() {",
+        "    function getVal(name, fallback) {",
+        "        try {",
+        "            var p = effect(name)(1);",
+        "            return (p && typeof p.value !== 'undefined') ? p.value : (p !== undefined ? p : fallback);",
+        "        } catch(e) {",
+        "            try {",
+        "                var p2 = parent.effect(name)(1);",
+        "                return (p2 && typeof p2.value !== 'undefined') ? p2.value : (p2 !== undefined ? p2 : fallback);",
+        "            } catch(e2) {",
+        "                return fallback;",
+        "            }",
+        "        }",
+        "    }",
+        "",
+        "    var w = Math.max(0, getVal('Bubble Width', getVal('Width', 300)));",
+        "    var h = Math.max(0, getVal('Bubble Height', getVal('Height', 100)));",
+        "    var rTL = Math.max(0, getVal('Radius Top-Left', 18));",
+        "    var rTR = Math.max(0, getVal('Radius Top-Right', 18));",
+        "    var rBR = Math.max(0, getVal('Radius Bottom-Right', 18));",
+        "    var rBL = Math.max(0, getVal('Radius Bottom-Left', 18));",
+        "    var preventOverlap = getVal('Prevent Overlap', 1);",
+        "",
+        "    if (preventOverlap > 0) {",
+        "        var topSum    = rTL + rTR;",
+        "        var bottomSum = rBL + rBR;",
+        "        var leftSum   = rTL + rBL;",
+        "        var rightSum  = rTR + rBR;",
+        "",
+        "        var f = 1.0;",
+        "        if (topSum > w && topSum > 0)       f = Math.min(f, w / topSum);",
+        "        if (bottomSum > w && bottomSum > 0) f = Math.min(f, w / bottomSum);",
+        "        if (leftSum > h && leftSum > 0)     f = Math.min(f, h / leftSum);",
+        "        if (rightSum > h && rightSum > 0)   f = Math.min(f, h / rightSum);",
+        "",
+        "        rTL *= f; rTR *= f; rBR *= f; rBL *= f;",
+        "    }",
+        "",
+        "    var K = 0.5522847498307936;",
+        "    var halfW = w / 2;",
+        "    var halfH = h / 2;",
+        "    var xMin = -halfW; var xMax = halfW;",
+        "    var yMin = -halfH; var yMax = halfH;",
+        "",
+        "    var points = [",
+        "        [xMin + rTL, yMin],",
+        "        [xMax - rTR, yMin],",
+        "        [xMax, yMin + rTR],",
+        "        [xMax, yMax - rBR],",
+        "        [xMax - rBR, yMax],",
+        "        [xMin + rBL, yMax],",
+        "        [xMin, yMax - rBL],",
+        "        [xMin, yMin + rTL]",
+        "    ];",
+        "    var inTangents = [",
+        "        [-rTL * K, 0],",
+        "        [0, 0],",
+        "        [0, -rTR * K],",
+        "        [0, 0],",
+        "        [rBR * K, 0],",
+        "        [0, 0],",
+        "        [0, rBL * K],",
+        "        [0, 0]",
+        "    ];",
+        "    var outTangents = [",
+        "        [0, 0],",
+        "        [rTR * K, 0],",
+        "        [0, 0],",
+        "        [0, rBR * K],",
+        "        [0, 0],",
+        "        [-rBL * K, 0],",
+        "        [0, 0],",
+        "        [0, -rTL * K]",
+        "    ];",
+        "    return createPath(points, inTangents, outTangents, true);",
+        "})();"
+    ].join("\n");
+
     var currentRandomTime = generateRandomTime();
 
     // -------------------------------------------------------------------------
@@ -233,6 +452,17 @@
     var radLight = grpTheme.add("radiobutton", undefined, "Light Theme");
     var radDark = grpTheme.add("radiobutton", undefined, "Dark Theme");
     radLight.value = true; // Default: Light Theme
+
+    // Tail / Pointer Switch
+    var grpTail = pnlStyle.add("group");
+    grpTail.orientation = "row";
+    grpTail.alignChildren = ["left", "center"];
+    var lblTail = grpTail.add("statictext", undefined, "Bubble Tail:");
+    lblTail.preferredSize = [95, -1];
+
+    var chkTail = grpTail.add("checkbox", undefined, "Show Tail / Pointer");
+    chkTail.value = true; // Default: Show Tail
+    chkTail.helpTip = "Toggle the chat pointer / tail at the bottom corner of the message bubble.";
 
     // -------------------------------------------------------------------------
     // 6. Dimensions & Typography (Screen Width determines line splits)
@@ -610,7 +840,23 @@
                 bubbleH = textBlockH + (padY * 2) + timeFontSize + 6;
             }
 
+            var hasTail = chkTail.value;
             var cornerRadius = platformCfg.radius || 18;
+
+            // Corner radii based on direction and tail setting (Custom Rounded Rect engine)
+            var rTL = cornerRadius;
+            var rTR = cornerRadius;
+            var rBR = cornerRadius;
+            var rBL = cornerRadius;
+
+            if (hasTail) {
+                if (isSent) {
+                    rBR = 4; // Tucked corner for sent tail
+                } else {
+                    rBL = 4; // Tucked corner for received tail
+                }
+            }
+
             var compCenter = [comp.width / 2, comp.height / 2, 0];
 
             // Horizontal alignment within screen:
@@ -645,26 +891,94 @@
                 var effBH = parade.addProperty("ADBE Slider Control");
                 if (effBH) { effBH.name = "Bubble Height"; effBH.property(1).setValue(bubbleH); }
 
+                var effTail = parade.addProperty("ADBE Checkbox Control");
+                if (effTail) { effTail.name = "Show Tail"; effTail.property(1).setValue(hasTail ? 1 : 0); }
+
                 var effCol = parade.addProperty("ADBE Color Control");
                 if (effCol) { effCol.name = "Bubble Color"; effCol.property(1).setValue(bubbleColor); }
             }
 
-            // 2. Bubble Vector Shape Layer
+            // 2. Bubble Vector Shape Layer (driven by Custom Rounded Rect engine)
             var bubbleLayer = comp.layers.addShape();
             bubbleLayer.name = isSent ? "Bubble_Sent" : "Bubble_Received";
             bubbleLayer.parent = master;
             bubbleLayer.transform.position.setValue([0, 0, 0]);
 
+            // Add Effect Controls to Bubble Shape Layer (matching custom_rounded_rect)
+            var bParade = bubbleLayer.property("ADBE Effect Parade") || bubbleLayer.property("Effects");
+            if (bParade && bParade.addProperty) {
+                var bEffW = bParade.addProperty("ADBE Slider Control");
+                if (bEffW) { bEffW.name = "Width"; bEffW.property(1).setValue(bubbleW); }
+
+                var bEffH = bParade.addProperty("ADBE Slider Control");
+                if (bEffH) { bEffH.name = "Height"; bEffH.property(1).setValue(bubbleH); }
+
+                var bEffTL = bParade.addProperty("ADBE Slider Control");
+                if (bEffTL) { bEffTL.name = "Radius Top-Left"; bEffTL.property(1).setValue(rTL); }
+
+                var bEffTR = bParade.addProperty("ADBE Slider Control");
+                if (bEffTR) { bEffTR.name = "Radius Top-Right"; bEffTR.property(1).setValue(rTR); }
+
+                var bEffBR = bParade.addProperty("ADBE Slider Control");
+                if (bEffBR) { bEffBR.name = "Radius Bottom-Right"; bEffBR.property(1).setValue(rBR); }
+
+                var bEffBL = bParade.addProperty("ADBE Slider Control");
+                if (bEffBL) { bEffBL.name = "Radius Bottom-Left"; bEffBL.property(1).setValue(rBL); }
+
+                var bEffOv = bParade.addProperty("ADBE Checkbox Control");
+                if (bEffOv) { bEffOv.name = "Prevent Overlap"; bEffOv.property(1).setValue(1); }
+
+                var bEffTail = bParade.addProperty("ADBE Checkbox Control");
+                if (bEffTail) { bEffTail.name = "Show Tail"; bEffTail.property(1).setValue(hasTail ? 1 : 0); }
+            }
+
             var contents = bubbleLayer.property("ADBE Root Vectors Group") || bubbleLayer.property("Contents");
-            var group = contents.addProperty("ADBE Vector Group");
-            group.name = "Bubble Group";
-            var grpContents = group.property("ADBE Vectors Group") || group.property("Contents");
 
-            var rect = grpContents.addProperty("ADBE Vector Shape - Rect");
-            rect.property("Size").setValue([bubbleW, bubbleH]);
-            rect.property("Roundness").setValue(cornerRadius);
+            // [A] Base outline group using custom_rounded_rect
+            var grpBase = contents.addProperty("ADBE Vector Group");
+            grpBase.name = "Bubble Base Outline";
+            var grpBaseContents = grpBase.property("ADBE Vectors Group") || grpBase.property("Contents");
+            var pathBase = grpBaseContents.addProperty("ADBE Vector Shape - Group");
+            var baseShapeData = computeShapeData(bubbleW, bubbleH, rTL, rTR, rBR, rBL, true);
+            if (typeof Shape !== "undefined") {
+                try {
+                    var sObj = new Shape();
+                    sObj.vertices = baseShapeData.points;
+                    sObj.inTangents = baseShapeData.inTangents;
+                    sObj.outTangents = baseShapeData.outTangents;
+                    sObj.closed = true;
+                    var pathProp = pathBase.property("ADBE Vector Shape") || pathBase.property("Path") || pathBase.property(1);
+                    if (pathProp) {
+                        pathProp.setValue(sObj);
+                        pathProp.expression = PATH_EXPR;
+                    }
+                } catch(eS) {}
+            }
 
-            var fill = grpContents.addProperty("ADBE Vector Graphic - Fill");
+            // [B] Tail Pointer vector group (when enabled)
+            if (hasTail) {
+                var grpTailShape = contents.addProperty("ADBE Vector Group");
+                grpTailShape.name = "Tail Pointer";
+                var grpTailContents = grpTailShape.property("ADBE Vectors Group") || grpTailShape.property("Contents");
+                var pathTail = grpTailContents.addProperty("ADBE Vector Shape - Group");
+                var tailShapeData = computeTailData(bubbleW, bubbleH, isSent);
+                if (typeof Shape !== "undefined") {
+                    try {
+                        var sObjTail = new Shape();
+                        sObjTail.vertices = tailShapeData.points;
+                        sObjTail.inTangents = tailShapeData.inTangents;
+                        sObjTail.outTangents = tailShapeData.outTangents;
+                        sObjTail.closed = true;
+                        var pathTailProp = pathTail.property("ADBE Vector Shape") || pathTail.property("Path") || pathTail.property(1);
+                        if (pathTailProp) {
+                            pathTailProp.setValue(sObjTail);
+                        }
+                    } catch(eT) {}
+                }
+            }
+
+            // [C] Shared Fill Graphic for unified bubble silhouette
+            var fill = contents.addProperty("ADBE Vector Graphic - Fill");
             fill.property("Color").setValue(bubbleColor);
 
             // 3. Message Text Layer
@@ -682,7 +996,7 @@
             textLayer.fontSize = textSize;
             textLayer.fontColor = textColor;
             textLayer.justification = "left";
-            textLayer.transform.position.setValue([textLeftX, textTopY, 0]);
+            textLayer.transform.position.setValue([textLeftX, textTopY, -0.5]);
 
             // 4. Timestamp Text Layer
             var timeLayer = null;
@@ -699,7 +1013,7 @@
             timeLayer.fontSize = timeFontSize;
             timeLayer.fontColor = timeColor;
             timeLayer.justification = "right";
-            timeLayer.transform.position.setValue([timeX, timeY, 0]);
+            timeLayer.transform.position.setValue([timeX, timeY, -0.5]);
 
             // Select master controller
             master.selected = true;
