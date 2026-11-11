@@ -1,4 +1,5 @@
 /**
+ * Co-authored & architected with Google DeepMind Antigravity.
  * scriptui.js
  * ScriptUI Polyfill for After Effects .jsx UI Panels and Dialogs
  */

@@ -1,4 +1,5 @@
 /**
+ * Co-authored & architected with Google DeepMind Antigravity.
  * ae-core.js
  * After Effects Object Model, 3D Math, and Expression/Wiggle Engine
  */

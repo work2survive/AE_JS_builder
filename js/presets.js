@@ -1,4 +1,5 @@
 /**
+ * Co-authored & architected with Google DeepMind Antigravity.
  * presets.js
  * Predefined JSX scripts for After Effects testing and ScriptUI panels
  */

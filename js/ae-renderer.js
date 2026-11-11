@@ -1,4 +1,5 @@
 /**
+ * Co-authored & architected with Google DeepMind Antigravity.
  * ae-renderer.js
  * 3D/2D Viewport Renderer, Interactive Camera (Orbit/Pan/Zoom), and SVG Shape Generator
  */

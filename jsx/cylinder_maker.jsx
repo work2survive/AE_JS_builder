@@ -1,3 +1,4 @@
+// Co-authored & architected with Google DeepMind Antigravity.
 // =============================================================================
 // ADOBE AFTER EFFECTS EXTENDSCRIPT & SCRIPTUI PANEL: CYLINDER MAKER 3D v1.4
 // =============================================================================

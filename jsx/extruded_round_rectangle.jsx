@@ -1,3 +1,4 @@
+// Co-authored & architected with Google DeepMind Antigravity.
 // =============================================================================
 // ADOBE AFTER EFFECTS EXTENDSCRIPT & SCRIPTUI PANEL: EXTRUDED ROUND RECTANGLE v1.3
 // =============================================================================

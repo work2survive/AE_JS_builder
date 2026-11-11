@@ -1,6 +1,7 @@
 # After Effects JS & ScriptUI Simulator (3D / 2D)
 
 [![GitHub Pages](https://img.shields.io/badge/Live%20Demo-GitHub%20Pages-2c8cff?style=for-the-badge&logo=github)](https://work2survive.github.io/AE_JS_builder/)
+[![Built with Antigravity](https://img.shields.io/badge/Built%20With-Antigravity-4285F4?style=for-the-badge&logo=google)](https://deepmind.google/)
 
 **Live Browser Simulator**: [https://work2survive.github.io/AE_JS_builder/](https://work2survive.github.io/AE_JS_builder/)
 
@@ -156,6 +157,15 @@ Then navigate to `http://localhost:8000`.
 
 The production tools built and tested inside this simulator are also available as dedicated, standalone After Effects plugins and ScriptUI panels:
 
-- **[AECustomRoundedRect](https://github.com/work2survive/AECustomRoundedRect)**: Independent 4-corner parametric rounded rectangle generator with W3C CSS proportional overlap protection (v1.1).
-- **[AE Message Bubble Generator](https://github.com/work2survive/AE_message_bubble)**: Authentic chat and text message bubble generator for iOS, Android RCS, WhatsApp, Instagram, Messenger, and Custom themes (v1.0).
+- **[AE Cube Maker 3D](https://github.com/work2survive/AE-Cube-Maker-3D)**: Parametric 3D cube generator with independent face colors, opacity, stroke controls, and collapsed-transformation master rigging (v1.3).
+- **[AE Cylinder Maker 3D](https://github.com/work2survive/AE-Cylinder-Maker-3D)**: Parametric 3D cylinder and circular slice sector generator with auto-rigged wall facets, tri-color palette, and inner cap seams protection (v1.4).
 - **[AE Pie Slice Tool](https://github.com/work2survive/AE-Pie-Slice-Tool)**: Parametric circular sectors, arcs, and pie slices with corner rounding and collision protection (v4.1).
+- **[AECustomRoundedRect](https://github.com/work2survive/AECustomRoundedRect)**: Independent 4-corner parametric rounded rectangle generator with W3C CSS proportional overlap protection (v1.1).
+- **[Extruded-Round-Corners-Maker](https://github.com/work2survive/Extruded-Round-Corners-Maker)**: Parametric 3D extruded rounded rectangle with faceted corner walls, tri-color palette, airtight inner caps, and master rigging (v1.3 / v2.0).
+- **[AE Message Bubble Generator](https://github.com/work2survive/AE_message_bubble)**: Authentic chat and text message bubble generator for iOS, Android RCS, WhatsApp, Instagram, Messenger, and Custom themes (v1.0).
+
+---
+
+## 🤖 Acknowledgments
+
+Engineered, architected, and co-developed using **[Google DeepMind Antigravity](https://deepmind.google/)** agentic coding assistant.

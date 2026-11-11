@@ -1,4 +1,5 @@
 /*
+ * Co-authored & architected with Google DeepMind Antigravity.
     Pie / Circular Sector Generator for Adobe After Effects  (v4)
     Creates a native Shape Layer with an expression-driven Path.
 

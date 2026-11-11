@@ -1,4 +1,5 @@
 /**
+ * Co-authored & architected with Google DeepMind Antigravity.
  * app.js
  * After Effects Web IDE Controller & Timeline Inspector
  */
