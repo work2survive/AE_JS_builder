@@ -1,21 +1,57 @@
-﻿{
+{
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "description": "After Effects Message Bubble Generator - Platform Style Presets",
-  "version": "1.0",
+  "version": "1.1",
   "presets": {
     "Android RCS": {
       "label": "Android RCS style",
       "radius": 18,
       "tailType": "modern",
       "font": "Roboto (Google / Android)",
+      "fontIndex": 1,
+      "fontFamily": "Roboto, 'Google Sans', 'Segoe UI', Arial, sans-serif",
+      "fonts": [
+        "Roboto",
+        "Google Sans",
+        "Segoe UI",
+        "Arial",
+        "sans-serif"
+      ],
+      "aeFontCandidates": [
+        "Roboto-Regular",
+        "GoogleSans-Regular",
+        "SegoeUI",
+        "ArialMT",
+        "Arial"
+      ],
       "statusStyle": "rcs",
       "light": {
-        "sent": { "bubble": "#0b57d0", "text": "#ffffff", "time": "rgba(255,255,255,0.75)", "check": "" },
-        "received": { "bubble": "#f1f3f4", "text": "#1f1f1f", "time": "#70757a", "check": "" }
+        "sent": {
+          "bubble": "#0b57d0",
+          "text": "#ffffff",
+          "time": "rgba(255,255,255,0.75)",
+          "check": ""
+        },
+        "received": {
+          "bubble": "#f1f3f4",
+          "text": "#1f1f1f",
+          "time": "#70757a",
+          "check": ""
+        }
       },
       "dark": {
-        "sent": { "bubble": "#a8c7fa", "text": "#041e49", "time": "rgba(4,30,73,0.75)", "check": "" },
-        "received": { "bubble": "#303134", "text": "#e3e3e3", "time": "#9aa0a6", "check": "" }
+        "sent": {
+          "bubble": "#a8c7fa",
+          "text": "#041e49",
+          "time": "rgba(4,30,73,0.75)",
+          "check": ""
+        },
+        "received": {
+          "bubble": "#303134",
+          "text": "#e3e3e3",
+          "time": "#9aa0a6",
+          "check": ""
+        }
       }
     },
     "iOS Message": {
@@ -23,104 +59,354 @@
       "radius": 18,
       "tailType": "ios",
       "font": "SF Pro (Apple / iOS)",
+      "fontIndex": 0,
+      "fontFamily": "-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display', 'Helvetica Neue', Arial, sans-serif",
+      "fonts": [
+        "SF Pro Text",
+        "SF Pro Display",
+        "-apple-system",
+        "BlinkMacSystemFont",
+        "Helvetica Neue",
+        "Arial",
+        "sans-serif"
+      ],
+      "aeFontCandidates": [
+        "SFProText-Regular",
+        "SFProDisplay-Regular",
+        "HelveticaNeue",
+        "ArialMT",
+        "Arial"
+      ],
       "statusStyle": "standard",
       "light": {
-        "sent": { "bubble": "#007aff", "text": "#ffffff", "time": "rgba(255,255,255,0.70)", "check": "" },
-        "received": { "bubble": "#e9e9eb", "text": "#000000", "time": "#8e8e93", "check": "" }
+        "sent": {
+          "bubble": "#007aff",
+          "text": "#ffffff",
+          "time": "rgba(255,255,255,0.75)",
+          "check": ""
+        },
+        "received": {
+          "bubble": "#e9e9eb",
+          "text": "#000000",
+          "time": "#8e8e93",
+          "check": ""
+        }
       },
       "dark": {
-        "sent": { "bubble": "#0a84ff", "text": "#ffffff", "time": "rgba(255,255,255,0.70)", "check": "" },
-        "received": { "bubble": "#26252a", "text": "#ffffff", "time": "#8e8e93", "check": "" }
+        "sent": {
+          "bubble": "#0b84fe",
+          "text": "#ffffff",
+          "time": "rgba(255,255,255,0.75)",
+          "check": ""
+        },
+        "received": {
+          "bubble": "#26252a",
+          "text": "#ffffff",
+          "time": "#8e8e93",
+          "check": ""
+        }
       }
     },
     "WhatsApp": {
       "label": "WhatsApp style",
-      "radius": 10,
-      "tailType": "whatsapp",
+      "radius": 8,
+      "tailType": "classic",
       "font": "Helvetica Neue",
+      "fontIndex": 3,
+      "fontFamily": "'Helvetica Neue', Helvetica, Arial, sans-serif",
+      "fonts": [
+        "Helvetica Neue",
+        "Helvetica",
+        "Arial",
+        "sans-serif"
+      ],
+      "aeFontCandidates": [
+        "HelveticaNeue",
+        "Helvetica",
+        "ArialMT",
+        "Arial"
+      ],
       "statusStyle": "standard",
       "light": {
-        "sent": { "bubble": "#d9fdd3", "text": "#111b21", "time": "#667781", "check": "✓✓" },
-        "received": { "bubble": "#ffffff", "text": "#111b21", "time": "#667781", "check": "" }
+        "sent": {
+          "bubble": "#d9fdd3",
+          "text": "#111b21",
+          "time": "#667781",
+          "check": "#53bdeb"
+        },
+        "received": {
+          "bubble": "#ffffff",
+          "text": "#111b21",
+          "time": "#667781",
+          "check": ""
+        }
       },
       "dark": {
-        "sent": { "bubble": "#005c4b", "text": "#e9edef", "time": "#8696a0", "check": "✓✓" },
-        "received": { "bubble": "#202c33", "text": "#e9edef", "time": "#8696a0", "check": "" }
+        "sent": {
+          "bubble": "#005c4b",
+          "text": "#e9edef",
+          "time": "#8696a0",
+          "check": "#53bdeb"
+        },
+        "received": {
+          "bubble": "#202c33",
+          "text": "#e9edef",
+          "time": "#8696a0",
+          "check": ""
+        }
       }
     },
     "Instagram": {
       "label": "Instagram style",
       "radius": 20,
-      "tailType": "instagram",
+      "tailType": "none",
       "font": "SF Pro (Apple / iOS)",
+      "fontIndex": 0,
+      "fontFamily": "-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Instagram Sans', 'Helvetica Neue', Arial, sans-serif",
+      "fonts": [
+        "SF Pro Text",
+        "Instagram Sans",
+        "Helvetica Neue",
+        "Arial",
+        "sans-serif"
+      ],
+      "aeFontCandidates": [
+        "SFProText-Regular",
+        "HelveticaNeue",
+        "ArialMT",
+        "Arial"
+      ],
       "statusStyle": "standard",
       "light": {
-        "sent": { "bubble": "#7839ee", "text": "#ffffff", "time": "rgba(255,255,255,0.70)", "check": "" },
-        "received": { "bubble": "#efefef", "text": "#000000", "time": "#8e8e93", "check": "" }
+        "sent": {
+          "bubble": "#3797f0",
+          "text": "#ffffff",
+          "time": "rgba(255,255,255,0.7)",
+          "check": ""
+        },
+        "received": {
+          "bubble": "#efefef",
+          "text": "#262626",
+          "time": "#8e8e8e",
+          "check": ""
+        }
       },
       "dark": {
-        "sent": { "bubble": "#7c3aed", "text": "#ffffff", "time": "rgba(255,255,255,0.70)", "check": "" },
-        "received": { "bubble": "#262626", "text": "#f5f5f5", "time": "#a8a8a8", "check": "" }
+        "sent": {
+          "bubble": "#3797f0",
+          "text": "#ffffff",
+          "time": "rgba(255,255,255,0.7)",
+          "check": ""
+        },
+        "received": {
+          "bubble": "#262626",
+          "text": "#f5f5f5",
+          "time": "#a8a8a8",
+          "check": ""
+        }
       }
     },
     "Facebook Messenger": {
-      "label": "Facebook Messenger style",
+      "label": "Messenger style",
       "radius": 18,
-      "tailType": "messenger",
+      "tailType": "none",
       "font": "Segoe UI (Windows)",
+      "fontIndex": 2,
+      "fontFamily": "'Segoe UI', Tahoma, Geneva, Verdana, Arial, sans-serif",
+      "fonts": [
+        "Segoe UI",
+        "Tahoma",
+        "Geneva",
+        "Arial",
+        "sans-serif"
+      ],
+      "aeFontCandidates": [
+        "SegoeUI",
+        "Tahoma",
+        "ArialMT",
+        "Arial"
+      ],
       "statusStyle": "standard",
       "light": {
-        "sent": { "bubble": "#0084ff", "text": "#ffffff", "time": "rgba(255,255,255,0.70)", "check": "✓" },
-        "received": { "bubble": "#e4e6eb", "text": "#050505", "time": "#65676b", "check": "" }
+        "sent": {
+          "bubble": "#0084ff",
+          "text": "#ffffff",
+          "time": "rgba(255,255,255,0.75)",
+          "check": "#0084ff"
+        },
+        "received": {
+          "bubble": "#e4e6eb",
+          "text": "#050505",
+          "time": "#65676b",
+          "check": ""
+        }
       },
       "dark": {
-        "sent": { "bubble": "#0084ff", "text": "#ffffff", "time": "rgba(255,255,255,0.70)", "check": "✓" },
-        "received": { "bubble": "#303030", "text": "#e4e6eb", "time": "#b0b3b8", "check": "" }
+        "sent": {
+          "bubble": "#0084ff",
+          "text": "#ffffff",
+          "time": "rgba(255,255,255,0.75)",
+          "check": "#0084ff"
+        },
+        "received": {
+          "bubble": "#303030",
+          "text": "#e4e6eb",
+          "time": "#b0b3b8",
+          "check": ""
+        }
       }
     },
     "Telegram": {
       "label": "Telegram style",
-      "radius": 16,
-      "tailType": "modern",
-      "font": "SF Pro (Apple / iOS)",
+      "radius": 14,
+      "tailType": "classic",
+      "font": "Open Sans",
+      "fontIndex": 6,
+      "fontFamily": "'Open Sans', 'Segoe UI', Roboto, Arial, sans-serif",
+      "fonts": [
+        "Open Sans",
+        "Segoe UI",
+        "Roboto",
+        "Arial",
+        "sans-serif"
+      ],
+      "aeFontCandidates": [
+        "OpenSans-Regular",
+        "OpenSans",
+        "SegoeUI",
+        "ArialMT",
+        "Arial"
+      ],
       "statusStyle": "standard",
       "light": {
-        "sent": { "bubble": "#effdde", "text": "#000000", "time": "#4fae4e", "check": "✓✓" },
-        "received": { "bubble": "#ffffff", "text": "#000000", "time": "#a0acb6", "check": "" }
+        "sent": {
+          "bubble": "#effdde",
+          "text": "#000000",
+          "time": "#4fae4e",
+          "check": "#4fae4e"
+        },
+        "received": {
+          "bubble": "#ffffff",
+          "text": "#000000",
+          "time": "#a0acb6",
+          "check": ""
+        }
       },
       "dark": {
-        "sent": { "bubble": "#2b5278", "text": "#ffffff", "time": "rgba(255,255,255,0.70)", "check": "✓✓" },
-        "received": { "bubble": "#182533", "text": "#ffffff", "time": "#708499", "check": "" }
+        "sent": {
+          "bubble": "#2b5278",
+          "text": "#ffffff",
+          "time": "rgba(255,255,255,0.75)",
+          "check": "#6ab2f2"
+        },
+        "received": {
+          "bubble": "#182533",
+          "text": "#ffffff",
+          "time": "#708499",
+          "check": ""
+        }
       }
     },
     "Discord": {
       "label": "Discord style",
-      "radius": 14,
-      "tailType": "modern",
+      "radius": 12,
+      "tailType": "none",
       "font": "Inter",
+      "fontIndex": 5,
+      "fontFamily": "Inter, 'gg sans', 'Segoe UI', Arial, sans-serif",
+      "fonts": [
+        "Inter",
+        "gg sans",
+        "Segoe UI",
+        "Arial",
+        "sans-serif"
+      ],
+      "aeFontCandidates": [
+        "Inter-Regular",
+        "Inter",
+        "SegoeUI",
+        "ArialMT",
+        "Arial"
+      ],
       "statusStyle": "standard",
       "light": {
-        "sent": { "bubble": "#5865f2", "text": "#ffffff", "time": "rgba(255,255,255,0.75)", "check": "" },
-        "received": { "bubble": "#f2f3f5", "text": "#2e3338", "time": "#747f8d", "check": "" }
+        "sent": {
+          "bubble": "#5865f2",
+          "text": "#ffffff",
+          "time": "rgba(255,255,255,0.75)",
+          "check": ""
+        },
+        "received": {
+          "bubble": "#e3e5e8",
+          "text": "#2e3338",
+          "time": "#747f8d",
+          "check": ""
+        }
       },
       "dark": {
-        "sent": { "bubble": "#5865f2", "text": "#ffffff", "time": "rgba(255,255,255,0.75)", "check": "" },
-        "received": { "bubble": "#2b2d31", "text": "#dbdee1", "time": "#949ba4", "check": "" }
+        "sent": {
+          "bubble": "#5865f2",
+          "text": "#ffffff",
+          "time": "rgba(255,255,255,0.75)",
+          "check": ""
+        },
+        "received": {
+          "bubble": "#2b2d31",
+          "text": "#dbdee1",
+          "time": "#949ba4",
+          "check": ""
+        }
       }
     },
     "Custom": {
-      "label": "Custom style",
-      "radius": 16,
+      "label": "Custom Preset",
+      "radius": 18,
       "tailType": "modern",
       "font": "System Default",
+      "fontIndex": 7,
+      "fontFamily": "system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
+      "fonts": [
+        "system-ui",
+        "-apple-system",
+        "Segoe UI",
+        "Roboto",
+        "Arial",
+        "sans-serif"
+      ],
+      "aeFontCandidates": [
+        "ArialMT",
+        "Arial",
+        "HelveticaNeue",
+        "SegoeUI"
+      ],
       "statusStyle": "standard",
       "light": {
-        "sent": { "bubble": "#2563eb", "text": "#ffffff", "time": "rgba(255,255,255,0.70)", "check": "" },
-        "received": { "bubble": "#f3f4f6", "text": "#111827", "time": "#6b7280", "check": "" }
+        "sent": {
+          "bubble": "#007aff",
+          "text": "#ffffff",
+          "time": "rgba(255,255,255,0.75)",
+          "check": ""
+        },
+        "received": {
+          "bubble": "#e9e9eb",
+          "text": "#000000",
+          "time": "#8e8e93",
+          "check": ""
+        }
       },
       "dark": {
-        "sent": { "bubble": "#3b82f6", "text": "#ffffff", "time": "rgba(255,255,255,0.70)", "check": "" },
-        "received": { "bubble": "#1f2937", "text": "#f9fafb", "time": "#9ca3af", "check": "" }
+        "sent": {
+          "bubble": "#0b84fe",
+          "text": "#ffffff",
+          "time": "rgba(255,255,255,0.75)",
+          "check": ""
+        },
+        "received": {
+          "bubble": "#26252a",
+          "text": "#ffffff",
+          "time": "#8e8e93",
+          "check": ""
+        }
       }
     }
   }

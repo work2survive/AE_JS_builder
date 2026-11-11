@@ -1,4 +1,4 @@
-// Co-authored & architected with Google DeepMind Antigravity.
+\xef\xbb\xbf// Co-authored & architected with Google DeepMind Antigravity.
 // =============================================================================
 // ADOBE AFTER EFFECTS EXTENDSCRIPT & SCRIPTUI PANEL: MESSAGE BUBBLE GENERATOR
 // =============================================================================
@@ -198,6 +198,10 @@
             radius: 18,
             tailType: "modern",
             font: "Roboto (Google / Android)",
+            fontIndex: 1,
+            fontFamily: "Roboto, 'Google Sans', 'Segoe UI', Arial, sans-serif",
+            fonts: ["Roboto", "Google Sans", "Segoe UI", "Arial", "sans-serif"],
+            aeFontCandidates: ["Roboto-Regular", "GoogleSans-Regular", "SegoeUI", "ArialMT", "Arial"],
             statusStyle: "rcs",
             light: {
                 sent:     { bubble: "#0b57d0", text: "#ffffff", time: "rgba(255,255,255,0.75)", check: "" },
@@ -213,104 +217,132 @@
             radius: 18,
             tailType: "ios",
             font: "SF Pro (Apple / iOS)",
+            fontIndex: 0,
+            fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display', 'Helvetica Neue', Arial, sans-serif",
+            fonts: ["SF Pro Text", "SF Pro Display", "-apple-system", "BlinkMacSystemFont", "Helvetica Neue", "Arial", "sans-serif"],
+            aeFontCandidates: ["SFProText-Regular", "SFProDisplay-Regular", "HelveticaNeue", "ArialMT", "Arial"],
             statusStyle: "standard",
             light: {
-                sent:     { bubble: "#007aff", text: "#ffffff", time: "rgba(255,255,255,0.70)", check: "" },
+                sent:     { bubble: "#007aff", text: "#ffffff", time: "rgba(255,255,255,0.75)", check: "" },
                 received: { bubble: "#e9e9eb", text: "#000000", time: "#8e8e93", check: "" }
             },
             dark: {
-                sent:     { bubble: "#0a84ff", text: "#ffffff", time: "rgba(255,255,255,0.70)", check: "" },
+                sent:     { bubble: "#0b84fe", text: "#ffffff", time: "rgba(255,255,255,0.75)", check: "" },
                 received: { bubble: "#26252a", text: "#ffffff", time: "#8e8e93", check: "" }
             }
         },
         "WhatsApp": {
             label: "WhatsApp style",
-            radius: 10,
-            tailType: "whatsapp",
+            radius: 8,
+            tailType: "classic",
             font: "Helvetica Neue",
+            fontIndex: 3,
+            fontFamily: "'Helvetica Neue', Helvetica, Arial, sans-serif",
+            fonts: ["Helvetica Neue", "Helvetica", "Arial", "sans-serif"],
+            aeFontCandidates: ["HelveticaNeue", "Helvetica", "ArialMT", "Arial"],
             statusStyle: "standard",
             light: {
-                sent:     { bubble: "#d9fdd3", text: "#111b21", time: "#667781", check: "✓✓" },
+                sent:     { bubble: "#d9fdd3", text: "#111b21", time: "#667781", check: "#53bdeb" },
                 received: { bubble: "#ffffff", text: "#111b21", time: "#667781", check: "" }
             },
             dark: {
-                sent:     { bubble: "#005c4b", text: "#e9edef", time: "#8696a0", check: "✓✓" },
+                sent:     { bubble: "#005c4b", text: "#e9edef", time: "#8696a0", check: "#53bdeb" },
                 received: { bubble: "#202c33", text: "#e9edef", time: "#8696a0", check: "" }
             }
         },
         "Instagram": {
             label: "Instagram style",
             radius: 20,
-            tailType: "instagram",
+            tailType: "none",
             font: "SF Pro (Apple / iOS)",
+            fontIndex: 0,
+            fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Instagram Sans', 'Helvetica Neue', Arial, sans-serif",
+            fonts: ["SF Pro Text", "Instagram Sans", "Helvetica Neue", "Arial", "sans-serif"],
+            aeFontCandidates: ["SFProText-Regular", "HelveticaNeue", "ArialMT", "Arial"],
             statusStyle: "standard",
             light: {
-                sent:     { bubble: "#7839ee", text: "#ffffff", time: "rgba(255,255,255,0.70)", check: "" },
-                received: { bubble: "#efefef", text: "#000000", time: "#8e8e93", check: "" }
+                sent:     { bubble: "#3797f0", text: "#ffffff", time: "rgba(255,255,255,0.7)", check: "" },
+                received: { bubble: "#efefef", text: "#262626", time: "#8e8e8e", check: "" }
             },
             dark: {
-                sent:     { bubble: "#7c3aed", text: "#ffffff", time: "rgba(255,255,255,0.70)", check: "" },
+                sent:     { bubble: "#3797f0", text: "#ffffff", time: "rgba(255,255,255,0.7)", check: "" },
                 received: { bubble: "#262626", text: "#f5f5f5", time: "#a8a8a8", check: "" }
             }
         },
         "Facebook Messenger": {
-            label: "Facebook Messenger style",
+            label: "Messenger style",
             radius: 18,
-            tailType: "messenger",
+            tailType: "none",
             font: "Segoe UI (Windows)",
+            fontIndex: 2,
+            fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, Arial, sans-serif",
+            fonts: ["Segoe UI", "Tahoma", "Geneva", "Arial", "sans-serif"],
+            aeFontCandidates: ["SegoeUI", "Tahoma", "ArialMT", "Arial"],
             statusStyle: "standard",
             light: {
-                sent:     { bubble: "#0084ff", text: "#ffffff", time: "rgba(255,255,255,0.70)", check: "✓" },
+                sent:     { bubble: "#0084ff", text: "#ffffff", time: "rgba(255,255,255,0.75)", check: "#0084ff" },
                 received: { bubble: "#e4e6eb", text: "#050505", time: "#65676b", check: "" }
             },
             dark: {
-                sent:     { bubble: "#0084ff", text: "#ffffff", time: "rgba(255,255,255,0.70)", check: "✓" },
+                sent:     { bubble: "#0084ff", text: "#ffffff", time: "rgba(255,255,255,0.75)", check: "#0084ff" },
                 received: { bubble: "#303030", text: "#e4e6eb", time: "#b0b3b8", check: "" }
             }
         },
         "Telegram": {
             label: "Telegram style",
-            radius: 16,
-            tailType: "modern",
-            font: "SF Pro (Apple / iOS)",
+            radius: 14,
+            tailType: "classic",
+            font: "Open Sans",
+            fontIndex: 6,
+            fontFamily: "'Open Sans', 'Segoe UI', Roboto, Arial, sans-serif",
+            fonts: ["Open Sans", "Segoe UI", "Roboto", "Arial", "sans-serif"],
+            aeFontCandidates: ["OpenSans-Regular", "OpenSans", "SegoeUI", "ArialMT", "Arial"],
             statusStyle: "standard",
             light: {
-                sent:     { bubble: "#effdde", text: "#000000", time: "#4fae4e", check: "✓✓" },
+                sent:     { bubble: "#effdde", text: "#000000", time: "#4fae4e", check: "#4fae4e" },
                 received: { bubble: "#ffffff", text: "#000000", time: "#a0acb6", check: "" }
             },
             dark: {
-                sent:     { bubble: "#2b5278", text: "#ffffff", time: "rgba(255,255,255,0.70)", check: "✓✓" },
+                sent:     { bubble: "#2b5278", text: "#ffffff", time: "rgba(255,255,255,0.75)", check: "#6ab2f2" },
                 received: { bubble: "#182533", text: "#ffffff", time: "#708499", check: "" }
             }
         },
         "Discord": {
             label: "Discord style",
-            radius: 14,
-            tailType: "modern",
+            radius: 12,
+            tailType: "none",
             font: "Inter",
+            fontIndex: 5,
+            fontFamily: "Inter, 'gg sans', 'Segoe UI', Arial, sans-serif",
+            fonts: ["Inter", "gg sans", "Segoe UI", "Arial", "sans-serif"],
+            aeFontCandidates: ["Inter-Regular", "Inter", "SegoeUI", "ArialMT", "Arial"],
             statusStyle: "standard",
             light: {
                 sent:     { bubble: "#5865f2", text: "#ffffff", time: "rgba(255,255,255,0.75)", check: "" },
-                received: { bubble: "#f2f3f5", text: "#2e3338", time: "#747f8d", check: "" }
+                received: { bubble: "#e3e5e8", text: "#2e3338", time: "#747f8d", check: "" }
             },
             dark: {
                 sent:     { bubble: "#5865f2", text: "#ffffff", time: "rgba(255,255,255,0.75)", check: "" },
-                received: { bubble: "#2b2d31", text: "#dbdee1", "time": "#949ba4", check: "" }
+                received: { bubble: "#2b2d31", text: "#dbdee1", time: "#949ba4", check: "" }
             }
         },
         "Custom": {
-            label: "Custom style",
-            radius: 16,
+            label: "Custom Preset",
+            radius: 18,
             tailType: "modern",
             font: "System Default",
+            fontIndex: 7,
+            fontFamily: "system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
+            fonts: ["system-ui", "-apple-system", "Segoe UI", "Roboto", "Arial", "sans-serif"],
+            aeFontCandidates: ["ArialMT", "Arial", "HelveticaNeue", "SegoeUI"],
             statusStyle: "standard",
             light: {
-                sent:     { bubble: "#2563eb", text: "#ffffff", time: "rgba(255,255,255,0.70)", check: "" },
-                received: { bubble: "#f3f4f6", text: "#111827", time: "#6b7280", check: "" }
+                sent:     { bubble: "#007aff", text: "#ffffff", time: "rgba(255,255,255,0.75)", check: "" },
+                received: { bubble: "#e9e9eb", text: "#000000", time: "#8e8e93", check: "" }
             },
             dark: {
-                sent:     { bubble: "#3b82f6", text: "#ffffff", time: "rgba(255,255,255,0.70)", check: "" },
-                received: { bubble: "#1f2937", text: "#f9fafb", time: "#9ca3af", check: "" }
+                sent:     { bubble: "#0b84fe", text: "#ffffff", time: "rgba(255,255,255,0.75)", check: "" },
+                received: { bubble: "#26252a", text: "#ffffff", time: "#8e8e93", check: "" }
             }
         }
     };
@@ -530,14 +562,54 @@
     // Common Messaging App Fonts & System Typography
     // -------------------------------------------------------------------------
     var FONTS = [
-        { name: "SF Pro (Apple / iOS)", css: "-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display', sans-serif", ae: "SFProText-Regular" },
-        { name: "Roboto (Google / Android)", css: "Roboto, 'Google Sans', sans-serif", ae: "Roboto-Regular" },
-        { name: "Segoe UI (Windows)", css: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif", ae: "SegoeUI" },
-        { name: "Helvetica Neue", css: "'Helvetica Neue', Helvetica, Arial, sans-serif", ae: "HelveticaNeue" },
-        { name: "Arial", css: "Arial, Helvetica, sans-serif", ae: "ArialMT" },
-        { name: "Inter", css: "Inter, sans-serif", ae: "Inter-Regular" },
-        { name: "Open Sans", css: "'Open Sans', sans-serif", ae: "OpenSans-Regular" },
-        { name: "System Default", css: "system-ui, -apple-system, sans-serif", ae: "" }
+        {
+            name: "SF Pro (Apple / iOS)",
+            css: "-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display', 'Helvetica Neue', Arial, sans-serif",
+            ae: "SFProText-Regular",
+            aeFallbacks: ["SFProText-Regular", "SFProDisplay-Regular", "HelveticaNeue", "ArialMT", "Arial"]
+        },
+        {
+            name: "Roboto (Google / Android)",
+            css: "Roboto, 'Google Sans', 'Segoe UI', Arial, sans-serif",
+            ae: "Roboto-Regular",
+            aeFallbacks: ["Roboto-Regular", "GoogleSans-Regular", "SegoeUI", "ArialMT", "Arial"]
+        },
+        {
+            name: "Segoe UI (Windows)",
+            css: "'Segoe UI', Tahoma, Geneva, Verdana, Arial, sans-serif",
+            ae: "SegoeUI",
+            aeFallbacks: ["SegoeUI", "Tahoma", "ArialMT", "Arial"]
+        },
+        {
+            name: "Helvetica Neue",
+            css: "'Helvetica Neue', Helvetica, Arial, sans-serif",
+            ae: "HelveticaNeue",
+            aeFallbacks: ["HelveticaNeue", "Helvetica", "ArialMT", "Arial"]
+        },
+        {
+            name: "Arial",
+            css: "Arial, Helvetica, sans-serif",
+            ae: "ArialMT",
+            aeFallbacks: ["ArialMT", "Arial", "Helvetica"]
+        },
+        {
+            name: "Inter",
+            css: "Inter, 'Segoe UI', Arial, sans-serif",
+            ae: "Inter-Regular",
+            aeFallbacks: ["Inter-Regular", "SegoeUI", "ArialMT", "Arial"]
+        },
+        {
+            name: "Open Sans",
+            css: "'Open Sans', 'Segoe UI', Arial, sans-serif",
+            ae: "OpenSans-Regular",
+            aeFallbacks: ["OpenSans-Regular", "SegoeUI", "ArialMT", "Arial"]
+        },
+        {
+            name: "System Default",
+            css: "system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
+            ae: "ArialMT",
+            aeFallbacks: ["ArialMT", "Arial", "HelveticaNeue", "SegoeUI"]
+        }
     ];
 
     // Helper: Hex color to AE 0.0-1.0 float array
@@ -990,7 +1062,7 @@
         "    var speed = Math.max(0.1, getVal('Animation Speed', 100) / 100);",
         "    var amp = Math.max(0, getVal('Animation Intensity', 100) / 100);",
         "    var t = time * speed;",
-        "    var dx = 0;",,
+        "    var dx = 0;",
         "    var dy = 0;",
         "",
         "    if (effectType === 3) {",
@@ -2397,6 +2469,76 @@
 
     tpanel.selection = tabMessage; // Default to Message tab
 
+
+    // -------------------------------------------------------------------------
+    // Font Resolution & Multi-Tier Fallback System (CSS-like font-family stack)
+    // -------------------------------------------------------------------------
+    function getActiveFontCandidates() {
+        var candidates = [];
+        var selIdx = (dropPlatform && dropPlatform.selection) ? dropPlatform.selection.index : 0;
+        var pKey = platformKeys[selIdx] || "iOS Message";
+        var pCfg = PLATFORMS[pKey] || DEFAULT_PLATFORMS[pKey];
+        if (pCfg && pCfg.aeFontCandidates && pCfg.aeFontCandidates.length) {
+            for (var c = 0; c < pCfg.aeFontCandidates.length; c++) {
+                if (pCfg.aeFontCandidates[c]) candidates.push(pCfg.aeFontCandidates[c]);
+            }
+        }
+        var fIdx = (dropFont && dropFont.selection) ? dropFont.selection.index : 0;
+        var curFont = FONTS[fIdx] || FONTS[0];
+        if (curFont && curFont.aeFallbacks) {
+            for (var f = 0; f < curFont.aeFallbacks.length; f++) {
+                if (curFont.aeFallbacks[f]) candidates.push(curFont.aeFallbacks[f]);
+            }
+        } else if (curFont && curFont.ae) {
+            candidates.push(curFont.ae);
+        }
+        return candidates;
+    }
+
+    function applyFontWithFallback(textProp, candidateList) {
+        if (!textProp) return false;
+        var candidates = [];
+        if (candidateList) {
+            if (typeof candidateList === "string") {
+                candidates.push(candidateList);
+            } else if (candidateList instanceof Array) {
+                for (var c = 0; c < candidateList.length; c++) {
+                    if (candidateList[c]) candidates.push(candidateList[c]);
+                }
+            }
+        }
+        // Universal system sans-serif fallback fonts guaranteed on Windows / macOS
+        var systemFallbacks = [
+            "ArialMT",
+            "Arial-BoldMT",
+            "Arial",
+            "HelveticaNeue",
+            "Helvetica",
+            "SegoeUI",
+            "Tahoma",
+            "Verdana"
+        ];
+        for (var s = 0; s < systemFallbacks.length; s++) {
+            var found = false;
+            for (var k = 0; k < candidates.length; k++) {
+                if (candidates[k] === systemFallbacks[s]) { found = true; break; }
+            }
+            if (!found) candidates.push(systemFallbacks[s]);
+        }
+
+        for (var i = 0; i < candidates.length; i++) {
+            var fontName = candidates[i];
+            if (!fontName) continue;
+            try {
+                var doc = textProp.value;
+                doc.font = fontName;
+                textProp.setValue(doc);
+                return true;
+            } catch(e) {}
+        }
+        return false;
+    }
+
     function syncColorsFromPlatform() {
         var selIdx = dropPlatform.selection ? dropPlatform.selection.index : 0;
         var platformName = platformKeys[selIdx] || "iOS Message";
@@ -2417,21 +2559,38 @@
         }
 
         if (typeof dropFont !== "undefined" && dropFont) {
-            if (typeof platformCfg.fontIndex === "number" && platformCfg.fontIndex < FONTS.length) {
-                dropFont.selection = platformCfg.fontIndex;
+            var targetFontIdx = -1;
+            if (typeof platformCfg.fontIndex === "number" && platformCfg.fontIndex >= 0 && platformCfg.fontIndex < FONTS.length) {
+                targetFontIdx = platformCfg.fontIndex;
             } else if (platformCfg.font) {
+                var pFontStr = String(platformCfg.font).toLowerCase();
                 for (var fi = 0; fi < FONTS.length; fi++) {
-                    if (FONTS[fi].name.toLowerCase().indexOf(platformCfg.font.toLowerCase()) !== -1 ||
-                        platformCfg.font.toLowerCase().indexOf(FONTS[fi].name.toLowerCase()) !== -1) {
-                        dropFont.selection = fi;
+                    var fNameLower = FONTS[fi].name.toLowerCase();
+                    if (fNameLower.indexOf(pFontStr) !== -1 || pFontStr.indexOf(fNameLower) !== -1) {
+                        targetFontIdx = fi;
+                        break;
+                    }
+                    if (FONTS[fi].ae && pFontStr.indexOf(FONTS[fi].ae.toLowerCase()) !== -1) {
+                        targetFontIdx = fi;
                         break;
                     }
                 }
-            } else {
-                if (platformName === "Android RCS") dropFont.selection = 1; // Roboto
-                else if (platformName === "iOS Message" || platformName === "Instagram") dropFont.selection = 0; // SF Pro
-                else if (platformName === "WhatsApp") dropFont.selection = 3; // Helvetica Neue
-                else if (platformName === "Facebook Messenger") dropFont.selection = 2; // Segoe UI
+            }
+            if (targetFontIdx === -1) {
+                if (platformName === "Android RCS") targetFontIdx = 1;
+                else if (platformName === "iOS Message" || platformName === "Instagram") targetFontIdx = 0;
+                else if (platformName === "WhatsApp") targetFontIdx = 3;
+                else if (platformName === "Facebook Messenger") targetFontIdx = 2;
+                else if (platformName === "Telegram") targetFontIdx = 6;
+                else if (platformName === "Discord") targetFontIdx = 5;
+                else if (platformName === "Custom") targetFontIdx = 7;
+                else targetFontIdx = 0;
+            }
+            if (targetFontIdx >= 0 && targetFontIdx < fontOptions.length) {
+                dropFont.selection = targetFontIdx;
+                if (dropFont.onChange) {
+                    try { dropFont.onChange(); } catch(eDropF) {}
+                }
             }
         }
 
@@ -2501,7 +2660,7 @@
             for (var i = 0; i < str.length; i++) {
                 var code = str.charCodeAt(i);
                 // Unicode emojis / surrogate pairs / wide glyphs
-                if (code > 255 || (code >= 0xD800 && code <= 0xDBFF)) {
+                if (code > 255 || (code >= 55296 && code <= 56319)) {
                     w += fontSize * 1.1;
                 } else if ("ijl|!.,:;'I".indexOf(str.charAt(i)) !== -1) {
                     w += fontSize * 0.28;
@@ -2544,7 +2703,7 @@
             var w = 0;
             for (var c = 0; c < line.length; c++) {
                 var code = line.charCodeAt(c);
-                if (code > 255 || (code >= 0xD800 && code <= 0xDBFF)) {
+                if (code > 255 || (code >= 55296 && code <= 56319)) {
                     w += fontSize * 1.1;
                 } else if ("ijl|!.,:;'I".indexOf(line.charAt(c)) !== -1) {
                     w += fontSize * 0.28;
@@ -2919,14 +3078,13 @@
 
             if (textLayer.property && textLayer.property("Source Text")) {
                 try {
-                    var textDoc = textLayer.property("Source Text").value;
+                    var textProp = textLayer.property("Source Text");
+                    var textDoc = textProp.value;
                     if (textDoc) {
                         textDoc.autoLeading = false;
                         textDoc.leading = lineH;
-                        if (selectedFont.ae) {
-                            try { textDoc.font = selectedFont.ae; } catch(eFont) {}
-                        }
-                        textLayer.property("Source Text").setValue(textDoc);
+                        textProp.setValue(textDoc);
+                        applyFontWithFallback(textProp, getActiveFontCandidates());
                     }
                 } catch(eDoc) {}
                 textLayer.property("Source Text").expression = TYPEWRITER_EXPR;
@@ -2956,6 +3114,16 @@
             timeLayer.fontFamily = selectedFont.css;
             timeLayer.justification = "right";
             timeLayer.transform.position.setValue([timeX, timeY, -0.5]);
+            if (timeLayer.property && timeLayer.property("Source Text")) {
+                try {
+                    var timeProp = timeLayer.property("Source Text");
+                    var timeDoc = timeProp.value;
+                    if (timeDoc) {
+                        timeProp.setValue(timeDoc);
+                        applyFontWithFallback(timeProp, getActiveFontCandidates());
+                    }
+                } catch(eTimeDoc) {}
+            }
             if (timeLayer.transform && timeLayer.transform.opacity) {
                 timeLayer.transform.opacity.expression = TIMECODE_ENTRANCE_EXPR;
             }
@@ -2977,6 +3145,16 @@
                 statusLayerText.fontFamily = selectedFont.css;
                 statusLayerText.justification = "right";
                 statusLayerText.transform.position.setValue([statusX, timeY, -0.5]);
+                if (statusLayerText.property && statusLayerText.property("Source Text")) {
+                    try {
+                        var statProp = statusLayerText.property("Source Text");
+                        var statDoc = statProp.value;
+                        if (statDoc) {
+                            statProp.setValue(statDoc);
+                            applyFontWithFallback(statProp, getActiveFontCandidates());
+                        }
+                    } catch(eStatDoc) {}
+                }
                 if (statusLayerText.transform && statusLayerText.transform.opacity) {
                     statusLayerText.transform.opacity.expression = STATUS_TEXT_OPACITY_EXPR;
                 }
@@ -3167,7 +3345,7 @@
             }
 
             // 6. Precompose all created layers into "message_" + random hex number
-            var randHex = Math.floor(Math.random() * 0x10000).toString(16).toLowerCase();
+            var randHex = Math.floor(Math.random() * 65536).toString(16).toLowerCase();
             while (randHex.length < 4) randHex = "0" + randHex;
             var precompName = "message_" + randHex;
 
@@ -3781,16 +3959,15 @@
                     }
                     if (textLayer.property && textLayer.property("Source Text")) {
                         try {
-                            var tDoc = textLayer.property("Source Text").value;
+                            var tProp = textLayer.property("Source Text");
+                            var tDoc = tProp.value;
                             if (tDoc) {
                                 tDoc.text = wrappedString;
                                 tDoc.fontSize = textSize;
                                 tDoc.leading = lineH;
                                 tDoc.autoLeading = false;
-                                if (selectedFont.ae) {
-                                    try { tDoc.font = selectedFont.ae; } catch(eFnt) {}
-                                }
-                                textLayer.property("Source Text").setValue(tDoc);
+                                tProp.setValue(tDoc);
+                                applyFontWithFallback(tProp, getActiveFontCandidates());
                             }
                         } catch(eTDoc) {}
                     }
@@ -3814,6 +3991,16 @@
                     timeLayer.fontFamily = selectedFont.css;
                     if (timeLayer.transform && timeLayer.transform.position) {
                         timeLayer.transform.position.setValue([timeX, timeY, -0.5]);
+                    }
+                    if (timeLayer.property && timeLayer.property("Source Text")) {
+                        try {
+                            var tmProp = timeLayer.property("Source Text");
+                            var tmDoc = tmProp.value;
+                            if (tmDoc) {
+                                tmProp.setValue(tmDoc);
+                                applyFontWithFallback(tmProp, getActiveFontCandidates());
+                            }
+                        } catch(eTm) {}
                     }
                 }
 
@@ -3872,6 +4059,7 @@
     btnBuild.alignment = ["fill", "top"];
     btnBuild.preferredSize = [-1, 36];
     btnBuild.onClick = function() {
+        checkSelectionState();
         var activeTarget = getSelectedMessageBubblePrecomp();
         if (activeTarget) {
             updateExistingMessageBubble(activeTarget);
@@ -3904,32 +4092,33 @@
     syncColorsFromPlatform();
     checkSelectionState();
 
+    // Safe selection detection: event-driven in AE, timer-driven in Emulator
+    win.checkSelectionState = checkSelectionState;
     win.onActivate = function() {
         checkSelectionState();
     };
     try {
-        win.addEventListener("mouseover", function() { checkSelectionState(); });
-        win.addEventListener("focus", function() { checkSelectionState(); });
+        if (win.addEventListener) {
+            win.addEventListener("mouseover", function() { checkSelectionState(); });
+            win.addEventListener("focus", function() { checkSelectionState(); });
+        }
     } catch(eEvt) {}
 
-    var pollTimerId = null;
-    if (typeof window !== "undefined" && typeof window.setInterval === "function") {
-        pollTimerId = window.setInterval(checkSelectionState, 300);
-    }
+    try {
+        if (btnBuild.addEventListener) {
+            btnBuild.addEventListener("mouseover", function() { checkSelectionState(); });
+        }
+    } catch(eBtnEvt) {}
 
-    var aeTaskId = 0;
-    if (typeof app !== "undefined" && typeof app.scheduleTask === "function") {
-        try {
-            aeTaskId = app.scheduleTask("checkSelectionState()", 350, true);
-        } catch(eTask) {}
+    var pollTimerId = null;
+    // Browser emulator only: safe standard DOM timer (never executes app.scheduleTask in AE)
+    if (typeof window !== "undefined" && typeof window.setInterval === "function") {
+        pollTimerId = window.setInterval(checkSelectionState, 350);
     }
 
     win.onClose = function() {
         if (pollTimerId !== null && typeof window !== "undefined" && typeof window.clearInterval === "function") {
             try { window.clearInterval(pollTimerId); } catch(eC1) {}
-        }
-        if (aeTaskId && typeof app !== "undefined" && typeof app.cancelTask === "function") {
-            try { app.cancelTask(aeTaskId); } catch(eC2) {}
         }
     };
 
