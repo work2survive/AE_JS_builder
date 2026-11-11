@@ -1098,7 +1098,9 @@
     // -------------------------------------------------------------
     // Initialization
     // -------------------------------------------------------------
-    window.addEventListener('DOMContentLoaded', () => {
+    function initApp() {
+        if (window.__aeAppInitialized) return;
+        window.__aeAppInitialized = true;
         // Update version badge
         const versionBadge = document.getElementById('ae-version-badge');
         if (versionBadge) {
@@ -1126,10 +1128,25 @@
         // -------------------------------------------------------------
         // URL Parameter Routing (Direct Deep Linking for .JSX files)
         // -------------------------------------------------------------
+        function normalizeJSXToken(str) {
+            if (!str) return '';
+            return str.toLowerCase()
+                .replace(/\.jsx$/i, '')
+                .replace(/rounded/g, 'round')
+                .replace(/rectangles?/g, 'rect')
+                .replace(/generators?/g, 'gen')
+                .replace(/makers?/g, 'maker')
+                .replace(/[\s\-_]/g, '');
+        }
+
         function updateURLForJSX(filename, isPush) {
             if (!filename) return;
             try {
                 const url = new URL(window.location.href);
+                // Clean any legacy/bare params before setting canonical jsx parameter
+                for (const key of Array.from(url.searchParams.keys())) {
+                    if (key !== 'jsx') url.searchParams.delete(key);
+                }
                 url.searchParams.set('jsx', filename);
                 if (url.hash && url.hash.includes('jsx=')) {
                     url.hash = '';
@@ -1152,9 +1169,10 @@
                 url.searchParams.delete('jsx');
                 url.searchParams.delete('file');
                 url.searchParams.delete('preset');
+                url.searchParams.delete('script');
                 url.hash = '';
                 const cleanUrl = url.origin + url.pathname + (url.search ? url.search : '');
-                window.history.pushState({}, '', cleanUrl);
+                window.history.replaceState({}, '', cleanUrl);
             } catch (e) {
                 try {
                     window.location.hash = '';
@@ -1164,13 +1182,30 @@
 
         function getRequestedJSXFromURL() {
             try {
-                const urlParams = new URLSearchParams(window.location.search);
-                let target = urlParams.get('jsx') || urlParams.get('file') || urlParams.get('preset');
-                if (!target && window.location.hash) {
-                    const hash = window.location.hash.replace(/^#\/?/, '');
-                    const hashParams = new URLSearchParams(hash);
-                    target = hashParams.get('jsx') || hashParams.get('file') || hashParams.get('preset') || hash;
+                const url = new URL(window.location.href);
+                const urlParams = url.searchParams;
+                let target = urlParams.get('jsx') || urlParams.get('file') || urlParams.get('preset') || urlParams.get('script');
+                
+                // If not found in named parameters, check bare query param (e.g., ?cylinder_maker.jsx or ?cylinder)
+                if (!target && url.search) {
+                    const rawSearch = url.search.replace(/^\?/, '').trim();
+                    if (rawSearch) {
+                        const firstKey = rawSearch.split('&')[0].split('=')[0];
+                        if (firstKey && !['fbclid', 'utm_source'].includes(firstKey.toLowerCase())) {
+                            target = firstKey;
+                        }
+                    }
                 }
+
+                // Also check hash (e.g., #jsx=... or #cylinder_maker.jsx)
+                if (!target && url.hash) {
+                    const hash = url.hash.replace(/^#\/?/, '').trim();
+                    if (hash) {
+                        const hashParams = new URLSearchParams(hash);
+                        target = hashParams.get('jsx') || hashParams.get('file') || hashParams.get('preset') || hash.split('&')[0].split('=')[0];
+                    }
+                }
+
                 if (target) {
                     target = decodeURIComponent(target).trim().replace(/^["']|["']$/g, '');
                 }
@@ -1182,49 +1217,60 @@
 
         function findMatchingOption(target) {
             if (!target) return null;
-            const cleanTarget = target.toLowerCase().replace(/\.jsx$/, '').replace(/[\s\-_]/g, '');
+            const cleanTarget = normalizeJSXToken(target);
 
-            // 1. Direct match on option value
+            // 1. Direct match on option value or filename
             for (let i = 0; i < presetSelect.options.length; i++) {
                 const opt = presetSelect.options[i];
                 if (opt.value === `jsx:${target}` || opt.value === `preset:${target}`) {
                     return opt.value;
                 }
-            }
-
-            // 2. Normalized match (without .jsx and ignoring case/symbols)
-            for (let i = 0; i < presetSelect.options.length; i++) {
-                const opt = presetSelect.options[i];
-                if (opt.value.startsWith('jsx:')) {
-                    const fname = opt.value.slice(4);
-                    const cleanFname = fname.toLowerCase().replace(/\.jsx$/, '').replace(/[\s\-_]/g, '');
-                    if (fname.toLowerCase() === target.toLowerCase() || cleanFname === cleanTarget) {
-                        return opt.value;
-                    }
-                } else if (opt.value.startsWith('preset:')) {
-                    const key = opt.value.slice(7);
-                    const cleanKey = key.toLowerCase().replace(/[\s\-_]/g, '');
-                    if (key.toLowerCase() === target.toLowerCase() || cleanKey === cleanTarget) {
-                        return opt.value;
-                    }
+                if (opt.value.startsWith('jsx:') && opt.value.slice(4).toLowerCase() === target.toLowerCase()) {
+                    return opt.value;
                 }
             }
 
-            // 3. Substring match
+            // 2. Normalized exact match (ignoring case, .jsx extension, round/rounded, rect/rectangle)
             for (let i = 0; i < presetSelect.options.length; i++) {
                 const opt = presetSelect.options[i];
-                if (opt.value.startsWith('jsx:')) {
-                    const fname = opt.value.slice(4);
-                    const cleanFname = fname.toLowerCase().replace(/\.jsx$/, '').replace(/[\s\-_]/g, '');
-                    if (cleanFname.includes(cleanTarget) || cleanTarget.includes(cleanFname)) {
-                        return opt.value;
+                const valName = opt.value.replace(/^(jsx:|preset:)/, '');
+                if (normalizeJSXToken(valName) === cleanTarget) {
+                    return opt.value;
+                }
+            }
+
+            // 3. Substring / Inclusion match
+            for (let i = 0; i < presetSelect.options.length; i++) {
+                const opt = presetSelect.options[i];
+                const valName = opt.value.replace(/^(jsx:|preset:)/, '');
+                const cleanVal = normalizeJSXToken(valName);
+                if (cleanVal.includes(cleanTarget) || cleanTarget.includes(cleanVal)) {
+                    return opt.value;
+                }
+            }
+
+            // 4. Token-based overlap match (e.g. "custom round rectangle" vs "custom_rounded_rect.jsx")
+            const targetWords = target.toLowerCase().replace(/\.jsx$/, '').split(/[\s\-_]+/).filter(w => w.length >= 3);
+            if (targetWords.length > 0) {
+                let bestOpt = null;
+                let maxMatches = 0;
+                for (let i = 0; i < presetSelect.options.length; i++) {
+                    const opt = presetSelect.options[i];
+                    const valName = opt.value.replace(/^(jsx:|preset:)/, '').toLowerCase();
+                    let matches = 0;
+                    for (const word of targetWords) {
+                        const normWord = normalizeJSXToken(word);
+                        if (valName.includes(word) || normalizeJSXToken(valName).includes(normWord)) {
+                            matches++;
+                        }
                     }
-                } else if (opt.value.startsWith('preset:')) {
-                    const key = opt.value.slice(7);
-                    const cleanKey = key.toLowerCase().replace(/[\s\-_]/g, '');
-                    if (cleanKey.includes(cleanTarget) || cleanTarget.includes(cleanKey)) {
-                        return opt.value;
+                    if (matches > maxMatches) {
+                        maxMatches = matches;
+                        bestOpt = opt.value;
                     }
+                }
+                if (maxMatches >= Math.min(2, targetWords.length)) {
+                    return bestOpt;
                 }
             }
 
@@ -1244,13 +1290,22 @@
                            ((fname === 'extruded_round_rectangle.jsx' && PRESETS.extrudedRoundRectangle) ? PRESETS.extrudedRoundRectangle.code : 
                            (fileObj ? fileObj.code : null)))));
 
-                // If over HTTP or if code not cached, fetch fresh from disk
-                if (window.location.protocol.startsWith('http') || !code) {
+                // If code not cached, look in window.JSX_FOLDER_FILES manifest
+                if (!code && window.JSX_FOLDER_FILES && Array.isArray(window.JSX_FOLDER_FILES)) {
+                    const found = window.JSX_FOLDER_FILES.find(f => (typeof f === 'object' && f.filename === fname));
+                    if (found && found.code) code = found.code;
+                }
+
+                // If over HTTP, try fetching fresh from disk
+                if (window.location.protocol.startsWith('http')) {
                     try {
                         const resp = await fetch(`jsx/${encodeURIComponent(fname)}`);
                         if (resp.ok) {
-                            code = await resp.text();
-                            if (fileObj) fileObj.code = code;
+                            const freshCode = await resp.text();
+                            if (freshCode && freshCode.trim().length > 0) {
+                                code = freshCode;
+                                if (fileObj) fileObj.code = code;
+                            }
                         }
                     } catch(e) {
                         console.warn('Could not fetch fresh jsx file, using cached version.');
@@ -1276,50 +1331,14 @@
             }
         }
 
-        async function populatePresetsDropdown() {
+        function renderPresetOptions() {
             presetSelect.innerHTML = '';
 
             // 1. Group for JSX subfolder files
             const jsxGroup = document.createElement('optgroup');
             jsxGroup.label = '📁 Detected in jsx/ folder';
-
-            if (window.JSX_FOLDER_FILES && Array.isArray(window.JSX_FOLDER_FILES)) {
-                window.JSX_FOLDER_FILES.forEach(item => {
-                    const fname = typeof item === 'string' ? item : item.filename;
-                    const code = typeof item === 'object' ? item.code : null;
-                    const path = typeof item === 'object' ? item.path : `jsx/${fname}`;
-                    if (fname) {
-                        jsxFiles.set(fname, { filename: fname, path: path, code: code });
-                    }
-                });
-            }
-
-            // Try dynamic fetch if running over HTTP
-            if (window.location.protocol.startsWith('http')) {
-                try {
-                    const res = await fetch('jsx/');
-                    if (res.ok) {
-                        const html = await res.text();
-                        const doc = new DOMParser().parseFromString(html, 'text/html');
-                        const links = Array.from(doc.querySelectorAll('a[href]'));
-                        for (const a of links) {
-                            const href = a.getAttribute('href');
-                            if (href && href.endsWith('.jsx')) {
-                                const fname = decodeURIComponent(href.split('/').pop());
-                                if (!jsxFiles.has(fname)) {
-                                    jsxFiles.set(fname, { filename: fname, path: `jsx/${fname}`, code: null });
-                                }
-                            }
-                        }
-                    }
-                } catch(e) {
-                    console.log('HTTP scan of jsx/ folder completed with manifest fallback.');
-                }
-            }
-
-            // Add detected JSX folder files to dropdown
             if (jsxFiles.size > 0) {
-                for (const [fname, fileObj] of jsxFiles.entries()) {
+                for (const [fname] of jsxFiles.entries()) {
                     const opt = document.createElement('option');
                     opt.value = `jsx:${fname}`;
                     opt.textContent = `📄 ${fname}`;
@@ -1338,11 +1357,56 @@
                 presetGroup.appendChild(opt);
             }
             presetSelect.appendChild(presetGroup);
+        }
+
+        async function populatePresetsDropdown() {
+            // Load manifest immediately
+            if (window.JSX_FOLDER_FILES && Array.isArray(window.JSX_FOLDER_FILES)) {
+                window.JSX_FOLDER_FILES.forEach(item => {
+                    const fname = typeof item === 'string' ? item : item.filename;
+                    const code = typeof item === 'object' ? item.code : null;
+                    const path = typeof item === 'object' ? item.path : `jsx/${fname}`;
+                    if (fname) {
+                        jsxFiles.set(fname, { filename: fname, path: path, code: code });
+                    }
+                });
+            }
+
+            // Render options immediately without waiting for network
+            renderPresetOptions();
 
             // Handler for selection change
             presetSelect.onchange = () => {
                 loadPresetOrJSX(presetSelect.value, true, true);
             };
+
+            // Background scan if running over HTTP
+            if (window.location.protocol.startsWith('http')) {
+                try {
+                    const res = await fetch('jsx/');
+                    if (res.ok) {
+                        const html = await res.text();
+                        const doc = new DOMParser().parseFromString(html, 'text/html');
+                        const links = Array.from(doc.querySelectorAll('a[href]'));
+                        let added = false;
+                        for (const a of links) {
+                            const href = a.getAttribute('href');
+                            if (href && href.endsWith('.jsx')) {
+                                const fname = decodeURIComponent(href.split('/').pop());
+                                if (!jsxFiles.has(fname)) {
+                                    jsxFiles.set(fname, { filename: fname, path: `jsx/${fname}`, code: null });
+                                    added = true;
+                                }
+                            }
+                        }
+                        if (added) {
+                            const curVal = presetSelect.value;
+                            renderPresetOptions();
+                            if (curVal) presetSelect.value = curVal;
+                        }
+                    }
+                } catch(e) {}
+            }
         }
 
         populatePresetsDropdown().then(async () => {
@@ -1353,16 +1417,17 @@
                 if (targetVal) {
                     appendConsole(`Detected "${requested}" in URL. Auto-loading...`);
                 } else {
-                    appendConsole(`Requested file "${requested}" from URL was not found in presets.`, true);
+                    appendConsole(`Requested file "${requested}" from URL was not found in presets. Defaulting to Cube Maker.`, true);
                 }
             }
 
-            if (!targetVal && !requested) {
+            if (!targetVal) {
                 const defaultOpt = presetSelect.querySelector('option[value="jsx:cube_maker.jsx"]');
                 targetVal = defaultOpt ? 'jsx:cube_maker.jsx' : (presetSelect.options[0] ? presetSelect.options[0].value : null);
             }
 
             if (targetVal) {
+                // Preserve URL parameter by using replaceState without adding history noise
                 await loadPresetOrJSX(targetVal, true, false);
             }
         });
@@ -1376,11 +1441,11 @@
                     loadPresetOrJSX(matched, false, false);
                 }
             } else {
-                while (comp.layers.length > 0) {
-                    comp.layers.remove(comp.layers[0]);
+                const defaultOpt = presetSelect.querySelector('option[value="jsx:cube_maker.jsx"]');
+                const fallback = defaultOpt ? 'jsx:cube_maker.jsx' : (presetSelect.options[0] ? presetSelect.options[0].value : null);
+                if (fallback && fallback !== presetSelect.value) {
+                    loadPresetOrJSX(fallback, false, false);
                 }
-                renderTimeline();
-                if (currentFilenameEl) currentFilenameEl.textContent = 'None';
             }
         });
 
@@ -1526,18 +1591,19 @@
             runUserScript(codeTextarea.value);
         };
 
-        document.getElementById('btn-clear-comp').onclick = () => {
-            while (comp.layers.length > 0) {
-                comp.layers.remove(comp.layers[0]);
+        document.getElementById('btn-clear-comp').onclick = (e) => {
+            clearCompLayers();
+            if (e && e.shiftKey) {
+                removeJSXFromURL();
+                if (currentFilenameEl) currentFilenameEl.textContent = 'None';
+                const scriptUIView = document.getElementById('scriptui-dock-host');
+                if (scriptUIView) {
+                    scriptUIView.innerHTML = '<div style="color: #888; font-size: 12px; text-align: center; margin-top: 40px;">No active ScriptUI panel. Select or run a script.</div>';
+                }
+                appendConsole('Cleared all layers and removed URL parameters.');
+            } else {
+                appendConsole('Cleared all layers in composition. (Active script & URL preserved)');
             }
-            renderTimeline();
-            removeJSXFromURL();
-            if (currentFilenameEl) currentFilenameEl.textContent = 'None';
-            const scriptUIView = document.getElementById('scriptui-dock-host');
-            if (scriptUIView) {
-                scriptUIView.innerHTML = '<div style="color: #888; font-size: 12px; text-align: center; margin-top: 40px;">No active ScriptUI panel. Select or run a script.</div>';
-            }
-            appendConsole('Cleared all layers in composition and removed URL parameters.');
         };
 
         // Keyboard Shortcut: Ctrl+Enter to Run
@@ -1663,6 +1729,12 @@
         initPanelResizers();
 
         renderTimeline();
-    });
+    }
+
+    if (document.readyState === 'loading') {
+        window.addEventListener('DOMContentLoaded', initApp);
+    } else {
+        initApp();
+    }
 
 })(typeof window !== 'undefined' ? window : global);
