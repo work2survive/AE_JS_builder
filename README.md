@@ -76,9 +76,11 @@ Supports the core AE vector shapes:
   - A visual legend is displayed at the top of the ScriptUI window.
 
 ### 8. Open & Test .JSX Files Directly
-- **File Dialog**: Click the **`📂 Open .JSX`** button in the top bar to open any `.jsx` or `.js` file from your disk.
+- **File Dialog**: Click the **`📂 Upload .JSX`** button in the top bar to open any `.jsx` or `.js` file from your disk.
+- **Load from Web URL**: Click **`🌐 Load from URL`** to load any raw `.jsx` script directly from GitHub or any web host.
 - **Drag & Drop**: Drag `.jsx` files directly from your file manager into the code editor panel.
 - **Auto-Execution**: The loaded script is automatically loaded into the editor and executed in the 3D comp, displaying real-time console output in the drawer.
+- **Auto Build Switch (`&autobuild=true`)**: A topbar toggle switch located immediately after the **Run Script** button. When active, it automatically appends `&autobuild=true` to the URL and automatically triggers the script's primary build/create button upon execution (e.g., *Build / Rebuild Extruded Rectangle*, *Build / Rebuild 3D Cube*, *Create Pie Slice Shape Layer*), generating geometry instantly without needing to press the button manually. When loading a URL containing `autobuild=true`, the switch is automatically enabled.
 - **Deep Linking & URL Routing**: The active script name is automatically synchronized with the URL (e.g., `?jsx=cylinder_maker.jsx&autobuild=true` or `?jsx=extruded_round_rectangle.jsx&autobuild=true`). Loading a link with a `?jsx=` parameter auto-detects and runs that tool immediately. Pressing the **Clear** button removes the URL parameter and resets the stage.
 - Comes with a sample test script: [`test_script.jsx`](file:///g:/My%20Drive/_openProjects/My_AE_assets/AE_JS_builder/test_script.jsx).
 
