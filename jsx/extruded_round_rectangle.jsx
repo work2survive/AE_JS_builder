@@ -23,6 +23,11 @@
 //      - Master Controller Layer (Extruded_Rect_Master_Controller) inside precomp.
 //      - Precomp layer in parent comp with collapseTransformation = true.
 //      - 17 Master Effect Controls driving geometry, corners, colors, and stroke.
+//   4. Dimension Presets:
+//      - Pulldown menu (Card, Cube, Pill, Tile, ...) loaded from a separate JSON file:
+//        "AE Extruded round rect presets/presets.json" (next to the script).
+//      - Folder & JSON are auto-created with defaults on first run (falls back to
+//        the user's AppData / Documents folder if the script folder is read-only).
 //
 // COMPATIBILITY:
 //   - Adobe After Effects CS6, CC 2014 - 2026+ (ExtendScript engine).
@@ -139,6 +144,270 @@
     }
 
     // -------------------------------------------------------------------------
+    // 2b. ExtendScript ES3 JSON Polyfill (Crockford json2 compliant)
+    // -------------------------------------------------------------------------
+    var JSONPolyfill = (function() {
+        if (typeof JSON !== "undefined" && JSON && typeof JSON.parse === "function" && typeof JSON.stringify === "function") {
+            return JSON;
+        }
+        var escapable = /[\\\"\x00-\x1f\x7f-\x9f\u00ad\u0600-\u0604\u070f\u17b4\u17b5\u200c-\u200f\u2028-\u202f\u2060-\u206f\ufeff\ufff0-\uffff]/g;
+        var meta = { '\b': '\\b', '\t': '\\t', '\n': '\\n', '\f': '\\f', '\r': '\\r', '"': '\\"', '\\': '\\\\' };
+        function quote(string) {
+            escapable.lastIndex = 0;
+            return escapable.test(string) ? '"' + string.replace(escapable, function(a) {
+                var c = meta[a];
+                return typeof c === 'string' ? c : '\\u' + ('0000' + a.charCodeAt(0).toString(16)).slice(-4);
+            }) + '"' : '"' + string + '"';
+        }
+        var repSpace = '';
+        function str(key, holder, gap) {
+            var value = holder[key];
+            switch (typeof value) {
+                case 'string': return quote(value);
+                case 'number': return isFinite(value) ? String(value) : 'null';
+                case 'boolean': return String(value);
+                case 'object':
+                    if (!value) return 'null';
+                    var mind = gap;
+                    gap += repSpace;
+                    var partial = [];
+                    if (Object.prototype.toString.apply(value) === '[object Array]') {
+                        for (var i = 0; i < value.length; i += 1) {
+                            partial[i] = str(i, value, gap) || 'null';
+                        }
+                        var v = partial.length === 0 ? '[]' : gap ? '[\n' + gap + partial.join(',\n' + gap) + '\n' + mind + ']' : '[' + partial.join(',') + ']';
+                        gap = mind;
+                        return v;
+                    }
+                    for (var k in value) {
+                        if (Object.prototype.hasOwnProperty.call(value, k)) {
+                            var res = str(k, value, gap);
+                            if (res) partial.push((gap ? quote(k) + ': ' : quote(k) + ':') + res);
+                        }
+                    }
+                    var result = partial.length === 0 ? '{}' : gap ? '{\n' + gap + partial.join(',\n' + gap) + '\n' + mind + '}' : '{' + partial.join(',') + '}';
+                    gap = mind;
+                    return result;
+            }
+            return undefined;
+        }
+        return {
+            stringify: function(value, replacer, space) {
+                repSpace = '';
+                if (typeof space === 'number') {
+                    for (var i = 0; i < space; i += 1) repSpace += ' ';
+                } else if (typeof space === 'string') {
+                    repSpace = space;
+                }
+                return str('', { '': value }, '');
+            },
+            parse: function(text) {
+                if (!text) return null;
+                var rx_one = /^[\],:{}\s]*$/;
+                var rx_two = /\\(?:["\\\/bfnrt]|u[0-9a-fA-F]{4})/g;
+                var rx_three = /"[^"\\\n\r]*"|true|false|null|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?/g;
+                var rx_four = /(?:^|:|,)(?:\s*\[)+/g;
+                if (rx_one.test(text.replace(rx_two, '@').replace(rx_three, ']').replace(rx_four, ''))) {
+                    return eval('(' + text + ')');
+                }
+                throw new SyntaxError('JSON.parse: Invalid JSON string');
+            }
+        };
+    })();
+
+    // -------------------------------------------------------------------------
+    // 2c. External Dimension Presets (JSON file, auto-created on first run)
+    //     Folder: "AE Extruded round rect presets/presets.json"
+    //     Location: next to this script; falls back to the user's AppData or
+    //     Documents folder when the script folder is not writable.
+    // -------------------------------------------------------------------------
+    var PRESETS_FOLDER_NAME = "AE Extruded round rect presets";
+    var PRESETS_FILE_NAME = "presets.json";
+    var currentPresetsFolder = null;
+    var currentPresetsFile = null;
+    var warnedSecurityPref = false;
+
+    var DEFAULT_DIM_PRESETS = [
+        { name: "Card", width: 500, height: 300, depth: 120 },
+        { name: "Cube", width: 350, height: 350, depth: 350 },
+        { name: "Pill", width: 600, height: 200, depth: 80 },
+        { name: "Tile", width: 400, height: 400, depth: 30 }
+    ];
+
+    function cloneDefaultPresets() {
+        var arr = [];
+        for (var i = 0; i < DEFAULT_DIM_PRESETS.length; i++) {
+            var p = DEFAULT_DIM_PRESETS[i];
+            arr.push({ name: p.name, width: p.width, height: p.height, depth: p.depth });
+        }
+        return arr;
+    }
+
+    // Active presets (loaded from JSON, with built-in fallback)
+    var DIM_PRESETS = cloneDefaultPresets();
+
+    function checkScriptSecurityPreference() {
+        if (warnedSecurityPref) return;
+        warnedSecurityPref = true;
+        try {
+            if (typeof app !== "undefined" && app && app.preferences) {
+                var allowed = app.preferences.getPrefAsLong("Main Pref Section", "Pref_SCRIPTING_FILE_NETWORK_SECURITY");
+                if (allowed === 0) {
+                    alert("Notice: After Effects security is currently blocking scripts from writing files.\n\n" +
+                          "To allow Extruded Round Rectangle to create its presets file, please enable:\n" +
+                          "Preferences > Scripting & Expressions > 'Allow Scripts to Write Files and Access Network'.\n\n" +
+                          "Built-in default presets will be used in memory for now.");
+                }
+            }
+        } catch (ePref) {}
+    }
+
+    function getPresetsFolder() {
+        if (typeof Folder === "undefined") return null;
+
+        var candidates = [];
+        var scriptParent = null;
+
+        try {
+            if (typeof $.fileName !== "undefined" && $.fileName) {
+                var sFile = new File($.fileName);
+                if (sFile && sFile.exists) {
+                    scriptParent = sFile.parent;
+                    if (scriptParent && scriptParent.exists) {
+                        candidates.push(new Folder(scriptParent.fsName + "/" + PRESETS_FOLDER_NAME));
+                        if (scriptParent.parent && scriptParent.parent.exists) {
+                            candidates.push(new Folder(scriptParent.parent.fsName + "/" + PRESETS_FOLDER_NAME));
+                        }
+                    }
+                }
+            }
+        } catch (e1) {}
+
+        // Current working directory
+        try {
+            if (Folder.current) {
+                candidates.push(new Folder(Folder.current.fsName + "/" + PRESETS_FOLDER_NAME));
+            }
+        } catch (eCurr) {}
+
+        var userAppDataFolder = null;
+        try {
+            if (Folder.userData) {
+                userAppDataFolder = new Folder(Folder.userData.fsName + "/Adobe/After Effects/" + PRESETS_FOLDER_NAME);
+                candidates.push(userAppDataFolder);
+            }
+        } catch (e2) {}
+
+        var userDocsFolder = null;
+        try {
+            if (Folder.myDocuments) {
+                userDocsFolder = new Folder(Folder.myDocuments.fsName + "/Adobe/After Effects/" + PRESETS_FOLDER_NAME);
+                candidates.push(userDocsFolder);
+            }
+        } catch (e3) {}
+
+        // 1. Existing folder that already contains presets.json
+        for (var i = 0; i < candidates.length; i++) {
+            if (candidates[i] && candidates[i].exists) {
+                var testF = new File(candidates[i].fsName + "/" + PRESETS_FILE_NAME);
+                if (testF.exists) return candidates[i];
+            }
+        }
+
+        // 2. Any existing (possibly empty) folder
+        for (var j = 0; j < candidates.length; j++) {
+            if (candidates[j] && candidates[j].exists) return candidates[j];
+        }
+
+        // 3. First run: try to create the folder (script folder, then AppData, then Documents)
+        for (var c = 0; c < candidates.length; c++) {
+            try {
+                if (candidates[c] && candidates[c].create()) return candidates[c];
+            } catch (eCreate) {}
+        }
+
+        checkScriptSecurityPreference();
+        return candidates.length > 0 ? candidates[0] : null;
+    }
+
+    function ensurePresetsFile(folder) {
+        if (!folder || typeof File === "undefined") return null;
+        var pFile = new File(folder.fsName + "/" + PRESETS_FILE_NAME);
+        if (pFile.exists) return pFile;
+
+        try {
+            if (!folder.exists && !folder.create()) {
+                checkScriptSecurityPreference();
+                return pFile;
+            }
+            pFile.encoding = "UTF-8";
+            if (pFile.open("w")) {
+                var dataObj = {
+                    "description": "After Effects Extruded Round Rectangle - Dimension Presets (width, height, depth in px). Edit freely, then press the reload button in the panel.",
+                    "version": "1.0",
+                    "presets": cloneDefaultPresets()
+                };
+                pFile.write(JSONPolyfill.stringify(dataObj, null, 2));
+                pFile.close();
+            } else {
+                checkScriptSecurityPreference();
+            }
+        } catch (eWrite) {
+            checkScriptSecurityPreference();
+        }
+        return pFile;
+    }
+
+    function loadPresetsFromFile() {
+        DIM_PRESETS = cloneDefaultPresets();
+        currentPresetsFolder = getPresetsFolder();
+        if (!currentPresetsFolder) return 0;
+        currentPresetsFile = ensurePresetsFile(currentPresetsFolder);
+        if (!currentPresetsFile || !currentPresetsFile.exists) return 0;
+
+        try {
+            currentPresetsFile.encoding = "UTF-8";
+            if (currentPresetsFile.open("r")) {
+                var content = currentPresetsFile.read();
+                currentPresetsFile.close();
+                if (content && content.replace(/^\s+|\s+$/g, "").length > 0) {
+                    var parsed = JSONPolyfill.parse(content);
+                    var list = (parsed && parsed.presets) ? parsed.presets : parsed;
+                    var loaded = [];
+                    if (list && typeof list.length === "number") {
+                        for (var i = 0; i < list.length; i++) {
+                            var p = list[i];
+                            if (!p) continue;
+                            var w = parseFloat(p.width), h = parseFloat(p.height), d = parseFloat(p.depth);
+                            if (isNaN(w) || isNaN(h) || isNaN(d)) continue;
+                            loaded.push({ name: String(p.name || ("Preset " + (i + 1))), width: w, height: h, depth: d });
+                        }
+                    } else if (list && typeof list === "object") {
+                        for (var k in list) {
+                            if (list.hasOwnProperty(k) && k.charAt(0) !== "$" && k !== "version" && k !== "description") {
+                                var item = list[k];
+                                if (!item) continue;
+                                var wi = parseFloat(item.width), hi = parseFloat(item.height), di = parseFloat(item.depth);
+                                if (isNaN(wi) || isNaN(hi) || isNaN(di)) continue;
+                                loaded.push({ name: String(item.name || k), width: wi, height: hi, depth: di });
+                            }
+                        }
+                    }
+                    if (loaded.length > 0) {
+                        DIM_PRESETS = loaded;
+                        return loaded.length;
+                    }
+                }
+            }
+        } catch (eLoad) {
+            alert("Could not parse presets file:\n" + currentPresetsFile.fsName + "\n\n" + eLoad.toString() + "\n\nUsing built-in default presets.");
+        }
+        return 0;
+    }
+
+    loadPresetsFromFile();
+
+    // -------------------------------------------------------------------------
     // 3. UI Header (Panel Title + Version & Description)
     // -------------------------------------------------------------------------
     var pnlHeader = win.add("panel", undefined, "Extruded Round Rectangle " + SCRIPT_VERSION);
@@ -209,25 +478,74 @@
     var txtD = grpD.add("edittext", undefined, "120");
     txtD.characters = 4;
 
-    // Quick Dimension Presets
+    // Quick Dimension Presets (Pulldown menu, loaded from external JSON file)
     var grpDimPresets = pnlDim.add("group");
     grpDimPresets.orientation = "row";
+    grpDimPresets.alignment = ["fill", "top"];
+    grpDimPresets.alignChildren = ["left", "center"];
     grpDimPresets.spacing = 4;
-    var btnDimCard = grpDimPresets.add("button", undefined, "Card");
-    btnDimCard.helpTip = "Card: 500 x 300 x 120";
-    var btnDimSquare = grpDimPresets.add("button", undefined, "Cube");
-    btnDimSquare.helpTip = "Cube: 350 x 350 x 350";
-    var btnDimPill = grpDimPresets.add("button", undefined, "Pill");
-    btnDimPill.helpTip = "Pill: 600 x 200 x 80";
-    var btnDimTile = grpDimPresets.add("button", undefined, "Tile");
-    btnDimTile.helpTip = "Tile: 400 x 400 x 30";
+    var lblDimPreset = grpDimPresets.add("statictext", undefined, "Preset:");
+    lblDimPreset.preferredSize = [70, -1];
+    var dropDimPreset = grpDimPresets.add("dropdownlist", undefined, []);
+    dropDimPreset.alignment = ["fill", "center"];
+    dropDimPreset.preferredSize = [150, -1];
+    dropDimPreset.helpTip = "Dimension presets stored in '" + PRESETS_FOLDER_NAME + "/" + PRESETS_FILE_NAME + "'.";
+    var btnReloadDimPresets = grpDimPresets.add("button", undefined, "\u21BB");
+    btnReloadDimPresets.preferredSize = [26, 24];
+    btnReloadDimPresets.helpTip = "Reload presets from the JSON file in '" + PRESETS_FOLDER_NAME + "'.";
+    var btnOpenDimPresets = grpDimPresets.add("button", undefined, "...");
+    btnOpenDimPresets.preferredSize = [26, 24];
+    btnOpenDimPresets.helpTip = "Open the '" + PRESETS_FOLDER_NAME + "' folder.";
 
-    btnDimCard.onClick = function() { setDim(500, 300, 120); };
-    btnDimSquare.onClick = function() { setDim(350, 350, 350); };
-    btnDimPill.onClick = function() { setDim(600, 200, 80); };
-    btnDimTile.onClick = function() { setDim(400, 400, 30); };
+    var suppressPresetChange = false;
+
+    function populateDimPresetDropdown() {
+        suppressPresetChange = true;
+        if (typeof dropDimPreset.removeAll === "function") {
+            dropDimPreset.removeAll();
+        }
+        dropDimPreset.add("item", "Choose preset...");
+        for (var i = 0; i < DIM_PRESETS.length; i++) {
+            var p = DIM_PRESETS[i];
+            dropDimPreset.add("item", p.name + "  (" + p.width + " x " + p.height + " x " + p.depth + ")");
+        }
+        dropDimPreset.selection = 0;
+        suppressPresetChange = false;
+    }
+
+    dropDimPreset.onChange = function() {
+        if (suppressPresetChange || !dropDimPreset.selection) return;
+        var idx = dropDimPreset.selection.index - 1;
+        if (idx < 0 || idx >= DIM_PRESETS.length) return;
+        var p = DIM_PRESETS[idx];
+        setDim(p.width, p.height, p.depth);
+    };
+
+    btnReloadDimPresets.onClick = function() {
+        var c = loadPresetsFromFile();
+        populateDimPresetDropdown();
+        if (c > 0 && currentPresetsFile) {
+            alert("Reloaded " + c + " presets from:\n" + currentPresetsFile.fsName);
+        } else {
+            alert("Could not read presets file. Using built-in default presets.");
+        }
+    };
+
+    btnOpenDimPresets.onClick = function() {
+        if (!currentPresetsFolder) currentPresetsFolder = getPresetsFolder();
+        if (currentPresetsFolder && currentPresetsFolder.exists) {
+            currentPresetsFolder.execute();
+        } else {
+            alert("Presets folder:\n" + (currentPresetsFolder ? currentPresetsFolder.fsName : PRESETS_FOLDER_NAME));
+        }
+    };
+
+    populateDimPresetDropdown();
 
     function setDim(w, h, d) {
+        w = Math.max(sldW.minvalue, Math.min(sldW.maxvalue, w));
+        h = Math.max(sldH.minvalue, Math.min(sldH.maxvalue, h));
+        d = Math.max(sldD.minvalue, Math.min(sldD.maxvalue, d));
         sldW.value = w; txtW.text = String(w);
         sldH.value = h; txtH.text = String(h);
         sldD.value = d; txtD.text = String(d);

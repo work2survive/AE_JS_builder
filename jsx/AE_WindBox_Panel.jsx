@@ -1125,29 +1125,45 @@
 
                 var rotXExpr = [
                     'var ctrl = thisComp.layer("' + ctrlName + '");',
+                    'var dY = ctrl.effect("WindBox - Direction Y")(1).value;',
+                    'var dZ = ctrl.effect("WindBox - Direction Z")(1).value;',
+                    'var alignWind = 0;',
+                    'try { alignWind = ctrl.effect("WindBox - Align to Wind")(1).value; } catch(e) {}',
+                    'var pitchAng = (alignWind == 1 && (dY != 0 || dZ != 0)) ? (-Math.atan2(dY, dZ) * 180 / Math.PI) : 0;',
                     'var f = ctrl.effect("WindBox - Rot X Wiggle Freq")(1).value;',
                     'var a = ctrl.effect("WindBox - Rot X Wiggle Amp")(1).value;',
-                    '(f > 0 && a > 0) ? wiggle(f, a) : value;'
+                    'var w = (f > 0 && a > 0) ? (wiggle(f, a)[0] - value[0] || wiggle(f, a) - value) : 0;',
+                    'value + pitchAng + w;'
                 ].join("\n");
 
                 var rotYExpr = [
                     'var ctrl = thisComp.layer("' + ctrlName + '");',
+                    'var dX = ctrl.effect("WindBox - Direction X")(1).value;',
+                    'var dZ = ctrl.effect("WindBox - Direction Z")(1).value;',
+                    'var alignWind = 0;',
+                    'try { alignWind = ctrl.effect("WindBox - Align to Wind")(1).value; } catch(e) {}',
+                    'var yawAng = (alignWind == 1 && (dX != 0 || dZ != 0)) ? (Math.atan2(dZ, dX) * 180 / Math.PI) : 0;',
                     'var f = ctrl.effect("WindBox - Rot Y Wiggle Freq")(1).value;',
                     'var a = ctrl.effect("WindBox - Rot Y Wiggle Amp")(1).value;',
-                    '(f > 0 && a > 0) ? wiggle(f, a) : value;'
+                    'var w = (f > 0 && a > 0) ? (wiggle(f, a)[0] - value[0] || wiggle(f, a) - value) : 0;',
+                    'value + yawAng + w;'
                 ].join("\n");
 
                 var rotZExpr = [
                     'var ctrl = thisComp.layer("' + ctrlName + '");',
                     'var dX = ctrl.effect("WindBox - Direction X")(1).value;',
                     'var dY = ctrl.effect("WindBox - Direction Y")(1).value;',
+                    'var spd = ctrl.effect("WindBox - Wind Speed")(1).value;',
                     'var alignWind = 0;',
                     'try { alignWind = ctrl.effect("WindBox - Align to Wind")(1).value; } catch(e) {}',
                     'var windAng = (alignWind == 1 && (dX != 0 || dY != 0)) ? (Math.atan2(dY, dX) * 180 / Math.PI) : 0;',
+                    'var pIndex = effect("WindBox Particle Index")(1).value;',
+                    'var spinDir = ((pIndex % 3) - 1);',
+                    'var windSpin = (alignWind == 1) ? (spd * time * 0.15 * spinDir) : 0;',
                     'var f = ctrl.effect("WindBox - Rot Z Wiggle Freq")(1).value;',
                     'var a = ctrl.effect("WindBox - Rot Z Wiggle Amp")(1).value;',
                     'var w = (f > 0 && a > 0) ? (wiggle(f, a)[0] - value[0] || wiggle(f, a) - value) : 0;',
-                    'value + windAng + w;'
+                    'value + windAng + windSpin + w;'
                 ].join("\n");
 
                 var opacityExpr = [

@@ -1369,6 +1369,7 @@
         const codeTextarea = document.getElementById('ae-code-editor');
         const currentFilenameEl = document.getElementById('current-filename');
         const jsxFiles = new Map();
+        const sampleFiles = new Map();
 
         // -------------------------------------------------------------
         // URL Parameter Routing (Direct Deep Linking for .JSX files)
@@ -1419,6 +1420,7 @@
             try {
                 const url = new URL(window.location.href);
                 url.searchParams.delete('jsx');
+                url.searchParams.delete('sample');
                 url.searchParams.delete('file');
                 url.searchParams.delete('preset');
                 url.searchParams.delete('script');
@@ -1441,7 +1443,7 @@
             try {
                 const url = new URL(window.location.href);
                 const urlParams = url.searchParams;
-                let target = urlParams.get('jsx') || urlParams.get('url') || urlParams.get('file') || urlParams.get('preset') || urlParams.get('script');
+                let target = urlParams.get('jsx') || urlParams.get('sample') || urlParams.get('url') || urlParams.get('file') || urlParams.get('preset') || urlParams.get('script');
                 
                 // If not found in named parameters, check bare query param (e.g., ?cylinder_maker.jsx or ?cylinder)
                 if (!target && url.search) {
@@ -1479,10 +1481,10 @@
             // 1. Direct match on option value or filename
             for (let i = 0; i < presetSelect.options.length; i++) {
                 const opt = presetSelect.options[i];
-                if (opt.value === `jsx:${target}` || opt.value === `preset:${target}`) {
+                if (opt.value === `jsx:${target}` || opt.value === `sample:${target}` || opt.value === `preset:${target}`) {
                     return opt.value;
                 }
-                if (opt.value.startsWith('jsx:') && opt.value.slice(4).toLowerCase() === target.toLowerCase()) {
+                if (opt.value.replace(/^(jsx:|sample:)/, '').toLowerCase() === target.toLowerCase()) {
                     return opt.value;
                 }
             }
@@ -1490,7 +1492,7 @@
             // 2. Normalized exact match (ignoring case, .jsx extension, round/rounded, rect/rectangle)
             for (let i = 0; i < presetSelect.options.length; i++) {
                 const opt = presetSelect.options[i];
-                const valName = opt.value.replace(/^(jsx:|preset:)/, '');
+                const valName = opt.value.replace(/^(jsx:|sample:|preset:)/, '');
                 if (normalizeJSXToken(valName) === cleanTarget) {
                     return opt.value;
                 }
@@ -1499,7 +1501,7 @@
             // 3. Substring / Inclusion match
             for (let i = 0; i < presetSelect.options.length; i++) {
                 const opt = presetSelect.options[i];
-                const valName = opt.value.replace(/^(jsx:|preset:)/, '');
+                const valName = opt.value.replace(/^(jsx:|sample:|preset:)/, '');
                 const cleanVal = normalizeJSXToken(valName);
                 if (cleanVal.includes(cleanTarget) || cleanTarget.includes(cleanVal)) {
                     return opt.value;
@@ -1513,7 +1515,7 @@
                 let maxMatches = 0;
                 for (let i = 0; i < presetSelect.options.length; i++) {
                     const opt = presetSelect.options[i];
-                    const valName = opt.value.replace(/^(jsx:|preset:)/, '').toLowerCase();
+                    const valName = opt.value.replace(/^(jsx:|sample:|preset:)/, '').toLowerCase();
                     let matches = 0;
                     for (const word of targetWords) {
                         const normWord = normalizeJSXToken(word);
@@ -1545,21 +1547,25 @@
                 return;
             }
             presetSelect.value = val;
-            if (val.startsWith('jsx:')) {
-                const fname = val.slice(4);
-                const fileObj = jsxFiles.get(fname);
+            if (val.startsWith('jsx:') || val.startsWith('sample:')) {
+                const isSample = val.startsWith('sample:');
+                const folder = isSample ? 'samples' : 'jsx';
+                const fname = val.slice(isSample ? 7 : 4);
+                const fileMap = isSample ? sampleFiles : jsxFiles;
+                const manifestList = isSample ? window.SAMPLE_FOLDER_FILES : window.JSX_FOLDER_FILES;
+                const fileObj = fileMap.get(fname);
                 let code = fileObj ? fileObj.code : null;
 
-                // If code not cached, look in window.JSX_FOLDER_FILES manifest
-                if (!code && window.JSX_FOLDER_FILES && Array.isArray(window.JSX_FOLDER_FILES)) {
-                    const found = window.JSX_FOLDER_FILES.find(f => (typeof f === 'object' && f.filename === fname));
+                // If code not cached, look in the folder manifest
+                if (!code && manifestList && Array.isArray(manifestList)) {
+                    const found = manifestList.find(f => (typeof f === 'object' && f.filename === fname));
                     if (found && found.code) code = found.code;
                 }
 
                 // If over HTTP, try fetching fresh from disk
                 if (window.location.protocol.startsWith('http')) {
                     try {
-                        const resp = await fetch(`jsx/${encodeURIComponent(fname)}`);
+                        const resp = await fetch(`${folder}/${encodeURIComponent(fname)}`);
                         if (resp.ok) {
                             const freshCode = await resp.text();
                             if (freshCode && freshCode.trim().length > 0) {
@@ -1575,7 +1581,7 @@
                 if (code) {
                     codeTextarea.value = code;
                     if (currentFilenameEl) currentFilenameEl.textContent = fname;
-                    appendConsole(`Selected "${fname}" from jsx/ folder. Executing...`);
+                    appendConsole(`Selected "${fname}" from ${folder}/ folder. Executing...`);
                     if (updateUrl) updateURLForJSX(fname, isPush);
                     runUserScript(code);
                 }
@@ -1599,29 +1605,70 @@
         function renderPresetOptions() {
             presetSelect.innerHTML = '';
 
-            // Populate detected JSX files
+            // 1. Detected JSX tools (jsx/ folder)
             if (jsxFiles.size > 0) {
+                const jsxGroup = document.createElement('optgroup');
+                jsxGroup.label = '📁 Detected JSX Scripts';
                 for (const [fname] of jsxFiles.entries()) {
                     const opt = document.createElement('option');
                     opt.value = `jsx:${fname}`;
                     opt.textContent = `📄 ${fname}`;
-                    presetSelect.appendChild(opt);
+                    jsxGroup.appendChild(opt);
                 }
+                presetSelect.appendChild(jsxGroup);
+            }
+
+            // 2. Built-in Samples (samples/ folder)
+            if (sampleFiles.size > 0) {
+                const sampleGroup = document.createElement('optgroup');
+                sampleGroup.label = 'Built-in Samples';
+                for (const [fname] of sampleFiles.entries()) {
+                    const opt = document.createElement('option');
+                    opt.value = `sample:${fname}`;
+                    opt.textContent = `📄 ${fname}`;
+                    sampleGroup.appendChild(opt);
+                }
+                presetSelect.appendChild(sampleGroup);
             }
         }
 
-        async function populatePresetsDropdown() {
-            // Load manifest immediately
-            if (window.JSX_FOLDER_FILES && Array.isArray(window.JSX_FOLDER_FILES)) {
-                window.JSX_FOLDER_FILES.forEach(item => {
-                    const fname = typeof item === 'string' ? item : item.filename;
-                    const code = typeof item === 'object' ? item.code : null;
-                    const path = typeof item === 'object' ? item.path : `jsx/${fname}`;
-                    if (fname) {
-                        jsxFiles.set(fname, { filename: fname, path: path, code: code });
+        function loadManifestInto(list, map, folder) {
+            if (!list || !Array.isArray(list)) return;
+            list.forEach(item => {
+                const fname = typeof item === 'string' ? item : item.filename;
+                const code = typeof item === 'object' ? item.code : null;
+                const path = typeof item === 'object' ? item.path : `${folder}/${fname}`;
+                if (fname) {
+                    map.set(fname, { filename: fname, path: path, code: code });
+                }
+            });
+        }
+
+        async function scanFolderListing(folder, map) {
+            let added = false;
+            try {
+                const res = await fetch(`${folder}/`);
+                if (!res.ok) return false;
+                const html = await res.text();
+                const doc = new DOMParser().parseFromString(html, 'text/html');
+                for (const a of Array.from(doc.querySelectorAll('a[href]'))) {
+                    const href = a.getAttribute('href');
+                    if (href && href.endsWith('.jsx')) {
+                        const fname = decodeURIComponent(href.split('/').pop());
+                        if (!map.has(fname)) {
+                            map.set(fname, { filename: fname, path: `${folder}/${fname}`, code: null });
+                            added = true;
+                        }
                     }
-                });
-            }
+                }
+            } catch (e) {}
+            return added;
+        }
+
+        async function populatePresetsDropdown() {
+            // Load manifests immediately
+            loadManifestInto(window.JSX_FOLDER_FILES, jsxFiles, 'jsx');
+            loadManifestInto(window.SAMPLE_FOLDER_FILES, sampleFiles, 'samples');
 
             // Render options immediately without waiting for network
             renderPresetOptions();
@@ -1633,30 +1680,13 @@
 
             // Background scan if running over HTTP
             if (window.location.protocol.startsWith('http')) {
-                try {
-                    const res = await fetch('jsx/');
-                    if (res.ok) {
-                        const html = await res.text();
-                        const doc = new DOMParser().parseFromString(html, 'text/html');
-                        const links = Array.from(doc.querySelectorAll('a[href]'));
-                        let added = false;
-                        for (const a of links) {
-                            const href = a.getAttribute('href');
-                            if (href && href.endsWith('.jsx')) {
-                                const fname = decodeURIComponent(href.split('/').pop());
-                                if (!jsxFiles.has(fname)) {
-                                    jsxFiles.set(fname, { filename: fname, path: `jsx/${fname}`, code: null });
-                                    added = true;
-                                }
-                            }
-                        }
-                        if (added) {
-                            const curVal = presetSelect.value;
-                            renderPresetOptions();
-                            if (curVal) presetSelect.value = curVal;
-                        }
-                    }
-                } catch(e) {}
+                const addedJsx = await scanFolderListing('jsx', jsxFiles);
+                const addedSamples = await scanFolderListing('samples', sampleFiles);
+                if (addedJsx || addedSamples) {
+                    const curVal = presetSelect.value;
+                    renderPresetOptions();
+                    if (curVal) presetSelect.value = curVal;
+                }
             }
         }
 

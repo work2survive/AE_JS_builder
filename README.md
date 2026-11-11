@@ -131,9 +131,25 @@ The simulator automatically detects and loads standalone production-ready After 
    - **Repository**: [work2survive/AE_windBox](https://github.com/work2survive/AE_windBox)
    - **Live Demo**: [https://work2survive.github.io/AE_JS_builder/?jsx=AE_WindBox_Panel.jsx&autobuild=true](https://work2survive.github.io/AE_JS_builder/?jsx=AE_WindBox_Panel.jsx&autobuild=true)
 
-8. **Text Roundabout** (`jsx/text_roundabout.jsx` - v1.0):
+#### Built-in Samples (`samples/` Folder)
+
+The simulator includes built-in sample scripts located in [`samples/`](samples/) demonstrating ScriptUI, kinetic typography, expressions, and 3D primitives:
+
+1. **Text Roundabout** (`samples/text_roundabout.jsx` - v1.0):
    - Parametric 3D circular word carousel spinning around a central master 3D controller null, featuring 6 to 12 configurable random or custom words, -12 to +12 continuous spin speed control, 3D tilt, and orientation modes (carousel, inward, billboard).
-   - **Live Demo**: [https://work2survive.github.io/AE_JS_builder/?jsx=text_roundabout.jsx&autobuild=true](https://work2survive.github.io/AE_JS_builder/?jsx=text_roundabout.jsx&autobuild=true)
+   - **Live Demo**: [https://work2survive.github.io/AE_JS_builder/?sample=text_roundabout.jsx&autobuild=true](https://work2survive.github.io/AE_JS_builder/?sample=text_roundabout.jsx&autobuild=true)
+
+2. **Test 1: 3D Cube (200x200px) with Wiggle** (`samples/test1_3d_cube_wiggle.jsx`):
+   - Baseline 6-face cube demonstration with active `wiggle()` expressions on position, rotation, and dimensions.
+
+3. **Test 2: ScriptUI Cube Builder Panel** (`samples/test2_scriptui_cube_builder.jsx`):
+   - Baseline ScriptUI window demonstration showing button callbacks, edit texts, and layer hierarchy creation.
+
+4. **Test 3: Squares, Circles & Bézier Paths** (`samples/test3_shapes_and_bezier_paths.jsx`):
+   - 2D vector primitives demonstration showing rounded rectangles, circle shapes, and 5-point Bézier star paths with curved control tangents.
+
+5. **Sample External Script** (`samples/test_script.jsx`):
+   - Sample external script with 3D star and rotating ring.
 
 ---
 
