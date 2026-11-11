@@ -954,6 +954,7 @@
                 addSlider(ctrlLayer, "WindBox - Direction Y", dirY);
                 addSlider(ctrlLayer, "WindBox - Direction Z", dirZ);
                 addCheckbox(ctrlLayer, "WindBox - Align to Wind", alignToWind ? 1 : 0);
+                addSlider(ctrlLayer, "WindBox - Particle Type", particleType);
 
                 // Cube appearance & Guide layer controls
                 addCheckbox(ctrlLayer, "WindBox - Cube Guide Layer", isCubeGuide ? 1 : 0);
@@ -1089,9 +1090,13 @@
                     '',
                     'var pIndex = effect("WindBox Particle Index")(1).value;',
                     'seedRandom(pIndex * 9973 + 17, true);',
+                    'var pType = 0;',
+                    'try { pType = ctrl.effect("WindBox - Particle Type")(1).value; } catch(e) {}',
+                    'var isMnt = (pType === 3);',
+                    'var initY = isMnt ? (sY * 0.35 + (random() - 0.5) * (sY * 0.1)) : ((random() - 0.5) * sY);',
                     'var initPos = [',
                     '    (random() - 0.5) * sX,',
-                    '    (random() - 0.5) * sY,',
+                    '    initY,',
                     '    (random() - 0.5) * sZ',
                     '];',
                     '',
