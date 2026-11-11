@@ -124,6 +124,10 @@
         const modesList = isColor ? EVAL_MODES_COLOR : EVAL_MODES_STANDARD;
         const defaultMode = isColor ? 'orig' : (prop.expression ? 'rand' : 'base');
         let mode = prop.animMode || defaultMode;
+        if (isColor && (mode === 'base' || !prop.animMode)) {
+            mode = 'orig';
+            prop.animMode = 'orig';
+        }
         let cfg = modesList.find(m => m.mode === mode);
         if (!cfg) {
             mode = defaultMode;

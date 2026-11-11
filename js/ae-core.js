@@ -165,7 +165,7 @@
             this._baseValue = this._clone(defaultValue);
             this._expression = '';
             this.expressionEnabled = true;
-            this.animMode = 'base'; // 'rand' | 'wiggle' | 'stop' | 'base'
+            this.animMode = (type === 'color') ? 'orig' : 'base';
             this._frozenTime = null;
             this._frozenValue = null;
             this._cachedTime = null;
@@ -178,8 +178,14 @@
 
         set expression(val) {
             this._expression = String(val || '');
-            if (this._expression.trim() && this.animMode === 'base') {
-                this.animMode = 'rand';
+            if (this._expression.trim()) {
+                if (this.type === 'color') {
+                    if (!this.animMode || this.animMode === 'base') {
+                        this.animMode = 'orig';
+                    }
+                } else if (this.animMode === 'base') {
+                    this.animMode = 'rand';
+                }
             }
             this.clearCache();
             this._notifyChange();
@@ -279,7 +285,10 @@
         getValueAtTime(time) {
             const isColor = (this.type === 'color');
             const defaultMode = isColor ? 'orig' : 'base';
-            const mode = this.animMode || defaultMode;
+            let mode = this.animMode;
+            if (!mode || (isColor && mode === 'base')) {
+                mode = defaultMode;
+            }
 
             // 1. Frozen / Stop mode
             if (mode === 'stop') {
@@ -376,9 +385,10 @@
 
             const layer = this.getLayer();
             const rootComp = this.getRootComp();
-            const animMode = this.animMode || 'rand';
+            const isColor = (this.type === 'color');
+            const animMode = this.animMode || (isColor ? 'orig' : 'rand');
 
-            // BASE mode: return static base value without evaluating animation, UNLESS it's a procedural path expression
+            // BASE/ORIG mode: return static base value without evaluating animation, UNLESS it's a procedural path expression or color expression
             if (animMode === 'base' && this.type !== 'shape') {
                 return base;
             }
@@ -391,8 +401,8 @@
                 time = (this._frozenTime !== null) ? this._frozenTime : 0;
             }
 
-            // RAND mode: add randomized jitter / noise
-            const isRand = (animMode === 'rand');
+            // RAND mode: add randomized jitter / noise (for numeric properties only, not colors)
+            const isRand = (animMode === 'rand' && !isColor);
             const evalTime = isRand ? (time + Math.sin(time * 25) * 0.15) : time;
             const jitterScale = isRand ? 1.4 : 1.0;
 
