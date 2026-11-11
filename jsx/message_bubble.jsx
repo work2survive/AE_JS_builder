@@ -1254,6 +1254,8 @@
     ].join("\n");
 
     var currentRandomTime = generateRandomTime();
+    var dropStatusStyle = null, dropStatus = null, grpStatusInfo = null, lblStatusInfo = null;
+    var lastSentStatusIdx = 0; // Memory for sent status when toggling direction
 
     // -------------------------------------------------------------------------
     // 3. UI Header: Title & Description
@@ -1365,57 +1367,6 @@
     var chkTail = grpTail.add("checkbox", undefined, "Show Tail / Pointer");
     chkTail.value = true; // Default: Show Tail
     chkTail.helpTip = "Toggle the chat pointer / tail at the bottom corner of the message bubble.";
-
-    // Status Icon Style (RCS Circled Checks vs Standard Checks)
-    var grpStatusStyle = pnlStyle.add("group");
-    grpStatusStyle.orientation = "row";
-    grpStatusStyle.alignChildren = ["left", "center"];
-    var lblStatusStyle = grpStatusStyle.add("statictext", undefined, "Icon Style:");
-    lblStatusStyle.preferredSize = [95, -1];
-
-    var dropStatusStyle = grpStatusStyle.add("dropdownlist", undefined, [
-        "RCS Circled Checks (○✓)",
-        "Standard Checks (✓✓)"
-    ]);
-    dropStatusStyle.selection = 0; // Default: RCS Circled Checks
-    dropStatusStyle.preferredSize = [185, 26];
-    dropStatusStyle.helpTip = "Choose between Google Messages / Android RCS circled checkmarks (outline/filled) or standard checks.";
-
-    // Status Icon (Sent / Received / Read / Auto Timing)
-    var grpStatus = pnlStyle.add("group");
-    grpStatus.orientation = "row";
-    grpStatus.alignChildren = ["left", "center"];
-    var lblStatus = grpStatus.add("statictext", undefined, "Status Icon:");
-    lblStatus.preferredSize = [95, -1];
-
-    var dropStatus = grpStatus.add("dropdownlist", undefined, [
-        "Auto (Timing Simulation)",
-        "Read",
-        "Delivered",
-        "Sent",
-        "None"
-    ]);
-    dropStatus.selection = 0; // Default: Auto (Timing Simulation)
-    dropStatus.preferredSize = [185, 26];
-    dropStatus.helpTip = "Auto: simulates sent -> delivered -> read timing based on text reading speed. Or choose static status.";
-
-    var grpStatusInfo = pnlStyle.add("group");
-    grpStatusInfo.orientation = "row";
-    grpStatusInfo.alignChildren = ["left", "center"];
-    var lblStatusInfoPad = grpStatusInfo.add("statictext", undefined, "");
-    lblStatusInfoPad.preferredSize = [95, -1];
-    var lblStatusInfo = grpStatusInfo.add("statictext", undefined, "⏱ Auto Read: ~4.2s (based on text length)");
-    lblStatusInfo.helpTip = "Calculated reading duration based on character and word count.";
-
-    var lastSentStatusIdx = 0; // Memory for sent status when toggling direction
-
-    dropStatus.onChange = function() {
-        var isAuto = (dropStatus.selection && dropStatus.selection.index === 0);
-        grpStatusInfo.visible = isAuto;
-        if (radSent.value && dropStatus.selection) {
-            lastSentStatusIdx = dropStatus.selection.index;
-        }
-    };
 
     // -------------------------------------------------------------------------
     // 6. Color Picker Helper Function
@@ -1659,26 +1610,83 @@
     pnlColors.spacing = 8;
     pnlColors.margins = 10;
 
-    var cpBubble = createColorPicker(pnlColors, "#007AFF", "Bubble Color:", 95);
-    var cpText = createColorPicker(pnlColors, "#FFFFFF", "Text Color:", 95);
+    var cpBubble = createColorPicker(pnlColors, "#007AFF", "Bubble Color:", 115);
+    var cpText = createColorPicker(pnlColors, "#FFFFFF", "Text Color:", 115);
 
-    // --- Panel: Timestamp (Randomized) ---
-    var pnlTime = tabAppearance.add("panel", undefined, "Timestamp (Randomized)");
-    pnlTime.orientation = "row";
-    pnlTime.alignChildren = ["fill", "center"];
-    pnlTime.spacing = 8;
-    pnlTime.margins = [10, 8, 10, 8];
+    // --- Panel: Status & Timestamp ---
+    var pnlStatusTime = tabAppearance.add("panel", undefined, "Status & Timestamp");
+    pnlStatusTime.orientation = "column";
+    pnlStatusTime.alignChildren = ["fill", "top"];
+    pnlStatusTime.spacing = 6;
+    pnlStatusTime.margins = [10, 8, 10, 8];
 
-    var lblTimeVal = pnlTime.add("statictext", undefined, "Time: " + currentRandomTime);
+    // Status Icon Style (RCS Circled Checks vs Standard Checks)
+    var grpStatusStyle = pnlStatusTime.add("group");
+    grpStatusStyle.orientation = "row";
+    grpStatusStyle.alignChildren = ["left", "center"];
+    var lblStatusStyle = grpStatusStyle.add("statictext", undefined, "Icon Style:");
+    lblStatusStyle.preferredSize = [115, -1];
+
+    dropStatusStyle = grpStatusStyle.add("dropdownlist", undefined, [
+        "RCS Circled Checks (○✓)",
+        "Standard Checks (✓✓)"
+    ]);
+    dropStatusStyle.selection = 0; // Default: RCS Circled Checks
+    dropStatusStyle.preferredSize = [185, 26];
+    dropStatusStyle.helpTip = "Choose between Google Messages / Android RCS circled checkmarks (outline/filled) or standard checks.";
+
+    // Status Icon (Sent / Received / Read / Auto Timing)
+    var grpStatus = pnlStatusTime.add("group");
+    grpStatus.orientation = "row";
+    grpStatus.alignChildren = ["left", "center"];
+    var lblStatus = grpStatus.add("statictext", undefined, "Status Icon:");
+    lblStatus.preferredSize = [115, -1];
+
+    dropStatus = grpStatus.add("dropdownlist", undefined, [
+        "Auto (Timing Simulation)",
+        "Read",
+        "Delivered",
+        "Sent",
+        "None"
+    ]);
+    dropStatus.selection = 0; // Default: Auto (Timing Simulation)
+    dropStatus.preferredSize = [185, 26];
+    dropStatus.helpTip = "Auto: simulates sent -> delivered -> read timing based on text reading speed. Or choose static status.";
+
+    grpStatusInfo = pnlStatusTime.add("group");
+    grpStatusInfo.orientation = "row";
+    grpStatusInfo.alignChildren = ["left", "center"];
+    var lblStatusInfoPad = grpStatusInfo.add("statictext", undefined, "");
+    lblStatusInfoPad.preferredSize = [115, -1];
+    lblStatusInfo = grpStatusInfo.add("statictext", undefined, "⏱ Auto Read: ~4.2s (based on text length)");
+    lblStatusInfo.helpTip = "Calculated reading duration based on character and word count.";
+
+    dropStatus.onChange = function() {
+        var isAuto = (dropStatus.selection && dropStatus.selection.index === 0);
+        grpStatusInfo.visible = isAuto;
+        if (radSent.value && dropStatus.selection) {
+            lastSentStatusIdx = dropStatus.selection.index;
+        }
+    };
+
+    // Timestamp Row
+    var grpTime = pnlStatusTime.add("group");
+    grpTime.orientation = "row";
+    grpTime.alignChildren = ["fill", "center"];
+    var lblTimeLabel = grpTime.add("statictext", undefined, "Timestamp:");
+    lblTimeLabel.preferredSize = [115, -1];
+    var lblTimeVal = grpTime.add("statictext", undefined, "Time: " + currentRandomTime);
     lblTimeVal.alignment = ["fill", "center"];
     lblTimeVal.helpTip = "Timestamps are randomized for now. A dedicated custom time dialog will be added in a future update.";
 
-    var btnRerollTime = pnlTime.add("button", undefined, "🎲 Re-roll Time");
+    var btnRerollTime = grpTime.add("button", undefined, "🎲 Re-roll Time");
     btnRerollTime.preferredSize = [135, 26];
     btnRerollTime.onClick = function() {
         currentRandomTime = generateRandomTime();
         lblTimeVal.text = "Time: " + currentRandomTime;
     };
+
+    updateCharCount(); // Initialize auto-read timing text
 
     // =========================================================================
     // TAB 2: ANIMATION (Text Effects & Animation)
