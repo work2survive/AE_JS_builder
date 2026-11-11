@@ -616,6 +616,131 @@
         "})();"
     ].join("\n");
 
+    // -------------------------------------------------------------------------
+    // Automatic Read & Delivery Timing Calculation & Expressions
+    // -------------------------------------------------------------------------
+    function calculateReadDuration(text) {
+        if (!text || !text.trim()) return 1.5;
+        var trimmed = text.trim();
+        var words = trimmed.split(/\s+/).length;
+        var chars = trimmed.length;
+
+        // Base reaction / glance delay before recipient begins reading
+        var reactionDelay = 0.8;
+        // Average human reading speed: ~220 words per minute (approx 0.28s per word)
+        var wordTime = words * 0.28;
+        // Density bonus for emojis / punctuation / character density
+        var densityBonus = Math.max(0, (chars - (words * 4))) * 0.025;
+
+        var total = reactionDelay + wordTime + densityBonus;
+        return Math.max(1.5, Math.min(12.0, Math.round(total * 10) / 10));
+    }
+
+    var STATUS_TEXT_EXPR = [
+        "// Animated Status Icon (Sent -> Delivered -> Read)",
+        "(function() {",
+        "    function getVal(name, fallback) {",
+        "        try {",
+        "            if (thisLayer && thisLayer.hasParent) {",
+        "                var p = thisLayer.parent.effect(name)(1);",
+        "                return (p && typeof p.value !== 'undefined') ? p.value : (p !== undefined ? p : fallback);",
+        "            }",
+        "        } catch(e) {}",
+        "        try {",
+        "            var p2 = thisComp.layer('Bubble_Master_Controller').effect(name)(1);",
+        "            return (p2 && typeof p2.value !== 'undefined') ? p2.value : (p2 !== undefined ? p2 : fallback);",
+        "        } catch(e2) {}",
+        "        try {",
+        "            var p3 = effect(name)(1);",
+        "            return (p3 && typeof p3.value !== 'undefined') ? p3.value : (p3 !== undefined ? p3 : fallback);",
+        "        } catch(e3) {}",
+        "        return fallback;",
+        "    }",
+        "",
+        "    var mode = Math.round(getVal('Status Icon Mode', 0));",
+        "    if (mode === 4) return '';",
+        "    if (mode === 3) return '✓';",
+        "    if (mode === 2) return '✓✓';",
+        "    if (mode === 1) return '✓✓';",
+        "",
+        "    // Auto mode (0): Sent at t=0 ('✓'), Delivered at t >= deliveredTime ('✓✓')",
+        "    var deliveredTime = getVal('Delivered Time (s)', 0.8);",
+        "    if (time < deliveredTime) {",
+        "        return '✓';",
+        "    } else {",
+        "        return '✓✓';",
+        "    }",
+        "})();"
+    ].join("\n");
+
+    var STATUS_COLOR_EXPR = [
+        "// Animated Status Icon Color (Neutral Gray -> Read Receipt Blue/Cyan)",
+        "(function() {",
+        "    function getVal(name, fallback) {",
+        "        try {",
+        "            if (thisLayer && thisLayer.hasParent) {",
+        "                var p = thisLayer.parent.effect(name)(1);",
+        "                return (p && typeof p.value !== 'undefined') ? p.value : (p !== undefined ? p : fallback);",
+        "            }",
+        "        } catch(e) {}",
+        "        try {",
+        "            var p2 = thisComp.layer('Bubble_Master_Controller').effect(name)(1);",
+        "            return (p2 && typeof p2.value !== 'undefined') ? p2.value : (p2 !== undefined ? p2 : fallback);",
+        "        } catch(e2) {}",
+        "        try {",
+        "            var p3 = effect(name)(1);",
+        "            return (p3 && typeof p3.value !== 'undefined') ? p3.value : (p3 !== undefined ? p3 : fallback);",
+        "        } catch(e3) {}",
+        "        return fallback;",
+        "    }",
+        "",
+        "    var mode = Math.round(getVal('Status Icon Mode', 0));",
+        "    var neutralCol = getVal('Status Neutral Color', [0.55, 0.55, 0.55]);",
+        "    var readCol = getVal('Status Read Color', [0.20, 0.72, 0.95]);",
+        "",
+        "    if (mode === 4 || mode === 3 || mode === 2) return neutralCol;",
+        "    if (mode === 1) return readCol;",
+        "",
+        "    // Auto mode (0): transitions from neutral to readCol at readTime",
+        "    var readTime = getVal('Read Time (s)', 3.5);",
+        "    if (time < readTime) {",
+        "        return neutralCol;",
+        "    } else {",
+        "        return readCol;",
+        "    }",
+        "})();"
+    ].join("\n");
+
+    var STATUS_SCALE_EXPR = [
+        "// Status Icon Micro-interaction Pop on Read",
+        "(function() {",
+        "    function getVal(name, fallback) {",
+        "        try {",
+        "            if (thisLayer && thisLayer.hasParent) {",
+        "                var p = thisLayer.parent.effect(name)(1);",
+        "                return (p && typeof p.value !== 'undefined') ? p.value : (p !== undefined ? p : fallback);",
+        "            }",
+        "        } catch(e) {}",
+        "        try {",
+        "            var p2 = thisComp.layer('Bubble_Master_Controller').effect(name)(1);",
+        "            return (p2 && typeof p2.value !== 'undefined') ? p2.value : (p2 !== undefined ? p2 : fallback);",
+        "        } catch(e2) {}",
+        "        return fallback;",
+        "    }",
+        "",
+        "    var mode = Math.round(getVal('Status Icon Mode', 0));",
+        "    if (mode !== 0) return value;",
+        "",
+        "    var readTime = getVal('Read Time (s)', 3.5);",
+        "    if (time >= readTime && time < (readTime + 0.35)) {",
+        "        var dt = time - readTime;",
+        "        var pop = Math.sin((dt / 0.35) * Math.PI) * 25;",
+        "        return [value[0] + pop, value[1] + pop];",
+        "    }",
+        "    return value;",
+        "})();"
+    ].join("\n");
+
     var currentRandomTime = generateRandomTime();
 
     // -------------------------------------------------------------------------
@@ -656,6 +781,10 @@
             txtMessage.text = current;
         }
         lblCharCount.text = current.length + " / " + MAX_CHARS + " chars";
+        if (typeof lblStatusInfo !== "undefined" && lblStatusInfo) {
+            var dur = calculateReadDuration(current);
+            lblStatusInfo.text = "⏱ Auto Read: ~" + (0.8 + dur).toFixed(1) + "s (based on text length)";
+        }
     }
 
     txtMessage.onChanging = function() {
@@ -725,7 +854,7 @@
     chkTail.value = true; // Default: Show Tail
     chkTail.helpTip = "Toggle the chat pointer / tail at the bottom corner of the message bubble.";
 
-    // Status Icon (Sent / Received / Read)
+    // Status Icon (Sent / Received / Read / Auto Timing)
     var grpStatus = pnlStyle.add("group");
     grpStatus.orientation = "row";
     grpStatus.alignChildren = ["left", "center"];
@@ -733,14 +862,28 @@
     lblStatus.preferredSize = [95, -1];
 
     var dropStatus = grpStatus.add("dropdownlist", undefined, [
+        "Auto (Timing Simulation)",
         "Read (✓✓)",
         "Delivered (✓✓)",
         "Sent (✓)",
         "None"
     ]);
-    dropStatus.selection = 0; // Default: Read icon
+    dropStatus.selection = 0; // Default: Auto (Timing Simulation)
     dropStatus.preferredSize = [185, 26];
-    dropStatus.helpTip = "Delivery and read receipt status indicator icon.";
+    dropStatus.helpTip = "Auto: simulates sent -> delivered -> read timing based on text reading speed. Or choose static status.";
+
+    var grpStatusInfo = pnlStyle.add("group");
+    grpStatusInfo.orientation = "row";
+    grpStatusInfo.alignChildren = ["left", "center"];
+    var lblStatusInfoPad = grpStatusInfo.add("statictext", undefined, "");
+    lblStatusInfoPad.preferredSize = [95, -1];
+    var lblStatusInfo = grpStatusInfo.add("statictext", undefined, "⏱ Auto Read: ~4.2s (based on text length)");
+    lblStatusInfo.helpTip = "Calculated reading duration based on character and word count.";
+
+    dropStatus.onChange = function() {
+        var isAuto = (dropStatus.selection && dropStatus.selection.index === 0);
+        grpStatusInfo.visible = isAuto;
+    };
 
     // -------------------------------------------------------------------------
     // 6. Dimensions & Typography (Screen Width, Fonts, Padding, Leading)
@@ -1335,21 +1478,37 @@
             var lineH = Math.round(textSize * 1.35 * leadingFactor);
             var textBlockH = lines.length * lineH;
 
-            // Status Icon & Timestamp formatting
+            // Status Icon & Timestamp formatting (Auto, Read, Delivered, Sent, None)
             var selStatusIdx = dropStatus.selection ? dropStatus.selection.index : 0;
+            var isAutoStatus = (selStatusIdx === 0);
             var statusString = "";
             var statusColor = timeColor;
+
+            var deliveredTime = 0.8;
+            var readDuration = calculateReadDuration(msgText);
+            var readTime = Math.round((deliveredTime + readDuration) * 10) / 10;
+            var readColor = isDark ? [0.33, 0.74, 0.92] : [0.20, 0.72, 0.95];
+
             if (isSent) {
                 if (selStatusIdx === 0) {
-                    statusString = "✓✓";
-                    // Cyan/Blue read receipt indicator
-                    statusColor = isDark ? [0.33, 0.74, 0.92] : [0.20, 0.72, 0.95];
+                    // Auto: Sent at t=0, Delivered at t=0.8s, Read at t=readTime
+                    statusString = "✓✓"; // Allocate space for double checks
+                    statusColor = timeColor; // Initial neutral color
                 } else if (selStatusIdx === 1) {
+                    // Read (✓✓)
+                    statusString = "✓✓";
+                    statusColor = readColor;
+                } else if (selStatusIdx === 2) {
+                    // Delivered (✓✓)
                     statusString = "✓✓";
                     statusColor = timeColor;
-                } else if (selStatusIdx === 2) {
+                } else if (selStatusIdx === 3) {
+                    // Sent (✓)
                     statusString = "✓";
                     statusColor = timeColor;
+                } else {
+                    // None (4)
+                    statusString = "";
                 }
             }
 
@@ -1435,7 +1594,19 @@
                 if (effTail) { effTail.name = "Show Tail"; effTail.property(1).setValue(hasTail ? 1 : 0); }
 
                 var effStatus = parade.addProperty("ADBE Slider Control");
-                if (effStatus) { effStatus.name = "Status Icon Type"; effStatus.property(1).setValue(selStatusIdx); }
+                if (effStatus) { effStatus.name = "Status Icon Mode"; effStatus.property(1).setValue(selStatusIdx); }
+
+                var effDelivered = parade.addProperty("ADBE Slider Control");
+                if (effDelivered) { effDelivered.name = "Delivered Time (s)"; effDelivered.property(1).setValue(deliveredTime); }
+
+                var effRead = parade.addProperty("ADBE Slider Control");
+                if (effRead) { effRead.name = "Read Time (s)"; effRead.property(1).setValue(readTime); }
+
+                var effStatNeut = parade.addProperty("ADBE Color Control");
+                if (effStatNeut) { effStatNeut.name = "Status Neutral Color"; effStatNeut.property(1).setValue(timeColor); }
+
+                var effStatRead = parade.addProperty("ADBE Color Control");
+                if (effStatRead) { effStatRead.name = "Status Read Color"; effStatRead.property(1).setValue(readColor); }
 
                 var effPad = parade.addProperty("ADBE Slider Control");
                 if (effPad) { effPad.name = "Inner Padding Offset"; effPad.property(1).setValue(padOffset); }
@@ -1606,7 +1777,7 @@
             timeLayer.justification = "right";
             timeLayer.transform.position.setValue([timeX, timeY, -0.5]);
 
-            // 5. Dedicated Status / Read Icon Layer
+            // 5. Dedicated Status / Read Icon Layer (Supports Auto Sent -> Delivered -> Read)
             var statusLayer = null;
             if (statusString) {
                 if (typeof comp.layers.addText === "function") {
@@ -1621,6 +1792,37 @@
                 statusLayer.fontFamily = selectedFont.css;
                 statusLayer.justification = "right";
                 statusLayer.transform.position.setValue([statusX, timeY, -0.5]);
+
+                // Attach dynamic status expressions (Auto / timing simulation)
+                if (statusLayer.sourceText) {
+                    statusLayer.sourceText.expression = STATUS_TEXT_EXPR;
+                }
+                var sParade = statusLayer.property("ADBE Effect Parade") || statusLayer.property("Effects");
+                if (sParade && sParade.addProperty) {
+                    var sColEff = sParade.addProperty("ADBE Color Control");
+                    if (sColEff) {
+                        sColEff.name = "Status Color";
+                        var sColProp = sColEff.property("Color") || sColEff.property(1);
+                        if (sColProp) {
+                            sColProp.setValue(statusColor);
+                            sColProp.expression = STATUS_COLOR_EXPR;
+                        }
+                    }
+                    try {
+                        var sFillEff = sParade.addProperty("ADBE Fill");
+                        if (sFillEff) {
+                            sFillEff.name = "Status Fill Color";
+                            var sFillCol = sFillEff.property("Color") || sFillEff.property(1);
+                            if (sFillCol) {
+                                sFillCol.setValue(statusColor);
+                                sFillCol.expression = STATUS_COLOR_EXPR;
+                            }
+                        }
+                    } catch(eFill) {}
+                }
+                if (statusLayer.transform && statusLayer.transform.scale) {
+                    statusLayer.transform.scale.expression = STATUS_SCALE_EXPR;
+                }
             }
 
             // Select master controller

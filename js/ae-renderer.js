@@ -531,13 +531,26 @@
                     const fs = layer.fontSize || 24;
                     const lines = txt.split('\n');
                     let fill = '#ffffff';
-                    if (layer.fontColor) {
-                        if (Array.isArray(layer.fontColor)) {
-                            const maxVal = Math.max(layer.fontColor[0] || 0, layer.fontColor[1] || 0, layer.fontColor[2] || 0);
+                    let rawCol = null;
+                    if (layer.effect && typeof layer.effect === 'function') {
+                        const effCol = layer.effect('Status Color') || layer.effect('Status Fill Color') || layer.effect('Color') || layer.effect('Fill');
+                        if (effCol) {
+                            const colProp = effCol.property('Color') || effCol.property(1);
+                            if (colProp && typeof colProp.getValueAtTime === 'function') {
+                                rawCol = colProp.getValueAtTime(time);
+                            }
+                        }
+                    }
+                    if (!rawCol && layer.fontColor) {
+                        rawCol = (typeof layer.fontColor.getValueAtTime === 'function') ? layer.fontColor.getValueAtTime(time) : layer.fontColor;
+                    }
+                    if (rawCol) {
+                        if (Array.isArray(rawCol)) {
+                            const maxVal = Math.max(rawCol[0] || 0, rawCol[1] || 0, rawCol[2] || 0);
                             const mult = (maxVal <= 1.0) ? 255 : 1;
-                            fill = `rgb(${Math.round(layer.fontColor[0] * mult)}, ${Math.round(layer.fontColor[1] * mult)}, ${Math.round(layer.fontColor[2] * mult)})`;
+                            fill = `rgb(${Math.round(rawCol[0] * mult)}, ${Math.round(rawCol[1] * mult)}, ${Math.round(rawCol[2] * mult)})`;
                         } else {
-                            fill = String(layer.fontColor);
+                            fill = String(rawCol);
                         }
                     }
                     const textAnchor = layer.justification === 'right' ? 'end' : (layer.justification === 'center' ? 'middle' : 'start');
