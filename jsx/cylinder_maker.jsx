@@ -150,7 +150,7 @@
         }
     }
 
-    function computeCapShape(r, n, isSlice, a0, a1) {
+    function computeCapShape(r, n, isSlice, a0, a1, imitateSegments) {
         if (typeof Shape === "undefined") return null;
         var s = new Shape();
         var span = a1 - a0;
@@ -158,18 +158,51 @@
         var verts = [];
         var ins = [];
         var outs = [];
-        if (isFull) {
-            for (var j = 0; j < n; j++) {
-                var phi = (j / n) * 2 * Math.PI;
-                verts.push([r * Math.sin(phi), -r * Math.cos(phi)]);
-                ins.push([0, 0]); outs.push([0, 0]);
+
+        var isSeg = (typeof imitateSegments === "undefined") ? true : imitateSegments;
+        if (isSeg) {
+            if (isFull) {
+                for (var j = 0; j < n; j++) {
+                    var phi = (j / n) * 2 * Math.PI;
+                    verts.push([r * Math.sin(phi), -r * Math.cos(phi)]);
+                    ins.push([0, 0]); outs.push([0, 0]);
+                }
+            } else {
+                verts.push([0, 0]); ins.push([0, 0]); outs.push([0, 0]);
+                for (var j = 0; j <= n; j++) {
+                    var phi = (a0 + j * (span / n)) * (Math.PI / 180);
+                    verts.push([r * Math.sin(phi), -r * Math.cos(phi)]);
+                    ins.push([0, 0]); outs.push([0, 0]);
+                }
             }
         } else {
-            verts.push([0, 0]); ins.push([0, 0]); outs.push([0, 0]);
-            for (var j = 0; j <= n; j++) {
-                var phi = (a0 + j * (span / n)) * (Math.PI / 180);
-                verts.push([r * Math.sin(phi), -r * Math.cos(phi)]);
-                ins.push([0, 0]); outs.push([0, 0]);
+            var K = 0.5522847498307936;
+            if (isFull) {
+                verts = [
+                    [0, -r],
+                    [r, 0],
+                    [0, r],
+                    [-r, 0]
+                ];
+                ins = [
+                    [-r * K, 0],
+                    [0, -r * K],
+                    [r * K, 0],
+                    [0, r * K]
+                ];
+                outs = [
+                    [r * K, 0],
+                    [0, r * K],
+                    [-r * K, 0],
+                    [0, -r * K]
+                ];
+            } else {
+                verts.push([0, 0]); ins.push([0, 0]); outs.push([0, 0]);
+                for (var j = 0; j <= n; j++) {
+                    var phi = (a0 + j * (span / n)) * (Math.PI / 180);
+                    verts.push([r * Math.sin(phi), -r * Math.cos(phi)]);
+                    ins.push([0, 0]); outs.push([0, 0]);
+                }
             }
         }
         s.vertices = verts;
@@ -189,7 +222,7 @@
     pnlHeader.spacing = 3;
     pnlHeader.margins = [10, 8, 10, 8];
 
-    var lblDesc = pnlHeader.add("statictext", undefined, "v1.3 - Parametric 3D Shape Layer Cylinder & Slice generator with live master rig.");
+    var lblDesc = pnlHeader.add("statictext", undefined, "v1.4 - Parametric 3D Shape Layer Cylinder & Slice generator with live master rig.");
 
     // -------------------------------------------------------------------------
     // 4. Tabbed Panel: Geometry vs. Appearance
@@ -461,6 +494,17 @@
         buildOrUpdateCylinder(true);
     };
 
+    // Imitate Wall Segments Checkbox (Non-animatable, matches cap segments to extruded wall facets)
+    var grpSegmentCaps = pnlStyle.add("group");
+    grpSegmentCaps.orientation = "row";
+    grpSegmentCaps.alignment = ["fill", "top"];
+    var chkSegmentCaps = grpSegmentCaps.add("checkbox", undefined, "Imitate segments of extruded walls");
+    chkSegmentCaps.value = true;
+    chkSegmentCaps.helpTip = "Generates faceted caps that match the extruded wall segments vertex-for-vertex, preventing cap colors from leaking through edge facets.";
+    chkSegmentCaps.onClick = function() {
+        buildOrUpdateCylinder(true);
+    };
+
     // Two-Way Sync for UI sliders
     function hookSliderText(sld, txt, onChangeFn, isInt) {
         function updateFromSlider() {
@@ -547,6 +591,7 @@
         var strokeColor = hexToRgb(cpStroke.value);
         var strokeWidth = Math.max(0, parseFloat(txtThick.text) || 0);
         var opacityVal = Math.max(0, Math.min(100, parseFloat(txtOp.text) || 90));
+        var imitateSegments = (typeof chkSegmentCaps !== "undefined") ? chkSegmentCaps.value : true;
 
         var center = [parentComp.width / 2, parentComp.height / 2, 0];
 
@@ -792,7 +837,7 @@
                         var pProp = shapeGroup.property("ADBE Vector Shape") || shapeGroup.property("Path") || shapeGroup.property(1);
                         if (pProp && typeof Shape !== "undefined") {
                             try {
-                                var initCapShape = computeCapShape(radius, segCount, enableSlice, startAngle, endAngle);
+                                var initCapShape = computeCapShape(radius, segCount, enableSlice, startAngle, endAngle, imitateSegments);
                                 if (initCapShape) pProp.setValue(initCapShape);
                             } catch (eShape) {}
                         }
@@ -1167,21 +1212,38 @@
                     'var a1 = slice ? m.effect("End Angle")(1).value : 360;\n' +
                     'var span = a1 - a0;\n' +
                     'var isFull = !slice || Math.abs(span) >= 359.99;\n' +
+                    'var isSeg = ' + (imitateSegments ? 'true' : 'false') + ';\n' +
                     'var verts = [];\n' +
                     'var ins = [];\n' +
                     'var outs = [];\n' +
-                    'if (isFull) {\n' +
-                    '  for (var j = 0; j < n; j++) {\n' +
-                    '    var phi = (j / n) * 2 * Math.PI;\n' +
-                    '    verts.push([r * Math.sin(phi), -r * Math.cos(phi)]);\n' +
-                    '    ins.push([0, 0]); outs.push([0, 0]);\n' +
+                    'if (isSeg) {\n' +
+                    '  if (isFull) {\n' +
+                    '    for (var j = 0; j < n; j++) {\n' +
+                    '      var phi = (j / n) * 2 * Math.PI;\n' +
+                    '      verts.push([r * Math.sin(phi), -r * Math.cos(phi)]);\n' +
+                    '      ins.push([0, 0]); outs.push([0, 0]);\n' +
+                    '    }\n' +
+                    '  } else {\n' +
+                    '    verts.push([0, 0]); ins.push([0, 0]); outs.push([0, 0]);\n' +
+                    '    for (var j = 0; j <= n; j++) {\n' +
+                    '      var phi = (a0 + j * (span / n)) * (Math.PI / 180);\n' +
+                    '      verts.push([r * Math.sin(phi), -r * Math.cos(phi)]);\n' +
+                    '      ins.push([0, 0]); outs.push([0, 0]);\n' +
+                    '    }\n' +
                     '  }\n' +
                     '} else {\n' +
-                    '  verts.push([0, 0]); ins.push([0, 0]); outs.push([0, 0]);\n' +
-                    '  for (var j = 0; j <= n; j++) {\n' +
-                    '    var phi = (a0 + j * (span / n)) * (Math.PI / 180);\n' +
-                    '    verts.push([r * Math.sin(phi), -r * Math.cos(phi)]);\n' +
-                    '    ins.push([0, 0]); outs.push([0, 0]);\n' +
+                    '  var K = 0.5522847498307936;\n' +
+                    '  if (isFull) {\n' +
+                    '    verts = [[0, -r], [r, 0], [0, r], [-r, 0]];\n' +
+                    '    ins = [[-r * K, 0], [0, -r * K], [r * K, 0], [0, r * K]];\n' +
+                    '    outs = [[r * K, 0], [0, r * K], [-r * K, 0], [0, -r * K]];\n' +
+                    '  } else {\n' +
+                    '    verts.push([0, 0]); ins.push([0, 0]); outs.push([0, 0]);\n' +
+                    '    for (var j = 0; j <= n; j++) {\n' +
+                    '      var phi = (a0 + j * (span / n)) * (Math.PI / 180);\n' +
+                    '      verts.push([r * Math.sin(phi), -r * Math.cos(phi)]);\n' +
+                    '      ins.push([0, 0]); outs.push([0, 0]);\n' +
+                    '    }\n' +
                     '  }\n' +
                     '}\n' +
                     'createPath(verts, ins, outs, true);';

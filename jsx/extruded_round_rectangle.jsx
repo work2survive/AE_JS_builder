@@ -145,7 +145,7 @@
     pnlHeader.spacing = 3;
     pnlHeader.margins = [10, 8, 10, 8];
 
-    var lblDesc = pnlHeader.add("statictext", undefined, "v1.2 - Parametric 3D extruded rounded rectangle with procedural front/back caps and cylindrical corners.");
+    var lblDesc = pnlHeader.add("statictext", undefined, "v1.3 - Parametric 3D extruded rounded rectangle with procedural front/back caps and cylindrical corners.");
 
     // -------------------------------------------------------------------------
     // 4. Tabbed Panel (Geometry vs. Appearance)
@@ -578,6 +578,17 @@
         buildOrUpdateExtruded(true);
     };
 
+    // Imitate Corner Segments Checkbox (Non-animatable, matches cap corners to extruded wall facets)
+    var grpSegmentCorners = pnlStyle.add("group");
+    grpSegmentCorners.orientation = "row";
+    grpSegmentCorners.alignment = ["fill", "top"];
+    var chkSegmentCorners = grpSegmentCorners.add("checkbox", undefined, "Imitate segments of extruded round corners");
+    chkSegmentCorners.value = true;
+    chkSegmentCorners.helpTip = "Generates faceted cap corners that match the extruded wall segments vertex-for-vertex, preventing cap colors from leaking through edge facets.";
+    chkSegmentCorners.onClick = function() {
+        buildOrUpdateExtruded(true);
+    };
+
     // Two-way slider hook helper
     function hookSliderText(sld, txt, onChangeFn, isInt) {
         function updateFromSlider() {
@@ -671,7 +682,7 @@
     // -------------------------------------------------------------------------
     // 5. Procedural Geometry & Expression Generation
     // -------------------------------------------------------------------------
-    function computeCapShapeData(w, h, rTL, rTR, rBR, rBL, preventOverlap) {
+    function computeCapShapeData(w, h, rTL, rTR, rBR, rBL, preventOverlap, imitateSegments, segCount) {
         w = Math.max(0, w);
         h = Math.max(0, h);
         rTL = Math.max(0, rTL);
@@ -697,7 +708,6 @@
             rBL *= f;
         }
 
-        var K = 0.5522847498307936;
         var halfW = w / 2;
         var halfH = h / 2;
         var xMin = -halfW;
@@ -705,6 +715,80 @@
         var yMin = -halfH;
         var yMax =  halfH;
 
+        var isSeg = (typeof imitateSegments === "undefined") ? true : imitateSegments;
+        if (isSeg) {
+            var S = Math.max(1, segCount || 6);
+            var verts = [];
+            var ins = [];
+            var outs = [];
+
+            function addV(x, y) {
+                if (verts.length > 0) {
+                    var last = verts[verts.length - 1];
+                    if (Math.abs(last[0] - x) < 0.0001 && Math.abs(last[1] - y) < 0.0001) return;
+                }
+                verts.push([x, y]);
+                ins.push([0, 0]);
+                outs.push([0, 0]);
+            }
+
+            addV(xMin + rTL, yMin);
+            addV(xMax - rTR, yMin);
+
+            if (rTR > 0 && S >= 1) {
+                var cX = xMax - rTR, cY = yMin + rTR;
+                for (var s = 1; s <= S; s++) {
+                    var rad = (-90 + s * (90 / S)) * (Math.PI / 180);
+                    addV(cX + rTR * Math.cos(rad), cY + rTR * Math.sin(rad));
+                }
+            } else {
+                addV(xMax, yMin);
+            }
+
+            addV(xMax, yMax - rBR);
+
+            if (rBR > 0 && S >= 1) {
+                var cX = xMax - rBR, cY = yMax - rBR;
+                for (var s = 1; s <= S; s++) {
+                    var rad = (s * (90 / S)) * (Math.PI / 180);
+                    addV(cX + rBR * Math.cos(rad), cY + rBR * Math.sin(rad));
+                }
+            } else {
+                addV(xMax, yMax);
+            }
+
+            addV(xMin + rBL, yMax);
+
+            if (rBL > 0 && S >= 1) {
+                var cX = xMin + rBL, cY = yMax - rBL;
+                for (var s = 1; s <= S; s++) {
+                    var rad = (90 + s * (90 / S)) * (Math.PI / 180);
+                    addV(cX + rBL * Math.cos(rad), cY + rBL * Math.sin(rad));
+                }
+            } else {
+                addV(xMin, yMax);
+            }
+
+            addV(xMin, yMin + rTL);
+
+            if (rTL > 0 && S >= 1) {
+                var cX = xMin + rTL, cY = yMin + rTL;
+                for (var s = 1; s < S; s++) {
+                    var rad = (180 + s * (90 / S)) * (Math.PI / 180);
+                    addV(cX + rTL * Math.cos(rad), cY + rTL * Math.sin(rad));
+                }
+            } else {
+                addV(xMin, yMin);
+            }
+
+            return {
+                points: verts,
+                inTangents: ins,
+                outTangents: outs
+            };
+        }
+
+        var K = 0.5522847498307936;
         var points = [
             [xMin + rTL, yMin],
             [xMax - rTR, yMin],
@@ -745,92 +829,142 @@
         };
     }
 
-    var CAP_PATH_EXPR = [
-        "// Procedural Bézier Path for Extruded Rounded Rectangle Caps",
-        "(function() {",
-        "    function getVal(name, fallback) {",
-        "        try {",
-        "            var p = thisComp.layer('Extruded_Rect_Master_Controller').effect(name)(1);",
-        "            return (p && typeof p.value !== 'undefined') ? p.value : (p !== undefined ? p : fallback);",
-        "        } catch(e) {",
-        "            return fallback;",
-        "        }",
-        "    }",
-        "",
-        "    var w = Math.max(0, getVal('Width', 500));",
-        "    var h = Math.max(0, getVal('Height', 300));",
-        "    var linkAll = getVal('Link All Corners', 0);",
-        "    var masterR = Math.max(0, getVal('Radius All', 60));",
-        "",
-        "    var rTL = linkAll ? masterR : Math.max(0, getVal('Radius Top-Left', 60));",
-        "    var rTR = linkAll ? masterR : Math.max(0, getVal('Radius Top-Right', 60));",
-        "    var rBR = linkAll ? masterR : Math.max(0, getVal('Radius Bottom-Right', 60));",
-        "    var rBL = linkAll ? masterR : Math.max(0, getVal('Radius Bottom-Left', 60));",
-        "",
-        "    var preventOverlap = getVal('Prevent Overlap', 1);",
-        "",
-        "    if (preventOverlap > 0) {",
-        "        var topSum    = rTL + rTR;",
-        "        var bottomSum = rBL + rBR;",
-        "        var leftSum   = rTL + rBL;",
-        "        var rightSum  = rTR + rBR;",
-        "",
-        "        var f = 1.0;",
-        "        if (topSum > w && topSum > 0)       f = Math.min(f, w / topSum);",
-        "        if (bottomSum > w && bottomSum > 0) f = Math.min(f, w / bottomSum);",
-        "        if (leftSum > h && leftSum > 0)     f = Math.min(f, h / leftSum);",
-        "        if (rightSum > h && rightSum > 0)   f = Math.min(f, h / rightSum);",
-        "",
-        "        rTL *= f;",
-        "        rTR *= f;",
-        "        rBR *= f;",
-        "        rBL *= f;",
-        "    }",
-        "",
-        "    var K = 0.5522847498307936;",
-        "    var halfW = w / 2;",
-        "    var halfH = h / 2;",
-        "    var xMin = -halfW;",
-        "    var xMax =  halfW;",
-        "    var yMin = -halfH;",
-        "    var yMax =  halfH;",
-        "",
-        "    var points = [",
-        "        [xMin + rTL, yMin],",
-        "        [xMax - rTR, yMin],",
-        "        [xMax, yMin + rTR],",
-        "        [xMax, yMax - rBR],",
-        "        [xMax - rBR, yMax],",
-        "        [xMin + rBL, yMax],",
-        "        [xMin, yMax - rBL],",
-        "        [xMin, yMin + rTL]",
-        "    ];",
-        "",
-        "    var inTangents = [",
-        "        [-rTL * K, 0],",
-        "        [0, 0],",
-        "        [0, -rTR * K],",
-        "        [0, 0],",
-        "        [rBR * K, 0],",
-        "        [0, 0],",
-        "        [0, rBL * K],",
-        "        [0, 0]",
-        "    ];",
-        "",
-        "    var outTangents = [",
-        "        [0, 0],",
-        "        [rTR * K, 0],",
-        "        [0, 0],",
-        "        [0, rBR * K],",
-        "        [0, 0],",
-        "        [-rBL * K, 0],",
-        "        [0, 0],",
-        "        [0, -rTL * K]",
-        "    ];",
-        "",
-        "    return createPath(points, inTangents, outTangents, true);",
-        "})();"
-    ].join("\n");
+    function getCapPathExpr(imitateSegments) {
+        return [
+            "// Procedural Path for Extruded Rounded Rectangle Caps",
+            "(function() {",
+            "    function getVal(name, fallback) {",
+            "        try {",
+            "            var p = thisComp.layer('Extruded_Rect_Master_Controller').effect(name)(1);",
+            "            return (p && typeof p.value !== 'undefined') ? p.value : (p !== undefined ? p : fallback);",
+            "        } catch(e) {",
+            "            return fallback;",
+            "        }",
+            "    }",
+            "",
+            "    var w = Math.max(0, getVal('Width', 500));",
+            "    var h = Math.max(0, getVal('Height', 300));",
+            "    var linkAll = getVal('Link All Corners', 0);",
+            "    var masterR = Math.max(0, getVal('Radius All', 60));",
+            "",
+            "    var rTL = linkAll ? masterR : Math.max(0, getVal('Radius Top-Left', 60));",
+            "    var rTR = linkAll ? masterR : Math.max(0, getVal('Radius Top-Right', 60));",
+            "    var rBR = linkAll ? masterR : Math.max(0, getVal('Radius Bottom-Right', 60));",
+            "    var rBL = linkAll ? masterR : Math.max(0, getVal('Radius Bottom-Left', 60));",
+            "",
+            "    var preventOverlap = getVal('Prevent Overlap', 1);",
+            "",
+            "    if (preventOverlap > 0) {",
+            "        var topSum    = rTL + rTR;",
+            "        var bottomSum = rBL + rBR;",
+            "        var leftSum   = rTL + rBL;",
+            "        var rightSum  = rTR + rBR;",
+            "",
+            "        var f = 1.0;",
+            "        if (topSum > w && topSum > 0)       f = Math.min(f, w / topSum);",
+            "        if (bottomSum > w && bottomSum > 0) f = Math.min(f, w / bottomSum);",
+            "        if (leftSum > h && leftSum > 0)     f = Math.min(f, h / leftSum);",
+            "        if (rightSum > h && rightSum > 0)   f = Math.min(f, h / rightSum);",
+            "",
+            "        rTL *= f;",
+            "        rTR *= f;",
+            "        rBR *= f;",
+            "        rBL *= f;",
+            "    }",
+            "",
+            "    var halfW = w / 2;",
+            "    var halfH = h / 2;",
+            "    var xMin = -halfW;",
+            "    var xMax =  halfW;",
+            "    var yMin = -halfH;",
+            "    var yMax =  halfH;",
+            "",
+            imitateSegments ? [
+            "    var S = Math.max(1, Math.round(getVal('Corner Segments', 6)));",
+            "    var verts = [];",
+            "    var ins = [];",
+            "    var outs = [];",
+            "    function addV(x, y) {",
+            "        if (verts.length > 0) {",
+            "            var last = verts[verts.length - 1];",
+            "            if (Math.abs(last[0] - x) < 0.0001 && Math.abs(last[1] - y) < 0.0001) return;",
+            "        }",
+            "        verts.push([x, y]);",
+            "        ins.push([0, 0]);",
+            "        outs.push([0, 0]);",
+            "    }",
+            "    addV(xMin + rTL, yMin);",
+            "    addV(xMax - rTR, yMin);",
+            "    if (rTR > 0 && S >= 1) {",
+            "        var cX = xMax - rTR, cY = yMin + rTR;",
+            "        for (var s = 1; s <= S; s++) {",
+            "            var rad = (-90 + s * (90 / S)) * (Math.PI / 180);",
+            "            addV(cX + rTR * Math.cos(rad), cY + rTR * Math.sin(rad));",
+            "        }",
+            "    } else {",
+            "        addV(xMax, yMin);",
+            "    }",
+            "    addV(xMax, yMax - rBR);",
+            "    if (rBR > 0 && S >= 1) {",
+            "        var cX = xMax - rBR, cY = yMax - rBR;",
+            "        for (var s = 1; s <= S; s++) {",
+            "            var rad = (s * (90 / S)) * (Math.PI / 180);",
+            "            addV(cX + rBR * Math.cos(rad), cY + rBR * Math.sin(rad));",
+            "        }",
+            "    } else {",
+            "        addV(xMax, yMax);",
+            "    }",
+            "    addV(xMin + rBL, yMax);",
+            "    if (rBL > 0 && S >= 1) {",
+            "        var cX = xMin + rBL, cY = yMax - rBL;",
+            "        for (var s = 1; s <= S; s++) {",
+            "            var rad = (90 + s * (90 / S)) * (Math.PI / 180);",
+            "            addV(cX + rBL * Math.cos(rad), cY + rBL * Math.sin(rad));",
+            "        }",
+            "    } else {",
+            "        addV(xMin, yMax);",
+            "    }",
+            "    addV(xMin, yMin + rTL);",
+            "    if (rTL > 0 && S >= 1) {",
+            "        var cX = xMin + rTL, cY = yMin + rTL;",
+            "        for (var s = 1; s < S; s++) {",
+            "            var rad = (180 + s * (90 / S)) * (Math.PI / 180);",
+            "            addV(cX + rTL * Math.cos(rad), cY + rTL * Math.sin(rad));",
+            "        }",
+            "    } else {",
+            "        addV(xMin, yMin);",
+            "    }",
+            "    return createPath(verts, ins, outs, true);"
+            ].join("\n") : [
+            "    var K = 0.5522847498307936;",
+            "    var points = [",
+            "        [xMin + rTL, yMin],",
+            "        [xMax - rTR, yMin],",
+            "        [xMax, yMin + rTR],",
+            "        [xMax, yMax - rBR],",
+            "        [xMax - rBR, yMax],",
+            "        [xMin + rBL, yMax],",
+            "        [xMin, yMax - rBL],",
+            "        [xMin, yMin + rTL]",
+            "    ];",
+            "    var inTangents = [",
+            "        [-rTL * K, 0], [0, 0],",
+            "        [0, -rTR * K], [0, 0],",
+            "        [rBR * K, 0], [0, 0],",
+            "        [0, rBL * K], [0, 0]",
+            "    ];",
+            "    var outTangents = [",
+            "        [0, 0], [rTR * K, 0],",
+            "        [0, 0], [0, rBR * K],",
+            "        [0, 0], [-rBL * K, 0],",
+            "        [0, 0], [0, -rTL * K]",
+            "    ];",
+            "    return createPath(points, inTangents, outTangents, true);"
+            ].join("\n"),
+            "",
+            "})();"
+        ].join("\n");
+    }
 
     // -------------------------------------------------------------------------
     // 6. Core Engine: Build & Live-Update the Extruded Shape
@@ -855,6 +989,7 @@
         var rBL = linkAll ? rAll : (parseFloat(txtBL.text) || 0);
         var segCount = Math.max(2, Math.min(16, parseInt(txtSeg.text, 10) || 6));
         var preventOverlap = chkOverlap.value;
+        var imitateSegments = (typeof chkSegmentCorners !== "undefined") ? chkSegmentCorners.value : true;
 
         var frontColor = hexToRgb(cpFront._color);
         var backColor = hexToRgb(cpBack._color);
@@ -1038,7 +1173,7 @@
                     if (shapeGroup) {
                         var pProp = shapeGroup.property("ADBE Vector Shape") || shapeGroup.property("Path") || (shapeGroup.numProperties >= 2 ? shapeGroup.property(2) : shapeGroup.property(1));
                         if (pProp) {
-                            var capData = computeCapShapeData(w, h, rTL, rTR, rBR, rBL, preventOverlap);
+                            var capData = computeCapShapeData(w, h, rTL, rTR, rBR, rBL, preventOverlap, imitateSegments, segCount);
                             if (typeof Shape !== "undefined") {
                                 try {
                                     var sObj = new Shape();
@@ -1262,6 +1397,8 @@
                 }
 
                 // Front & Back Caps expressions
+                var capPathExpr = getCapPathExpr(imitateSegments);
+
                 var preCapFront = getLayer(preComp, "Cap_Front");
                 if (preCapFront) {
                     setTransformExpr(preCapFront, "Position", 'try { [0, 0, -thisComp.layer("Extruded_Rect_Master_Controller").effect("Extrude Depth")(1).value / 2]; } catch(e) { [0, 0, -' + (d / 2) + ']; }');
@@ -1271,7 +1408,7 @@
                     var contF = grpF.property("ADBE Vectors Group") || grpF.property("Contents") || (grpF.property && grpF.property(2)) || (grpF.property && grpF.property(1));
                     var shpF = contF.property("ADBE Vector Shape - Group") || contF.property(1);
                     var pF = shpF.property("ADBE Vector Shape") || shpF.property("Path") || (shpF.numProperties >= 2 ? shpF.property(2) : shpF.property(1));
-                    if (pF) pF.expression = CAP_PATH_EXPR;
+                    if (pF) pF.expression = capPathExpr;
                 }
 
                 var preCapFrontInner = getLayer(preComp, "Cap_Front_Inner");
@@ -1283,7 +1420,7 @@
                     var contFI = grpFI.property("ADBE Vectors Group") || grpFI.property("Contents") || (grpFI.property && grpFI.property(2)) || (grpFI.property && grpFI.property(1));
                     var shpFI = contFI.property("ADBE Vector Shape - Group") || contFI.property(1);
                     var pFI = shpFI.property("ADBE Vector Shape") || shpFI.property("Path") || (shpFI.numProperties >= 2 ? shpFI.property(2) : shpFI.property(1));
-                    if (pFI) pFI.expression = CAP_PATH_EXPR;
+                    if (pFI) pFI.expression = capPathExpr;
                 }
 
                 var preCapBack = getLayer(preComp, "Cap_Back");
@@ -1295,7 +1432,7 @@
                     var contB = grpB.property("ADBE Vectors Group") || grpB.property("Contents") || (grpB.property && grpB.property(2)) || (grpB.property && grpB.property(1));
                     var shpB = contB.property("ADBE Vector Shape - Group") || contB.property(1);
                     var pB = shpB.property("ADBE Vector Shape") || shpB.property("Path") || (shpB.numProperties >= 2 ? shpB.property(2) : shpB.property(1));
-                    if (pB) pB.expression = CAP_PATH_EXPR;
+                    if (pB) pB.expression = capPathExpr;
                 }
 
                 var preCapBackInner = getLayer(preComp, "Cap_Back_Inner");
@@ -1307,7 +1444,7 @@
                     var contBI = grpBI.property("ADBE Vectors Group") || grpBI.property("Contents") || (grpBI.property && grpBI.property(2)) || (grpBI.property && grpBI.property(1));
                     var shpBI = contBI.property("ADBE Vector Shape - Group") || contBI.property(1);
                     var pBI = shpBI.property("ADBE Vector Shape") || shpBI.property("Path") || (shpBI.numProperties >= 2 ? shpBI.property(2) : shpBI.property(1));
-                    if (pBI) pBI.expression = CAP_PATH_EXPR;
+                    if (pBI) pBI.expression = capPathExpr;
                 }
 
                 // Helper for wall dimensions & positions
