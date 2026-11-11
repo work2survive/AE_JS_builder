@@ -523,6 +523,30 @@
                             ${svgContent}
                         </svg>
                     `;
+                } else if (typeof TextLayer !== 'undefined' && layer instanceof TextLayer) {
+                    const txt = String(layer.sourceText ? layer.sourceText.getValueAtTime(time) : '');
+                    const fs = layer.fontSize || 24;
+                    const lines = txt.split('\n');
+                    let fill = '#ffffff';
+                    if (layer.fontColor) {
+                        if (Array.isArray(layer.fontColor)) {
+                            const maxVal = Math.max(layer.fontColor[0] || 0, layer.fontColor[1] || 0, layer.fontColor[2] || 0);
+                            const mult = (maxVal <= 1.0) ? 255 : 1;
+                            fill = `rgb(${Math.round(layer.fontColor[0] * mult)}, ${Math.round(layer.fontColor[1] * mult)}, ${Math.round(layer.fontColor[2] * mult)})`;
+                        } else {
+                            fill = String(layer.fontColor);
+                        }
+                    }
+                    const textAnchor = layer.justification === 'right' ? 'end' : (layer.justification === 'center' ? 'middle' : 'start');
+                    const escapeXml = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                    const tspans = lines.map((l, li) => `<tspan x="0" dy="${li === 0 ? 0 : (fs * 1.35)}">${escapeXml(l)}</tspan>`).join('');
+                    layerEl.innerHTML = `
+                        <svg class="ae-layer-svg" style="overflow: visible;">
+                            <text x="0" y="${fs * 0.9}" fill="${fill}" font-size="${fs}px" font-family="${layer.fontFamily || 'system-ui, -apple-system, sans-serif'}" text-anchor="${textAnchor}" style="user-select:none; font-weight:400;">
+                                ${tspans}
+                            </text>
+                        </svg>
+                    `;
                 }
             }
 

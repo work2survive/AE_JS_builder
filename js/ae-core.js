@@ -1075,6 +1075,56 @@
         }
     }
 
+    class TextLayer extends Layer {
+        constructor(name = 'Text Layer', containingComp = null, initialText = '') {
+            super(name, containingComp);
+            this.colorLabel = '#ff2d55'; // AE Text layer red/peach
+            this.notShyable = false;
+
+            this.text = new PropertyGroup('Text', 'ADBE Text Properties');
+            this.text.parentProperty = this;
+
+            const textStr = (typeof initialText === 'string') ? initialText : (initialText?.toString() || '');
+            this.sourceText = new Property('Source Text', 'ADBE Text Document', textStr, 'string');
+            this.sourceText.parentProperty = this.text;
+            this.text.properties.push(this.sourceText);
+
+            this.properties.unshift(this.text);
+            this.fontSize = 24;
+            this.fontColor = [1, 1, 1];
+            this.fontFamily = 'system-ui, -apple-system, sans-serif';
+            this.justification = 'left'; // 'left' | 'center' | 'right'
+        }
+
+        property(nameOrIndex) {
+            if (nameOrIndex === 'Text' || nameOrIndex === 'ADBE Text Properties') return this.text;
+            if (nameOrIndex === 'Source Text' || nameOrIndex === 'ADBE Text Document') return this.sourceText;
+            return super.property(nameOrIndex);
+        }
+
+        sourceRectAtTime(time, includeExtents) {
+            const str = String(this.sourceText.getValueAtTime(time || 0) || '');
+            const lines = str.split('\n');
+            const fs = this.fontSize || 24;
+            const lineH = fs * 1.35;
+            let maxW = 0;
+            for (const line of lines) {
+                let w = 0;
+                for (let i = 0; i < line.length; i++) {
+                    const code = line.charCodeAt(i);
+                    w += (code > 255 ? fs * 1.0 : fs * 0.55);
+                }
+                if (w > maxW) maxW = w;
+            }
+            return {
+                top: 0,
+                left: 0,
+                width: maxW,
+                height: lines.length * lineH
+            };
+        }
+    }
+
     // -------------------------------------------------------------
     // 7. CompItem & LayerCollection
     // -------------------------------------------------------------
@@ -1090,6 +1140,16 @@
             // Default center position for shape layer in AE: center of comp
             layer.transform.position.setValue([this.comp.width / 2, this.comp.height / 2, 0]);
             this.unshift(layer); // AE layers are ordered top-to-bottom (1 is topmost)
+            this._notify();
+            return layer;
+        }
+
+        addText(initialText = '') {
+            const count = this.length + 1;
+            const textStr = (typeof initialText === 'string') ? initialText : (initialText?.toString() || '');
+            const layer = new TextLayer('Text Layer ' + count, this.comp, textStr);
+            layer.transform.position.setValue([this.comp.width / 2, this.comp.height / 2, 0]);
+            this.unshift(layer);
             this._notify();
             return layer;
         }
@@ -1340,6 +1400,7 @@
     global.Mat4 = Mat4;
     global.Shape = Shape;
     global.ShapeLayer = ShapeLayer;
+    global.TextLayer = TextLayer;
     global.CompItem = CompItem;
     global.Property = Property;
     global.PropertyGroup = PropertyGroup;

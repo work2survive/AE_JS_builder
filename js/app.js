@@ -286,6 +286,26 @@
                     </div>
                     ` : ''}
 
+                    <!-- Text Group (for Text Layers) -->
+                    ${(typeof TextLayer !== 'undefined' && layer instanceof TextLayer) ? `
+                    <div class="ae-prop-group">
+                        <div class="ae-prop-group-header">
+                            <span class="ae-twirl open" data-action="toggle-group">&#9656;</span>
+                            <span class="ae-prop-group-title">Text</span>
+                            <span class="ae-badge-type animatable" style="margin-left:6px;">[TEXT]</span>
+                        </div>
+                        <div class="ae-prop-items">
+                            <div class="ae-prop-row ae-prop-animatable">
+                                <span class="ae-badge-type animatable">[ANIM]</span>
+                                <span class="ae-prop-name">Source Text</span>
+                                <div class="ae-prop-val-container">
+                                    <span style="color:#ffd166; font-family:var(--font-mono); font-size:11px;">"${escapeHtml(String(layer.sourceText.value || ''))}"</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    ` : ''}
+
                     <!-- Transform Group -->
                     <div class="ae-prop-group">
                         <div class="ae-prop-group-header">

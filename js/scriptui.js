@@ -560,15 +560,16 @@
         }
 
         renderDOM() {
-            const input = document.createElement('input');
-            input.type = 'text';
-            input.className = 'scriptui-edittext';
+            const isMultiline = Boolean(this.properties && this.properties.multiline);
+            const input = document.createElement(isMultiline ? 'textarea' : 'input');
+            if (!isMultiline) input.type = 'text';
+            input.className = 'scriptui-edittext' + (isMultiline ? ' multiline' : '');
             input.value = this._text;
             this.applyCommonStyles(input);
             if (this.helpTip) {
                 input.title = this.helpTip;
             }
-            if (this.characters > 0) {
+            if (!isMultiline && this.characters > 0) {
                 input.size = this.characters;
                 input.style.width = `${Math.max(36, this.characters * 7 + 16)}px`;
                 input.style.flexShrink = '0';
@@ -726,13 +727,23 @@
 
             const radio = document.createElement('input');
             radio.type = 'radio';
-            radio.name = this.container ? `radio_${this.container.type}` : 'radio_group';
+            if (this.container && !this.container._radioGroupId) {
+                this.container._radioGroupId = 'radio_grp_' + Math.random().toString(36).substring(2, 9);
+            }
+            radio.name = this.container ? this.container._radioGroupId : 'radio_group';
             radio.checked = this._value;
             if (this.enabled === false) {
                 radio.disabled = true;
             }
             radio.onchange = () => {
                 this._value = radio.checked;
+                if (this.container && this.container.children) {
+                    this.container.children.forEach(child => {
+                        if (child instanceof RadioButton && child !== this) {
+                            child._value = false;
+                        }
+                    });
+                }
                 if (this.onClick) this.onClick();
             };
 
@@ -757,15 +768,34 @@
         constructor(text, container, properties) {
             super('dropdownlist', text, container, properties);
             this.items = [];
-            this.selection = null;
+            this._selection = null;
+            if (Array.isArray(text)) {
+                text.forEach(t => this.add('item', String(t)));
+            }
+        }
+
+        get selection() {
+            return this._selection;
+        }
+
+        set selection(val) {
+            if (typeof val === 'number') {
+                this._selection = this.items[val] || null;
+            } else {
+                this._selection = val;
+            }
+            if (this.domElement) {
+                const idx = (this._selection && this._selection.index !== undefined) ? this._selection.index : -1;
+                this.domElement.selectedIndex = idx;
+            }
         }
 
         add(type, text) {
             if (type === 'item') {
                 const item = { text: text, index: this.items.length };
                 this.items.push(item);
-                if (this.items.length === 1) {
-                    this.selection = item;
+                if (this.items.length === 1 && !this._selection) {
+                    this._selection = item;
                 }
                 return item;
             }
@@ -774,15 +804,19 @@
         renderDOM() {
             const select = document.createElement('select');
             select.className = 'scriptui-dropdown';
+            this.applyCommonStyles(select);
             this.items.forEach((item, idx) => {
                 const opt = document.createElement('option');
                 opt.value = idx;
                 opt.textContent = item.text;
                 select.appendChild(opt);
             });
+            if (this._selection && this._selection.index !== undefined) {
+                select.selectedIndex = this._selection.index;
+            }
 
             select.onchange = () => {
-                this.selection = this.items[select.selectedIndex];
+                this._selection = this.items[select.selectedIndex];
                 if (this.onChange) this.onChange();
             };
 

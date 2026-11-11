@@ -712,6 +712,16 @@ body.is-resizing-h .ae-resizer-h {
     text-align: center;
     box-sizing: border-box;
 }
+.scriptui-edittext.multiline {
+    height: auto;
+    min-height: 52px;
+    line-height: 1.4;
+    text-align: left;
+    padding: 6px 8px;
+    resize: vertical;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
 .scriptui-edittext:focus {
     border-color: #1473e6;
     background: #141414;
