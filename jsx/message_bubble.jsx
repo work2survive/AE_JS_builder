@@ -175,6 +175,29 @@
     var MAX_CHARS = 250;
 
     // -------------------------------------------------------------------------
+
+    // -------------------------------------------------------------------------
+    // ExtendScript Layer.effect DOM Compatibility Helper
+    // -------------------------------------------------------------------------
+    if (typeof Layer !== "undefined" && Layer && Layer.prototype && !Layer.prototype.effect) {
+        Layer.prototype.effect = function(name) {
+            try {
+                var p = this.property("ADBE Effect Parade") || this.property("Effects");
+                if (p) return p.property(name);
+            } catch(e) {}
+            return null;
+        };
+    }
+    if (typeof AVLayer !== "undefined" && AVLayer && AVLayer.prototype && !AVLayer.prototype.effect) {
+        AVLayer.prototype.effect = function(name) {
+            try {
+                var p = this.property("ADBE Effect Parade") || this.property("Effects");
+                if (p) return p.property(name);
+            } catch(e) {}
+            return null;
+        };
+    }
+
     // 1. ScriptUI Window / Dockable Panel Initialization
     // -------------------------------------------------------------------------
     var win = (thisObj instanceof Panel)
@@ -2470,9 +2493,31 @@
     tpanel.selection = tabMessage; // Default to Message tab
 
 
+
     // -------------------------------------------------------------------------
     // Font Resolution & Multi-Tier Fallback System (CSS-like font-family stack)
     // -------------------------------------------------------------------------
+    function isFontAvailable(postScriptName) {
+        if (!postScriptName) return false;
+        try {
+            if (typeof app !== "undefined" && app.fonts && typeof app.fonts.getFontsByName === "function") {
+                var list = app.fonts.getFontsByName(postScriptName);
+                if (list && list.length > 0) return true;
+                return false;
+            }
+        } catch(eFonts) {}
+
+        // On Windows, Apple proprietary fonts (SF Pro, Helvetica Neue) are NOT present unless custom-installed
+        var isWin = (typeof $ !== "undefined" && $.os && $.os.indexOf("Windows") !== -1);
+        if (isWin) {
+            var lower = postScriptName.toLowerCase();
+            if (lower.indexOf("sfpro") !== -1 || lower.indexOf("helvetica") !== -1) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     function getActiveFontCandidates() {
         var candidates = [];
         var selIdx = (dropPlatform && dropPlatform.selection) ? dropPlatform.selection.index : 0;
@@ -2507,17 +2552,11 @@
                 }
             }
         }
-        // Universal system sans-serif fallback fonts guaranteed on Windows / macOS
-        var systemFallbacks = [
-            "ArialMT",
-            "Arial-BoldMT",
-            "Arial",
-            "HelveticaNeue",
-            "Helvetica",
-            "SegoeUI",
-            "Tahoma",
-            "Verdana"
-        ];
+        var isWin = (typeof $ !== "undefined" && $.os && $.os.indexOf("Windows") !== -1);
+        var systemFallbacks = isWin
+            ? ["SegoeUI", "ArialMT", "Arial", "Tahoma"]
+            : ["SFProText-Regular", "HelveticaNeue", "Helvetica", "ArialMT", "Arial"];
+
         for (var s = 0; s < systemFallbacks.length; s++) {
             var found = false;
             for (var k = 0; k < candidates.length; k++) {
@@ -2526,17 +2565,76 @@
             if (!found) candidates.push(systemFallbacks[s]);
         }
 
+        var chosenFont = null;
         for (var i = 0; i < candidates.length; i++) {
             var fontName = candidates[i];
             if (!fontName) continue;
+            if (isFontAvailable(fontName)) {
+                chosenFont = fontName;
+                break;
+            }
+        }
+        if (!chosenFont) {
+            chosenFont = isWin ? "SegoeUI" : "ArialMT";
+        }
+
+        try {
+            var doc = textProp.value;
+            doc.font = chosenFont;
+            textProp.setValue(doc);
+            return true;
+        } catch(e) {
             try {
-                var doc = textProp.value;
-                doc.font = fontName;
-                textProp.setValue(doc);
+                var doc2 = textProp.value;
+                doc2.font = isWin ? "SegoeUI" : "ArialMT";
+                textProp.setValue(doc2);
                 return true;
-            } catch(e) {}
+            } catch(e2) {
+                try {
+                    var doc3 = textProp.value;
+                    doc3.font = "ArialMT";
+                    textProp.setValue(doc3);
+                    return true;
+                } catch(e3) {
+                    try {
+                        var doc4 = textProp.value;
+                        doc4.font = "Arial";
+                        textProp.setValue(doc4);
+                        return true;
+                    } catch(e4) {}
+                }
+            }
         }
         return false;
+    }
+
+    function formatTextLayer(lyr, textStr, fontSize, fontColor, justification, lineLeading, candidates) {
+        if (!lyr) return;
+        try {
+            var prop = lyr.property("Source Text") || (lyr.sourceText ? lyr.sourceText : null);
+            if (!prop) return;
+            var doc = prop.value;
+            if (!doc) return;
+            if (textStr !== undefined && textStr !== null) {
+                doc.text = textStr;
+            }
+            if (typeof fontSize === "number" && fontSize > 0) {
+                doc.fontSize = fontSize;
+            }
+            if (fontColor) {
+                doc.applyFill = true;
+                doc.fillColor = fontColor;
+            }
+            if (justification) {
+                doc.justification = justification;
+            }
+            if (typeof lineLeading === "number" && lineLeading > 0) {
+                doc.autoLeading = false;
+                doc.leading = lineLeading;
+            }
+            prop.setValue(doc);
+            applyFontWithFallback(prop, candidates);
+        } catch(eFmt) {}
     }
 
     function syncColorsFromPlatform() {
@@ -3076,17 +3174,11 @@
             if (rotProp) rotProp.expression = ROT_ANIM_EXPR;
             if (textLayer.transform.opacity) textLayer.transform.opacity.expression = OPACITY_ANIM_EXPR;
 
+            var justLeft = (typeof ParagraphJustification !== "undefined" && ParagraphJustification && ParagraphJustification.LEFT_JUSTIFY) ? ParagraphJustification.LEFT_JUSTIFY : null;
+            var justRight = (typeof ParagraphJustification !== "undefined" && ParagraphJustification && ParagraphJustification.RIGHT_JUSTIFY) ? ParagraphJustification.RIGHT_JUSTIFY : null;
+
+            formatTextLayer(textLayer, wrappedString, textSize, textColor, justLeft, lineH, getActiveFontCandidates());
             if (textLayer.property && textLayer.property("Source Text")) {
-                try {
-                    var textProp = textLayer.property("Source Text");
-                    var textDoc = textProp.value;
-                    if (textDoc) {
-                        textDoc.autoLeading = false;
-                        textDoc.leading = lineH;
-                        textProp.setValue(textDoc);
-                        applyFontWithFallback(textProp, getActiveFontCandidates());
-                    }
-                } catch(eDoc) {}
                 textLayer.property("Source Text").expression = TYPEWRITER_EXPR;
             } else if (textLayer.sourceText) {
                 textLayer.sourceText.expression = TYPEWRITER_EXPR;
@@ -3114,16 +3206,9 @@
             timeLayer.fontFamily = selectedFont.css;
             timeLayer.justification = "right";
             timeLayer.transform.position.setValue([timeX, timeY, -0.5]);
-            if (timeLayer.property && timeLayer.property("Source Text")) {
-                try {
-                    var timeProp = timeLayer.property("Source Text");
-                    var timeDoc = timeProp.value;
-                    if (timeDoc) {
-                        timeProp.setValue(timeDoc);
-                        applyFontWithFallback(timeProp, getActiveFontCandidates());
-                    }
-                } catch(eTimeDoc) {}
-            }
+
+            formatTextLayer(timeLayer, timeString, timeFontSize, timeColor, justRight, null, getActiveFontCandidates());
+
             if (timeLayer.transform && timeLayer.transform.opacity) {
                 timeLayer.transform.opacity.expression = TIMECODE_ENTRANCE_EXPR;
             }
@@ -3145,16 +3230,8 @@
                 statusLayerText.fontFamily = selectedFont.css;
                 statusLayerText.justification = "right";
                 statusLayerText.transform.position.setValue([statusX, timeY, -0.5]);
-                if (statusLayerText.property && statusLayerText.property("Source Text")) {
-                    try {
-                        var statProp = statusLayerText.property("Source Text");
-                        var statDoc = statProp.value;
-                        if (statDoc) {
-                            statProp.setValue(statDoc);
-                            applyFontWithFallback(statProp, getActiveFontCandidates());
-                        }
-                    } catch(eStatDoc) {}
-                }
+
+                formatTextLayer(statusLayerText, statusString || "✓✓", timeFontSize, statusColor, justRight, null, getActiveFontCandidates());
                 if (statusLayerText.transform && statusLayerText.transform.opacity) {
                     statusLayerText.transform.opacity.expression = STATUS_TEXT_OPACITY_EXPR;
                 }
@@ -3436,21 +3513,35 @@
 
                 precompLayer.selected = true;
 
-                // 8. Link Master Controller inside the precomp to parent precomp layer
+                // 8. Safely Link Master Controller inside the precomp to parent precomp layer
                 var safeParentCompName = comp.name.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
                 var safePrecompName = precompName.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
 
+                // Retrieve live layers inside precomp (original layer handles in parent comp are now invalid after precompose)
+                var masterInPre = null;
+                var bubbleInPre = null;
+                if (preCompItem) {
+                    masterInPre = getLayer(preCompItem, "Bubble_Master_Controller") || (preCompItem.layers.length > 0 ? preCompItem.layer(1) : null);
+                    bubbleInPre = getLayer(preCompItem, "Bubble_Sent") || getLayer(preCompItem, "Bubble_Received");
+                }
+
                 function linkPreMaster(effectName, isColor) {
-                    if (!master) return;
-                    var eff = master.effect(effectName);
-                    if (!eff || !eff.property(1)) return;
-                    var valStr = isColor ? "" : ".value";
-                    var expr = 'try {\n' +
-                               '    comp("' + safeParentCompName + '").layer("' + safePrecompName + '").effect("' + effectName + '")(1)' + valStr + ';\n' +
-                               '} catch (err) {\n' +
-                               '    value;\n' +
-                               '}';
-                    eff.property(1).expression = expr;
+                    if (!masterInPre) return;
+                    try {
+                        var eff = masterInPre.effect ? masterInPre.effect(effectName) : null;
+                        if (!eff) {
+                            var p = masterInPre.property("ADBE Effect Parade") || masterInPre.property("Effects");
+                            if (p) eff = p.property(effectName);
+                        }
+                        if (!eff || !eff.property(1)) return;
+                        var valStr = isColor ? "" : ".value";
+                        var expr = 'try {\n' +
+                                   '    comp("' + safeParentCompName + '").layer("' + safePrecompName + '").effect("' + effectName + '")(1)' + valStr + ';\n' +
+                                   '} catch (err) {\n' +
+                                   '    value;\n' +
+                                   '}';
+                        eff.property(1).expression = expr;
+                    } catch(eLnk) {}
                 }
 
                 linkPreMaster("Bubble Color", true);
@@ -3475,12 +3566,20 @@
                 linkPreMaster("Screen Width", false);
                 linkPreMaster("Text Size", false);
 
-                if (fill && fill.property && fill.property("Color")) {
-                    fill.property("Color").expression = 'try {\n' +
-                        '    comp("' + safeParentCompName + '").layer("' + safePrecompName + '").effect("Bubble Color")(1);\n' +
-                        '} catch (err) {\n' +
-                        '    try { thisComp.layer("Bubble_Master_Controller").effect("Bubble Color")(1); } catch (e) { value; }\n' +
-                        '}';
+                if (bubbleInPre) {
+                    try {
+                        var cnt = bubbleInPre.property("ADBE Root Vectors Group") || bubbleInPre.property("Contents");
+                        if (cnt) {
+                            var bFill = cnt.property("ADBE Vector Graphic - Fill");
+                            if (bFill && bFill.property("Color")) {
+                                bFill.property("Color").expression = 'try {\n' +
+                                    '    comp("' + safeParentCompName + '").layer("' + safePrecompName + '").effect("Bubble Color")(1);\n' +
+                                    '} catch (err) {\n' +
+                                    '    try { thisComp.layer("Bubble_Master_Controller").effect("Bubble Color")(1); } catch (e) { value; }\n' +
+                                    '}';
+                            }
+                        }
+                    } catch(eBFill) {}
                 }
             } else {
                 master.selected = true;
@@ -3505,9 +3604,17 @@
             if (/^message_[0-9a-fA-F]+/i.test(lyr.source.name)) return true;
             if (isMessageBubbleComp(lyr.source)) return true;
         }
-        if (lyr.effect && lyr.effect("Bubble Color") && lyr.effect("Bubble Width")) {
-            return true;
-        }
+        try {
+            var parade = lyr.property("ADBE Effect Parade") || lyr.property("Effects");
+            if (parade && parade.property("Bubble Color") && parade.property("Bubble Width")) {
+                return true;
+            }
+        } catch(eEff) {}
+        try {
+            if (lyr.effect && lyr.effect("Bubble Color") && lyr.effect("Bubble Width")) {
+                return true;
+            }
+        } catch(eEff2) {}
         return false;
     }
 
@@ -3957,20 +4064,10 @@
                     if (textLayer.transform && textLayer.transform.position) {
                         textLayer.transform.position.setValue([textLeftX, textTopY, -0.5]);
                     }
-                    if (textLayer.property && textLayer.property("Source Text")) {
-                        try {
-                            var tProp = textLayer.property("Source Text");
-                            var tDoc = tProp.value;
-                            if (tDoc) {
-                                tDoc.text = wrappedString;
-                                tDoc.fontSize = textSize;
-                                tDoc.leading = lineH;
-                                tDoc.autoLeading = false;
-                                tProp.setValue(tDoc);
-                                applyFontWithFallback(tProp, getActiveFontCandidates());
-                            }
-                        } catch(eTDoc) {}
-                    }
+                    var justLeft = (typeof ParagraphJustification !== "undefined" && ParagraphJustification && ParagraphJustification.LEFT_JUSTIFY) ? ParagraphJustification.LEFT_JUSTIFY : null;
+                    var justRight = (typeof ParagraphJustification !== "undefined" && ParagraphJustification && ParagraphJustification.RIGHT_JUSTIFY) ? ParagraphJustification.RIGHT_JUSTIFY : null;
+
+                    formatTextLayer(textLayer, wrappedString, textSize, textColor, justLeft, lineH, getActiveFontCandidates());
                     if (textLayer.text !== undefined) {
                         textLayer.text = wrappedString;
                     }
@@ -3992,16 +4089,7 @@
                     if (timeLayer.transform && timeLayer.transform.position) {
                         timeLayer.transform.position.setValue([timeX, timeY, -0.5]);
                     }
-                    if (timeLayer.property && timeLayer.property("Source Text")) {
-                        try {
-                            var tmProp = timeLayer.property("Source Text");
-                            var tmDoc = tmProp.value;
-                            if (tmDoc) {
-                                tmProp.setValue(tmDoc);
-                                applyFontWithFallback(tmProp, getActiveFontCandidates());
-                            }
-                        } catch(eTm) {}
-                    }
+                    formatTextLayer(timeLayer, timeString, timeFontSize, timeColor, justRight, null, getActiveFontCandidates());
                 }
 
                 // Update Status text layer
@@ -4013,15 +4101,7 @@
                     if (statusLayerText.transform && statusLayerText.transform.position) {
                         statusLayerText.transform.position.setValue([statusX, timeY, -0.5]);
                     }
-                    if (statusLayerText.sourceText) {
-                        try {
-                            var sDoc = statusLayerText.sourceText.value;
-                            if (sDoc) {
-                                sDoc.text = statusString || "✓✓";
-                                statusLayerText.sourceText.setValue(sDoc);
-                            }
-                        } catch(eSDoc) {}
-                    }
+                    formatTextLayer(statusLayerText, statusString || "✓✓", timeFontSize, statusColor, justRight, null, getActiveFontCandidates());
                 }
 
                 // Update Status RCS layer
