@@ -909,7 +909,7 @@
         "        settleTime = (growFrames + typeFrames) * fd;",
         "    }",
         "    var deliveredTime = settleTime + getVal('Delivered Time (s)', 0.8);",
-        "    var readTime = deliveredTime + getVal('Read Time (s)', 3.5);",
+        "    var readTime = settleTime + getVal('Read Time (s)', 4.2);",
         "    if (time < readTime) {",
         "        return neutralCol;",
         "    } else {",
@@ -938,13 +938,326 @@
         "    var mode = Math.round(getVal('Status Icon Mode', 0));",
         "    if (mode !== 0) return value;",
         "",
-        "    var readTime = getVal('Read Time (s)', 3.5);",
+        "    var animOn = getVal('Animate Entrance', 1);",
+        "    var settleTime = 0;",
+        "    if (animOn > 0) {",
+        "        var growFrames = Math.max(1, getVal('Bubble Grow Duration (frames)', 5));",
+        "        var typeFrames = Math.max(1, getVal('Typewriter Duration (frames)', 5));",
+        "        var fps = 30;",
+        "        try { fps = thisComp.frameRate; } catch(eFps) {}",
+        "        var fd = 1.0 / fps;",
+        "        try { if (thisComp.frameDuration) fd = thisComp.frameDuration; } catch(eFd) {}",
+        "        settleTime = (growFrames + typeFrames) * fd;",
+        "    }",
+        "    var deliveredTime = settleTime + getVal('Delivered Time (s)', 0.8);",
+        "    var readTime = settleTime + getVal('Read Time (s)', 4.2);",
         "    if (time >= readTime && time < (readTime + 0.35)) {",
         "        var dt = time - readTime;",
         "        var pop = Math.sin((dt / 0.35) * Math.PI) * 25;",
         "        return [value[0] + pop, value[1] + pop];",
         "    }",
         "    return value;",
+        "})();"
+    ].join("\n");
+
+    // -------------------------------------------------------------------------
+    // Android RCS Status Icon Expressions (Circle Outline / Solid Filled Checks)
+    // -------------------------------------------------------------------------
+    var STATUS_TEXT_OPACITY_EXPR = [
+        "// Standard Checks Layer Opacity (checks style and entrance)",
+        "(function() {",
+        "    function getVal(name, fallback) {",
+        "        try {",
+        "            if (thisLayer && thisLayer.hasParent) {",
+        "                var p = thisLayer.parent.effect(name)(1);",
+        "                return (p && typeof p.value !== 'undefined') ? p.value : (p !== undefined ? p : fallback);",
+        "            }",
+        "        } catch(e) {}",
+        "        try {",
+        "            var p2 = thisComp.layer('Bubble_Master_Controller').effect(name)(1);",
+        "            return (p2 && typeof p2.value !== 'undefined') ? p2.value : (p2 !== undefined ? p2 : fallback);",
+        "        } catch(e2) {}",
+        "        return fallback;",
+        "    }",
+        "",
+        "    var style = Math.round(getVal('Status Icon Style', 0));",
+        "    if (style !== 1) return 0; // Visible when style === 1 (Standard Checks)",
+        "    var mode = Math.round(getVal('Status Icon Mode', 0));",
+        "    if (mode === 4) return 0; // None",
+        "",
+        "    var animOn = getVal('Animate Entrance', 1);",
+        "    if (animOn <= 0) return 100;",
+        "    var growFrames = Math.max(1, getVal('Bubble Grow Duration (frames)', 5));",
+        "    var typeFrames = Math.max(1, getVal('Typewriter Duration (frames)', 5));",
+        "    var fps = 30;",
+        "    try { fps = thisComp.frameRate; } catch(eFps) {}",
+        "    var fd = 1.0 / fps;",
+        "    try { if (thisComp.frameDuration) fd = thisComp.frameDuration; } catch(eFd) {}",
+        "    var totalTime = (growFrames + typeFrames) * fd;",
+        "    if (time < totalTime) return 0;",
+        "    var dt = time - totalTime;",
+        "    var fadeDur = 2.0 * fd;",
+        "    return Math.min(100, (dt / fadeDur) * 100);",
+        "})();"
+    ].join("\n");
+
+    var STATUS_RCS_OPACITY_EXPR = [
+        "// RCS Circled Checks Layer Opacity (checks style and entrance)",
+        "(function() {",
+        "    function getVal(name, fallback) {",
+        "        try {",
+        "            if (thisLayer && thisLayer.hasParent) {",
+        "                var p = thisLayer.parent.effect(name)(1);",
+        "                return (p && typeof p.value !== 'undefined') ? p.value : (p !== undefined ? p : fallback);",
+        "            }",
+        "        } catch(e) {}",
+        "        try {",
+        "            var p2 = thisComp.layer('Bubble_Master_Controller').effect(name)(1);",
+        "            return (p2 && typeof p2.value !== 'undefined') ? p2.value : (p2 !== undefined ? p2 : fallback);",
+        "        } catch(e2) {}",
+        "        return fallback;",
+        "    }",
+        "",
+        "    var style = Math.round(getVal('Status Icon Style', 0));",
+        "    if (style !== 0) return 0; // Visible when style === 0 (RCS Circled Checks)",
+        "    var mode = Math.round(getVal('Status Icon Mode', 0));",
+        "    if (mode === 4) return 0; // None",
+        "",
+        "    var animOn = getVal('Animate Entrance', 1);",
+        "    if (animOn <= 0) return 100;",
+        "    var growFrames = Math.max(1, getVal('Bubble Grow Duration (frames)', 5));",
+        "    var typeFrames = Math.max(1, getVal('Typewriter Duration (frames)', 5));",
+        "    var fps = 30;",
+        "    try { fps = thisComp.frameRate; } catch(eFps) {}",
+        "    var fd = 1.0 / fps;",
+        "    try { if (thisComp.frameDuration) fd = thisComp.frameDuration; } catch(eFd) {}",
+        "    var totalTime = (growFrames + typeFrames) * fd;",
+        "    if (time < totalTime) return 0;",
+        "    var dt = time - totalTime;",
+        "    var fadeDur = 2.0 * fd;",
+        "    return Math.min(100, (dt / fadeDur) * 100);",
+        "})();"
+    ].join("\n");
+
+    var RCS_CIRCLE1_POS_EXPR = [
+        "// Circle 1 Position: centered at [3.0, 0] for Sent (single circle), [-3.0, 0] for Delivered / Read",
+        "(function() {",
+        "    function getVal(name, fallback) {",
+        "        try {",
+        "            if (thisLayer && thisLayer.hasParent) {",
+        "                var p = thisLayer.parent.effect(name)(1);",
+        "                return (p && typeof p.value !== 'undefined') ? p.value : (p !== undefined ? p : fallback);",
+        "            }",
+        "        } catch(e) {}",
+        "        try {",
+        "            var p2 = thisComp.layer('Bubble_Master_Controller').effect(name)(1);",
+        "            return (p2 && typeof p2.value !== 'undefined') ? p2.value : (p2 !== undefined ? p2 : fallback);",
+        "        } catch(e2) {}",
+        "        return fallback;",
+        "    }",
+        "    var mode = Math.round(getVal('Status Icon Mode', 0));",
+        "    var isSingle = (mode === 3);",
+        "    if (mode === 0) {",
+        "        var animOn = getVal('Animate Entrance', 1);",
+        "        var settleTime = 0;",
+        "        if (animOn > 0) {",
+        "            var growFrames = Math.max(1, getVal('Bubble Grow Duration (frames)', 5));",
+        "            var typeFrames = Math.max(1, getVal('Typewriter Duration (frames)', 5));",
+        "            var fps = 30;",
+        "            try { fps = thisComp.frameRate; } catch(eFps) {}",
+        "            var fd = 1.0 / fps;",
+        "            try { if (thisComp.frameDuration) fd = thisComp.frameDuration; } catch(eFd) {}",
+        "            settleTime = (growFrames + typeFrames) * fd;",
+        "        }",
+        "        var deliveredTime = settleTime + getVal('Delivered Time (s)', 0.8);",
+        "        isSingle = (time < deliveredTime);",
+        "    }",
+        "    return isSingle ? [3.0, 0] : [-3.0, 0];",
+        "})();"
+    ].join("\n");
+
+    var RCS_CIRCLE2_OPACITY_EXPR = [
+        "// Circle 2 Opacity: hidden for Sent or None, visible for Delivered / Read",
+        "(function() {",
+        "    function getVal(name, fallback) {",
+        "        try {",
+        "            if (thisLayer && thisLayer.hasParent) {",
+        "                var p = thisLayer.parent.effect(name)(1);",
+        "                return (p && typeof p.value !== 'undefined') ? p.value : (p !== undefined ? p : fallback);",
+        "            }",
+        "        } catch(e) {}",
+        "        try {",
+        "            var p2 = thisComp.layer('Bubble_Master_Controller').effect(name)(1);",
+        "            return (p2 && typeof p2.value !== 'undefined') ? p2.value : (p2 !== undefined ? p2 : fallback);",
+        "        } catch(e2) {}",
+        "        return fallback;",
+        "    }",
+        "    var mode = Math.round(getVal('Status Icon Mode', 0));",
+        "    if (mode === 4 || mode === 3) return 0;",
+        "    if (mode === 2 || mode === 1) return 100;",
+        "    var animOn = getVal('Animate Entrance', 1);",
+        "    var settleTime = 0;",
+        "    if (animOn > 0) {",
+        "        var growFrames = Math.max(1, getVal('Bubble Grow Duration (frames)', 5));",
+        "        var typeFrames = Math.max(1, getVal('Typewriter Duration (frames)', 5));",
+        "        var fps = 30;",
+        "        try { fps = thisComp.frameRate; } catch(eFps) {}",
+        "        var fd = 1.0 / fps;",
+        "        try { if (thisComp.frameDuration) fd = thisComp.frameDuration; } catch(eFd) {}",
+        "        settleTime = (growFrames + typeFrames) * fd;",
+        "    }",
+        "    var deliveredTime = settleTime + getVal('Delivered Time (s)', 0.8);",
+        "    return (time >= deliveredTime) ? 100 : 0;",
+        "})();"
+    ].join("\n");
+
+    var RCS_CIRCLE_FILL_OPACITY_EXPR = [
+        "// Circle Fill Opacity: 0 for Sent & Delivered (outline only), 100 for Read (solid filled)",
+        "(function() {",
+        "    function getVal(name, fallback) {",
+        "        try {",
+        "            if (thisLayer && thisLayer.hasParent) {",
+        "                var p = thisLayer.parent.effect(name)(1);",
+        "                return (p && typeof p.value !== 'undefined') ? p.value : (p !== undefined ? p : fallback);",
+        "            }",
+        "        } catch(e) {}",
+        "        try {",
+        "            var p2 = thisComp.layer('Bubble_Master_Controller').effect(name)(1);",
+        "            return (p2 && typeof p2.value !== 'undefined') ? p2.value : (p2 !== undefined ? p2 : fallback);",
+        "        } catch(e2) {}",
+        "        return fallback;",
+        "    }",
+        "    var mode = Math.round(getVal('Status Icon Mode', 0));",
+        "    if (mode === 1) return 100;",
+        "    if (mode === 4 || mode === 3 || mode === 2) return 0;",
+        "    var animOn = getVal('Animate Entrance', 1);",
+        "    var settleTime = 0;",
+        "    if (animOn > 0) {",
+        "        var growFrames = Math.max(1, getVal('Bubble Grow Duration (frames)', 5));",
+        "        var typeFrames = Math.max(1, getVal('Typewriter Duration (frames)', 5));",
+        "        var fps = 30;",
+        "        try { fps = thisComp.frameRate; } catch(eFps) {}",
+        "        var fd = 1.0 / fps;",
+        "        try { if (thisComp.frameDuration) fd = thisComp.frameDuration; } catch(eFd) {}",
+        "        settleTime = (growFrames + typeFrames) * fd;",
+        "    }",
+        "    var deliveredTime = settleTime + getVal('Delivered Time (s)', 0.8);",
+        "    var readTime = settleTime + getVal('Read Time (s)', 4.2);",
+        "    return (time >= readTime) ? 100 : 0;",
+        "})();"
+    ].join("\n");
+
+    var RCS_CIRCLE_STROKE_OPACITY_EXPR = [
+        "// Circle Stroke Opacity: 100 for Sent & Delivered (outline), 0 for Read (filled)",
+        "(function() {",
+        "    function getVal(name, fallback) {",
+        "        try {",
+        "            if (thisLayer && thisLayer.hasParent) {",
+        "                var p = thisLayer.parent.effect(name)(1);",
+        "                return (p && typeof p.value !== 'undefined') ? p.value : (p !== undefined ? p : fallback);",
+        "            }",
+        "        } catch(e) {}",
+        "        try {",
+        "            var p2 = thisComp.layer('Bubble_Master_Controller').effect(name)(1);",
+        "            return (p2 && typeof p2.value !== 'undefined') ? p2.value : (p2 !== undefined ? p2 : fallback);",
+        "        } catch(e2) {}",
+        "        return fallback;",
+        "    }",
+        "    var mode = Math.round(getVal('Status Icon Mode', 0));",
+        "    if (mode === 1) return 0;",
+        "    if (mode === 4 || mode === 3 || mode === 2) return 100;",
+        "    var animOn = getVal('Animate Entrance', 1);",
+        "    var settleTime = 0;",
+        "    if (animOn > 0) {",
+        "        var growFrames = Math.max(1, getVal('Bubble Grow Duration (frames)', 5));",
+        "        var typeFrames = Math.max(1, getVal('Typewriter Duration (frames)', 5));",
+        "        var fps = 30;",
+        "        try { fps = thisComp.frameRate; } catch(eFps) {}",
+        "        var fd = 1.0 / fps;",
+        "        try { if (thisComp.frameDuration) fd = thisComp.frameDuration; } catch(eFd) {}",
+        "        settleTime = (growFrames + typeFrames) * fd;",
+        "    }",
+        "    var deliveredTime = settleTime + getVal('Delivered Time (s)', 0.8);",
+        "    var readTime = settleTime + getVal('Read Time (s)', 4.2);",
+        "    return (time >= readTime) ? 0 : 100;",
+        "})();"
+    ].join("\n");
+
+    var RCS_CHECK_COLOR_EXPR = [
+        "// Checkmark Stroke Color: Neutral color for Sent & Delivered, Inverted Contrast for Read",
+        "(function() {",
+        "    function getVal(name, fallback) {",
+        "        try {",
+        "            if (thisLayer && thisLayer.hasParent) {",
+        "                var p = thisLayer.parent.effect(name)(1);",
+        "                return (p && typeof p.value !== 'undefined') ? p.value : (p !== undefined ? p : fallback);",
+        "            }",
+        "        } catch(e) {}",
+        "        try {",
+        "            var p2 = thisComp.layer('Bubble_Master_Controller').effect(name)(1);",
+        "            return (p2 && typeof p2.value !== 'undefined') ? p2.value : (p2 !== undefined ? p2 : fallback);",
+        "        } catch(e2) {}",
+        "        return fallback;",
+        "    }",
+        "    var neutralCol = getVal('Status Neutral Color', [0.55, 0.55, 0.55]);",
+        "    var readCheckCol = getVal('Status Read Check Color', [1, 1, 1]);",
+        "    var mode = Math.round(getVal('Status Icon Mode', 0));",
+        "    if (mode === 1) return readCheckCol;",
+        "    if (mode === 4 || mode === 3 || mode === 2) return neutralCol;",
+        "    var animOn = getVal('Animate Entrance', 1);",
+        "    var settleTime = 0;",
+        "    if (animOn > 0) {",
+        "        var growFrames = Math.max(1, getVal('Bubble Grow Duration (frames)', 5));",
+        "        var typeFrames = Math.max(1, getVal('Typewriter Duration (frames)', 5));",
+        "        var fps = 30;",
+        "        try { fps = thisComp.frameRate; } catch(eFps) {}",
+        "        var fd = 1.0 / fps;",
+        "        try { if (thisComp.frameDuration) fd = thisComp.frameDuration; } catch(eFd) {}",
+        "        settleTime = (growFrames + typeFrames) * fd;",
+        "    }",
+        "    var deliveredTime = settleTime + getVal('Delivered Time (s)', 0.8);",
+        "    var readTime = settleTime + getVal('Read Time (s)', 4.2);",
+        "    return (time >= readTime) ? readCheckCol : neutralCol;",
+        "})();"
+    ].join("\n");
+
+    var RCS_CIRCLE_FILL_COLOR_EXPR = [
+        "// Circle Fill Color (Read accent / Charcoal / Solid)",
+        "(function() {",
+        "    function getVal(name, fallback) {",
+        "        try {",
+        "            if (thisLayer && thisLayer.hasParent) {",
+        "                var p = thisLayer.parent.effect(name)(1);",
+        "                return (p && typeof p.value !== 'undefined') ? p.value : (p !== undefined ? p : fallback);",
+        "            }",
+        "        } catch(e) {}",
+        "        try {",
+        "            var p2 = thisComp.layer('Bubble_Master_Controller').effect(name)(1);",
+        "            return (p2 && typeof p2.value !== 'undefined') ? p2.value : (p2 !== undefined ? p2 : fallback);",
+        "        } catch(e2) {}",
+        "        return fallback;",
+        "    }",
+        "    return getVal('Status Read Color', [0.20, 0.72, 0.95]);",
+        "})();"
+    ].join("\n");
+
+    var RCS_CIRCLE_STROKE_COLOR_EXPR = [
+        "// Circle Stroke Color (Neutral Outline)",
+        "(function() {",
+        "    function getVal(name, fallback) {",
+        "        try {",
+        "            if (thisLayer && thisLayer.hasParent) {",
+        "                var p = thisLayer.parent.effect(name)(1);",
+        "                return (p && typeof p.value !== 'undefined') ? p.value : (p !== undefined ? p : fallback);",
+        "            }",
+        "        } catch(e) {}",
+        "        try {",
+        "            var p2 = thisComp.layer('Bubble_Master_Controller').effect(name)(1);",
+        "            return (p2 && typeof p2.value !== 'undefined') ? p2.value : (p2 !== undefined ? p2 : fallback);",
+        "        } catch(e2) {}",
+        "        return fallback;",
+        "    }",
+        "    return getVal('Status Neutral Color', [0.55, 0.55, 0.55]);",
         "})();"
     ].join("\n");
 
@@ -1061,6 +1374,21 @@
     chkTail.value = true; // Default: Show Tail
     chkTail.helpTip = "Toggle the chat pointer / tail at the bottom corner of the message bubble.";
 
+    // Status Icon Style (RCS Circled Checks vs Standard Checks)
+    var grpStatusStyle = pnlStyle.add("group");
+    grpStatusStyle.orientation = "row";
+    grpStatusStyle.alignChildren = ["left", "center"];
+    var lblStatusStyle = grpStatusStyle.add("statictext", undefined, "Icon Style:");
+    lblStatusStyle.preferredSize = [95, -1];
+
+    var dropStatusStyle = grpStatusStyle.add("dropdownlist", undefined, [
+        "RCS Circled Checks (○✓)",
+        "Standard Checks (✓✓)"
+    ]);
+    dropStatusStyle.selection = 0; // Default: RCS Circled Checks
+    dropStatusStyle.preferredSize = [185, 26];
+    dropStatusStyle.helpTip = "Choose between Google Messages / Android RCS circled checkmarks (outline/filled) or standard checks.";
+
     // Status Icon (Sent / Received / Read / Auto Timing)
     var grpStatus = pnlStyle.add("group");
     grpStatus.orientation = "row";
@@ -1070,9 +1398,9 @@
 
     var dropStatus = grpStatus.add("dropdownlist", undefined, [
         "Auto (Timing Simulation)",
-        "Read (✓✓)",
-        "Delivered (✓✓)",
-        "Sent (✓)",
+        "Read",
+        "Delivered",
+        "Sent",
         "None"
     ]);
     dropStatus.selection = 0; // Default: Auto (Timing Simulation)
@@ -1531,6 +1859,14 @@
             else if (platformName === "WhatsApp") dropFont.selection = 3; // Helvetica Neue
             else if (platformName === "Facebook Messenger") dropFont.selection = 2; // Segoe UI
         }
+
+        if (typeof dropStatusStyle !== "undefined" && dropStatusStyle) {
+            if (platformName === "Android RCS") {
+                dropStatusStyle.selection = 0; // RCS Circled Checks (○✓)
+            } else if (platformName === "WhatsApp") {
+                dropStatusStyle.selection = 1; // Standard Checks (✓✓)
+            }
+        }
     }
 
     dropPlatform.onChange = function() {
@@ -1696,42 +2032,39 @@
             // Status Icon & Timestamp formatting (Auto, Read, Delivered, Sent, None)
             var selStatusIdx = dropStatus.selection ? dropStatus.selection.index : 0;
             var isAutoStatus = (selStatusIdx === 0);
-            var statusString = "";
-            var statusColor = timeColor;
+            var selStatusStyleIdx = (typeof dropStatusStyle !== "undefined" && dropStatusStyle && dropStatusStyle.selection)
+                ? dropStatusStyle.selection.index
+                : (platformName === "Android RCS" ? 0 : 1);
+            var isRCSStyle = (selStatusStyleIdx === 0);
 
             var deliveredTime = 0.8;
             var readDuration = calculateReadDuration(msgText);
             var readTime = Math.round((deliveredTime + readDuration) * 10) / 10;
-            var readColor = isDark ? [0.33, 0.74, 0.92] : [0.20, 0.72, 0.95];
 
-            if (isSent) {
-                if (selStatusIdx === 0) {
-                    // Auto: Sent at t=0, Delivered at t=0.8s, Read at t=readTime
-                    statusString = "✓✓"; // Allocate space for double checks
-                    statusColor = timeColor; // Initial neutral color
-                } else if (selStatusIdx === 1) {
-                    // Read (✓✓)
+            // Determine Read Receipt Colors (RCS filled circles vs standard checkmarks)
+            var isDarkBubble = (bubbleColor[0] * 0.299 + bubbleColor[1] * 0.587 + bubbleColor[2] * 0.114) < 0.55;
+            var rcsReadCircleCol = isDarkBubble ? [1.0, 1.0, 1.0] : [0.18, 0.19, 0.21];
+            var rcsReadCheckCol = isDarkBubble ? bubbleColor : [1.0, 1.0, 1.0];
+            var standardReadColor = isDark ? [0.33, 0.74, 0.92] : [0.20, 0.72, 0.95];
+            var readColor = isRCSStyle ? rcsReadCircleCol : standardReadColor;
+            var statusColor = timeColor;
+
+            var statusString = "";
+            if (isSent && selStatusIdx !== 4) {
+                if (selStatusIdx === 0 || selStatusIdx === 1 || selStatusIdx === 2) {
                     statusString = "✓✓";
-                    statusColor = readColor;
-                } else if (selStatusIdx === 2) {
-                    // Delivered (✓✓)
-                    statusString = "✓✓";
-                    statusColor = timeColor;
                 } else if (selStatusIdx === 3) {
-                    // Sent (✓)
                     statusString = "✓";
-                    statusColor = timeColor;
-                } else {
-                    // None (4)
-                    statusString = "";
                 }
             }
 
             var timeString = currentRandomTime;
             var timeFontSize = Math.max(10, Math.round(textSize * 0.58));
             var timeW = Math.round(timeString.length * timeFontSize * 0.55);
-            var statusW = statusString ? Math.round(timeFontSize * 1.35) : 0;
-            var statusSpacing = statusString ? 6 : 0;
+            var statusW = (isSent && selStatusIdx !== 4)
+                ? (isRCSStyle ? Math.round(timeFontSize * 1.55) : Math.round(timeFontSize * 1.35))
+                : 0;
+            var statusSpacing = statusW > 0 ? 6 : 0;
             var timeRowW = timeW + statusSpacing + statusW;
 
             // Bubble bounding dimensions
@@ -1811,6 +2144,9 @@
                 var effStatus = parade.addProperty("ADBE Slider Control");
                 if (effStatus) { effStatus.name = "Status Icon Mode"; effStatus.property(1).setValue(selStatusIdx); }
 
+                var effStatusStyle = parade.addProperty("ADBE Slider Control");
+                if (effStatusStyle) { effStatusStyle.name = "Status Icon Style"; effStatusStyle.property(1).setValue(selStatusStyleIdx); }
+
                 var effDelivered = parade.addProperty("ADBE Slider Control");
                 if (effDelivered) { effDelivered.name = "Delivered Time (s)"; effDelivered.property(1).setValue(deliveredTime); }
 
@@ -1822,6 +2158,9 @@
 
                 var effStatRead = parade.addProperty("ADBE Color Control");
                 if (effStatRead) { effStatRead.name = "Status Read Color"; effStatRead.property(1).setValue(readColor); }
+
+                var effStatReadCheck = parade.addProperty("ADBE Color Control");
+                if (effStatReadCheck) { effStatReadCheck.name = "Status Read Check Color"; effStatReadCheck.property(1).setValue(rcsReadCheckCol); }
 
                 var effPad = parade.addProperty("ADBE Slider Control");
                 if (effPad) { effPad.name = "Inner Padding Offset"; effPad.property(1).setValue(padOffset); }
@@ -2000,7 +2339,9 @@
             var timeY = (bubbleH / 2) - Math.round(padY * 0.6) - timeFontSize;
 
             var statusX = timeRowRightX;
-            var timeX = statusString ? (timeRowRightX - statusW - statusSpacing) : timeRowRightX;
+            var timeX = (statusW > 0) ? (timeRowRightX - statusW - statusSpacing) : timeRowRightX;
+            var statusCenterX = timeRowRightX - (statusW / 2);
+            var statusCenterY = timeY + Math.round(timeFontSize * 0.44);
 
             var timeLayer = null;
             if (typeof comp.layers.addText === "function") {
@@ -2019,30 +2360,30 @@
                 timeLayer.transform.opacity.expression = TIMECODE_ENTRANCE_EXPR;
             }
 
-            // 5. Dedicated Status / Read Icon Layer (Supports Auto Sent -> Delivered -> Read)
-            var statusLayer = null;
-            if (statusString) {
+            // 5. Dedicated Status / Read Icon Layers (Supports both RCS Circled Checks & Standard Checks)
+            var hasStatus = (isSent && selStatusIdx !== 4);
+            if (hasStatus) {
+                // [A] Standard Checks Text Layer (WhatsApp / Classic ✓✓ style)
+                var statusLayerText = null;
                 if (typeof comp.layers.addText === "function") {
-                    statusLayer = comp.layers.addText(statusString);
+                    statusLayerText = comp.layers.addText(statusString || "✓✓");
                 } else {
-                    statusLayer = comp.layers.addShape();
+                    statusLayerText = comp.layers.addShape();
                 }
-                statusLayer.name = "Status_Icon";
-                statusLayer.parent = master;
-                statusLayer.fontSize = timeFontSize;
-                statusLayer.fontColor = statusColor;
-                statusLayer.fontFamily = selectedFont.css;
-                statusLayer.justification = "right";
-                statusLayer.transform.position.setValue([statusX, timeY, -0.5]);
-                if (statusLayer.transform && statusLayer.transform.opacity) {
-                    statusLayer.transform.opacity.expression = TIMECODE_ENTRANCE_EXPR;
+                statusLayerText.name = "Status_Icon_Text";
+                statusLayerText.parent = master;
+                statusLayerText.fontSize = timeFontSize;
+                statusLayerText.fontColor = statusColor;
+                statusLayerText.fontFamily = selectedFont.css;
+                statusLayerText.justification = "right";
+                statusLayerText.transform.position.setValue([statusX, timeY, -0.5]);
+                if (statusLayerText.transform && statusLayerText.transform.opacity) {
+                    statusLayerText.transform.opacity.expression = STATUS_TEXT_OPACITY_EXPR;
                 }
-
-                // Attach dynamic status expressions (Auto / timing simulation)
-                if (statusLayer.sourceText) {
-                    statusLayer.sourceText.expression = STATUS_TEXT_EXPR;
+                if (statusLayerText.sourceText) {
+                    statusLayerText.sourceText.expression = STATUS_TEXT_EXPR;
                 }
-                var sParade = statusLayer.property("ADBE Effect Parade") || statusLayer.property("Effects");
+                var sParade = statusLayerText.property("ADBE Effect Parade") || statusLayerText.property("Effects");
                 if (sParade && sParade.addProperty) {
                     var sColEff = sParade.addProperty("ADBE Color Control");
                     if (sColEff) {
@@ -2065,8 +2406,163 @@
                         }
                     } catch(eFill) {}
                 }
-                if (statusLayer.transform && statusLayer.transform.scale) {
-                    statusLayer.transform.scale.expression = STATUS_SCALE_EXPR;
+                if (statusLayerText.transform && statusLayerText.transform.scale) {
+                    statusLayerText.transform.scale.expression = STATUS_SCALE_EXPR;
+                }
+
+                // [B] RCS Circled Checks Shape Layer (Google Messages / Android RCS style)
+                var statusLayerRCS = null;
+                if (typeof comp.layers.addShape === "function") {
+                    statusLayerRCS = comp.layers.addShape();
+                } else {
+                    statusLayerRCS = comp.layers.addNull();
+                }
+                statusLayerRCS.name = "Status_Icon_RCS";
+                statusLayerRCS.parent = master;
+                statusLayerRCS.transform.position.setValue([statusCenterX, statusCenterY, -0.5]);
+                if (statusLayerRCS.transform && statusLayerRCS.transform.opacity) {
+                    statusLayerRCS.transform.opacity.expression = STATUS_RCS_OPACITY_EXPR;
+                }
+                if (statusLayerRCS.transform && statusLayerRCS.transform.scale) {
+                    statusLayerRCS.transform.scale.expression = STATUS_SCALE_EXPR;
+                }
+
+                var rcsContents = statusLayerRCS.property("ADBE Root Vectors Group") || statusLayerRCS.property("Contents");
+                if (rcsContents && rcsContents.addProperty) {
+                    var circleSize = Math.max(10, Math.round(timeFontSize * 0.95));
+                    var circleRadius = circleSize / 2;
+                    var circleOffset = Math.round(circleSize * 0.44);
+                    var checkScale = circleRadius / 6.5;
+
+                    // Circle 1 Group
+                    var grpC1 = rcsContents.addProperty("ADBE Vector Group");
+                    grpC1.name = "Circle 1 Group";
+                    var c1Contents = grpC1.property("ADBE Vectors Group") || grpC1.property("Contents");
+                    var c1Transform = grpC1.property("ADBE Vector Transform Group") || grpC1.property("Transform");
+                    if (c1Transform) {
+                        var c1Pos = c1Transform.property("ADBE Vector Position") || c1Transform.property("Position");
+                        if (c1Pos) c1Pos.expression = RCS_CIRCLE1_POS_EXPR;
+                    }
+
+                    // Circle 1 Shape (Ellipse + Fill + Stroke)
+                    var grpC1Shape = c1Contents.addProperty("ADBE Vector Group");
+                    grpC1Shape.name = "Circle 1 Shape";
+                    var c1sContents = grpC1Shape.property("ADBE Vectors Group") || grpC1Shape.property("Contents");
+                    var el1 = c1sContents.addProperty("ADBE Vector Shape - Ellipse");
+                    if (el1) {
+                        var el1Size = el1.property("ADBE Vector Ellipse Size") || el1.property("Size");
+                        if (el1Size) el1Size.setValue([circleSize, circleSize]);
+                    }
+                    var f1 = c1sContents.addProperty("ADBE Vector Graphic - Fill");
+                    if (f1) {
+                        var f1Col = f1.property("ADBE Vector Fill Color") || f1.property("Color");
+                        if (f1Col) f1Col.expression = RCS_CIRCLE_FILL_COLOR_EXPR;
+                        var f1Op = f1.property("ADBE Vector Fill Opacity") || f1.property("Opacity");
+                        if (f1Op) f1Op.expression = RCS_CIRCLE_FILL_OPACITY_EXPR;
+                    }
+                    var s1 = c1sContents.addProperty("ADBE Vector Graphic - Stroke");
+                    if (s1) {
+                        var s1Col = s1.property("ADBE Vector Stroke Color") || s1.property("Color");
+                        if (s1Col) s1Col.expression = RCS_CIRCLE_STROKE_COLOR_EXPR;
+                        var s1W = s1.property("ADBE Vector Stroke Width") || s1.property("Stroke Width");
+                        if (s1W) s1W.setValue(1.5);
+                        var s1Op = s1.property("ADBE Vector Stroke Opacity") || s1.property("Opacity");
+                        if (s1Op) s1Op.expression = RCS_CIRCLE_STROKE_OPACITY_EXPR;
+                    }
+
+                    // Checkmark 1 (Path + Stroke)
+                    var grpChk1 = c1Contents.addProperty("ADBE Vector Group");
+                    grpChk1.name = "Checkmark 1";
+                    var chk1Contents = grpChk1.property("ADBE Vectors Group") || grpChk1.property("Contents");
+                    var p1 = chk1Contents.addProperty("ADBE Vector Shape - Group");
+                    if (p1 && typeof Shape !== "undefined") {
+                        try {
+                            var shp1 = new Shape();
+                            shp1.vertices = [
+                                [-2.7 * checkScale, -0.2 * checkScale],
+                                [-0.7 * checkScale, 2.0 * checkScale],
+                                [2.8 * checkScale, -2.4 * checkScale]
+                            ];
+                            shp1.inTangents = [[0, 0], [0, 0], [0, 0]];
+                            shp1.outTangents = [[0, 0], [0, 0], [0, 0]];
+                            shp1.closed = false;
+                            var p1Prop = p1.property("ADBE Vector Shape") || p1.property("Path") || p1.property(1);
+                            if (p1Prop) p1Prop.setValue(shp1);
+                        } catch(eShp1) {}
+                    }
+                    var sChk1 = chk1Contents.addProperty("ADBE Vector Graphic - Stroke");
+                    if (sChk1) {
+                        var sChk1Col = sChk1.property("ADBE Vector Stroke Color") || sChk1.property("Color");
+                        if (sChk1Col) sChk1Col.expression = RCS_CHECK_COLOR_EXPR;
+                        var sChk1W = sChk1.property("ADBE Vector Stroke Width") || sChk1.property("Stroke Width");
+                        if (sChk1W) sChk1W.setValue(1.5);
+                    }
+
+                    // Circle 2 Group
+                    var grpC2 = rcsContents.addProperty("ADBE Vector Group");
+                    grpC2.name = "Circle 2 Group";
+                    var c2Contents = grpC2.property("ADBE Vectors Group") || grpC2.property("Contents");
+                    var c2Transform = grpC2.property("ADBE Vector Transform Group") || grpC2.property("Transform");
+                    if (c2Transform) {
+                        var c2Pos = c2Transform.property("ADBE Vector Position") || c2Transform.property("Position");
+                        if (c2Pos) c2Pos.setValue([circleOffset, 0]);
+                        var c2Op = c2Transform.property("ADBE Vector Group Opacity") || c2Transform.property("Opacity");
+                        if (c2Op) c2Op.expression = RCS_CIRCLE2_OPACITY_EXPR;
+                    }
+
+                    // Circle 2 Shape (Ellipse + Fill + Stroke)
+                    var grpC2Shape = c2Contents.addProperty("ADBE Vector Group");
+                    grpC2Shape.name = "Circle 2 Shape";
+                    var c2sContents = grpC2Shape.property("ADBE Vectors Group") || grpC2Shape.property("Contents");
+                    var el2 = c2sContents.addProperty("ADBE Vector Shape - Ellipse");
+                    if (el2) {
+                        var el2Size = el2.property("ADBE Vector Ellipse Size") || el2.property("Size");
+                        if (el2Size) el2Size.setValue([circleSize, circleSize]);
+                    }
+                    var f2 = c2sContents.addProperty("ADBE Vector Graphic - Fill");
+                    if (f2) {
+                        var f2Col = f2.property("ADBE Vector Fill Color") || f2.property("Color");
+                        if (f2Col) f2Col.expression = RCS_CIRCLE_FILL_COLOR_EXPR;
+                        var f2Op = f2.property("ADBE Vector Fill Opacity") || f2.property("Opacity");
+                        if (f2Op) f2Op.expression = RCS_CIRCLE_FILL_OPACITY_EXPR;
+                    }
+                    var s2 = c2sContents.addProperty("ADBE Vector Graphic - Stroke");
+                    if (s2) {
+                        var s2Col = s2.property("ADBE Vector Stroke Color") || s2.property("Color");
+                        if (s2Col) s2Col.expression = RCS_CIRCLE_STROKE_COLOR_EXPR;
+                        var s2W = s2.property("ADBE Vector Stroke Width") || s2.property("Stroke Width");
+                        if (s2W) s2W.setValue(1.5);
+                        var s2Op = s2.property("ADBE Vector Stroke Opacity") || s2.property("Opacity");
+                        if (s2Op) s2Op.expression = RCS_CIRCLE_STROKE_OPACITY_EXPR;
+                    }
+
+                    // Checkmark 2 (Path + Stroke)
+                    var grpChk2 = c2Contents.addProperty("ADBE Vector Group");
+                    grpChk2.name = "Checkmark 2";
+                    var chk2Contents = grpChk2.property("ADBE Vectors Group") || grpChk2.property("Contents");
+                    var p2 = chk2Contents.addProperty("ADBE Vector Shape - Group");
+                    if (p2 && typeof Shape !== "undefined") {
+                        try {
+                            var shp2 = new Shape();
+                            shp2.vertices = [
+                                [-2.7 * checkScale, -0.2 * checkScale],
+                                [-0.7 * checkScale, 2.0 * checkScale],
+                                [2.8 * checkScale, -2.4 * checkScale]
+                            ];
+                            shp2.inTangents = [[0, 0], [0, 0], [0, 0]];
+                            shp2.outTangents = [[0, 0], [0, 0], [0, 0]];
+                            shp2.closed = false;
+                            var p2Prop = p2.property("ADBE Vector Shape") || p2.property("Path") || p2.property(1);
+                            if (p2Prop) p2Prop.setValue(shp2);
+                        } catch(eShp2) {}
+                    }
+                    var sChk2 = chk2Contents.addProperty("ADBE Vector Graphic - Stroke");
+                    if (sChk2) {
+                        var sChk2Col = sChk2.property("ADBE Vector Stroke Color") || sChk2.property("Color");
+                        if (sChk2Col) sChk2Col.expression = RCS_CHECK_COLOR_EXPR;
+                        var sChk2W = sChk2.property("ADBE Vector Stroke Width") || sChk2.property("Stroke Width");
+                        if (sChk2W) sChk2W.setValue(1.5);
+                    }
                 }
             }
 

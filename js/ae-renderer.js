@@ -407,12 +407,39 @@
                             const strokeAttr = (localStroke && localStroke.width > 0 && localStroke.opacity > 0)
                                 ? `stroke="${localStroke.color}" stroke-width="${localStroke.width}"`
                                 : 'stroke="none"';
-                            svgChildren += `<path d="${d}" ${fillAttr} ${strokeAttr} />`;
+                            svgChildren += `<path d="${d}" ${fillAttr} ${strokeAttr} stroke-linecap="round" stroke-linejoin="round" />`;
                         }
                     } else if (prop instanceof VectorGroup) {
-                        // Recursively process nested group
+                        // Recursively process nested group with local transform and opacity
                         const subContents = prop.property('Contents');
-                        if (subContents) traverseGroup(subContents, localFill, localStroke);
+                        if (subContents) {
+                            const prevSvgChildren = svgChildren;
+                            svgChildren = '';
+                            traverseGroup(subContents, localFill, localStroke);
+                            const grpInner = svgChildren;
+                            svgChildren = prevSvgChildren;
+
+                            if (grpInner) {
+                                const t = prop.transform;
+                                let transformAttr = '';
+                                let opAttr = '';
+                                if (t) {
+                                    const pos = (t.position && typeof t.position.getValueAtTime === 'function') ? (t.position.getValueAtTime(time) || [0, 0]) : [0, 0];
+                                    const scale = (t.scale && typeof t.scale.getValueAtTime === 'function') ? (t.scale.getValueAtTime(time) || [100, 100]) : [100, 100];
+                                    const rot = (t.rotation && typeof t.rotation.getValueAtTime === 'function') ? (t.rotation.getValueAtTime(time) || 0) : 0;
+                                    const rawOp = (t.opacity && typeof t.opacity.getValueAtTime === 'function') ? t.opacity.getValueAtTime(time) : 100;
+                                    const op = (rawOp !== undefined && rawOp !== null && !isNaN(rawOp)) ? Math.max(0, Math.min(1, rawOp / 100)) : 1;
+
+                                    const transforms = [];
+                                    if (pos[0] !== 0 || pos[1] !== 0) transforms.push(`translate(${pos[0]}, ${pos[1]})`);
+                                    if (rot !== 0) transforms.push(`rotate(${rot})`);
+                                    if (scale[0] !== 100 || scale[1] !== 100) transforms.push(`scale(${scale[0] / 100}, ${scale[1] / 100})`);
+                                    if (transforms.length > 0) transformAttr = ` transform="${transforms.join(' ')}"`;
+                                    if (op < 0.999) opAttr = ` opacity="${op}"`;
+                                }
+                                svgChildren += `<g${transformAttr}${opAttr}>${grpInner}</g>`;
+                            }
+                        }
                     } else if (prop instanceof PropertyGroup) {
                         traverseGroup(prop, localFill, localStroke);
                     }
