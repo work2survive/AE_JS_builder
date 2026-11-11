@@ -1074,8 +1074,7 @@
         "        return createPath(points, inTangents, outTangents, true);",
         "    }",
         "})();"
-    ].join("
-");
+    ].join("\n");
 
     // -------------------------------------------------------------------------
     // Entrance Animations: Bubble Grow (5 frames) + Typewriter Reveal (5 frames)
