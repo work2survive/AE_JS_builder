@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Boolean Modes Test</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body style="background:#1e1e1e; color:#eee; font-family:sans-serif; padding:20px;">
+    <h2>Testing Boolean Property Evaluation Modes</h2>
+    <div id="results"></div>
+
+    <div id="timeline-test" style="margin-top:20px; background:#252526; padding:15px; border-radius:4px; max-width:600px;">
+        <h3>Timeline Rows Simulation</h3>
+        <div id="timeline-container"></div>
+    </div>
+
+    <script src="js/ae-core.js"></script>
+    <script src="js/app.js"></script>
+    <script>
+    const log = (msg, pass) => {
+        const div = document.createElement('div');
+        div.style.color = pass ? '#4ade80' : '#f87171';
+        div.textContent = (pass ? '✔ PASS: ' : '❌ FAIL: ') + msg;
+        document.getElementById('results').appendChild(div);
+    };
+
+    try {
+        // 1. Property unit tests
+        const prop = new Property('Prevent Overlap', 'ADBE Checkbox Control-0001', 1, 'boolean');
+        log('Initial animMode is default: ' + (prop.animMode === 'default'), prop.animMode === 'default');
+
+        // Test default mode
+        log('Default mode at time 0 returns 1: ' + (prop.getValueAtTime(0) === 1), prop.getValueAtTime(0) === 1);
+        prop.setValue(0);
+        log('Default mode after setValue(0) returns 0: ' + (prop.getValueAtTime(0) === 0), prop.getValueAtTime(0) === 0);
+
+        // Test true mode
+        prop.animMode = 'true';
+        log('True mode returns 1 (even if baseValue is 0): ' + (prop.getValueAtTime(0) === 1), prop.getValueAtTime(0) === 1);
+
+        // Test false mode
+        prop.animMode = 'false';
+        prop.setValue(1);
+        log('False mode returns 0 (even if baseValue is 1): ' + (prop.getValueAtTime(0) === 0), prop.getValueAtTime(0) === 0);
+
+        // Test blink mode (1 per second: 0.5s on, 0.5s off)
+        prop.animMode = 'blink';
+        const t0_2 = prop.getValueAtTime(0.2); // on -> 1
+        const t0_7 = prop.getValueAtTime(0.7); // off -> 0
+        const t1_2 = prop.getValueAtTime(1.2); // on -> 1
+        const t1_7 = prop.getValueAtTime(1.7); // off -> 0
+        const blinkPass = (t0_2 === 1 && t0_7 === 0 && t1_2 === 1 && t1_7 === 0);
+        log(`Blink mode 1/s (t=0.2s:${t0_2}, t=0.7s:${t0_7}, t=1.2s:${t1_2}, t=1.7s:${t1_7}): ` + blinkPass, blinkPass);
+
+        // 2. Render evaluation mode switches for each mode
+        const container = document.getElementById('timeline-container');
+        ['default', 'true', 'false', 'blink'].forEach(m => {
+            const p = new Property('Checkbox_' + m, 'ADBE Checkbox Control-0001', 1, 'boolean');
+            p.animMode = m;
+            const row = document.createElement('div');
+            row.className = 'ae-prop-row';
+            row.style.display = 'flex';
+            row.style.alignItems = 'center';
+            row.style.margin = '8px 0';
+            row.style.padding = '6px';
+            row.style.background = '#2d2d30';
+            row.innerHTML = `
+                ${renderEvalModeSwitch(p)}
+                <span class="ae-badge-type animatable">[ANIM]</span>
+                <span class="ae-badge-ui-locked">UI</span>
+                <span style="margin: 0 10px; font-weight:bold;">Status: ${m.toUpperCase()}</span>
+                <label style="display:inline-flex; align-items:center; gap:4px;">
+                    <input type="checkbox" ${p.value ? 'checked' : ''} class="ae-effect-checkbox" disabled />
+                    <span class="ae-boolean-val-label" style="font-family:monospace; color:${p.value ? 'var(--ae-blue)' : '#888'}; font-size:11px;">
+                        ${p.value ? '1 (true)' : '0 (false)'}
+                    </span>
+                </label>
+            `;
+            container.appendChild(row);
+        });
+
+        window.__TEST_DONE__ = true;
+    } catch (e) {
+        log('Exception: ' + e.message, false);
+        window.__TEST_DONE__ = true;
+    }
+    </script>
+</body>
+</html>

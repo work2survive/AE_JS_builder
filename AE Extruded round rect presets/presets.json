@@ -1,49 +1,112 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "description": "After Effects Extruded Round Rectangle - Dimension Presets (width, height, depth in px).",
-  "version": "1.0",
+  "description": "After Effects Extruded Round Rectangle - Style & Dimension Presets (dimensions, radii, fill, colors, opacity, stroke line).",
+  "version": "1.1",
   "presets": [
-    {
-      "name": "Card",
-      "width": 500,
-      "height": 300,
-      "depth": 120
-    },
-    {
-      "name": "Cube",
-      "width": 350,
-      "height": 350,
-      "depth": 350
-    },
-    {
-      "name": "Pill",
-      "width": 600,
-      "height": 200,
-      "depth": 80
-    },
-    {
-      "name": "Tile",
-      "width": 400,
-      "height": 400,
-      "depth": 30
-    },
     {
       "name": "Phone / Mobile",
       "width": 360,
       "height": 760,
-      "depth": 30
+      "depth": 30,
+      "radius": 44,
+      "frontColor": "#111111",
+      "backColor": "#1a1a1a",
+      "capsOpacity": 100,
+      "sidesColor": "#0a0a0a",
+      "sidesOpacity": 100,
+      "strokeColor": "#000000",
+      "strokeWidth": 0,
+      "strokeOpacity": 0
+    },
+    {
+      "name": "Card",
+      "width": 500,
+      "height": 300,
+      "depth": 15,
+      "radius": 24,
+      "frontColor": "#FFF8DC",
+      "backColor": "#FEF3BD",
+      "capsOpacity": 100,
+      "sidesColor": "#EBD997",
+      "sidesOpacity": 100,
+      "strokeColor": "#FFFFFF",
+      "strokeWidth": 0,
+      "strokeOpacity": 0
     },
     {
       "name": "Tablet",
       "width": 720,
       "height": 960,
-      "depth": 25
+      "depth": 25,
+      "radius": 32,
+      "frontColor": "#CFD4D9",
+      "backColor": "#C2C7CD",
+      "capsOpacity": 100,
+      "sidesColor": "#9AA1A8",
+      "sidesOpacity": 100,
+      "strokeColor": "#222428",
+      "strokeWidth": 3,
+      "strokeOpacity": 100
+    },
+    {
+      "name": "Cube",
+      "width": 350,
+      "height": 350,
+      "depth": 350,
+      "radius": 40,
+      "frontColor": "#2288EE",
+      "backColor": "#EE8822",
+      "capsOpacity": 100,
+      "sidesColor": "#1166CC",
+      "sidesOpacity": 90,
+      "strokeColor": "#FFFFFF",
+      "strokeWidth": 2,
+      "strokeOpacity": 100
+    },
+    {
+      "name": "Pill",
+      "width": 600,
+      "height": 200,
+      "depth": 80,
+      "radius": 100,
+      "frontColor": "#00C2CB",
+      "backColor": "#FF6584",
+      "capsOpacity": 100,
+      "sidesColor": "#009FA7",
+      "sidesOpacity": 100,
+      "strokeColor": "#FFFFFF",
+      "strokeWidth": 2,
+      "strokeOpacity": 90
+    },
+    {
+      "name": "Tile",
+      "width": 400,
+      "height": 400,
+      "depth": 30,
+      "radius": 20,
+      "frontColor": "#333D4B",
+      "backColor": "#232B35",
+      "capsOpacity": 100,
+      "sidesColor": "#1D242C",
+      "sidesOpacity": 100,
+      "strokeColor": "#4E5969",
+      "strokeWidth": 1.5,
+      "strokeOpacity": 100
     },
     {
       "name": "Wide Banner",
       "width": 900,
       "height": 180,
-      "depth": 50
+      "depth": 50,
+      "radius": 16,
+      "frontColor": "#6C5CE7",
+      "backColor": "#A29BFE",
+      "capsOpacity": 100,
+      "sidesColor": "#5844D1",
+      "sidesOpacity": 95,
+      "strokeColor": "#FFFFFF",
+      "strokeWidth": 2,
+      "strokeOpacity": 90
     }
   ]
 }

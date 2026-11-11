@@ -1514,6 +1514,30 @@ body.is-resizing-h .ae-resizer-h {
     border-color: #94a3b8;
     box-shadow: 0 0 4px rgba(148, 163, 184, 0.35);
 }
+.ae-prop-eval-btn[data-mode="default"]:hover {
+    border-color: #8b949e;
+    box-shadow: 0 0 4px rgba(139, 148, 158, 0.35);
+}
+.ae-prop-eval-btn[data-mode="true"]:hover {
+    border-color: #00e676;
+    box-shadow: 0 0 4px rgba(0, 230, 118, 0.35);
+}
+.ae-prop-eval-btn[data-mode="false"]:hover {
+    border-color: #ff5252;
+    box-shadow: 0 0 4px rgba(255, 82, 82, 0.35);
+}
+.ae-prop-eval-btn[data-mode="blink"]:hover {
+    border-color: #ffd166;
+    box-shadow: 0 0 4px rgba(255, 209, 102, 0.35);
+}
+
+@keyframes ae-blink-knob {
+    0%, 49.9% { opacity: 1; transform: scale(1); }
+    50%, 100% { opacity: 0.15; transform: scale(0.65); }
+}
+.ae-prop-eval-btn[data-mode="blink"] .ae-eval-knob {
+    animation: ae-blink-knob 1s infinite steps(1, start);
+}
 
 /* Legacy 4-Way Switch fallback support */
 .ae-prop-4way-switch {

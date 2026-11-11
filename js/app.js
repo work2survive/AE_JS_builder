@@ -88,16 +88,18 @@
         return { r, g, b, hex, rgbStr };
     }
 
-    // Smooth real-time update of dynamic timeline rows (Circle RGB & Wiggle)
+    // Smooth real-time update of dynamic timeline rows (Circle RGB, Wiggle, Blink)
     window.updateDynamicTimelineProperties = function(time) {
-        const dynamicBtns = document.querySelectorAll('.ae-prop-eval-btn[data-mode="circle"], .ae-prop-eval-btn[data-mode="wiggle"]');
+        const dynamicBtns = document.querySelectorAll('.ae-prop-eval-btn[data-mode="circle"], .ae-prop-eval-btn[data-mode="wiggle"], .ae-prop-eval-btn[data-mode="blink"]');
         if (!dynamicBtns || dynamicBtns.length === 0) return;
         dynamicBtns.forEach(btn => {
             const propId = btn.dataset.propId;
             const prop = (typeof Property !== 'undefined' && Property.getById) ? Property.getById(propId) : null;
-            if (prop && (prop.type === 'color' || isColorProperty(prop))) {
-                const row = btn.closest('.ae-prop-row');
-                if (!row) return;
+            if (!prop) return;
+            const row = btn.closest('.ae-prop-row');
+            if (!row) return;
+
+            if (prop.type === 'color' || isColorProperty(prop)) {
                 const swatch = row.querySelector('.ae-color-swatch-box');
                 const rgbLabel = row.querySelector('.ae-color-rgb-val');
                 const val = prop.getValueAtTime(time);
@@ -106,6 +108,15 @@
                 if (rgbLabel) {
                     rgbLabel.textContent = info.rgbStr;
                     rgbLabel.title = `RGB Code: ${info.rgbStr}`;
+                }
+            } else if (prop.type === 'boolean' || isBooleanProperty(prop)) {
+                const chk = row.querySelector('.ae-effect-checkbox');
+                const labelSpan = row.querySelector('.ae-boolean-val-label') || row.querySelector('.ae-prop-val-container label span');
+                const val = Boolean(prop.getValueAtTime(time));
+                if (chk) chk.checked = val;
+                if (labelSpan) {
+                    labelSpan.textContent = val ? '1 (true)' : '0 (false)';
+                    labelSpan.style.color = val ? 'var(--ae-blue)' : '#888';
                 }
             }
         });
@@ -130,6 +141,22 @@
         { mode: 'transparent', letter: 'T', label: 'Transparent', desc: '100% transparent (hidden)', color: '#334155', textColor: '#cbd5e1' }
     ];
 
+    const EVAL_MODES_BOOLEAN = [
+        { mode: 'default', letter: 'D', label: 'Default', desc: 'Default / base value or expression', color: '#8b949e', textColor: '#ffffff' },
+        { mode: 'true', letter: 'T', label: 'True', desc: 'Forced True (1)', color: '#00e676', textColor: '#0a3d1b' },
+        { mode: 'false', letter: 'F', label: 'False', desc: 'Forced False (0)', color: '#ff5252', textColor: '#ffffff' },
+        { mode: 'blink', letter: 'B', label: 'Blink', desc: 'Blink (1 per second)', color: '#ffd166', textColor: '#3d2c00' }
+    ];
+
+    function isBooleanProperty(prop) {
+        if (!prop) return false;
+        if (prop.type === 'boolean') return true;
+        const name = (prop.name || '').toLowerCase();
+        const matchName = (prop.matchName || '').toLowerCase();
+        if (name === 'checkbox' || matchName.includes('checkbox')) return true;
+        return false;
+    }
+
     function isColorProperty(prop) {
         if (!prop) return false;
         if (prop.type === 'color') return true;
@@ -139,16 +166,23 @@
     }
 
     function getEvalModesForProp(prop) {
+        if (isBooleanProperty(prop)) return EVAL_MODES_BOOLEAN;
         return isColorProperty(prop) ? EVAL_MODES_COLOR : EVAL_MODES_STANDARD;
     }
 
     function renderEvalModeSwitch(prop) {
         if (!prop || !prop._id) return '';
-        const isColor = isColorProperty(prop);
-        const modesList = isColor ? EVAL_MODES_COLOR : EVAL_MODES_STANDARD;
-        const defaultMode = isColor ? 'orig' : (prop.expression ? 'wiggle' : 'base');
+        const isBool = isBooleanProperty(prop);
+        const isColor = !isBool && isColorProperty(prop);
+        const modesList = isBool ? EVAL_MODES_BOOLEAN : (isColor ? EVAL_MODES_COLOR : EVAL_MODES_STANDARD);
+        const defaultMode = isBool ? 'default' : (isColor ? 'orig' : (prop.expression ? 'wiggle' : 'base'));
         let mode = prop.animMode || defaultMode;
-        if (isColor && (mode === 'base' || !prop.animMode)) {
+        if (isBool) {
+            if (!prop.animMode || prop.animMode === 'base' || !modesList.some(m => m.mode === mode)) {
+                mode = 'default';
+                prop.animMode = 'default';
+            }
+        } else if (isColor && (mode === 'base' || !prop.animMode)) {
             mode = 'orig';
             prop.animMode = 'orig';
         } else if (!isColor && prop.expression && prop.expressionEnabled && (!prop.animMode || mode === 'base')) {
@@ -166,7 +200,7 @@
         const bgStyle = cfg.isGradient ? `background: ${cfg.color};` : `background-color: ${cfg.color};`;
 
         return `
-            <button class="ae-prop-eval-btn ${isColor ? 'ae-eval-btn-color' : ''}" data-action="cycle-prop-mode" data-is-color="${isColor ? '1' : '0'}" data-mode="${mode}" data-prop-id="${prop._id}" title="${title}">
+            <button class="ae-prop-eval-btn ${isColor ? 'ae-eval-btn-color' : ''} ${isBool ? 'ae-eval-btn-bool' : ''}" data-action="cycle-prop-mode" data-is-color="${isColor ? '1' : '0'}" data-is-bool="${isBool ? '1' : '0'}" data-mode="${mode}" data-prop-id="${prop._id}" title="${title}">
                 <span class="ae-eval-color-box ${mode === 'transparent' ? 'is-transparent' : ''} ${mode === 'half' ? 'is-half' : ''}" style="${bgStyle} color: ${cfg.textColor};">
                     <span class="ae-eval-letter">${cfg.letter}</span>
                     <span class="ae-eval-knob"></span>
@@ -175,6 +209,8 @@
         `;
     }
     const render4WaySwitch = renderEvalModeSwitch;
+    window.renderEvalModeSwitch = renderEvalModeSwitch;
+    window.EVAL_MODES_BOOLEAN = EVAL_MODES_BOOLEAN;
 
     // Per-Property Toggle Expression Switch (= / ≠)
     function renderPropExprToggle(prop) {
@@ -357,8 +393,9 @@
                     const propId = btn.dataset.propId;
                     const prop = (typeof Property !== 'undefined' && Property.getById) ? Property.getById(propId) : null;
                     if (prop) {
-                        const isColor = isColorProperty(prop);
-                        const modesList = isColor ? EVAL_MODES_COLOR : EVAL_MODES_STANDARD;
+                        const isBool = isBooleanProperty(prop);
+                        const isColor = !isBool && isColorProperty(prop);
+                        const modesList = isBool ? EVAL_MODES_BOOLEAN : (isColor ? EVAL_MODES_COLOR : EVAL_MODES_STANDARD);
                         const modeKeys = modesList.map(m => m.mode);
                         const curIdx = modeKeys.indexOf(currentMode);
                         const step = reverse ? -1 : 1;
@@ -582,7 +619,7 @@
                             <div class="ae-prop-val-container">
                                 <label style="display:inline-flex; align-items:center; gap:4px; cursor:pointer;">
                                     <input type="checkbox" ${isChecked ? 'checked' : ''} data-effect-name="${safeEffectName}" data-prop-name="${safePropName}" class="ae-effect-checkbox" />
-                                    <span style="font-family:monospace; color:${isChecked ? 'var(--ae-blue)' : '#888'}; font-size:11px;">${isChecked ? '1 (true)' : '0 (false)'}</span>
+                                    <span class="ae-boolean-val-label" style="font-family:monospace; color:${isChecked ? 'var(--ae-blue)' : '#888'}; font-size:11px;">${isChecked ? '1 (true)' : '0 (false)'}</span>
                                 </label>
                                 ${renderPropExprBadge(prop)}
                             </div>
@@ -1074,7 +1111,11 @@
                 prop.expressionEnabled = !prop.expressionEnabled;
                 if (prop.expressionEnabled) {
                     if (!prop.animMode || prop.animMode === 'base') {
-                        prop.animMode = (prop.type === 'color' || isColorProperty(prop)) ? 'orig' : 'wiggle';
+                        if (prop.type === 'boolean' || isBooleanProperty(prop)) {
+                            prop.animMode = 'default';
+                        } else {
+                            prop.animMode = (prop.type === 'color' || isColorProperty(prop)) ? 'orig' : 'wiggle';
+                        }
                     }
                 }
                 prop.clearCache();
@@ -1113,6 +1154,7 @@
                 const prop = layer?.effects?.property(effName)?.property(propName);
                 if (prop) {
                     prop.setValue(chk.checked ? 1 : 0);
+                    prop.animMode = 'default';
                     syncCubeFromControls(layer);
                     syncCylinderFromControls(layer);
                     renderTimeline();

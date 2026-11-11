@@ -20,7 +20,7 @@
 //      - 3-axis positional turbulence & independent 3-axis rotational tumbling wiggle.
 //   3. Rich Preset System:
 //      - 🍃 Leaves: Procedural Bézier teardrop leaves with multi-hue autumn tones & organic tumbling.
-//      - ☁️ Clouds: Multi-puff soft cloud vector clusters with gentle horizontal drift.
+//      - ☁️ Clouds: Wide-volume billowing clouds drifting on diagonal 3D wind gently in front of the camera.
 //      - ⭐ Stars: 5-pointed twinkling stars with cosmic shimmering float.
 //      - ⛰️ Mountains: Low-poly geometric mountain silhouettes with majestic parallax glide.
 //      - ⚪ 3D Circles: Snow, dust, spores, or bubbles.
@@ -206,25 +206,62 @@
             pathProp.setValue(leafShape);
             finalColor = autumnLeafPalette[(pIndex - 1) % autumnLeafPalette.length];
 
-        } else if (sourceIndex === 1) { // ☁️ Clouds (Soft 6-Node Bubble Puff)
+        } else if (sourceIndex === 1) { // ☁️ Clouds (Soft Multi-Puff Cumulus & Wispy Clouds)
             var pathGroupCloud = contents.addProperty("ADBE Vector Shape - Group");
             var pathPropCloud = pathGroupCloud.property("ADBE Vector Shape");
             var cloudShape = new Shape();
-            var cw = shapeSize, ch = shapeSize * 0.6;
-            cloudShape.vertices = [
-                [-cw * 0.4, ch * 0.25],
-                [cw * 0.4, ch * 0.25],
-                [cw * 0.45, 0],
-                [cw * 0.18, -ch * 0.38],
-                [-cw * 0.18, -ch * 0.42],
-                [-cw * 0.45, 0]
-            ];
-            var cc = shapeSize * 0.16;
-            cloudShape.inTangents = [[0, 0], [cc, 0], [0, cc], [cc, 0], [-cc, 0], [0, -cc]];
-            cloudShape.outTangents = [[-cc, 0], [0, -cc], [-cc, 0], [cc, 0], [0, cc], [0, 0]];
+            var cw = shapeSize * 1.3, ch = shapeSize * 0.65;
+            var cVariant = (pIndex - 1) % 3;
+
+            if (cVariant === 0) { // Classic Billowing Cumulus
+                cloudShape.vertices = [
+                    [-cw * 0.42, ch * 0.22],
+                    [cw * 0.42, ch * 0.22],
+                    [cw * 0.46, -ch * 0.05],
+                    [cw * 0.2, -ch * 0.38],
+                    [-cw * 0.16, -ch * 0.44],
+                    [-cw * 0.46, -ch * 0.05]
+                ];
+                var cc0 = shapeSize * 0.18;
+                cloudShape.inTangents = [[0, 0], [cc0, 0], [0, cc0], [cc0, 0], [-cc0, 0], [0, -cc0]];
+                cloudShape.outTangents = [[-cc0, 0], [0, -cc0], [-cc0, 0], [cc0, 0], [0, cc0], [0, 0]];
+            } else if (cVariant === 1) { // Elongated Wispy Cloud
+                var cw1 = cw * 1.2, ch1 = ch * 0.8;
+                cloudShape.vertices = [
+                    [-cw1 * 0.45, ch1 * 0.18],
+                    [cw1 * 0.45, ch1 * 0.18],
+                    [cw1 * 0.48, -ch1 * 0.06],
+                    [cw1 * 0.22, -ch1 * 0.32],
+                    [-cw1 * 0.14, -ch1 * 0.36],
+                    [-cw1 * 0.48, -ch1 * 0.06]
+                ];
+                var cc1 = shapeSize * 0.2;
+                cloudShape.inTangents = [[0, 0], [cc1, 0], [0, cc1], [cc1, 0], [-cc1, 0], [0, -cc1]];
+                cloudShape.outTangents = [[-cc1, 0], [0, -cc1], [-cc1, 0], [cc1, 0], [0, cc1], [0, 0]];
+            } else { // High-Puff Layered Cloud
+                var cw2 = cw * 1.1, ch2 = ch * 1.05;
+                cloudShape.vertices = [
+                    [-cw2 * 0.4, ch2 * 0.24],
+                    [cw2 * 0.4, ch2 * 0.24],
+                    [cw2 * 0.44, 0],
+                    [cw2 * 0.25, -ch2 * 0.42],
+                    [-cw2 * 0.08, -ch2 * 0.48],
+                    [-cw2 * 0.44, 0]
+                ];
+                var cc2 = shapeSize * 0.17;
+                cloudShape.inTangents = [[0, 0], [cc2, 0], [0, cc2], [cc2, 0], [-cc2, 0], [0, -cc2]];
+                cloudShape.outTangents = [[-cc2, 0], [0, -cc2], [-cc2, 0], [cc2, 0], [0, cc2], [0, 0]];
+            }
             cloudShape.closed = true;
             pathPropCloud.setValue(cloudShape);
-            finalColor = [0.94, 0.96, 0.98, 1]; // Puffy white cloud
+
+            // Subtle airy cloud tint palette (ethereal soft whites and sky mists)
+            var cloudPalette = [
+                [0.96, 0.98, 1.0, 1],   // Pure airy white
+                [0.92, 0.95, 0.98, 1],  // Soft sky-tinted white
+                [0.88, 0.92, 0.96, 1]   // Atmospheric depth mist
+            ];
+            finalColor = cloudPalette[cVariant];
 
         } else if (sourceIndex === 2) { // ⭐ Stars (5-Point Vector Star)
             var pathGroupStar = contents.addProperty("ADBE Vector Shape - Group");
@@ -278,6 +315,11 @@
         // Add Vector Fill Graphic
         var fill = contents.addProperty("ADBE Vector Graphic - Fill");
         fill.property("ADBE Vector Fill Color").setValue(finalColor);
+        if (sourceIndex === 1) { // ☁️ Clouds: gentle, soft airy translucency
+            try {
+                fill.property("ADBE Vector Fill Opacity").setValue(78);
+            } catch (e) {}
+        }
     }
 
     // ==========================================
@@ -698,18 +740,26 @@
                 editRotYAmp.text = "60"; editRotYFreq.text = "1.2";
                 editRotZAmp.text = "75"; editRotZFreq.text = "1.5";
 
-            } else if (pIdx === 1) { // ☁️ Clouds
+            } else if (pIdx === 1) { // ☁️ Clouds (Wider volume, diagonal wind passing gently in front of camera)
                 dropSource.selection = 1;
-                editSizeX.text = "1800"; editSizeY.text = "600"; editSizeZ.text = "1200";
-                editSpeed.text = "80"; editDirX.text = "1.0"; editDirY.text = "0.05"; editDirZ.text = "0.0";
-                chkAlignWind.value = false;
-                editCount.text = "18";
-                editPartSize.text = "85";
+                editSizeX.text = "3600"; // Much wider volume spanning far past viewport edges
+                editSizeY.text = "850";  // Vertical sky span
+                editSizeZ.text = "2800"; // Deep volume passing in front of and around the camera
+                editSpeed.text = "65";   // Gentle, serene drift speed
+                editDirX.text = "0.85";  // Diagonal X: drift left-to-right
+                editDirY.text = "-0.12"; // Gentle upward atmospheric lift
+                editDirZ.text = "-0.65"; // Diagonal Z: drift towards camera to pass directly in front of the lens
+                chkAlignWind.value = false; // Stand facing camera as soft billboard clouds
+                editCount.text = "22";
+                editPartSize.text = "240"; // Large billowy cloud silhouettes
                 cpPartColor.setColor("#f0f4f8", false);
-                editPosFreq.text = "0.4"; editPosAmpX.text = "30"; editPosAmpY.text = "20"; editPosAmpZ.text = "20";
-                editRotXAmp.text = "5"; editRotXFreq.text = "0.2";
-                editRotYAmp.text = "5"; editRotYFreq.text = "0.2";
-                editRotZAmp.text = "8"; editRotZFreq.text = "0.3";
+                editPosFreq.text = "0.2";
+                editPosAmpX.text = "35";
+                editPosAmpY.text = "20";
+                editPosAmpZ.text = "30";
+                editRotXAmp.text = "2"; editRotXFreq.text = "0.1";
+                editRotYAmp.text = "3"; editRotYFreq.text = "0.1";
+                editRotZAmp.text = "4"; editRotZFreq.text = "0.15";
 
             } else if (pIdx === 2) { // ⭐ Stars
                 dropSource.selection = 2;
@@ -1093,7 +1143,8 @@
                     'var pType = 0;',
                     'try { pType = ctrl.effect("WindBox - Particle Type")(1).value; } catch(e) {}',
                     'var isMnt = (pType === 3);',
-                    'var initY = isMnt ? (sY * 0.35 + (random() - 0.5) * (sY * 0.1)) : ((random() - 0.5) * sY);',
+                    'var isCloud = (pType === 1);',
+                    'var initY = isMnt ? (sY * 0.35 + (random() - 0.5) * (sY * 0.1)) : (isCloud ? (-sY * 0.12 + (random() - 0.5) * (sY * 0.75)) : ((random() - 0.5) * sY));',
                     'var initPos = [',
                     '    (random() - 0.5) * sX,',
                     '    initY,',

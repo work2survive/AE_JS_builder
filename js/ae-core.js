@@ -219,7 +219,7 @@
             this._baseValue = this._clone(defaultValue);
             this._expression = '';
             this.expressionEnabled = true;
-            this.animMode = (type === 'color') ? 'orig' : 'base';
+            this.animMode = (type === 'color') ? 'orig' : (type === 'boolean' ? 'default' : 'base');
             this._frozenTime = null;
             this._frozenValue = null;
             this._cachedTime = null;
@@ -237,6 +237,10 @@
                 if (this.type === 'color') {
                     if (!this.animMode || this.animMode === 'base') {
                         this.animMode = 'orig';
+                    }
+                } else if (this.type === 'boolean') {
+                    if (!this.animMode || this.animMode === 'base') {
+                        this.animMode = 'default';
                     }
                 } else if (!this.animMode || this.animMode === 'base') {
                     this.animMode = 'wiggle';
@@ -353,9 +357,10 @@
             }
 
             const isColor = (this.type === 'color');
-            const defaultMode = isColor ? 'orig' : 'base';
+            const isBool = (this.type === 'boolean');
+            const defaultMode = isColor ? 'orig' : (isBool ? 'default' : 'base');
             let mode = this.animMode;
-            if (!mode || (isColor && mode === 'base')) {
+            if (!mode || (isColor && mode === 'base') || (isBool && mode === 'base')) {
                 mode = defaultMode;
             }
 
@@ -365,6 +370,27 @@
                     return this._clone(this._frozenValue);
                 }
                 time = (this._frozenTime !== null) ? this._frozenTime : 0;
+            }
+
+            // 2. Boolean Property special modes (Default | True | False | Blink)
+            if (isBool) {
+                if (mode === 'true') {
+                    return 1;
+                }
+                if (mode === 'false') {
+                    return 0;
+                }
+                if (mode === 'blink') {
+                    // Blink at 1 Hz (1 blink per second: 0.5s ON, 0.5s OFF)
+                    const cycle = ((Math.floor(time * 2) % 2) + 2) % 2;
+                    return (cycle === 0) ? 1 : 0;
+                }
+                // 'default' mode: evaluate expression if present and enabled; otherwise return base value
+                if (this._expression && this.expressionEnabled) {
+                    const evaluated = this.evaluateExpression(time);
+                    return Boolean(evaluated) ? 1 : 0;
+                }
+                return this._clone(this._baseValue);
             }
 
             // 2. Color Property special modes (Orig | Rand | Circle | Wiggle | Half | Transparent)
