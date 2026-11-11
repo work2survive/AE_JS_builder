@@ -203,7 +203,10 @@
         }
 
         get value() {
-            return this.getValueAtTime(this.getRootComp()?.time || 0);
+            const t = (Property._currentEvaluationTime !== null && Property._currentEvaluationTime !== undefined)
+                ? Property._currentEvaluationTime
+                : (this.getRootComp()?.time || 0);
+            return this.getValueAtTime(t);
         }
 
         valueOf() {
@@ -233,9 +236,14 @@
         _makeCircleColor(time) {
             const is255 = this._isColor255();
             const scale = is255 ? 255 : 1.0;
-            // Complete circle cycle every 3 seconds
-            const hue = ((time * 0.333) % 1.0 + 1.0) % 1.0;
-            const rgb = Property.hsvToRgb(hue, 0.9, 0.95);
+            if (time === undefined || time === null) {
+                time = (Property._currentEvaluationTime !== null && Property._currentEvaluationTime !== undefined)
+                    ? Property._currentEvaluationTime
+                    : (this.getRootComp()?.time || 0);
+            }
+            // Circle around the whole RGB spectrum once every 5 seconds (full saturation & brightness)
+            const hue = ((time / 5.0) % 1.0 + 1.0) % 1.0;
+            const rgb = Property.hsvToRgb(hue, 1.0, 1.0);
             return [rgb[0] * scale, rgb[1] * scale, rgb[2] * scale, scale];
         }
 
@@ -283,6 +291,12 @@
         }
 
         getValueAtTime(time) {
+            if (time === undefined || time === null) {
+                time = (Property._currentEvaluationTime !== null && Property._currentEvaluationTime !== undefined)
+                    ? Property._currentEvaluationTime
+                    : (this.getRootComp()?.time || 0);
+            }
+
             const isColor = (this.type === 'color');
             const defaultMode = isColor ? 'orig' : 'base';
             let mode = this.animMode;
@@ -418,6 +432,8 @@
             }
 
             // General JS expression sandbox with full AE standard API
+            const prevEvalTime = Property._currentEvaluationTime;
+            Property._currentEvaluationTime = evalTime;
             try {
                 const value = base;
                 const degreesToRadians = (deg) => (deg * Math.PI) / 180;
@@ -491,6 +507,8 @@
             } catch (err) {
                 console.warn('[AE Expression Error]', err);
                 return base;
+            } finally {
+                Property._currentEvaluationTime = prevEvalTime;
             }
         }
 
@@ -1303,7 +1321,15 @@
 
     // Export to global scope
     Property.getById = function(id) {
-        return propertyRegistry.get(id) || null;
+        if (id === null || id === undefined) return null;
+        if (propertyRegistry.has(id)) return propertyRegistry.get(id);
+        const strId = String(id);
+        if (propertyRegistry.has(strId)) return propertyRegistry.get(strId);
+        if (!strId.startsWith('prop_')) {
+            const prefixed = 'prop_' + strId;
+            if (propertyRegistry.has(prefixed)) return propertyRegistry.get(prefixed);
+        }
+        return null;
     };
     global.getPropertyById = Property.getById;
     global.prepareExpressionBody = prepareExpressionBody;

@@ -309,6 +309,9 @@
                 this.lastFrameTime = now;
 
                 this.renderLayers(this.comp.time);
+                if (typeof window !== 'undefined' && typeof window.updateDynamicTimelineProperties === 'function') {
+                    window.updateDynamicTimelineProperties(this.comp.time);
+                }
                 requestAnimationFrame(loop);
             };
             this.updateCameraTransform();
@@ -496,6 +499,7 @@
 
                 // Precomposition or Shape Layer SVG Render
                 if (layer.source && layer.source.layers) {
+                    layer.source.time = time;
                     let subHtml = '';
                     for (let s = 0; s < layer.source.layers.length; s++) {
                         const subLayer = layer.source.layers[s];

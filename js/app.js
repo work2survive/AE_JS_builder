@@ -87,6 +87,29 @@
         return { r, g, b, hex, rgbStr };
     }
 
+    // Smooth real-time update of dynamic timeline rows (Circle RGB & Wiggle)
+    window.updateDynamicTimelineProperties = function(time) {
+        const dynamicBtns = document.querySelectorAll('.ae-prop-eval-btn[data-mode="circle"], .ae-prop-eval-btn[data-mode="wiggle"]');
+        if (!dynamicBtns || dynamicBtns.length === 0) return;
+        dynamicBtns.forEach(btn => {
+            const propId = btn.dataset.propId;
+            const prop = (typeof Property !== 'undefined' && Property.getById) ? Property.getById(propId) : null;
+            if (prop && (prop.type === 'color' || isColorProperty(prop))) {
+                const row = btn.closest('.ae-prop-row');
+                if (!row) return;
+                const swatch = row.querySelector('.ae-color-swatch-box');
+                const rgbLabel = row.querySelector('.ae-color-rgb-val');
+                const val = prop.getValueAtTime(time);
+                const info = formatRgbInfo(val);
+                if (swatch) swatch.style.backgroundColor = info.hex;
+                if (rgbLabel) {
+                    rgbLabel.textContent = info.rgbStr;
+                    rgbLabel.title = `RGB Code: ${info.rgbStr}`;
+                }
+            }
+        });
+    };
+
     // -------------------------------------------------------------
     // Timeline Inspector UI Generation (Matches AE Look Exactly)
     // -------------------------------------------------------------
@@ -100,7 +123,7 @@
     const EVAL_MODES_COLOR = [
         { mode: 'orig', letter: 'O', label: 'Original', desc: 'Original color (UI panel)', color: '#2563eb', textColor: '#ffffff' },
         { mode: 'rand', letter: 'R', label: 'Random', desc: 'Random fixed color', color: '#db2777', textColor: '#ffffff' },
-        { mode: 'circle', letter: 'C', label: 'Circle RGB', desc: 'Circle RGB colors (hue wheel)', color: 'linear-gradient(135deg, #ff0055, #00ffcc, #3300ff)', isGradient: true, textColor: '#ffffff' },
+        { mode: 'circle', letter: 'C', label: 'Circle RGB', desc: 'Circle RGB spectrum (5s cycle)', color: 'linear-gradient(135deg, #ff0055, #00ffcc, #3300ff)', isGradient: true, textColor: '#ffffff' },
         { mode: 'wiggle', letter: 'W', label: 'Wiggle', desc: 'Wiggle color (harmonic shift)', color: '#ffd166', textColor: '#3d2c00' },
         { mode: 'half', letter: 'H', label: '50% Opacity', desc: '50% opacity (semi-transparent)', color: '#8b5cf6', textColor: '#ffffff' },
         { mode: 'transparent', letter: 'T', label: 'Transparent', desc: '100% transparent (hidden)', color: '#334155', textColor: '#cbd5e1' }
@@ -317,6 +340,9 @@
                         }
 
                         renderTimeline();
+                        if (window.updateDynamicTimelineProperties && comp) {
+                            window.updateDynamicTimelineProperties(comp.time);
+                        }
                         if (comp && comp._onChanged) comp._onChanged();
                         const nextCfg = modesList[nextIdx];
                         appendConsole(`Property [${prop.name}] evaluation mode set to [${nextCfg.label.toUpperCase()}] (${nextCfg.letter})`);
