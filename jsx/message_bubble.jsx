@@ -464,6 +464,23 @@
     chkTail.value = true; // Default: Show Tail
     chkTail.helpTip = "Toggle the chat pointer / tail at the bottom corner of the message bubble.";
 
+    // Status Icon (Sent / Received / Read)
+    var grpStatus = pnlStyle.add("group");
+    grpStatus.orientation = "row";
+    grpStatus.alignChildren = ["left", "center"];
+    var lblStatus = grpStatus.add("statictext", undefined, "Status Icon:");
+    lblStatus.preferredSize = [95, -1];
+
+    var dropStatus = grpStatus.add("dropdownlist", undefined, [
+        "Read (✓✓)",
+        "Delivered (✓✓)",
+        "Sent (✓)",
+        "None"
+    ]);
+    dropStatus.selection = 0; // Default: Read icon
+    dropStatus.preferredSize = [185, 26];
+    dropStatus.helpTip = "Delivery and read receipt status indicator icon.";
+
     // -------------------------------------------------------------------------
     // 6. Dimensions & Typography (Screen Width determines line splits)
     // -------------------------------------------------------------------------
@@ -818,25 +835,42 @@
             var lineH = Math.round(textSize * 1.35);
             var textBlockH = lines.length * lineH;
 
-            // Timestamp formatting
-            var timeString = currentRandomTime;
-            if (colorSet.check) {
-                timeString += " " + colorSet.check;
+            // Status Icon & Timestamp formatting
+            var selStatusIdx = dropStatus.selection ? dropStatus.selection.index : 0;
+            var statusString = "";
+            var statusColor = timeColor;
+            if (isSent) {
+                if (selStatusIdx === 0) {
+                    statusString = "✓✓";
+                    // Cyan/Blue read receipt indicator
+                    statusColor = isDark ? [0.33, 0.74, 0.92] : [0.20, 0.72, 0.95];
+                } else if (selStatusIdx === 1) {
+                    statusString = "✓✓";
+                    statusColor = timeColor;
+                } else if (selStatusIdx === 2) {
+                    statusString = "✓";
+                    statusColor = timeColor;
+                }
             }
+
+            var timeString = currentRandomTime;
             var timeFontSize = Math.max(10, Math.round(textSize * 0.58));
-            var timeW = Math.round(timeString.length * timeFontSize * 0.58);
+            var timeW = Math.round(timeString.length * timeFontSize * 0.55);
+            var statusW = statusString ? Math.round(timeFontSize * 1.35) : 0;
+            var statusSpacing = statusString ? 6 : 0;
+            var timeRowW = timeW + statusSpacing + statusW;
 
             // Bubble bounding dimensions
             var singleLine = (lines.length === 1);
             var bubbleW = 0;
             var bubbleH = 0;
-            if (singleLine && (measuredTextW + timeW + padX * 2 + 12 < maxBubbleW)) {
-                // Inline single line message + timestamp
-                bubbleW = measuredTextW + timeW + (padX * 2) + 12;
+            if (singleLine && (measuredTextW + timeRowW + padX * 2 + 16 < maxBubbleW)) {
+                // Inline single line message + timestamp + status icon
+                bubbleW = measuredTextW + timeRowW + (padX * 2) + 16;
                 bubbleH = textBlockH + (padY * 2);
             } else {
                 // Multiline message + bottom timestamp row
-                bubbleW = Math.max(measuredTextW, timeW) + (padX * 2);
+                bubbleW = Math.max(measuredTextW, timeRowW) + (padX * 2);
                 bubbleH = textBlockH + (padY * 2) + timeFontSize + 6;
             }
 
@@ -893,6 +927,9 @@
 
                 var effTail = parade.addProperty("ADBE Checkbox Control");
                 if (effTail) { effTail.name = "Show Tail"; effTail.property(1).setValue(hasTail ? 1 : 0); }
+
+                var effStatus = parade.addProperty("ADBE Slider Control");
+                if (effStatus) { effStatus.name = "Status Icon Type"; effStatus.property(1).setValue(selStatusIdx); }
 
                 var effCol = parade.addProperty("ADBE Color Control");
                 if (effCol) { effCol.name = "Bubble Color"; effCol.property(1).setValue(bubbleColor); }
@@ -998,11 +1035,14 @@
             textLayer.justification = "left";
             textLayer.transform.position.setValue([textLeftX, textTopY, -0.5]);
 
-            // 4. Timestamp Text Layer
-            var timeLayer = null;
-            var timeX = (bubbleW / 2) - padX;
+            // 4. Timestamp & Status Row (allocated space for sent/delivered/read status icon)
+            var timeRowRightX = (bubbleW / 2) - padX;
             var timeY = (bubbleH / 2) - Math.round(padY * 0.6) - timeFontSize;
 
+            var statusX = timeRowRightX;
+            var timeX = statusString ? (timeRowRightX - statusW - statusSpacing) : timeRowRightX;
+
+            var timeLayer = null;
             if (typeof comp.layers.addText === "function") {
                 timeLayer = comp.layers.addText(timeString);
             } else {
@@ -1014,6 +1054,22 @@
             timeLayer.fontColor = timeColor;
             timeLayer.justification = "right";
             timeLayer.transform.position.setValue([timeX, timeY, -0.5]);
+
+            // 5. Dedicated Status / Read Icon Layer
+            var statusLayer = null;
+            if (statusString) {
+                if (typeof comp.layers.addText === "function") {
+                    statusLayer = comp.layers.addText(statusString);
+                } else {
+                    statusLayer = comp.layers.addShape();
+                }
+                statusLayer.name = "Status_Icon";
+                statusLayer.parent = master;
+                statusLayer.fontSize = timeFontSize;
+                statusLayer.fontColor = statusColor;
+                statusLayer.justification = "right";
+                statusLayer.transform.position.setValue([statusX, timeY, -0.5]);
+            }
 
             // Select master controller
             master.selected = true;
