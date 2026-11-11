@@ -80,6 +80,7 @@
         grpRound.alignChildren = ["fill", "top"];
 
         var chkRound = grpRound.add("checkbox", undefined, "Round Corners");
+        chkRound.value = true;
 
         var grpCorners = grpRound.add("group");
         grpCorners.orientation = "column";
@@ -87,20 +88,20 @@
 
         var grpCA = grpCorners.add("group");
         grpCA.add("statictext", undefined, "Radius A (centre):");
-        var txtCornerA = grpCA.add("edittext", undefined, "20");
+        var txtCornerA = grpCA.add("edittext", undefined, "5");
         txtCornerA.characters = 7;
 
         var grpCB = grpCorners.add("group");
         grpCB.add("statictext", undefined, "Radius B (start):");
-        var txtCornerB = grpCB.add("edittext", undefined, "20");
+        var txtCornerB = grpCB.add("edittext", undefined, "10");
         txtCornerB.characters = 7;
 
         var grpCC = grpCorners.add("group");
         grpCC.add("statictext", undefined, "Radius C (end):");
-        var txtCornerC = grpCC.add("edittext", undefined, "20");
+        var txtCornerC = grpCC.add("edittext", undefined, "15");
         txtCornerC.characters = 7;
 
-        grpCorners.enabled = false;
+        grpCorners.enabled = true;
 
         chkRound.onClick = function () {
             grpCorners.enabled = chkRound.value;
@@ -238,9 +239,9 @@
                 addSlider("Start Angle", numberFromField(txtStart, 0));
                 addSlider("End Angle", numberFromField(txtEnd, 90));
                 addCheckbox("Round Corners", chkRound.value);
-                addSlider("Corner Radius A", numberFromField(txtCornerA, 20));
-                addSlider("Corner Radius B", numberFromField(txtCornerB, 20));
-                addSlider("Corner Radius C", numberFromField(txtCornerC, 20));
+                addSlider("Corner Radius A", numberFromField(txtCornerA, 5));
+                addSlider("Corner Radius B", numberFromField(txtCornerB, 10));
+                addSlider("Corner Radius C", numberFromField(txtCornerC, 15));
 
                 var root = layer.property("ADBE Root Vectors Group");
                 var pieGroup = root.addProperty("ADBE Vector Group");
@@ -273,10 +274,10 @@
         grpRepoLink.alignment = ["fill", "bottom"];
         grpRepoLink.alignChildren = ["center", "center"];
         grpRepoLink.margins = [0, 4, 0, 0];
-        var lblRepoLink = grpRepoLink.add("statictext", undefined, "GitHub: work2survive/AE_JS_builder");
-        lblRepoLink.helpTip = "https://github.com/work2survive/AE_JS_builder";
+        var lblRepoLink = grpRepoLink.add("statictext", undefined, "GitHub: work2survive/AE-Pie-Slice-Tool");
+        lblRepoLink.helpTip = "https://github.com/work2survive/AE-Pie-Slice-Tool";
         lblRepoLink.onClick = function() {
-            var url = "https://github.com/work2survive/AE_JS_builder";
+            var url = "https://github.com/work2survive/AE-Pie-Slice-Tool";
             if (typeof window !== "undefined" && window.open) {
                 window.open(url, "_blank");
             } else if ($.os.indexOf("Windows") !== -1) {

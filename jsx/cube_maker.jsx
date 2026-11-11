@@ -545,10 +545,10 @@
     grpRepoLink.alignment = ["fill", "bottom"];
     grpRepoLink.alignChildren = ["center", "center"];
     grpRepoLink.margins = [0, 4, 0, 0];
-    var lblRepoLink = grpRepoLink.add("statictext", undefined, "GitHub: work2survive/AE_JS_builder");
-    lblRepoLink.helpTip = "https://github.com/work2survive/AE_JS_builder";
+    var lblRepoLink = grpRepoLink.add("statictext", undefined, "GitHub: work2survive/AE-Cube-Maker-3D");
+    lblRepoLink.helpTip = "https://github.com/work2survive/AE-Cube-Maker-3D";
     lblRepoLink.onClick = function() {
-        var url = "https://github.com/work2survive/AE_JS_builder";
+        var url = "https://github.com/work2survive/AE-Cube-Maker-3D";
         if (typeof window !== "undefined" && window.open) {
             window.open(url, "_blank");
         } else if ($.os.indexOf("Windows") !== -1) {

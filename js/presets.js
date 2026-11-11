@@ -5474,6 +5474,7 @@ $.writeln("Shapes showcase created: Square, Circle, and Bézier Star!");
         grpRound.alignChildren = ["fill", "top"];
 
         var chkRound = grpRound.add("checkbox", undefined, "Round Corners");
+        chkRound.value = true;
 
         var grpCorners = grpRound.add("group");
         grpCorners.orientation = "column";
@@ -5481,20 +5482,20 @@ $.writeln("Shapes showcase created: Square, Circle, and Bézier Star!");
 
         var grpCA = grpCorners.add("group");
         grpCA.add("statictext", undefined, "Radius A (centre):");
-        var txtCornerA = grpCA.add("edittext", undefined, "20");
+        var txtCornerA = grpCA.add("edittext", undefined, "5");
         txtCornerA.characters = 7;
 
         var grpCB = grpCorners.add("group");
         grpCB.add("statictext", undefined, "Radius B (start):");
-        var txtCornerB = grpCB.add("edittext", undefined, "20");
+        var txtCornerB = grpCB.add("edittext", undefined, "10");
         txtCornerB.characters = 7;
 
         var grpCC = grpCorners.add("group");
         grpCC.add("statictext", undefined, "Radius C (end):");
-        var txtCornerC = grpCC.add("edittext", undefined, "20");
+        var txtCornerC = grpCC.add("edittext", undefined, "15");
         txtCornerC.characters = 7;
 
-        grpCorners.enabled = false;
+        grpCorners.enabled = true;
 
         chkRound.onClick = function () {
             grpCorners.enabled = chkRound.value;
@@ -5632,9 +5633,9 @@ $.writeln("Shapes showcase created: Square, Circle, and Bézier Star!");
                 addSlider("Start Angle", numberFromField(txtStart, 0));
                 addSlider("End Angle", numberFromField(txtEnd, 90));
                 addCheckbox("Round Corners", chkRound.value);
-                addSlider("Corner Radius A", numberFromField(txtCornerA, 20));
-                addSlider("Corner Radius B", numberFromField(txtCornerB, 20));
-                addSlider("Corner Radius C", numberFromField(txtCornerC, 20));
+                addSlider("Corner Radius A", numberFromField(txtCornerA, 5));
+                addSlider("Corner Radius B", numberFromField(txtCornerB, 10));
+                addSlider("Corner Radius C", numberFromField(txtCornerC, 15));
 
                 var root = layer.property("ADBE Root Vectors Group");
                 var pieGroup = root.addProperty("ADBE Vector Group");

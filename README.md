@@ -95,84 +95,31 @@ The emulator includes production-ready After Effects ScriptUI tools as well as q
 
 #### A. Production ScriptUI Add-ons (`jsx/` Folder)
 
-1. **Cube Maker 3D (`jsx/cube_maker.jsx` - v1.3)**:
-   - **Interactive ScriptUI Panel**: Runs as a dockable panel in After Effects or floating palette in the emulator.
-   - **Geometry Tab**:
-     - **Dimensions (X, Y, Z)**: Sliders and numerical inputs for width, height, and depth ($10\text{ to }500\text{ px}$).
-     - **Link All Sizes to Z**: Checkbox adding an AE Checkbox Control effect. When checked, links X and Y to Z. Supports timeline keyframing and expressions.
-     - **Topology & Precomp**: Builds 6 rectangular shape faces parented to a master controller, precomposed into a clean subcomp with continuous rasterization (`collapseTransformation = true`).
-   - **Appearance Tab**:
-     - **Face & Edge Colors**: Live color swatches paired with direct hex inputs for sides fill and border stroke.
-     - **Opacity Controls**: Independent sliders for Face Opacity ($0\text{--}100\%$) and Stroke Opacity ($0\text{--}100\%$).
-     - **Stroke Width**: Real-time slider ($0\text{ to }20\text{ px}$) with automatic stroke suppression when width is 0.
-     - **Corner Roundness & Face Gap**: Scrubbable sliders for rounded bevels and inset edge spacing.
+The simulator includes standalone production-ready After Effects ScriptUI tools located in [`jsx/`](jsx/). Each tool is maintained in its own dedicated repository with complete documentation, installation guides, and full source code:
 
-2. **Cylinder Maker 3D (`jsx/cylinder_maker.jsx` - v1.4)**:
-   - **Parametric 3D Cylinder & Slice Generator**: Generates full cylinders or customizable radial slice sectors.
-   - **Geometry Tab**:
-     - **Radius**: Scrubbable slider and numeric field ($1\text{ to }500\text{ px}$).
-     - **Extrude (Height)**: Scrubbable slider ($1\text{ to }1000\text{ px}$).
-     - **Wall Segments**: Dynamic resolution slider ($3\text{ to }64\text{ segments}$) computing exact chord lengths and tangent angles.
-     - **Slice Options**: "Enable Slice" checkbox with Start Angle and End Angle controls ($0^\circ\text{ to }360^\circ$) to produce pie wedges, open tubes, and half-cylinders with automatically generated radial end walls (`Slice_Start` and `Slice_End`) driven by reactive expressions ensuring walls stay visible and in sync if slice is toggled post-creation.
-   - **Appearance Tab**:
-     - **Tri-Color Palette**: 3 separate color swatches with paired hex fields for Top/Front Cap, Walls, and Bottom/Back Cap.
-     - **Opacity & Stroke**: Global opacity slider, stroke color swatch + hex field, and stroke width slider ($0\text{ to }20\text{ px}$) with dynamic expression to hide stroke at 0.
-     - **Inner Sides Checkbox**: "Paint inner sides with edge color" (enabled by default) adds internal backing cap faces (`Cap_Top_Inner`, `Cap_Bottom_Inner`) sharing the walls color to prevent contrasting cap colors from leaking through seams at acute viewing angles.
-     - **Imitate Wall Segments Checkbox**: "Imitate segments of extruded walls" (enabled by default) generates caps matching the extruded polygonal wall facets vertex-for-vertex, eliminating sub-pixel edge leakage.
-   - **Live Rigging**: Precomposes walls and caps into an auto-rigged subcomp driven by Master Effect Controls on the parent layer.
+1. **[Cube Maker 3D](https://github.com/work2survive/AE-Cube-Maker-3D)** (`jsx/cube_maker.jsx` - v1.3):
+   - Parametric 3D cube generator with independent face colors, opacity, stroke controls, and collapsed-transformation master rigging.
+   - **Repository**: [work2survive/AE-Cube-Maker-3D](https://github.com/work2survive/AE-Cube-Maker-3D) · [Run in Simulator](https://work2survive.github.io/AE_JS_builder/?jsx=cube_maker.jsx)
 
-3. **Pie / Slice Generator (`jsx/Pie_Slice_Generator.jsx` - v4.1)**:
-   - **Dedicated Standalone Repository**: [work2survive/AE-Pie-Slice-Tool](https://github.com/work2survive/AE-Pie-Slice-Tool)
-   - **Procedural Bézier Vector Path**: Creates a native AE Shape Layer whose path is dynamically calculated using a single mathematical expression.
-   - **Dimensions**: Radius X with optional "Enable Ellipse" checkbox for independent Radius Y (elliptical sectors).
-   - **Angles**: Start angle (Point B) and End angle (Point C) in degrees, supporting partial sectors up to full $360^\circ$ circles.
-   - **Corner Rounding & Overlap Protection**:
-     - "Round Corners" checkbox enabling independent rounding radii for Center vertex (A), Start corner (B), and End corner (C).
-     - Built-in mathematical constraint solver preventing corner rounding collisions (Priority: Center A > End C > Start B).
-   - Generates clean `createPath(verts, ins, outs, true)` expression code.
+2. **[Cylinder Maker 3D](https://github.com/work2survive/AE-Cylinder-Maker-3D)** (`jsx/cylinder_maker.jsx` - v1.4):
+   - Parametric 3D cylinder and circular slice sector generator with auto-rigged wall facets, tri-color palette, and inner cap seams protection.
+   - **Repository**: [work2survive/AE-Cylinder-Maker-3D](https://github.com/work2survive/AE-Cylinder-Maker-3D) · [Run in Simulator](https://work2survive.github.io/AE_JS_builder/?jsx=cylinder_maker.jsx)
 
-4. **Custom Rounded Rect (`jsx/custom_rounded_rect.jsx` - v1.1)**:
-   - **Dedicated Standalone Repository**: [work2survive/AECustomRoundedRect](https://github.com/work2survive/AECustomRoundedRect)
-   - **Independent 4-Corner Parametric Bézier Generator**: Creates a native AE Shape Layer with individual corner radii (Top-Left, Top-Right, Bottom-Right, Bottom-Left) and dynamic effect controls.
-   - **Geometry Tab**:
-     - **Dimensions (Width & Height)**: Sliders and numerical inputs ($10\text{ to }2000\text{ px}$) with quick dimension presets (Card, Square, HD, Banner).
-     - **Link All Corners**: Checkbox with Master Radius slider ($0\text{ to }500\text{ px}$) to drive all 4 corners simultaneously.
-     - **2x2 Corner Radii Grid**: Individual controls for Top-Left (TL), Top-Right (TR), Bottom-Left (BL), and Bottom-Right (BR).
-     - **Quick Corner Presets**: One-click buttons for Capsule / Pill, Top Tab, Bottom Tab, Diagonal, Card 30px, and Sharp 0px.
-     - **Overlap Protection**: Implements the W3C CSS Backgrounds & Borders Level 3 (§5.5) proportional corner scaling solver ($f = \min(1.0, w / \text{sum}_{\text{top}}, w / \text{sum}_{\text{bottom}}, h / \text{sum}_{\text{left}}, h / \text{sum}_{\text{right}})$) so corners never collide or distort even when radii exceed rectangle dimensions.
-   - **Appearance Tab**:
-     - **Fill & Stroke Controls**: Native color swatches paired with hex inputs, Fill Opacity, Stroke Color swatch, and Stroke Width ($0\text{ to }50\text{ px}$).
-     - **0-Stroke Suppression**: Dynamic expression disables stroke rendering when width is 0.
-   - **Procedural Rigging**: Adds 14 native Slider/Color/Checkbox Effect Controls to the shape layer and links Bézier path points and tangents via `createPath()` expression.
+3. **[Pie / Slice Generator](https://github.com/work2survive/AE-Pie-Slice-Tool)** (`jsx/Pie_Slice_Generator.jsx` - v4.1):
+   - Expression-driven parametric circular and elliptical pie slices, arcs, and wedges with independent 3-corner rounding and overlap collision protection.
+   - **Repository**: [work2survive/AE-Pie-Slice-Tool](https://github.com/work2survive/AE-Pie-Slice-Tool) · [Run in Simulator](https://work2survive.github.io/AE_JS_builder/?jsx=Pie_Slice_Generator.jsx)
 
-5. **Extruded Round Rectangle 3D (`jsx/extruded_round_rectangle.jsx` - v1.3)**:
-   - **Parametric 3D Extruded Rounded Rectangle**: Combines the procedural front/back caps of `custom_rounded_rect` with cylindrical sector wall facets from `cylinder_maker` to form an airtight 3D solid.
-   - **Geometry Tab**:
-     - **Dimensions ($W \times H \times D$)**: Interactive sliders and inputs for Width ($20\text{--}1920\text{ px}$), Height ($20\text{--}1080\text{ px}$), and Extrude Depth ($10\text{--}800\text{ px}$).
-     - **Quick Dimension Presets**: Card, Cube, Pill, and Tile.
-     - **Corner Radii ($2 \times 2$ Grid)**: Link All Corners + Master Radius or independent radii for Top-Left, Top-Right, Bottom-Left, and Bottom-Right.
-     - **Corner Resolution**: Configurable segment count ($2\text{ to }16\text{ facets per corner}$) to balance smoothness and render speed.
-     - **W3C Overlap Protection**: Auto-scales corner radii proportionally when combined radii exceed dimensions.
-   - **Appearance Tab**:
-     - **Tri-Color Palette**: Independent live color swatches paired with hex inputs for Front Face Color, Back Face Color, and Perimeter Walls/Corners Color.
-     - **Independent Opacity**: Sliders for Caps Opacity and Sides Opacity.
-     - **Edge Stroke**: Color swatch + hex input and stroke width slider ($0\text{ to }30\text{ px}$) with 0-stroke suppression.
-     - **Inner Sides Checkbox**: "Paint inner sides using edge color" (enabled by default) adds internal backing cap faces (`Cap_Front_Inner`, `Cap_Back_Inner`) sharing the sides color to prevent opposite face colors from peeking through perimeter edges.
-     - **Imitate Corner Segments Checkbox**: "Imitate segments of extruded round corners" (enabled by default) dynamically facets the front and back caps' rounded corners to match the extruded corner wall segments vertex-for-vertex, completely eliminating any Bézier curvature gaps or color leaks.
-   - **Live Rigging**: Builds 33 native 3D Shape Layers precomposed into an auto-rigged subcomp driven by 18 Master Effect Controls on the parent layer with continuous rasterization.
+4. **[Custom Rounded Rect](https://github.com/work2survive/AECustomRoundedRect)** (`jsx/custom_rounded_rect.jsx` - v1.1):
+   - Native 2D shape layer generator with 4 independent corner radii, quick presets, and W3C CSS Backgrounds & Borders Level 3 proportional overlap protection.
+   - **Repository**: [work2survive/AECustomRoundedRect](https://github.com/work2survive/AECustomRoundedRect) · [Run in Simulator](https://work2survive.github.io/AE_JS_builder/?jsx=custom_rounded_rect.jsx)
 
-6. **Message Bubble Generator (`jsx/message_bubble.jsx` - v1.0)**:
-   - **Dedicated Standalone Repository**: [work2survive/AE_message_bubble](https://github.com/work2survive/AE_message_bubble)
-   - **Interactive Chat Bubble Engine**: Generates authentic, parametric 2D vector chat bubbles imitating modern mobile messaging platforms (**iOS Messages**, **Android RCS**, **WhatsApp**, **Instagram Direct**, **Facebook Messenger**, and **Custom** themes).
-   - **Appearance Tab**:
-     - **Layout & Typography**: Font family selector (`SF Pro`, `Roboto`, `Segoe UI`, `Helvetica Neue`, `Arial`, `Inter`, `Open Sans`, `System Default`), responsive screen width ($300\text{ to }1920\text{ px}$ with automatic word-wrapping), text size ($12\text{ to }60\text{ px}$), inner padding ($-10\text{ to }+10\text{ px}$), and leading ($50\%\text{ to }150\%$).
-     - **Colors & Appearance**: Interactive color swatches paired with direct hex inputs for bubble and text colors.
-     - **Status & Timestamp**: Circled RCS receipts (`○✓`, `○○✓✓`, `●●✓✓`), standard checks (`✓`, `✓✓`), intelligent auto-timing read duration simulation, and randomized timestamps with re-roll. Automatically sets receipts to `None` for Received messages.
-     - **Bubble Tail & Direction**: Toggle bottom corner pointer/tail for consecutive multi-message chaining; switch between Sent (Right) and Received (Left).
-   - **Animation Tab**:
-     - **Entrance Animations**: Independent sliders for Bubble Grow ($0\text{ to }20\text{ frames}$, snappy `easeOutBack` expansion) and Typewriter Reveal ($0\text{ to }20\text{ frames}$, character-by-character reveal).
-     - **iOS 18 Animated Text Effects**: 8 continuous looping presets (Big, Small, Shake, Nod, Explode, Ripple, Bloom, Jitter) with speed ($50\%\text{--}200\%$) and intensity ($20\%\text{--}200\%$) modulation.
-   - **Live Rigging**: Generates parametric vector shape layers and text layers driven by `Bubble_Master_Controller` with native Effect Controls.
+5. **[Extruded Round Rectangle 3D](https://github.com/work2survive/Extruded-Round-Corners-Maker)** (`jsx/extruded_round_rectangle.jsx` - v1.3):
+   - Parametric 3D extruded rounded rectangle with faceted corner walls, tri-color palette, airtight inner caps, and master rigging.
+   - **Repository**: [work2survive/Extruded-Round-Corners-Maker](https://github.com/work2survive/Extruded-Round-Corners-Maker) · [Run in Simulator](https://work2survive.github.io/AE_JS_builder/?jsx=extruded_round_rectangle.jsx)
+
+6. **[Message Bubble Generator](https://github.com/work2survive/AE_message_bubble)** (`jsx/message_bubble.jsx` - v1.0):
+   - Authentic 2D vector chat bubble generator imitating iOS Messages, Android RCS, WhatsApp, Instagram, Messenger, and Custom themes with auto-timing receipts and iOS 18 text animations.
+   - **Repository**: [work2survive/AE_message_bubble](https://github.com/work2survive/AE_message_bubble) · [Run in Simulator](https://work2survive.github.io/AE_JS_builder/?jsx=message_bubble.jsx)
 
 #### B. Quick Verification Presets
 
