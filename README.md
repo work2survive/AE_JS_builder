@@ -122,6 +122,7 @@ The emulator includes production-ready After Effects ScriptUI tools as well as q
    - **Live Rigging**: Precomposes walls and caps into an auto-rigged subcomp driven by Master Effect Controls on the parent layer.
 
 3. **Pie / Slice Generator (`jsx/Pie_Slice_Generator.jsx` - v4.1)**:
+   - **Dedicated Standalone Repository**: [work2survive/AE-Pie-Slice-Tool](https://github.com/work2survive/AE-Pie-Slice-Tool)
    - **Procedural Bézier Vector Path**: Creates a native AE Shape Layer whose path is dynamically calculated using a single mathematical expression.
    - **Dimensions**: Radius X with optional "Enable Ellipse" checkbox for independent Radius Y (elliptical sectors).
    - **Angles**: Start angle (Point B) and End angle (Point C) in degrees, supporting partial sectors up to full $360^\circ$ circles.
@@ -131,6 +132,7 @@ The emulator includes production-ready After Effects ScriptUI tools as well as q
    - Generates clean `createPath(verts, ins, outs, true)` expression code.
 
 4. **Custom Rounded Rect (`jsx/custom_rounded_rect.jsx` - v1.1)**:
+   - **Dedicated Standalone Repository**: [work2survive/AECustomRoundedRect](https://github.com/work2survive/AECustomRoundedRect)
    - **Independent 4-Corner Parametric Bézier Generator**: Creates a native AE Shape Layer with individual corner radii (Top-Left, Top-Right, Bottom-Right, Bottom-Left) and dynamic effect controls.
    - **Geometry Tab**:
      - **Dimensions (Width & Height)**: Sliders and numerical inputs ($10\text{ to }2000\text{ px}$) with quick dimension presets (Card, Square, HD, Banner).
@@ -142,7 +144,6 @@ The emulator includes production-ready After Effects ScriptUI tools as well as q
      - **Fill & Stroke Controls**: Native color swatches paired with hex inputs, Fill Opacity, Stroke Color swatch, and Stroke Width ($0\text{ to }50\text{ px}$).
      - **0-Stroke Suppression**: Dynamic expression disables stroke rendering when width is 0.
    - **Procedural Rigging**: Adds 14 native Slider/Color/Checkbox Effect Controls to the shape layer and links Bézier path points and tangents via `createPath()` expression.
-   - **Credits & Reference**: Based on the AECustomRoundedRect specification by [work2survive](https://github.com/work2survive/AECustomRoundedRect).
 
 5. **Extruded Round Rectangle 3D (`jsx/extruded_round_rectangle.jsx` - v1.3)**:
    - **Parametric 3D Extruded Rounded Rectangle**: Combines the procedural front/back caps of `custom_rounded_rect` with cylindrical sector wall facets from `cylinder_maker` to form an airtight 3D solid.
@@ -195,3 +196,13 @@ Run `run_server.bat` or run:
 python -m http.server 8000
 ```
 Then navigate to `http://localhost:8000`.
+
+---
+
+## 🔗 Related Standalone Repositories
+
+The production tools built and tested inside this simulator are also available as dedicated, standalone After Effects plugins and ScriptUI panels:
+
+- **[AECustomRoundedRect](https://github.com/work2survive/AECustomRoundedRect)**: Independent 4-corner parametric rounded rectangle generator with W3C CSS proportional overlap protection (v1.1).
+- **[AE Message Bubble Generator](https://github.com/work2survive/AE_message_bubble)**: Authentic chat and text message bubble generator for iOS, Android RCS, WhatsApp, Instagram, Messenger, and Custom themes (v1.0).
+- **[AE Pie Slice Tool](https://github.com/work2survive/AE-Pie-Slice-Tool)**: Parametric circular sectors, arcs, and pie slices with corner rounding and collision protection (v4.1).
