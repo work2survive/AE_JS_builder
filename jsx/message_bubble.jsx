@@ -171,7 +171,7 @@
         JSON = JSONPolyfill;
     }
 
-    var SCRIPT_VERSION = "v1.0";
+    var SCRIPT_VERSION = "v1.1";
     var MAX_CHARS = 250;
 
     // -------------------------------------------------------------------------
