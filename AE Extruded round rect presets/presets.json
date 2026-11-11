@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "description": "After Effects Extruded Round Rectangle - Dimension Presets (width, height, depth in px).",
+  "version": "1.0",
+  "presets": [
+    {
+      "name": "Card",
+      "width": 500,
+      "height": 300,
+      "depth": 120
+    },
+    {
+      "name": "Cube",
+      "width": 350,
+      "height": 350,
+      "depth": 350
+    },
+    {
+      "name": "Pill",
+      "width": 600,
+      "height": 200,
+      "depth": 80
+    },
+    {
+      "name": "Tile",
+      "width": 400,
+      "height": 400,
+      "depth": 30
+    },
+    {
+      "name": "Phone / Mobile",
+      "width": 360,
+      "height": 760,
+      "depth": 30
+    },
+    {
+      "name": "Tablet",
+      "width": 720,
+      "height": 960,
+      "depth": 25
+    },
+    {
+      "name": "Wide Banner",
+      "width": 900,
+      "height": 180,
+      "depth": 50
+    }
+  ]
+}

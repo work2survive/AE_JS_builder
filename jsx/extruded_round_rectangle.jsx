@@ -231,7 +231,10 @@
         { name: "Card", width: 500, height: 300, depth: 120 },
         { name: "Cube", width: 350, height: 350, depth: 350 },
         { name: "Pill", width: 600, height: 200, depth: 80 },
-        { name: "Tile", width: 400, height: 400, depth: 30 }
+        { name: "Tile", width: 400, height: 400, depth: 30 },
+        { name: "Phone / Mobile", width: 360, height: 760, depth: 30 },
+        { name: "Tablet", width: 720, height: 960, depth: 25 },
+        { name: "Wide Banner", width: 900, height: 180, depth: 50 }
     ];
 
     function cloneDefaultPresets() {
@@ -493,9 +496,9 @@
     var btnReloadDimPresets = grpDimPresets.add("button", undefined, "\u21BB");
     btnReloadDimPresets.preferredSize = [26, 24];
     btnReloadDimPresets.helpTip = "Reload presets from the JSON file in '" + PRESETS_FOLDER_NAME + "'.";
-    var btnOpenDimPresets = grpDimPresets.add("button", undefined, "...");
+    var btnOpenDimPresets = grpDimPresets.add("button", undefined, "📂");
     btnOpenDimPresets.preferredSize = [26, 24];
-    btnOpenDimPresets.helpTip = "Open the '" + PRESETS_FOLDER_NAME + "' folder.";
+    btnOpenDimPresets.helpTip = "Open '" + PRESETS_FOLDER_NAME + "' folder in File Explorer / Finder.";
 
     var suppressPresetChange = false;
 
@@ -507,7 +510,7 @@
         dropDimPreset.add("item", "Choose preset...");
         for (var i = 0; i < DIM_PRESETS.length; i++) {
             var p = DIM_PRESETS[i];
-            dropDimPreset.add("item", p.name + "  (" + p.width + " x " + p.height + " x " + p.depth + ")");
+            dropDimPreset.add("item", p.name + " (" + p.width + " x " + p.height + " x " + p.depth + ")");
         }
         dropDimPreset.selection = 0;
         suppressPresetChange = false;
@@ -518,7 +521,7 @@
         var idx = dropDimPreset.selection.index - 1;
         if (idx < 0 || idx >= DIM_PRESETS.length) return;
         var p = DIM_PRESETS[idx];
-        setDim(p.width, p.height, p.depth);
+        setDim(p.width, p.height, p.depth, true);
     };
 
     btnReloadDimPresets.onClick = function() {
@@ -534,7 +537,21 @@
     btnOpenDimPresets.onClick = function() {
         if (!currentPresetsFolder) currentPresetsFolder = getPresetsFolder();
         if (currentPresetsFolder && currentPresetsFolder.exists) {
-            currentPresetsFolder.execute();
+            try {
+                if (typeof currentPresetsFolder.execute === "function") {
+                    currentPresetsFolder.execute();
+                } else if (typeof system !== "undefined" && system.callSystem && $.os) {
+                    if ($.os.indexOf("Windows") !== -1) {
+                        system.callSystem('explorer "' + currentPresetsFolder.fsName + '"');
+                    } else {
+                        system.callSystem('open "' + currentPresetsFolder.fsName + '"');
+                    }
+                } else {
+                    alert("Presets folder:\n" + currentPresetsFolder.fsName);
+                }
+            } catch (eOpen) {
+                alert("Presets folder:\n" + currentPresetsFolder.fsName);
+            }
         } else {
             alert("Presets folder:\n" + (currentPresetsFolder ? currentPresetsFolder.fsName : PRESETS_FOLDER_NAME));
         }
@@ -542,13 +559,18 @@
 
     populateDimPresetDropdown();
 
-    function setDim(w, h, d) {
+    function setDim(w, h, d, fromPreset) {
         w = Math.max(sldW.minvalue, Math.min(sldW.maxvalue, w));
         h = Math.max(sldH.minvalue, Math.min(sldH.maxvalue, h));
         d = Math.max(sldD.minvalue, Math.min(sldD.maxvalue, d));
         sldW.value = w; txtW.text = String(w);
         sldH.value = h; txtH.text = String(h);
         sldD.value = d; txtD.text = String(d);
+        if (!fromPreset && dropDimPreset && dropDimPreset.selection && dropDimPreset.selection.index !== 0) {
+            suppressPresetChange = true;
+            dropDimPreset.selection = 0;
+            suppressPresetChange = false;
+        }
         buildOrUpdateExtruded(false);
     }
 
@@ -934,9 +956,17 @@
     }
 
     var onLiveUpdate = function() { buildOrUpdateExtruded(false); };
-    hookSliderText(sldW, txtW, onLiveUpdate, true);
-    hookSliderText(sldH, txtH, onLiveUpdate, true);
-    hookSliderText(sldD, txtD, onLiveUpdate, true);
+    var onDimSliderUpdate = function() {
+        if (dropDimPreset && dropDimPreset.selection && dropDimPreset.selection.index !== 0) {
+            suppressPresetChange = true;
+            dropDimPreset.selection = 0;
+            suppressPresetChange = false;
+        }
+        buildOrUpdateExtruded(false);
+    };
+    hookSliderText(sldW, txtW, onDimSliderUpdate, true);
+    hookSliderText(sldH, txtH, onDimSliderUpdate, true);
+    hookSliderText(sldD, txtD, onDimSliderUpdate, true);
     hookSliderText(sldMaster, txtMaster, function() {
         if (chkLink.value) {
             var v = sldMaster.value;
