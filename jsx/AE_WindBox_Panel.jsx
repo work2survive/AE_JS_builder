@@ -1315,9 +1315,13 @@
                     'var pAmpY = ctrl.effect("WindBox - Pos Wiggle Amp Y")(1).value;',
                     'var pAmpZ = ctrl.effect("WindBox - Pos Wiggle Amp Z")(1).value;',
                     '',
-                    'var wX = (pFreq > 0 && pAmpX > 0) ? (wiggle(pFreq, pAmpX)[0] - value[0]) : 0;',
-                    'var wY = (pFreq > 0 && pAmpY > 0) ? (wiggle(pFreq, pAmpY, 1, 0.5, time + 11.3)[1] - value[1]) : 0;',
-                    'var wZ = (pFreq > 0 && pAmpZ > 0) ? (wiggle(pFreq, pAmpZ, 1, 0.5, time + 23.7)[2] - value[2]) : 0;',
+                    'seedRandom(seed + pIndex * 9973 + 51, false);',
+                    'var tOffX = pIndex * 13.73 + (seed % 100);',
+                    'var tOffY = pIndex * 29.41 + (seed % 100) + 11.3;',
+                    'var tOffZ = pIndex * 47.19 + (seed % 100) + 23.7;',
+                    'var wX = (pFreq > 0 && pAmpX > 0) ? (wiggle(pFreq, pAmpX, 1, 0.5, time + tOffX)[0] - value[0]) : 0;',
+                    'var wY = (pFreq > 0 && pAmpY > 0) ? (wiggle(pFreq, pAmpY, 1, 0.5, time + tOffY)[1] - value[1]) : 0;',
+                    'var wZ = (pFreq > 0 && pAmpZ > 0) ? (wiggle(pFreq, pAmpZ, 1, 0.5, time + tOffZ)[2] - value[2]) : 0;',
                     '',
                     'ctrl.toWorld([bx + wX, by + wY, bz + wZ]);'
                 ].join("\n");
@@ -1329,9 +1333,14 @@
                     'var alignWind = 0;',
                     'try { alignWind = ctrl.effect("WindBox - Align to Wind")(1).value; } catch(e) {}',
                     'var pitchAng = (alignWind == 1 && (dY != 0 || dZ != 0)) ? (-Math.atan2(dY, dZ) * 180 / Math.PI) : 0;',
+                    'var pIndex = effect("WindBox Particle Index")(1).value;',
+                    'var seed = 12345;',
+                    'try { seed = ctrl.effect("WindBox - Random Seed")(1).value; } catch(e) {}',
+                    'seedRandom(seed + pIndex * 9973 + 101, false);',
                     'var f = ctrl.effect("WindBox - Rot X Wiggle Freq")(1).value;',
                     'var a = ctrl.effect("WindBox - Rot X Wiggle Amp")(1).value;',
-                    'var w = (f > 0 && a > 0) ? (wiggle(f, a)[0] - value[0] || wiggle(f, a) - value) : 0;',
+                    'var tOff = pIndex * 19.31 + (seed % 100);',
+                    'var w = (f > 0 && a > 0) ? (wiggle(f, a, 1, 0.5, time + tOff)[0] - value[0] || wiggle(f, a, 1, 0.5, time + tOff) - value) : 0;',
                     'value + pitchAng + w;'
                 ].join("\n");
 
@@ -1342,9 +1351,14 @@
                     'var alignWind = 0;',
                     'try { alignWind = ctrl.effect("WindBox - Align to Wind")(1).value; } catch(e) {}',
                     'var yawAng = (alignWind == 1 && (dX != 0 || dZ != 0)) ? (Math.atan2(dZ, dX) * 180 / Math.PI) : 0;',
+                    'var pIndex = effect("WindBox Particle Index")(1).value;',
+                    'var seed = 12345;',
+                    'try { seed = ctrl.effect("WindBox - Random Seed")(1).value; } catch(e) {}',
+                    'seedRandom(seed + pIndex * 9973 + 203, false);',
                     'var f = ctrl.effect("WindBox - Rot Y Wiggle Freq")(1).value;',
                     'var a = ctrl.effect("WindBox - Rot Y Wiggle Amp")(1).value;',
-                    'var w = (f > 0 && a > 0) ? (wiggle(f, a)[0] - value[0] || wiggle(f, a) - value) : 0;',
+                    'var tOff = pIndex * 31.17 + (seed % 100);',
+                    'var w = (f > 0 && a > 0) ? (wiggle(f, a, 1, 0.5, time + tOff)[0] - value[0] || wiggle(f, a, 1, 0.5, time + tOff) - value) : 0;',
                     'value + yawAng + w;'
                 ].join("\n");
 
@@ -1357,11 +1371,15 @@
                     'try { alignWind = ctrl.effect("WindBox - Align to Wind")(1).value; } catch(e) {}',
                     'var windAng = (alignWind == 1 && (dX != 0 || dY != 0)) ? (Math.atan2(dY, dX) * 180 / Math.PI) : 0;',
                     'var pIndex = effect("WindBox Particle Index")(1).value;',
+                    'var seed = 12345;',
+                    'try { seed = ctrl.effect("WindBox - Random Seed")(1).value; } catch(e) {}',
+                    'seedRandom(seed + pIndex * 9973 + 307, false);',
                     'var spinDir = ((pIndex % 3) - 1);',
                     'var windSpin = (alignWind == 1) ? (spd * time * 0.15 * spinDir) : 0;',
                     'var f = ctrl.effect("WindBox - Rot Z Wiggle Freq")(1).value;',
                     'var a = ctrl.effect("WindBox - Rot Z Wiggle Amp")(1).value;',
-                    'var w = (f > 0 && a > 0) ? (wiggle(f, a)[0] - value[0] || wiggle(f, a) - value) : 0;',
+                    'var tOff = pIndex * 43.83 + (seed % 100);',
+                    'var w = (f > 0 && a > 0) ? (wiggle(f, a, 1, 0.5, time + tOff)[0] - value[0] || wiggle(f, a, 1, 0.5, time + tOff) - value) : 0;',
                     'value + windAng + windSpin + w;'
                 ].join("\n");
 
@@ -1443,7 +1461,8 @@
                     '    var sFreq = 0, sAmp = 0;',
                     '    try { sFreq = ctrl.effect("WindBox - Scale Wiggle Freq")(1).value; } catch(e) {}',
                     '    try { sAmp = ctrl.effect("WindBox - Scale Wiggle Amp (%)")(1).value; } catch(e) {}',
-                    '    var w = (sFreq > 0 && sAmp > 0) ? (wiggle(sFreq, sAmp)[0] - value[0]) : 0;',
+                    '    var tOff = pIndex * 23.45 + (seed % 100);',
+                    '    var w = (sFreq > 0 && sAmp > 0) ? (wiggle(sFreq, sAmp, 1, 0.5, time + tOff)[0] - value[0]) : 0;',
                     '    var s = Math.max(0.1, value[0] * randMult * (1 + w / 100));',
                     '    [s, s, s];',
                     '}'

@@ -528,13 +528,16 @@
                     return shp;
                 };
 
-                const wiggle = (f, a) => {
+                const wiggle = (f, a, octaves, ampMult, t) => {
                     const freq = f * (isRand ? 1.6 : 1.0);
                     const amp = a * jitterScale;
+                    const evalT = (t !== undefined) ? t : evalTime;
+                    const lIdx = (layer && layer.index !== undefined) ? layer.index : (layer && layer._id !== undefined ? layer._id : 1);
+                    const layerOffset = lIdx * 19.73 + (rndState % 1000) * 0.01;
                     if (Array.isArray(value)) {
-                        return value.map((v, i) => v + wiggleGen.wiggle(freq, amp, evalTime, i + 1));
+                        return value.map((v, i) => v + wiggleGen.wiggle(freq, amp, evalT, layerOffset + (i + 1) * 31.415));
                     }
-                    return value + wiggleGen.wiggle(freq, amp, evalTime, 0);
+                    return value + wiggleGen.wiggle(freq, amp, evalT, layerOffset);
                 };
                 let rndState = 12345;
                 const seedRandom = (seed, timeless) => {
