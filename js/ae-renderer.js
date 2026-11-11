@@ -134,16 +134,22 @@
                 const factor = delta > 0 ? 1.08 : 0.92;
                 if (!this.camera.zoom) this.camera.zoom = 1.0;
 
-                // Two-stage Zoom Architecture:
-                // Safe distance threshold: 900px.
-                // At distance >= 900px, 3D vertices (radius up to ~350px) never approach the 1200px CSS perspective near-plane singularity.
-                // When zooming closer, 2D viewport magnification (zoom) scales up to 1000% seamlessly without near-plane distortion.
+                // Two-stage Zoom Architecture (Limited to 300% max zoom in):
+                // Safe distance threshold: 900px (~200% zoom).
+                // At distance >= 900px, 3D vertices never approach the 1200px CSS perspective near-plane singularity.
+                // When zooming closer, 2D viewport magnification (zoom) scales from 1.0 up to 1.5, reaching exactly 300% maximum.
+                const MAX_EFFECTIVE_ZOOM = 3.0; // 300% maximum zoom in
                 if (delta < 0) {
                     // Zooming in
-                    if (this.camera.distance > 900) {
-                        this.camera.distance = Math.max(900, this.camera.distance * factor);
-                    } else {
-                        this.camera.zoom = Math.min(10.0, this.camera.zoom * 1.08);
+                    const curEffectiveZoom = (1800 / this.camera.distance) * this.camera.zoom;
+                    if (curEffectiveZoom < MAX_EFFECTIVE_ZOOM) {
+                        if (this.camera.distance > 900) {
+                            const newDist = Math.max(900, this.camera.distance * factor);
+                            this.camera.distance = Math.max(1800 / MAX_EFFECTIVE_ZOOM, newDist);
+                        } else {
+                            const maxAllowedZoom = MAX_EFFECTIVE_ZOOM / (1800 / this.camera.distance);
+                            this.camera.zoom = Math.min(maxAllowedZoom, this.camera.zoom * 1.08);
+                        }
                     }
                 } else {
                     // Zooming out
@@ -269,7 +275,7 @@
                 this.orbitValsEl.textContent = `${Math.round(this.camera.orbitX)}°, ${Math.round(this.camera.orbitY)}°`;
             }
             if (this.zoomValEl) {
-                const effectiveZoom = Math.round(((1800 / this.camera.distance) * this.camera.zoom) * 100);
+                const effectiveZoom = Math.min(300, Math.round(((1800 / this.camera.distance) * this.camera.zoom) * 100));
                 this.zoomValEl.textContent = `${effectiveZoom}%`;
             }
 
