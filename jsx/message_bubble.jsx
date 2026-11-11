@@ -198,6 +198,45 @@
         };
     }
 
+
+    // -------------------------------------------------------------------------
+    // Safe Text Layer Extraction Helper (Prevents [object PropertyGroup] bug)
+    // -------------------------------------------------------------------------
+    function getTextProp(lyr) {
+        if (!lyr) return null;
+        try {
+            if (lyr.text && lyr.text.sourceText) return lyr.text.sourceText;
+        } catch(e1) {}
+        try {
+            if (lyr.sourceText) return lyr.sourceText;
+        } catch(e2) {}
+        try {
+            var g = lyr.property("ADBE Text Properties") || lyr.property("Text");
+            if (g) {
+                var doc = g.property("ADBE Text Document") || g.property("Source Text") || g.property(1);
+                if (doc) return doc;
+            }
+        } catch(e3) {}
+        try {
+            var d = lyr.property("Source Text");
+            if (d && !(d instanceof PropertyGroup)) return d;
+        } catch(e4) {}
+        return null;
+    }
+
+    function getTextLayerString(lyr) {
+        if (!lyr) return "";
+        try {
+            var p = getTextProp(lyr);
+            if (p && p.value) {
+                var v = p.value;
+                if (typeof v === "string") return v;
+                if (v && typeof v.text === "string") return v.text;
+            }
+        } catch(e) {}
+        return "";
+    }
+
     // 1. ScriptUI Window / Dockable Panel Initialization
     // -------------------------------------------------------------------------
     var win = (thisObj instanceof Panel)
@@ -696,31 +735,29 @@
     // -------------------------------------------------------------------------
     // Core Geometry Engine: Custom Rounded Rectangle & Tail Pointer
     // -------------------------------------------------------------------------
-    function computeShapeData(w, h, rTL, rTR, rBR, rBL, preventOverlap) {
-        w = Math.max(0, w);
-        h = Math.max(0, h);
+    function computeShapeData(w, h, rTL, rTR, rBR, rBL, hasTail, isSent, tailType) {
+        w = Math.max(20, w);
+        h = Math.max(20, h);
         rTL = Math.max(0, rTL);
         rTR = Math.max(0, rTR);
         rBR = Math.max(0, rBR);
         rBL = Math.max(0, rBL);
 
-        if (preventOverlap) {
-            var topSum    = rTL + rTR;
-            var bottomSum = rBL + rBR;
-            var leftSum   = rTL + rBL;
-            var rightSum  = rTR + rBR;
+        var topSum    = rTL + rTR;
+        var bottomSum = rBL + rBR;
+        var leftSum   = rTL + rBL;
+        var rightSum  = rTR + rBR;
 
-            var f = 1.0;
-            if (topSum > w && topSum > 0)       f = Math.min(f, w / topSum);
-            if (bottomSum > w && bottomSum > 0) f = Math.min(f, w / bottomSum);
-            if (leftSum > h && leftSum > 0)     f = Math.min(f, h / leftSum);
-            if (rightSum > h && rightSum > 0)   f = Math.min(f, h / rightSum);
+        var f = 1.0;
+        if (topSum > w && topSum > 0)       f = Math.min(f, w / topSum);
+        if (bottomSum > w && bottomSum > 0) f = Math.min(f, w / bottomSum);
+        if (leftSum > h && leftSum > 0)     f = Math.min(f, h / leftSum);
+        if (rightSum > h && rightSum > 0)   f = Math.min(f, h / rightSum);
 
-            rTL *= f;
-            rTR *= f;
-            rBR *= f;
-            rBL *= f;
-        }
+        rTL *= f;
+        rTR *= f;
+        rBR *= f;
+        rBL *= f;
 
         var K = 0.5522847498307936;
         var halfW = w / 2;
@@ -730,44 +767,124 @@
         var yMin = -halfH;
         var yMax =  halfH;
 
-        var points = [
-            [xMin + rTL, yMin],        // P0: Top edge, TL curve end
-            [xMax - rTR, yMin],        // P1: Top edge, TR curve start
-            [xMax, yMin + rTR],        // P2: Right edge, TR curve end
-            [xMax, yMax - rBR],        // P3: Right edge, BR curve start
-            [xMax - rBR, yMax],        // P4: Bottom edge, BR curve end
-            [xMin + rBL, yMax],        // P5: Bottom edge, BL curve start
-            [xMin, yMax - rBL],        // P6: Left edge, BL curve end
-            [xMin, yMin + rTL]         // P7: Left edge, TL curve start
-        ];
+        if (!hasTail || tailType === "none") {
+            // Pure rounded rectangle (Instagram / Messenger / Tail OFF)
+            return {
+                points: [
+                    [xMin + rTL, yMin],
+                    [xMax - rTR, yMin],
+                    [xMax, yMin + rTR],
+                    [xMax, yMax - rBR],
+                    [xMax - rBR, yMax],
+                    [xMin + rBL, yMax],
+                    [xMin, yMax - rBL],
+                    [xMin, yMin + rTL]
+                ],
+                inTangents: [
+                    [-rTL * K, 0], [0, 0],
+                    [0, -rTR * K], [0, 0],
+                    [rBR * K, 0],  [0, 0],
+                    [0, rBL * K],  [0, 0]
+                ],
+                outTangents: [
+                    [0, 0],        [rTR * K, 0],
+                    [0, 0],        [0, rBR * K],
+                    [0, 0],        [-rBL * K, 0],
+                    [0, 0],        [0, -rTL * K]
+                ]
+            };
+        }
 
-        var inTangents = [
-            [-rTL * K, 0],
-            [0, 0],
-            [0, -rTR * K],
-            [0, 0],
-            [rBR * K, 0],
-            [0, 0],
-            [0, rBL * K],
-            [0, 0]
-        ];
+        if (tailType === "modern" || tailType === "rcs") {
+            // Android RCS Material You: asymmetrical pill with 4px corner on tail side
+            var effRBR = isSent ? 4 : rBR;
+            var effRBL = isSent ? rBL : 4;
+            return {
+                points: [
+                    [xMin + rTL, yMin],
+                    [xMax - rTR, yMin],
+                    [xMax, yMin + rTR],
+                    [xMax, yMax - effRBR],
+                    [xMax - effRBR, yMax],
+                    [xMin + effRBL, yMax],
+                    [xMin, yMax - effRBL],
+                    [xMin, yMin + rTL]
+                ],
+                inTangents: [
+                    [-rTL * K, 0], [0, 0],
+                    [0, -rTR * K], [0, 0],
+                    [effRBR * K, 0], [0, 0],
+                    [0, effRBL * K], [0, 0]
+                ],
+                outTangents: [
+                    [0, 0], [rTR * K, 0],
+                    [0, 0], [0, effRBR * K],
+                    [0, 0], [-effRBL * K, 0],
+                    [0, 0], [0, -rTL * K]
+                ]
+            };
+        }
 
-        var outTangents = [
-            [0, 0],
-            [rTR * K, 0],
-            [0, 0],
-            [0, rBR * K],
-            [0, 0],
-            [-rBL * K, 0],
-            [0, 0],
-            [0, -rTL * K]
-        ];
-
-        return {
-            points: points,
-            inTangents: inTangents,
-            outTangents: outTangents
-        };
+        // iOS / Classic WhatsApp curved pointer integrated seamlessly into perimeter (Single Continuous Bézier Shape)
+        if (isSent) {
+            // Sent tail on bottom-right
+            return {
+                points: [
+                    [xMin + rTL, yMin],        // P0: Top edge, TL curve end
+                    [xMax - rTR, yMin],        // P1: Top edge, TR curve start
+                    [xMax, yMin + rTR],        // P2: Right edge, TR curve end
+                    [xMax, yMax - 14],         // P3: Right edge down towards tail
+                    [xMax + 7, yMax],          // P4: Tail tip (pointing right)
+                    [xMax - 10, yMax],         // P5: Tail bottom curve into base
+                    [xMin + rBL, yMax],        // P6: Bottom edge, BL curve start
+                    [xMin, yMax - rBL],        // P7: Left edge, BL curve end
+                    [xMin, yMin + rTL]         // P8: Left edge, TL curve start
+                ],
+                inTangents: [
+                    [-rTL * K, 0], [0, 0],
+                    [0, -rTR * K], [0, 0],
+                    [-1, -4],      [4, 0],
+                    [0, 0],        [0, rBL * K],
+                    [0, 0]
+                ],
+                outTangents: [
+                    [0, 0],        [rTR * K, 0],
+                    [0, 0],        [1, 5],
+                    [-2, 0],       [0, 0],
+                    [-rBL * K, 0], [0, 0],
+                    [0, -rTL * K]
+                ]
+            };
+        } else {
+            // Received tail on bottom-left (mirrored)
+            return {
+                points: [
+                    [xMin + rTL, yMin],        // P0: Top edge, TL curve end
+                    [xMax - rTR, yMin],        // P1: Top edge, TR curve start
+                    [xMax, yMin + rTR],        // P2: Right edge, TR curve end
+                    [xMax, yMax - rBR],        // P3: Right edge, BR curve start
+                    [xMax - rBR, yMax],        // P4: Bottom edge, BR curve end
+                    [xMin + 10, yMax],         // P5: Tail bottom curve from base
+                    [xMin - 7, yMax],          // P6: Tail tip (pointing left)
+                    [xMin, yMax - 14],         // P7: Left edge, swoop end
+                    [xMin, yMin + rTL]         // P8: Left edge, TL curve start
+                ],
+                inTangents: [
+                    [-rTL * K, 0], [0, 0],
+                    [0, -rTR * K], [0, 0],
+                    [rBR * K, 0],  [0, 0],
+                    [2, 0],        [-1, 5],
+                    [0, 0]
+                ],
+                outTangents: [
+                    [0, 0],        [rTR * K, 0],
+                    [0, 0],        [0, rBR * K],
+                    [0, 0],        [-4, 0],
+                    [1, -4],       [0, 0],
+                    [0, -rTL * K]
+                ]
+            };
+        }
     }
 
     function computeTailData(w, h, isSent) {
@@ -833,7 +950,7 @@
     }
 
     var PATH_EXPR = [
-        "// Custom Rounded Rectangle Base Expression (W3C CSS Proportional Overlap)",
+        "// Integrated Single-Path Message Bubble Perimeter (Zero Gaps / Flawless Solid Fill)",
         "(function() {",
         "    function getVal(name, fallback) {",
         "        try {",
@@ -849,28 +966,25 @@
         "        }",
         "    }",
         "",
-        "    var w = Math.max(0, getVal('Bubble Width', getVal('Width', 300)));",
-        "    var h = Math.max(0, getVal('Bubble Height', getVal('Height', 100)));",
+        "    var w = Math.max(20, getVal('Bubble Width', getVal('Width', 300)));",
+        "    var h = Math.max(20, getVal('Bubble Height', getVal('Height', 100)));",
         "    var rTL = Math.max(0, getVal('Radius Top-Left', 18));",
         "    var rTR = Math.max(0, getVal('Radius Top-Right', 18));",
         "    var rBR = Math.max(0, getVal('Radius Bottom-Right', 18));",
         "    var rBL = Math.max(0, getVal('Radius Bottom-Left', 18));",
-        "    var preventOverlap = getVal('Prevent Overlap', 1);",
+        "    var hasTail = getVal('Show Tail', 1);",
+        "    var isSent = (thisLayer.name.indexOf('Sent') !== -1) ? 1 : (thisLayer.name.indexOf('Received') !== -1 ? 0 : 1);",
         "",
-        "    if (preventOverlap > 0) {",
-        "        var topSum    = rTL + rTR;",
-        "        var bottomSum = rBL + rBR;",
-        "        var leftSum   = rTL + rBL;",
-        "        var rightSum  = rTR + rBR;",
-        "",
-        "        var f = 1.0;",
-        "        if (topSum > w && topSum > 0)       f = Math.min(f, w / topSum);",
-        "        if (bottomSum > w && bottomSum > 0) f = Math.min(f, w / bottomSum);",
-        "        if (leftSum > h && leftSum > 0)     f = Math.min(f, h / leftSum);",
-        "        if (rightSum > h && rightSum > 0)   f = Math.min(f, h / rightSum);",
-        "",
-        "        rTL *= f; rTR *= f; rBR *= f; rBL *= f;",
-        "    }",
+        "    var topSum    = rTL + rTR;",
+        "    var bottomSum = rBL + rBR;",
+        "    var leftSum   = rTL + rBL;",
+        "    var rightSum  = rTR + rBR;",
+        "    var f = 1.0;",
+        "    if (topSum > w && topSum > 0)       f = Math.min(f, w / topSum);",
+        "    if (bottomSum > w && bottomSum > 0) f = Math.min(f, w / bottomSum);",
+        "    if (leftSum > h && leftSum > 0)     f = Math.min(f, h / leftSum);",
+        "    if (rightSum > h && rightSum > 0)   f = Math.min(f, h / rightSum);",
+        "    rTL *= f; rTR *= f; rBR *= f; rBL *= f;",
         "",
         "    var K = 0.5522847498307936;",
         "    var halfW = w / 2;",
@@ -878,39 +992,90 @@
         "    var xMin = -halfW; var xMax = halfW;",
         "    var yMin = -halfH; var yMax = halfH;",
         "",
-        "    var points = [",
-        "        [xMin + rTL, yMin],",
-        "        [xMax - rTR, yMin],",
-        "        [xMax, yMin + rTR],",
-        "        [xMax, yMax - rBR],",
-        "        [xMax - rBR, yMax],",
-        "        [xMin + rBL, yMax],",
-        "        [xMin, yMax - rBL],",
-        "        [xMin, yMin + rTL]",
-        "    ];",
-        "    var inTangents = [",
-        "        [-rTL * K, 0],",
-        "        [0, 0],",
-        "        [0, -rTR * K],",
-        "        [0, 0],",
-        "        [rBR * K, 0],",
-        "        [0, 0],",
-        "        [0, rBL * K],",
-        "        [0, 0]",
-        "    ];",
-        "    var outTangents = [",
-        "        [0, 0],",
-        "        [rTR * K, 0],",
-        "        [0, 0],",
-        "        [0, rBR * K],",
-        "        [0, 0],",
-        "        [-rBL * K, 0],",
-        "        [0, 0],",
-        "        [0, -rTL * K]",
-        "    ];",
-        "    return createPath(points, inTangents, outTangents, true);",
+        "    if (hasTail <= 0) {",
+        "        var points = [",
+        "            [xMin + rTL, yMin],",
+        "            [xMax - rTR, yMin],",
+        "            [xMax, yMin + rTR],",
+        "            [xMax, yMax - rBR],",
+        "            [xMax - rBR, yMax],",
+        "            [xMin + rBL, yMax],",
+        "            [xMin, yMax - rBL],",
+        "            [xMin, yMin + rTL]",
+        "        ];",
+        "        var inTangents = [",
+        "            [-rTL * K, 0], [0, 0],",
+        "            [0, -rTR * K], [0, 0],",
+        "            [rBR * K, 0],  [0, 0],",
+        "            [0, rBL * K],  [0, 0]",
+        "        ];",
+        "        var outTangents = [",
+        "            [0, 0],        [rTR * K, 0],",
+        "            [0, 0],        [0, rBR * K],",
+        "            [0, 0],        [-rBL * K, 0],",
+        "            [0, 0],        [0, -rTL * K]",
+        "        ];",
+        "        return createPath(points, inTangents, outTangents, true);",
+        "    }",
+        "",
+        "    if (isSent > 0) {",
+        "        var points = [",
+        "            [xMin + rTL, yMin],",
+        "            [xMax - rTR, yMin],",
+        "            [xMax, yMin + rTR],",
+        "            [xMax, yMax - 14],",
+        "            [xMax + 7, yMax],",
+        "            [xMax - 10, yMax],",
+        "            [xMin + rBL, yMax],",
+        "            [xMin, yMax - rBL],",
+        "            [xMin, yMin + rTL]",
+        "        ];",
+        "        var inTangents = [",
+        "            [-rTL * K, 0], [0, 0],",
+        "            [0, -rTR * K], [0, 0],",
+        "            [-1, -4],      [4, 0],",
+        "            [0, 0],        [0, rBL * K],",
+        "            [0, 0]",
+        "        ];",
+        "        var outTangents = [",
+        "            [0, 0],        [rTR * K, 0],",
+        "            [0, 0],        [1, 5],",
+        "            [-2, 0],       [0, 0],",
+        "            [-rBL * K, 0], [0, 0],",
+        "            [0, -rTL * K]",
+        "        ];",
+        "        return createPath(points, inTangents, outTangents, true);",
+        "    } else {",
+        "        var points = [",
+        "            [xMin + rTL, yMin],",
+        "            [xMax - rTR, yMin],",
+        "            [xMax, yMin + rTR],",
+        "            [xMax, yMax - rBR],",
+        "            [xMax - rBR, yMax],",
+        "            [xMin + 10, yMax],",
+        "            [xMin - 7, yMax],",
+        "            [xMin, yMax - 14],",
+        "            [xMin, yMin + rTL]",
+        "        ];",
+        "        var inTangents = [",
+        "            [-rTL * K, 0], [0, 0],",
+        "            [0, -rTR * K], [0, 0],",
+        "            [rBR * K, 0],  [0, 0],",
+        "            [2, 0],        [-1, 5],",
+        "            [0, 0]",
+        "        ];",
+        "        var outTangents = [",
+        "            [0, 0],        [rTR * K, 0],",
+        "            [0, 0],        [0, rBR * K],",
+        "            [0, 0],        [-4, 0],",
+        "            [1, -4],       [0, 0],",
+        "            [0, -rTL * K]",
+        "        ];",
+        "        return createPath(points, inTangents, outTangents, true);",
+        "    }",
         "})();"
-    ].join("\n");
+    ].join("
+");
 
     // -------------------------------------------------------------------------
     // Entrance Animations: Bubble Grow (5 frames) + Typewriter Reveal (5 frames)
@@ -999,7 +1164,15 @@
         "    var f = time / fd;",
         "    if (f < growFrames) return '';",
         "    if (typeFrames <= 0) return value;",
-        "    var fullStr = String(value);",
+        "    var fullStr = '';",
+        "    try {",
+        "        if (value && typeof value.text === 'string') {",
+        "            fullStr = value.text;",
+        "        } else {",
+        "            fullStr = String(value);",
+        "        }",
+        "    } catch(eStr) { fullStr = String(value); }",
+        "    if (fullStr === '[object PropertyGroup]' || fullStr.indexOf('PropertyGroup') !== -1) fullStr = '';",
         "    if (f >= (growFrames + typeFrames)) return value;",
         "",
         "    var p = (f - growFrames) / typeFrames;",
@@ -2611,12 +2784,12 @@
     function formatTextLayer(lyr, textStr, fontSize, fontColor, justification, lineLeading, candidates) {
         if (!lyr) return;
         try {
-            var prop = lyr.property("Source Text") || (lyr.sourceText ? lyr.sourceText : null);
+            var prop = getTextProp(lyr);
             if (!prop) return;
             var doc = prop.value;
             if (!doc) return;
             if (textStr !== undefined && textStr !== null) {
-                doc.text = textStr;
+                doc.text = String(textStr);
             }
             if (typeof fontSize === "number" && fontSize > 0) {
                 doc.fontSize = fontSize;
@@ -3100,7 +3273,7 @@
             grpBase.name = "Bubble Base Outline";
             var grpBaseContents = grpBase.property("ADBE Vectors Group") || grpBase.property("Contents");
             var pathBase = grpBaseContents.addProperty("ADBE Vector Shape - Group");
-            var baseShapeData = computeShapeData(bubbleW, bubbleH, rTL, rTR, rBR, rBL, true);
+            var baseShapeData = computeShapeData(bubbleW, bubbleH, rTL, rTR, rBR, rBL, hasTail, isSent, tailType);
             if (typeof Shape !== "undefined") {
                 try {
                     var sObj = new Shape();
@@ -3116,35 +3289,14 @@
                 } catch(eS) {}
             }
 
-            // [B] Tail Pointer vector group (when enabled)
-            if (hasTail) {
-                var grpTailShape = contents.addProperty("ADBE Vector Group");
-                grpTailShape.name = "Tail Pointer";
-                var grpTailContents = grpTailShape.property("ADBE Vectors Group") || grpTailShape.property("Contents");
-                var pathTail = grpTailContents.addProperty("ADBE Vector Shape - Group");
-                var tailShapeData = computeTailData(bubbleW, bubbleH, isSent);
-                if (typeof Shape !== "undefined") {
-                    try {
-                        var sObjTail = new Shape();
-                        sObjTail.vertices = tailShapeData.points;
-                        sObjTail.inTangents = tailShapeData.inTangents;
-                        sObjTail.outTangents = tailShapeData.outTangents;
-                        sObjTail.closed = true;
-                        var pathTailProp = pathTail.property("ADBE Vector Shape") || pathTail.property("Path") || pathTail.property(1);
-                        if (pathTailProp) {
-                            pathTailProp.setValue(sObjTail);
-                        }
-                    } catch(eT) {}
-                }
-            }
-
             // [C] Shared Fill Graphic for unified bubble silhouette
             var fill = contents.addProperty("ADBE Vector Graphic - Fill");
             fill.property("Color").setValue(bubbleColor);
 
-            // 3. Message Text Layer
+            // 3. Message Text Layer (proper cap-height alignment prevents clipping top border)
             var textLayer = null;
-            var textTopY = -(bubbleH / 2) + padY;
+            var capHeight = Math.round(textSize * 0.76);
+            var textTopY = -(bubbleH / 2) + padY + capHeight;
             var textLeftX = -(bubbleW / 2) + padX;
 
             if (typeof comp.layers.addText === "function") {
@@ -3665,15 +3817,8 @@
         if (pComp) {
             var txtL = getLayer(pComp, "Message_Text");
             if (txtL) {
-                var raw = "";
-                if (txtL.property && txtL.property("Source Text")) {
-                    try {
-                        var doc = txtL.property("Source Text").value;
-                        if (doc && doc.text) raw = doc.text;
-                    } catch(e1) {}
-                }
-                if (!raw && txtL.text) raw = txtL.text;
-                if (raw) {
+                var raw = getTextLayerString(txtL);
+                if (raw && raw !== "[object PropertyGroup]" && raw.indexOf("PropertyGroup") === -1) {
                     txtMessage.text = raw;
                     updateCharCount();
                 }
@@ -4001,7 +4146,7 @@
                     }
 
                     // Update base shape outline
-                    var baseShapeData = computeShapeData(bubbleW, bubbleH, rTL, rTR, rBR, rBL, true);
+                    var baseShapeData = computeShapeData(bubbleW, bubbleH, rTL, rTR, rBR, rBL, hasTail, isSent, tailType);
                     var pathProp = null;
                     try {
                         pathProp = bubbleLayer.property("Contents").property("Bubble Base Outline").property("Contents").property("ADBE Vector Shape - Group").property("Path");
@@ -4053,7 +4198,8 @@
 
                 // Update Message Text layer
                 var textLayer = getLayer(preCompItem, "Message_Text");
-                var textTopY = -(bubbleH / 2) + padY;
+                var capHeight = Math.round(textSize * 0.76);
+                var textTopY = -(bubbleH / 2) + padY + capHeight;
                 var textLeftX = -(bubbleW / 2) + padX;
                 if (textLayer) {
                     textLayer.fontSize = textSize;
@@ -4168,6 +4314,9 @@
     };
 
     // Initialize layout & live selection state
+    if (txtMessage.text === "[object PropertyGroup]" || txtMessage.text.indexOf("PropertyGroup") !== -1) {
+        txtMessage.text = "Hey! Are we still meeting for lunch today? ☺️ 🍕";
+    }
     updateCharCount();
     syncColorsFromPlatform();
     checkSelectionState();

@@ -204,7 +204,7 @@
 
         comp.layers.forEach((layer, idx) => {
             const hasUIEffects = Boolean(layer.effects && layer.effects.properties && layer.effects.properties.length > 0);
-            const isNotShyable = Boolean(layer.notShyable || layer.name === 'Cube_Master_Controller' || (layer.name && layer.name.indexOf('cube_maker') === 0) || hasUIEffects);
+            const isNotShyable = Boolean(layer.notShyable || layer.name === 'Cube_Master_Controller' || (layer.name && (layer.name.indexOf('cube_maker') === 0 || layer.name.endsWith('_Controller'))) || hasUIEffects);
 
             // In Shy Mode: Hide secondary/geometry layers marked shy, but NEVER hide layers with UI properties
             if (globalShyActive && layer.shy && !isNotShyable) {
@@ -1548,12 +1548,7 @@
             if (val.startsWith('jsx:')) {
                 const fname = val.slice(4);
                 const fileObj = jsxFiles.get(fname);
-                let code = (fname === 'cube_maker.jsx' && PRESETS.cubeMaker) ? PRESETS.cubeMaker.code : 
-                           ((fname === 'cylinder_maker.jsx' && PRESETS.cylinderMaker) ? PRESETS.cylinderMaker.code : 
-                           ((fname === 'Pie_Slice_Generator.jsx' && PRESETS.pieSlice) ? PRESETS.pieSlice.code : 
-                           ((fname === 'custom_rounded_rect.jsx' && PRESETS.customRoundedRect) ? PRESETS.customRoundedRect.code : 
-                           ((fname === 'extruded_round_rectangle.jsx' && PRESETS.extrudedRoundRectangle) ? PRESETS.extrudedRoundRectangle.code : 
-                           (fileObj ? fileObj.code : null)))));
+                let code = fileObj ? fileObj.code : null;
 
                 // If code not cached, look in window.JSX_FOLDER_FILES manifest
                 if (!code && window.JSX_FOLDER_FILES && Array.isArray(window.JSX_FOLDER_FILES)) {
@@ -1586,7 +1581,12 @@
                 }
             } else if (val.startsWith('preset:')) {
                 const key = val.slice(7);
-                if (PRESETS[key]) {
+                const matched = findMatchingOption(key);
+                if (matched && matched !== val) {
+                    loadPresetOrJSX(matched, updateUrl, isPush);
+                    return;
+                }
+                if (typeof PRESETS !== 'undefined' && PRESETS[key]) {
                     codeTextarea.value = PRESETS[key].code;
                     if (currentFilenameEl) currentFilenameEl.textContent = PRESETS[key].name;
                     appendConsole(`Selected preset "${PRESETS[key].name}". Executing...`);
@@ -1599,29 +1599,15 @@
         function renderPresetOptions() {
             presetSelect.innerHTML = '';
 
-            // 1. Group for JSX subfolder files
-            const jsxGroup = document.createElement('optgroup');
-            jsxGroup.label = '📁 Detected in jsx/ folder';
+            // Populate detected JSX files
             if (jsxFiles.size > 0) {
                 for (const [fname] of jsxFiles.entries()) {
                     const opt = document.createElement('option');
                     opt.value = `jsx:${fname}`;
                     opt.textContent = `📄 ${fname}`;
-                    jsxGroup.appendChild(opt);
+                    presetSelect.appendChild(opt);
                 }
-                presetSelect.appendChild(jsxGroup);
             }
-
-            // 2. Group for Built-in Templates & Presets
-            const presetGroup = document.createElement('optgroup');
-            presetGroup.label = 'Built-in Presets';
-            for (const [key, preset] of Object.entries(PRESETS)) {
-                const opt = document.createElement('option');
-                opt.value = `preset:${key}`;
-                opt.textContent = preset.name;
-                presetGroup.appendChild(opt);
-            }
-            presetSelect.appendChild(presetGroup);
         }
 
         async function populatePresetsDropdown() {

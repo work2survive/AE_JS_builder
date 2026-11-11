@@ -92,13 +92,9 @@ Supports the core AE vector shapes:
 - **Color Swatch + Hex Rule**: Standardized interactive rectangular sample swatches positioned immediately adjacent to hex text boxes across all JSX panels, providing 100% visual and interactive parity between Adobe After Effects ScriptUI and the Web Emulator.
 - Switch to the **ScriptUI Panel Preview** tab to interact directly with your UI controls and see them modify the composition live.
 
-### 10. Built-in Test Presets & Parametric Generators
+### 10. Detected Production ScriptUI Tools (`jsx/` Folder)
 
-The emulator includes production-ready After Effects ScriptUI tools as well as quick verification presets:
-
-#### A. Production ScriptUI Add-ons (`jsx/` Folder)
-
-The simulator includes standalone production-ready After Effects ScriptUI tools located in [`jsx/`](jsx/). Each tool is maintained in its own dedicated repository with complete documentation, installation guides, and full source code:
+The simulator automatically detects and loads standalone production-ready After Effects ScriptUI tools located in [`jsx/`](jsx/). Each tool is maintained in its own dedicated repository with complete documentation, installation guides, and full source code:
 
 1. **[Cube Maker 3D](https://github.com/work2survive/AE-Cube-Maker-3D)** (`jsx/cube_maker.jsx` - v1.3):
    - Parametric 3D cube generator with independent face colors, opacity, stroke controls, and collapsed-transformation master rigging.
@@ -130,14 +126,10 @@ The simulator includes standalone production-ready After Effects ScriptUI tools 
    - **Repository**: [work2survive/AE_message_bubble](https://github.com/work2survive/AE_message_bubble)
    - **Live Demo**: [https://work2survive.github.io/AE_JS_builder/?jsx=message_bubble.jsx&autobuild=true](https://work2survive.github.io/AE_JS_builder/?jsx=message_bubble.jsx&autobuild=true)
 
-#### B. Quick Verification Presets
-
-7. **Test 1: 3D Cube (200x200px) with Wiggle**:
-   - Baseline 6-face cube demonstration with active `wiggle()` expressions on position, rotation, and dimensions.
-8. **Test 2: ScriptUI Cube Builder Panel**:
-   - Baseline ScriptUI window demonstration showing button callbacks, edit texts, and layer hierarchy creation.
-9. **Test 3: Squares, Circles & Bézier Paths**:
-   - 2D vector primitives demonstration showing rounded rectangles, circle shapes, and 5-point Bézier star paths with curved control tangents.
+7. **[AE WindBox](https://github.com/work2survive/AE_windBox)** (`jsx/AE_WindBox_Panel.jsx` - v1.0):
+   - Procedural 3D wind volume particle system with animatable 3D Cube bounding box based on `AE-Cube-Maker-3D` architecture, 3-axis positional/rotational turbulence, seamless spatial wrapping, and live color controls.
+   - **Repository**: [work2survive/AE_windBox](https://github.com/work2survive/AE_windBox)
+   - **Live Demo**: [https://work2survive.github.io/AE_JS_builder/?jsx=AE_WindBox_Panel.jsx&autobuild=true](https://work2survive.github.io/AE_JS_builder/?jsx=AE_WindBox_Panel.jsx&autobuild=true)
 
 ---
 
@@ -165,6 +157,7 @@ The production tools built and tested inside this simulator are also available a
 - **[AE_Custom_Rounded_Rect](https://github.com/work2survive/AE_Custom_Rounded_Rect)**: Independent 4-corner parametric rounded rectangle generator with W3C CSS proportional overlap protection (v1.1).
 - **[AE_Extruded_Round_corners](https://github.com/work2survive/AE_Extruded_Round_corners)**: Parametric 3D extruded rounded rectangle with faceted corner walls, tri-color palette, airtight inner caps, and master rigging (v1.3 / v2.0).
 - **[AE Message Bubble Generator](https://github.com/work2survive/AE_message_bubble)**: Authentic chat and text message bubble generator for iOS, Android RCS, WhatsApp, Instagram, Messenger, and Custom themes (v1.0).
+- **[AE WindBox](https://github.com/work2survive/AE_windBox)**: Procedural 3D wind volume particle system with dynamic 3D cube bounding box, 3-axis positional and rotational turbulence, and master controller rigging (v1.0).
 
 ---
 
