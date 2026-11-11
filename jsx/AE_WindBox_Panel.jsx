@@ -1,30 +1,39 @@
 // Co-authored & architected with Google DeepMind Antigravity.
 // =============================================================================
-// ADOBE AFTER EFFECTS EXTENDSCRIPT & SCRIPTUI PANEL: AE WINDBOX v1.0
+// ADOBE AFTER EFFECTS EXTENDSCRIPT & SCRIPTUI PANEL: AE WINDBOX v1.1
 // =============================================================================
 //
 // PURPOSE:
 //   A procedural 3D Wind Volume Particle System for Adobe After Effects,
-//   integrated with the parametric 3D Cube Maker architecture from:
-//   https://github.com/work2survive/AE-Cube-Maker-3D
+//   featuring a virtual 3D bounding box (Guide Layer) and preset physics
+//   for organic elements (Leaves, Clouds, Stars, Mountains, Shapes, and Custom Comps).
 //
-// ARCHITECTURE & WORKFLOW:
-//   1. 3D Cube Bounding Box (6 Parametric Shape Faces):
-//      - Front, Back, Left, Right, Top, Bottom
-//      - White outline strokes and semitransparent grey sides (animatable fill & stroke)
-//      - Expressions dynamically link face positions & sizes to Master Controller
-//   2. Procedural Wind Particles:
-//      - Speed, 3D Direction vector [X, Y, Z] with auto-normalization
-//      - 3D spatial wrapping within the cube volume
-//      - 3-axis positional turbulence & independent 3-axis rotational turbulence
-//      - Particle count control with seamless active culling
-//   3. Master 3D Controller:
-//      - Single null layer with Expression Slider & Color Controls
-//      - Moving or rotating the controller transforms the entire wind volume in 3D
+// KEY CAPABILITIES:
+//   1. Virtual 3D Cube (Guide Layer):
+//      - Visible in After Effects working composition viewport for precise volume framing.
+//      - Flagged as Guide Layer (`guideLayer = true`) by default so it never renders to exports.
+//      - 6 parametric faces parented to the Master Controller with dynamic expressions.
+//   2. Wind-Driven Particle Motion & Rotation:
+//      - Particles travel along normalized 3D wind vector [X, Y, Z] at animatable speed.
+//      - 3D spatial wrapping keeps particles in continuous flow within the box volume.
+//      - "Align to Wind" option dynamically rotates particles to face and orient with the wind.
+//      - 3-axis positional turbulence & independent 3-axis rotational tumbling wiggle.
+//   3. Rich Preset System:
+//      - 🍃 Leaves: Procedural Bézier teardrop leaves with multi-hue autumn tones & organic tumbling.
+//      - ☁️ Clouds: Multi-puff soft cloud vector clusters with gentle horizontal drift.
+//      - ⭐ Stars: 5-pointed twinkling stars with cosmic shimmering float.
+//      - ⛰️ Mountains: Low-poly geometric mountain silhouettes with majestic parallax glide.
+//      - ⚪ 3D Circles: Snow, dust, spores, or bubbles.
+//      - ⬛ 3D Squares: Confetti, debris, or pixel particles.
+//      - 🎬 Project Composition: Instantiate any existing CompItem from the project!
+//      - 🎯 Selected Layer(s): Duplicate any selected timeline layer as particle source.
+//   4. Master 3D Controller:
+//      - Single 3D null layer containing Slider, Color, and Checkbox Effect Controls.
+//      - Moving or rotating the controller transforms and reorients the entire wind volume.
 //
 // COMPATIBILITY:
-//   - Adobe After Effects CS6, CC 2014 - 2026+ (ExtendScript engine)
-//   - Works both as a dockable panel (in ScriptUI Panels folder) and as a floating palette.
+//   - Adobe After Effects CS6 through CC 2026+ (ExtendScript engine)
+//   - Works both as a dockable panel (ScriptUI Panels) and as a floating palette.
 // =============================================================================
 
 (function (thisObj) {
@@ -158,15 +167,129 @@
     }
 
     // ==========================================
+    // PROCEDURAL VECTOR SHAPE BUILDER
+    // ==========================================
+    function buildParticleShape(pLayer, sourceIndex, shapeSize, defaultColor, pIndex) {
+        var root = pLayer.property("ADBE Root Vectors Group");
+        var shapeGroup = root.addProperty("ADBE Vector Group");
+        shapeGroup.name = "Particle Shape";
+        var contents = shapeGroup.property("ADBE Vectors Group");
+
+        // Curated multi-tone palettes for rich natural particle fields
+        var autumnLeafPalette = [
+            [0.32, 0.68, 0.22, 1], // Fresh Green
+            [0.88, 0.68, 0.12, 1], // Golden Amber
+            [0.92, 0.44, 0.10, 1], // Vivid Autumn Orange
+            [0.82, 0.22, 0.16, 1], // Crimson
+            [0.55, 0.72, 0.20, 1]  // Bright Lime
+        ];
+
+        var starPalette = [
+            [1.0, 0.95, 0.45, 1], // Warm Golden Star
+            [1.0, 1.0, 1.0, 1],    // Pure White Diamond
+            [0.75, 0.88, 1.0, 1],  // Celestial Blue
+            [1.0, 0.85, 0.6, 1]   // Peach Starlight
+        ];
+
+        var finalColor = defaultColor;
+
+        if (sourceIndex === 0) { // 🍃 Leaves (Procedural Teardrop Bézier)
+            var pathGroup = contents.addProperty("ADBE Vector Shape - Group");
+            var pathProp = pathGroup.property("ADBE Vector Shape");
+            var leafShape = new Shape();
+            var r = shapeSize / 2;
+            leafShape.vertices = [[0, -r], [r * 0.65, 0], [0, r * 0.9], [-r * 0.65, 0]];
+            var k = r * 0.45;
+            leafShape.inTangents = [[-k * 0.4, 0], [0, -k], [k * 0.4, 0], [0, k]];
+            leafShape.outTangents = [[k * 0.4, 0], [0, k], [-k * 0.4, 0], [0, -k]];
+            leafShape.closed = true;
+            pathProp.setValue(leafShape);
+            finalColor = autumnLeafPalette[(pIndex - 1) % autumnLeafPalette.length];
+
+        } else if (sourceIndex === 1) { // ☁️ Clouds (Soft 6-Node Bubble Puff)
+            var pathGroupCloud = contents.addProperty("ADBE Vector Shape - Group");
+            var pathPropCloud = pathGroupCloud.property("ADBE Vector Shape");
+            var cloudShape = new Shape();
+            var cw = shapeSize, ch = shapeSize * 0.6;
+            cloudShape.vertices = [
+                [-cw * 0.4, ch * 0.25],
+                [cw * 0.4, ch * 0.25],
+                [cw * 0.45, 0],
+                [cw * 0.18, -ch * 0.38],
+                [-cw * 0.18, -ch * 0.42],
+                [-cw * 0.45, 0]
+            ];
+            var cc = shapeSize * 0.16;
+            cloudShape.inTangents = [[0, 0], [cc, 0], [0, cc], [cc, 0], [-cc, 0], [0, -cc]];
+            cloudShape.outTangents = [[-cc, 0], [0, -cc], [-cc, 0], [cc, 0], [0, cc], [0, 0]];
+            cloudShape.closed = true;
+            pathPropCloud.setValue(cloudShape);
+            finalColor = [0.94, 0.96, 0.98, 1]; // Puffy white cloud
+
+        } else if (sourceIndex === 2) { // ⭐ Stars (5-Point Vector Star)
+            var pathGroupStar = contents.addProperty("ADBE Vector Shape - Group");
+            var pathPropStar = pathGroupStar.property("ADBE Vector Shape");
+            var starShape = new Shape();
+            var rOut = shapeSize / 2;
+            var rIn = rOut * 0.42;
+            var sVerts = [], sIns = [], sOuts = [];
+            for (var st = 0; st < 10; st++) {
+                var ang = (st * Math.PI) / 5 - Math.PI / 2;
+                var rad = (st % 2 === 0) ? rOut : rIn;
+                sVerts.push([Math.cos(ang) * rad, Math.sin(ang) * rad]);
+                sIns.push([0, 0]);
+                sOuts.push([0, 0]);
+            }
+            starShape.vertices = sVerts;
+            starShape.inTangents = sIns;
+            starShape.outTangents = sOuts;
+            starShape.closed = true;
+            pathPropStar.setValue(starShape);
+            finalColor = starPalette[(pIndex - 1) % starPalette.length];
+
+        } else if (sourceIndex === 3) { // ⛰️ Mountains (Low-Poly Peak Silhouette)
+            var pathGroupMnt = contents.addProperty("ADBE Vector Shape - Group");
+            var pathPropMnt = pathGroupMnt.property("ADBE Vector Shape");
+            var mntShape = new Shape();
+            var mw = shapeSize, mh = shapeSize * 0.7;
+            mntShape.vertices = [
+                [-mw * 0.5, mh * 0.35],
+                [-mw * 0.22, -mh * 0.1],
+                [-mw * 0.08, mh * 0.05],
+                [0, -mh * 0.45],
+                [mw * 0.2, -mh * 0.08],
+                [mw * 0.5, mh * 0.35]
+            ];
+            mntShape.inTangents = [[0,0],[0,0],[0,0],[0,0],[0,0],[0,0]];
+            mntShape.outTangents = [[0,0],[0,0],[0,0],[0,0],[0,0],[0,0]];
+            mntShape.closed = true;
+            pathPropMnt.setValue(mntShape);
+            finalColor = [0.32, 0.38, 0.46, 1]; // Slate mountain silhouette
+
+        } else if (sourceIndex === 4) { // ⚪ 3D Circles
+            var ellipse = contents.addProperty("ADBE Vector Shape - Ellipse");
+            ellipse.property("ADBE Vector Ellipse Size").setValue([shapeSize, shapeSize]);
+
+        } else if (sourceIndex === 5) { // ⬛ 3D Squares
+            var rect = contents.addProperty("ADBE Vector Shape - Rect");
+            rect.property("ADBE Vector Rect Size").setValue([shapeSize, shapeSize]);
+        }
+
+        // Add Vector Fill Graphic
+        var fill = contents.addProperty("ADBE Vector Graphic - Fill");
+        fill.property("ADBE Vector Fill Color").setValue(finalColor);
+    }
+
+    // ==========================================
     // UI BUILDER
     // ==========================================
     function buildWindBoxUI(thisObj) {
         var isPanel = (thisObj instanceof Panel);
-        var win = isPanel ? thisObj : new Window("palette", "AE WindBox v1.0", undefined, {
+        var win = isPanel ? thisObj : new Window("palette", "AE WindBox v1.1", undefined, {
             resizeable: true
         });
         if (!(thisObj instanceof Panel)) {
-            win.text = "AE WindBox v1.0";
+            win.text = "AE WindBox v1.1";
         }
 
         win.orientation = "column";
@@ -175,7 +298,7 @@
         win.margins = 8;
 
         // ---------------------------------------------------------------------
-        // UI Header (Panel Title + Version & Description)
+        // 1. UI Header (Panel Title + Version & Description)
         // ---------------------------------------------------------------------
         var pnlHeader = win.add("panel", undefined, "AE WindBox");
         pnlHeader.orientation = "column";
@@ -184,33 +307,58 @@
         pnlHeader.spacing = 3;
         pnlHeader.margins = [10, 8, 10, 8];
 
-        var lblDesc = pnlHeader.add("statictext", undefined, "v1.0 - Procedural 3D Wind Volume Particle System with 3D Cube Bounding Box.");
+        var lblDesc = pnlHeader.add("statictext", undefined, "v1.1 - Procedural 3D Wind Volume Particle System with Virtual Guide Cube.");
 
-        // ---------- SYSTEM NAME & HELP ----------
+        // ---------- SYSTEM NAME & PRESETS ----------
         var headerGroup = win.add("group");
         headerGroup.orientation = "row";
         headerGroup.alignChildren = ["left", "center"];
+        headerGroup.alignment = ["fill", "top"];
         headerGroup.spacing = 6;
 
         headerGroup.add("statictext", undefined, "System Name:");
         var txtSysName = headerGroup.add("edittext", undefined, "WindBox");
-        txtSysName.characters = 12;
+        txtSysName.characters = 10;
 
         var btnHelp = headerGroup.add("button", undefined, "?");
         btnHelp.maximumSize = [24, 22];
         btnHelp.onClick = function () {
             alert(
-                "AE WindBox + 3D Cube Maker (v1.0)\n" +
+                "AE WindBox + 3D Cube Maker (v1.1)\n" +
                 "=================================\n" +
-                "1. Set Box Dimensions (Size X, Y, Z), Wind Speed, Direction & Wiggle.\n" +
-                "2. The 3D Cube is constructed from 6 shape layers based on AE-Cube-Maker-3D architecture.\n" +
-                "3. Features customizable stroke lines and semitransparent sides with live color pickers.\n" +
-                "4. All parameters are rigged to the Master Controller as Expression Sliders & Color Controls,\n" +
-                "   making both particles and the 3D cube 100% keyframeable in the timeline!\n\n" +
+                "1. Virtual 3D Cube (Guide Layer):\n" +
+                "   Defines the 3D wind boundary. Marked as Guide Layer by default so it stays\n" +
+                "   visible in the working viewport for reference, but never renders to exports!\n\n" +
+                "2. Wind Physics & Flow Direction:\n" +
+                "   Particles wrap seamlessly in 3D volume space. Enable 'Align to Wind' so\n" +
+                "   elements naturally steer and orient in the direction of the wind vector!\n\n" +
+                "3. Presets & Custom Comps:\n" +
+                "   Quickly switch between Leaves, Clouds, Stars, Mountains, Shapes, or pick\n" +
+                "   any composition from your project to instantiate as 3D wind particles.\n\n" +
                 "Tip: Moving or rotating the Controller null transforms the entire wind volume in 3D world space.",
                 "About AE WindBox"
             );
         };
+
+        // ---------- PRESET QUICK-LOADER ROW ----------
+        var grpPreset = win.add("group");
+        grpPreset.orientation = "row";
+        grpPreset.alignChildren = ["left", "center"];
+        grpPreset.alignment = ["fill", "top"];
+        grpPreset.spacing = 6;
+
+        grpPreset.add("statictext", undefined, "Preset:");
+        var dropPreset = grpPreset.add("dropdownlist", undefined, [
+            "🍃 Falling Leaves (Organic Flutter & Tumble)",
+            "☁️ Drifting Clouds (Soft Gentle Float)",
+            "⭐ Cosmic Stars (Twinkle & Shimmer)",
+            "⛰️ Parallax Mountains (Horizon Glide)",
+            "⚪ 3D Circles (Snow / Spores)",
+            "⬛ 3D Squares (Confetti / Debris)",
+            "🎬 Project Composition...",
+            "🎯 Selected Layer(s)"
+        ]);
+        dropPreset.selection = 0; // Default to Leaves!
 
         // ---------- TABBED PANEL ----------
         var tpanel = win.add("tabbedpanel");
@@ -234,7 +382,7 @@
         pnlSize.spacing = 4;
 
         pnlSize.add("statictext", undefined, "X:");
-        var editSizeX = pnlSize.add("edittext", undefined, "1200");
+        var editSizeX = pnlSize.add("edittext", undefined, "1400");
         editSizeX.characters = 5;
 
         pnlSize.add("statictext", undefined, "Y:");
@@ -256,7 +404,7 @@
         grpSpeed.orientation = "row";
         grpSpeed.alignChildren = ["left", "center"];
         grpSpeed.add("statictext", undefined, "Wind Speed (px/s):");
-        var editSpeed = grpSpeed.add("edittext", undefined, "300");
+        var editSpeed = grpSpeed.add("edittext", undefined, "260");
         editSpeed.characters = 6;
 
         // Direction row
@@ -271,12 +419,17 @@
         editDirX.characters = 4;
 
         grpDir.add("statictext", undefined, "Y:");
-        var editDirY = grpDir.add("edittext", undefined, "0.0");
+        var editDirY = grpDir.add("edittext", undefined, "0.3");
         editDirY.characters = 4;
 
         grpDir.add("statictext", undefined, "Z:");
-        var editDirZ = grpDir.add("edittext", undefined, "0.0");
+        var editDirZ = grpDir.add("edittext", undefined, "0.2");
         editDirZ.characters = 4;
+
+        // Align rotation to wind checkbox
+        var chkAlignWind = pnlWind.add("checkbox", undefined, "Align Particle Rotation to Wind Vector");
+        chkAlignWind.value = true;
+        chkAlignWind.helpTip = "Automatically rotates particles towards the wind direction vector with aerodynamic tumble";
 
         // Particle Count Panel
         var pnlCount = tabFlow.add("panel", undefined, "Particles Count - Animatable");
@@ -285,25 +438,28 @@
         pnlCount.spacing = 6;
 
         pnlCount.add("statictext", undefined, "Number of Particles:");
-        var editCount = pnlCount.add("edittext", undefined, "60");
+        var editCount = pnlCount.add("edittext", undefined, "50");
         editCount.characters = 5;
 
         // ==========================================
-        // TAB 2: 3D CUBE (AE-CUBE-MAKER-3D)
+        // TAB 2: VIRTUAL CUBE (GUIDE LAYER)
         // ==========================================
-        var tabCube = tpanel.add("tab", undefined, "3D Cube");
+        var tabCube = tpanel.add("tab", undefined, "Virtual Cube");
         tabCube.orientation = "column";
         tabCube.alignChildren = ["fill", "top"];
         tabCube.spacing = 6;
         tabCube.margins = 6;
 
-        var chkCreateCube = tabCube.add("checkbox", undefined, "Build 3D Cube (AE-Cube-Maker-3D Architecture)");
+        var chkCreateCube = tabCube.add("checkbox", undefined, "Build Virtual 3D Cube (AE-Cube-Maker-3D)");
         chkCreateCube.value = true;
 
-        var chkCubeGuide = tabCube.add("checkbox", undefined, "Set Cube as Guide Layer (Viewport only)");
-        chkCubeGuide.value = false;
+        var chkCubeGuide = tabCube.add("checkbox", undefined, "Set as Guide Layer (Viewport only, invisible in render)");
+        chkCubeGuide.value = true; // Default: Guide layer!
 
-        var pnlCubeStyle = tabCube.add("panel", undefined, "Cube Appearance");
+        var lblGuideTip = tabCube.add("statictext", undefined, "Guide Layers frame the volume in working viewport and do NOT render out.", { multiline: true });
+        lblGuideTip.alignment = ["fill", "top"];
+
+        var pnlCubeStyle = tabCube.add("panel", undefined, "Cube Visualizer Appearance");
         pnlCubeStyle.orientation = "column";
         pnlCubeStyle.alignChildren = ["fill", "top"];
         pnlCubeStyle.spacing = 6;
@@ -322,9 +478,9 @@
         grpCubeSidesOp.alignChildren = ["left", "center"];
         var lblSidesOp = grpCubeSidesOp.add("statictext", undefined, "Sides Opacity (%):");
         lblSidesOp.preferredSize = [135, -1];
-        var editCubeSidesOp = grpCubeSidesOp.add("edittext", undefined, "12");
+        var editCubeSidesOp = grpCubeSidesOp.add("edittext", undefined, "10");
         editCubeSidesOp.characters = 4;
-        grpCubeSidesOp.add("statictext", undefined, "(Semitransparent sides)");
+        grpCubeSidesOp.add("statictext", undefined, "(Subtle holographic volume)");
 
         // Stroke Color Picker
         var grpCubeStroke = pnlCubeStyle.add("group");
@@ -340,7 +496,7 @@
         grpCubeStrokeW.alignChildren = ["left", "center"];
         var lblStrokeW = grpCubeStrokeW.add("statictext", undefined, "Stroke Width (px):");
         lblStrokeW.preferredSize = [135, -1];
-        var editCubeStrokeW = grpCubeStrokeW.add("edittext", undefined, "2");
+        var editCubeStrokeW = grpCubeStrokeW.add("edittext", undefined, "1.5");
         editCubeStrokeW.characters = 4;
 
         // Stroke Opacity
@@ -349,7 +505,7 @@
         grpCubeStrokeOp.alignChildren = ["left", "center"];
         var lblStrokeOp = grpCubeStrokeOp.add("statictext", undefined, "Stroke Opacity (%):");
         lblStrokeOp.preferredSize = [135, -1];
-        var editCubeStrokeOp = grpCubeStrokeOp.add("edittext", undefined, "90");
+        var editCubeStrokeOp = grpCubeStrokeOp.add("edittext", undefined, "85");
         editCubeStrokeOp.characters = 4;
 
         // ==========================================
@@ -361,7 +517,7 @@
         tabPosWiggle.spacing = 6;
         tabPosWiggle.margins = 6;
 
-        var pnlPosWig = tabPosWiggle.add("panel", undefined, "Particle Position Wiggle");
+        var pnlPosWig = tabPosWiggle.add("panel", undefined, "Particle Position Turbulence");
         pnlPosWig.orientation = "column";
         pnlPosWig.alignChildren = ["fill", "top"];
         pnlPosWig.spacing = 4;
@@ -370,7 +526,7 @@
         grpPosFreq.orientation = "row";
         grpPosFreq.alignChildren = ["left", "center"];
         grpPosFreq.add("statictext", undefined, "Frequency (Hz):");
-        var editPosFreq = grpPosFreq.add("edittext", undefined, "1.5");
+        var editPosFreq = grpPosFreq.add("edittext", undefined, "1.6");
         editPosFreq.characters = 5;
 
         var grpPosAmp = pnlPosWig.add("group");
@@ -380,11 +536,11 @@
 
         grpPosAmp.add("statictext", undefined, "Amount (px):");
         grpPosAmp.add("statictext", undefined, "X:");
-        var editPosAmpX = grpPosAmp.add("edittext", undefined, "60");
+        var editPosAmpX = grpPosAmp.add("edittext", undefined, "70");
         editPosAmpX.characters = 4;
 
         grpPosAmp.add("statictext", undefined, "Y:");
-        var editPosAmpY = grpPosAmp.add("edittext", undefined, "60");
+        var editPosAmpY = grpPosAmp.add("edittext", undefined, "50");
         editPosAmpY.characters = 4;
 
         grpPosAmp.add("statictext", undefined, "Z:");
@@ -400,44 +556,44 @@
         tabRotWiggle.spacing = 6;
         tabRotWiggle.margins = 6;
 
-        // X Rotation
-        var pnlRotX = tabRotWiggle.add("panel", undefined, "X Rotation Wiggle");
+        // X Rotation (Pitch)
+        var pnlRotX = tabRotWiggle.add("panel", undefined, "X Rotation Turbulence (Pitch)");
         pnlRotX.orientation = "row";
         pnlRotX.alignChildren = ["fill", "center"];
         pnlRotX.spacing = 4;
         pnlRotX.add("statictext", undefined, "Amount (°):");
-        var editRotXAmp = pnlRotX.add("edittext", undefined, "45");
+        var editRotXAmp = pnlRotX.add("edittext", undefined, "60");
         editRotXAmp.characters = 4;
         pnlRotX.add("statictext", undefined, "Freq (Hz):");
-        var editRotXFreq = pnlRotX.add("edittext", undefined, "1.0");
+        var editRotXFreq = pnlRotX.add("edittext", undefined, "1.2");
         editRotXFreq.characters = 4;
 
-        // Y Rotation
-        var pnlRotY = tabRotWiggle.add("panel", undefined, "Y Rotation Wiggle");
+        // Y Rotation (Yaw)
+        var pnlRotY = tabRotWiggle.add("panel", undefined, "Y Rotation Turbulence (Yaw)");
         pnlRotY.orientation = "row";
         pnlRotY.alignChildren = ["fill", "center"];
         pnlRotY.spacing = 4;
         pnlRotY.add("statictext", undefined, "Amount (°):");
-        var editRotYAmp = pnlRotY.add("edittext", undefined, "45");
+        var editRotYAmp = pnlRotY.add("edittext", undefined, "60");
         editRotYAmp.characters = 4;
         pnlRotY.add("statictext", undefined, "Freq (Hz):");
-        var editRotYFreq = pnlRotY.add("edittext", undefined, "1.0");
+        var editRotYFreq = pnlRotY.add("edittext", undefined, "1.2");
         editRotYFreq.characters = 4;
 
-        // Z Rotation
-        var pnlRotZ = tabRotWiggle.add("panel", undefined, "Z Rotation Wiggle");
+        // Z Rotation (Roll)
+        var pnlRotZ = tabRotWiggle.add("panel", undefined, "Z Rotation Turbulence (Roll)");
         pnlRotZ.orientation = "row";
         pnlRotZ.alignChildren = ["fill", "center"];
         pnlRotZ.spacing = 4;
         pnlRotZ.add("statictext", undefined, "Amount (°):");
-        var editRotZAmp = pnlRotZ.add("edittext", undefined, "45");
+        var editRotZAmp = pnlRotZ.add("edittext", undefined, "75");
         editRotZAmp.characters = 4;
         pnlRotZ.add("statictext", undefined, "Freq (Hz):");
-        var editRotZFreq = pnlRotZ.add("edittext", undefined, "1.0");
+        var editRotZFreq = pnlRotZ.add("edittext", undefined, "1.5");
         editRotZFreq.characters = 4;
 
         // ==========================================
-        // TAB 5: PARTICLE SOURCE
+        // TAB 5: PARTICLE SOURCE & APPEARANCE
         // ==========================================
         var tabSource = tpanel.add("tab", undefined, "Particles");
         tabSource.orientation = "column";
@@ -450,21 +606,164 @@
         grpSource.alignChildren = ["left", "center"];
         grpSource.add("statictext", undefined, "Source:");
         var dropSource = grpSource.add("dropdownlist", undefined, [
-            "Built-in 3D Circle (Vector)",
-            "Built-in 3D Square (Vector)",
-            "Use Selected Layer(s)"
+            "🍃 Built-in Leaves (Bézier Vector)",
+            "☁️ Built-in Clouds (Soft Vector)",
+            "⭐ Built-in Stars (5-Point Vector)",
+            "⛰️ Built-in Mountains (Silhouette)",
+            "⚪ Built-in 3D Circle (Vector)",
+            "⬛ Built-in 3D Square (Vector)",
+            "🎬 Project Composition...",
+            "🎯 Use Selected Timeline Layer(s)"
         ]);
-        dropSource.selection = 0;
+        dropSource.selection = 0; // Default to Leaves!
+
+        // Project Comp Selector row (visible when source == 6)
+        var grpProjComp = tabSource.add("group");
+        grpProjComp.orientation = "row";
+        grpProjComp.alignChildren = ["left", "center"];
+        grpProjComp.visible = false;
+
+        grpProjComp.add("statictext", undefined, "Comp:");
+        var dropProjectComp = grpProjComp.add("dropdownlist", undefined, ["(Scan Project Comps)"]);
+        dropProjectComp.preferredSize = [160, -1];
+        dropProjectComp.selection = 0;
+
+        var btnRefreshComps = grpProjComp.add("button", undefined, "🔄");
+        btnRefreshComps.maximumSize = [28, 22];
+        btnRefreshComps.helpTip = "Scan project for available Compositions";
+
+        var projectCompItems = [];
+        function updateProjectCompsList() {
+            dropProjectComp.removeAll();
+            projectCompItems = [];
+            var proj = app.project;
+            if (proj && proj.items) {
+                for (var ci = 1; ci <= proj.items.length; ci++) {
+                    var item = proj.items[ci];
+                    if (item && item instanceof CompItem) {
+                        dropProjectComp.add("item", item.name);
+                        projectCompItems.push(item);
+                    }
+                }
+            }
+            if (dropProjectComp.items.length === 0) {
+                dropProjectComp.add("item", "(No comps found)");
+            }
+            dropProjectComp.selection = 0;
+        }
+
+        btnRefreshComps.onClick = function() {
+            updateProjectCompsList();
+        };
 
         var grpPartSize = tabSource.add("group");
         grpPartSize.orientation = "row";
         grpPartSize.alignChildren = ["left", "center"];
-        grpPartSize.add("statictext", undefined, "Shape Size (px):");
-        var editPartSize = grpPartSize.add("edittext", undefined, "12");
+        grpPartSize.add("statictext", undefined, "Particle Size (px):");
+        var editPartSize = grpPartSize.add("edittext", undefined, "28");
         editPartSize.characters = 5;
 
-        dropSource.onChange = function () {
-            grpPartSize.enabled = (dropSource.selection.index !== 2);
+        // Custom particle base color
+        var grpPartCol = tabSource.add("group");
+        grpPartCol.orientation = "row";
+        grpPartCol.alignChildren = ["left", "center"];
+        grpPartCol.add("statictext", undefined, "Base Color:");
+        var cpPartColor = createColorPicker(grpPartCol, "#44aa33");
+
+        function handleSourceChange() {
+            var idx = dropSource.selection.index;
+            grpProjComp.visible = (idx === 6);
+            grpPartSize.enabled = (idx <= 5);
+            grpPartCol.enabled = (idx <= 5);
+            if (idx === 6) {
+                updateProjectCompsList();
+            }
+        }
+
+        dropSource.onChange = handleSourceChange;
+
+        // Preset synchronization logic
+        dropPreset.onChange = function () {
+            var pIdx = dropPreset.selection.index;
+            if (pIdx === 0) { // 🍃 Leaves
+                dropSource.selection = 0;
+                editSizeX.text = "1400"; editSizeY.text = "800"; editSizeZ.text = "1000";
+                editSpeed.text = "260"; editDirX.text = "1.0"; editDirY.text = "0.3"; editDirZ.text = "0.2";
+                chkAlignWind.value = true;
+                editCount.text = "50";
+                editPartSize.text = "28";
+                cpPartColor.setColor("#44aa33", false);
+                editPosFreq.text = "1.6"; editPosAmpX.text = "70"; editPosAmpY.text = "50"; editPosAmpZ.text = "60";
+                editRotXAmp.text = "60"; editRotXFreq.text = "1.2";
+                editRotYAmp.text = "60"; editRotYFreq.text = "1.2";
+                editRotZAmp.text = "75"; editRotZFreq.text = "1.5";
+
+            } else if (pIdx === 1) { // ☁️ Clouds
+                dropSource.selection = 1;
+                editSizeX.text = "1800"; editSizeY.text = "600"; editSizeZ.text = "1200";
+                editSpeed.text = "80"; editDirX.text = "1.0"; editDirY.text = "0.05"; editDirZ.text = "0.0";
+                chkAlignWind.value = false;
+                editCount.text = "18";
+                editPartSize.text = "85";
+                cpPartColor.setColor("#f0f4f8", false);
+                editPosFreq.text = "0.4"; editPosAmpX.text = "30"; editPosAmpY.text = "20"; editPosAmpZ.text = "20";
+                editRotXAmp.text = "5"; editRotXFreq.text = "0.2";
+                editRotYAmp.text = "5"; editRotYFreq.text = "0.2";
+                editRotZAmp.text = "8"; editRotZFreq.text = "0.3";
+
+            } else if (pIdx === 2) { // ⭐ Stars
+                dropSource.selection = 2;
+                editSizeX.text = "1500"; editSizeY.text = "1000"; editSizeZ.text = "1500";
+                editSpeed.text = "40"; editDirX.text = "0.4"; editDirY.text = "-0.2"; editDirZ.text = "0.4";
+                chkAlignWind.value = false;
+                editCount.text = "70";
+                editPartSize.text = "18";
+                cpPartColor.setColor("#ffea00", false);
+                editPosFreq.text = "0.8"; editPosAmpX.text = "40"; editPosAmpY.text = "40"; editPosAmpZ.text = "40";
+                editRotXAmp.text = "20"; editRotXFreq.text = "0.5";
+                editRotYAmp.text = "20"; editRotYFreq.text = "0.5";
+                editRotZAmp.text = "45"; editRotZFreq.text = "0.8";
+
+            } else if (pIdx === 3) { // ⛰️ Mountains
+                dropSource.selection = 3;
+                editSizeX.text = "2000"; editSizeY.text = "700"; editSizeZ.text = "1600";
+                editSpeed.text = "60"; editDirX.text = "-1.0"; editDirY.text = "0.0"; editDirZ.text = "0.0";
+                chkAlignWind.value = false;
+                editCount.text = "12";
+                editPartSize.text = "120";
+                cpPartColor.setColor("#4a5568", false);
+                editPosFreq.text = "0.2"; editPosAmpX.text = "20"; editPosAmpY.text = "10"; editPosAmpZ.text = "20";
+                editRotXAmp.text = "0"; editRotXFreq.text = "0.1";
+                editRotYAmp.text = "5"; editRotYFreq.text = "0.1";
+                editRotZAmp.text = "0"; editRotZFreq.text = "0.1";
+
+            } else if (pIdx === 4) { // ⚪ 3D Circles
+                dropSource.selection = 4;
+                editSizeX.text = "1200"; editSizeY.text = "800"; editSizeZ.text = "1000";
+                editSpeed.text = "200"; editDirX.text = "1.0"; editDirY.text = "0.0"; editDirZ.text = "0.0";
+                chkAlignWind.value = false;
+                editCount.text = "60";
+                editPartSize.text = "14";
+                cpPartColor.setColor("#ffffff", false);
+
+            } else if (pIdx === 5) { // ⬛ 3D Squares
+                dropSource.selection = 5;
+                editSizeX.text = "1200"; editSizeY.text = "800"; editSizeZ.text = "1000";
+                editSpeed.text = "250"; editDirX.text = "1.0"; editDirY.text = "0.2"; editDirZ.text = "0.1";
+                chkAlignWind.value = true;
+                editCount.text = "60";
+                editPartSize.text = "14";
+                cpPartColor.setColor("#ff3b30", false);
+
+            } else if (pIdx === 6) { // 🎬 Project Comp
+                dropSource.selection = 6;
+                chkAlignWind.value = true;
+
+            } else if (pIdx === 7) { // 🎯 Selected Layers
+                dropSource.selection = 7;
+                chkAlignWind.value = true;
+            }
+            handleSourceChange();
         };
 
         // Select first tab
@@ -531,6 +830,14 @@
             return colorProp;
         }
 
+        // ---------- HELPER: ADD CHECKBOX CONTROL ----------
+        function addCheckbox(layer, effectName, defaultValue) {
+            var chk = layer.property("ADBE Effect Parade").addProperty("ADBE Checkbox Control");
+            chk.name = effectName;
+            chk.property("ADBE Checkbox Control-0001").setValue(defaultValue ? 1 : 0);
+            return chk;
+        }
+
         // ---------- HELPER: SET TRANSFORM PROPERTY ----------
         function setTransformVal(layer, propName, val) {
             var xform = layer.property("ADBE Transform Group") || layer.property("Transform") || layer.transform;
@@ -560,41 +867,54 @@
             var sysName = txtSysName.text.replace(/^\s+|\s+$/g, "");
             if (sysName.length === 0) sysName = "WindBox";
 
-            var sizeX = Math.max(10, getNum(editSizeX, 1200));
+            var sizeX = Math.max(10, getNum(editSizeX, 1400));
             var sizeY = Math.max(10, getNum(editSizeY, 800));
             var sizeZ = Math.max(10, getNum(editSizeZ, 1000));
-            var windSpd = getNum(editSpeed, 300);
+            var windSpd = getNum(editSpeed, 260);
             var dirX = getNum(editDirX, 1.0);
-            var dirY = getNum(editDirY, 0.0);
-            var dirZ = getNum(editDirZ, 0.0);
-            var numParticles = Math.max(1, Math.round(getNum(editCount, 60)));
+            var dirY = getNum(editDirY, 0.3);
+            var dirZ = getNum(editDirZ, 0.2);
+            var alignToWind = chkAlignWind.value;
+            var numParticles = Math.max(1, Math.round(getNum(editCount, 50)));
 
-            var posFreq = Math.max(0, getNum(editPosFreq, 1.5));
-            var posAmpX = Math.max(0, getNum(editPosAmpX, 60));
-            var posAmpY = Math.max(0, getNum(editPosAmpY, 60));
+            var posFreq = Math.max(0, getNum(editPosFreq, 1.6));
+            var posAmpX = Math.max(0, getNum(editPosAmpX, 70));
+            var posAmpY = Math.max(0, getNum(editPosAmpY, 50));
             var posAmpZ = Math.max(0, getNum(editPosAmpZ, 60));
 
-            var rotXAmp = getNum(editRotXAmp, 45);
-            var rotXFreq = Math.max(0, getNum(editRotXFreq, 1.0));
-            var rotYAmp = getNum(editRotYAmp, 45);
-            var rotYFreq = Math.max(0, getNum(editRotYFreq, 1.0));
-            var rotZAmp = getNum(editRotZAmp, 45);
-            var rotZFreq = Math.max(0, getNum(editRotZFreq, 1.0));
+            var rotXAmp = getNum(editRotXAmp, 60);
+            var rotXFreq = Math.max(0, getNum(editRotXFreq, 1.2));
+            var rotYAmp = getNum(editRotYAmp, 60);
+            var rotYFreq = Math.max(0, getNum(editRotYFreq, 1.2));
+            var rotZAmp = getNum(editRotZAmp, 75);
+            var rotZFreq = Math.max(0, getNum(editRotZFreq, 1.5));
 
             var shouldBuildCube = chkCreateCube.value;
             var isCubeGuide = chkCubeGuide.value;
             var cubeFillColor = hexToRgb(cpCubeFill.value);
             var cubeStrokeColor = hexToRgb(cpCubeStroke.value);
-            var cubeSidesOp = Math.max(0, Math.min(100, getNum(editCubeSidesOp, 12)));
-            var cubeStrokeWidth = Math.max(0.5, getNum(editCubeStrokeW, 2));
-            var cubeStrokeOp = Math.max(0, Math.min(100, getNum(editCubeStrokeOp, 90)));
+            var cubeSidesOp = Math.max(0, Math.min(100, getNum(editCubeSidesOp, 10)));
+            var cubeStrokeWidth = Math.max(0.5, getNum(editCubeStrokeW, 1.5));
+            var cubeStrokeOp = Math.max(0, Math.min(100, getNum(editCubeStrokeOp, 85)));
 
             var particleType = dropSource.selection.index;
-            var shapeSize = Math.max(1, getNum(editPartSize, 12));
+            var shapeSize = Math.max(1, getNum(editPartSize, 28));
+            var partBaseColor = hexToRgb(cpPartColor.value);
 
-            // Handle custom source layer selection
+            // Handle Project Comp or Custom Source Layer
+            var chosenComp = null;
+            if (particleType === 6) { // Project Composition
+                if (projectCompItems.length > 0 && dropProjectComp.selection) {
+                    chosenComp = projectCompItems[dropProjectComp.selection.index];
+                }
+                if (!chosenComp) {
+                    alert("Please select a valid Project Composition from the dropdown.", "AE WindBox");
+                    return;
+                }
+            }
+
             var templateLayers = [];
-            if (particleType === 2) {
+            if (particleType === 7) { // Selected Layer(s)
                 if (!comp.selectedLayers || comp.selectedLayers.length === 0) {
                     alert("Please select at least one layer in the composition to use as the particle source.", "AE WindBox");
                     return;
@@ -609,7 +929,7 @@
             }
 
             try {
-                // 1. Create WindBox Controller Null
+                // 1. Create WindBox Master Controller Null
                 var ctrlName = sysName + "_Controller";
                 var ctrlLayer = comp.layers.addNull();
                 ctrlLayer.name = ctrlName;
@@ -627,21 +947,23 @@
                 addSlider(ctrlLayer, "WindBox - Size Y", sizeY);
                 addSlider(ctrlLayer, "WindBox - Size Z", sizeZ);
 
-                // Cube appearance controls
+                // Wind & Dynamic Controls
+                addSlider(ctrlLayer, "WindBox - Wind Speed", windSpd);
+                addSlider(ctrlLayer, "WindBox - Number of Particles", numParticles);
+                addSlider(ctrlLayer, "WindBox - Direction X", dirX);
+                addSlider(ctrlLayer, "WindBox - Direction Y", dirY);
+                addSlider(ctrlLayer, "WindBox - Direction Z", dirZ);
+                addCheckbox(ctrlLayer, "WindBox - Align to Wind", alignToWind ? 1 : 0);
+
+                // Cube appearance & Guide layer controls
+                addCheckbox(ctrlLayer, "WindBox - Cube Guide Layer", isCubeGuide ? 1 : 0);
                 addColor(ctrlLayer, "WindBox - Cube Fill Color", cubeFillColor);
                 addSlider(ctrlLayer, "WindBox - Cube Fill Opacity", cubeSidesOp);
                 addColor(ctrlLayer, "WindBox - Cube Stroke Color", cubeStrokeColor);
                 addSlider(ctrlLayer, "WindBox - Cube Stroke Width", cubeStrokeWidth);
                 addSlider(ctrlLayer, "WindBox - Cube Stroke Opacity", cubeStrokeOp);
 
-                // Wind Flow controls
-                addSlider(ctrlLayer, "WindBox - Wind Speed", windSpd);
-                addSlider(ctrlLayer, "WindBox - Number of Particles", numParticles);
-                addSlider(ctrlLayer, "WindBox - Direction X", dirX);
-                addSlider(ctrlLayer, "WindBox - Direction Y", dirY);
-                addSlider(ctrlLayer, "WindBox - Direction Z", dirZ);
-
-                // Wiggle controls
+                // Turbulence Wiggle controls
                 addSlider(ctrlLayer, "WindBox - Pos Wiggle Freq", posFreq);
                 addSlider(ctrlLayer, "WindBox - Pos Wiggle Amp X", posAmpX);
                 addSlider(ctrlLayer, "WindBox - Pos Wiggle Amp Y", posAmpY);
@@ -653,7 +975,7 @@
                 addSlider(ctrlLayer, "WindBox - Rot Z Wiggle Freq", rotZFreq);
                 addSlider(ctrlLayer, "WindBox - Rot Z Wiggle Amp", rotZAmp);
 
-                // 3. 3D CUBE MAKER INTEGRATION (work2survive/AE-Cube-Maker-3D architecture)
+                // 3. VIRTUAL 3D CUBE BOUNDING BOX (Guide Layer)
                 if (shouldBuildCube) {
                     var halfX = sizeX / 2;
                     var halfY = sizeY / 2;
@@ -696,10 +1018,10 @@
                     };
 
                     var exprSidesFill = 'try { thisComp.layer("' + ctrlName + '").effect("WindBox - Cube Fill Color")(1).value; } catch (e) { [0.55, 0.55, 0.55, 1]; }';
-                    var exprSidesOp   = 'try { thisComp.layer("' + ctrlName + '").effect("WindBox - Cube Fill Opacity")(1).value; } catch (e) { 12; }';
+                    var exprSidesOp   = 'try { thisComp.layer("' + ctrlName + '").effect("WindBox - Cube Fill Opacity")(1).value; } catch (e) { 10; }';
                     var exprStrokeCol = 'try { thisComp.layer("' + ctrlName + '").effect("WindBox - Cube Stroke Color")(1).value; } catch (e) { [1, 1, 1, 1]; }';
-                    var exprStrokeW   = 'try { thisComp.layer("' + ctrlName + '").effect("WindBox - Cube Stroke Width")(1).value; } catch (e) { 2; }';
-                    var exprStrokeOp  = 'try { thisComp.layer("' + ctrlName + '").effect("WindBox - Cube Stroke Opacity")(1).value; } catch (e) { 90; }';
+                    var exprStrokeW   = 'try { thisComp.layer("' + ctrlName + '").effect("WindBox - Cube Stroke Width")(1).value; } catch (e) { 1.5; }';
+                    var exprStrokeOp  = 'try { thisComp.layer("' + ctrlName + '").effect("WindBox - Cube Stroke Opacity")(1).value; } catch (e) { 85; }';
 
                     for (var f = 0; f < faceConfigs.length; f++) {
                         var cfg = faceConfigs[f];
@@ -707,8 +1029,9 @@
                         faceLayer.name = sysName + "_Cube_Face_" + cfg.name;
                         faceLayer.threeDLayer = true;
                         faceLayer.shy = true;
-                        faceLayer.guideLayer = isCubeGuide;
-                        faceLayer.label = 13; // Grey label
+                        faceLayer.guideLayer = isCubeGuide; // Virtual Guide Layer (Viewport only)
+                        faceLayer.label = isCubeGuide ? 14 : 13; // Blue Guide / Grey
+                        faceLayer.colorLabel = isCubeGuide ? "#5ac8fa" : "#8e8e93";
 
                         var faceGroup = faceLayer.property("ADBE Root Vectors Group").addProperty("ADBE Vector Group");
                         faceGroup.name = "Face Vector";
@@ -750,7 +1073,7 @@
                     }
                 }
 
-                // 4. Particle Expressions
+                // 4. PARTICLE EXPRESSIONS (Motion, Alignment, Turbulence)
                 var posExpr = [
                     'var ctrl = thisComp.layer("' + ctrlName + '");',
                     'var sX = Math.max(1, ctrl.effect("WindBox - Size X")(1).value);',
@@ -816,9 +1139,15 @@
 
                 var rotZExpr = [
                     'var ctrl = thisComp.layer("' + ctrlName + '");',
+                    'var dX = ctrl.effect("WindBox - Direction X")(1).value;',
+                    'var dY = ctrl.effect("WindBox - Direction Y")(1).value;',
+                    'var alignWind = 0;',
+                    'try { alignWind = ctrl.effect("WindBox - Align to Wind")(1).value; } catch(e) {}',
+                    'var windAng = (alignWind == 1 && (dX != 0 || dY != 0)) ? (Math.atan2(dY, dX) * 180 / Math.PI) : 0;',
                     'var f = ctrl.effect("WindBox - Rot Z Wiggle Freq")(1).value;',
                     'var a = ctrl.effect("WindBox - Rot Z Wiggle Amp")(1).value;',
-                    '(f > 0 && a > 0) ? wiggle(f, a) : value;'
+                    'var w = (f > 0 && a > 0) ? (wiggle(f, a)[0] - value[0] || wiggle(f, a) - value) : 0;',
+                    'value + windAng + w;'
                 ].join("\n");
 
                 var opacityExpr = [
@@ -835,28 +1164,18 @@
                     '(pIndex <= activeCount) ? value : [0, 0, 0];'
                 ].join("\n");
 
-                // 5. Generate Particle Layers
+                // 5. GENERATE PARTICLE LAYERS
                 for (var p = 1; p <= numParticles; p++) {
                     var pLayer;
 
-                    if (particleType === 2) {
+                    if (particleType === 6) { // Project Composition
+                        pLayer = comp.layers.add(chosenComp);
+                    } else if (particleType === 7) { // Selected Timeline Layers
                         var src = templateLayers[(p - 1) % templateLayers.length];
                         pLayer = src.duplicate();
-                    } else {
+                    } else { // Procedural Vector Shapes: Leaves, Clouds, Stars, Mountains, Circle, Square
                         pLayer = comp.layers.addShape();
-                        var shapeGroup = pLayer.property("ADBE Root Vectors Group").addProperty("ADBE Vector Group");
-                        var shapeContents = shapeGroup.property("ADBE Vectors Group");
-
-                        if (particleType === 0) {
-                            var ellipse = shapeContents.addProperty("ADBE Vector Shape - Ellipse");
-                            ellipse.property("ADBE Vector Ellipse Size").setValue([shapeSize, shapeSize]);
-                        } else {
-                            var rect = shapeContents.addProperty("ADBE Vector Shape - Rect");
-                            rect.property("ADBE Vector Rect Size").setValue([shapeSize, shapeSize]);
-                        }
-
-                        var fill = shapeContents.addProperty("ADBE Vector Graphic - Fill");
-                        fill.property("ADBE Vector Fill Color").setValue([1, 1, 1, 1]);
+                        buildParticleShape(pLayer, particleType, shapeSize, partBaseColor, p);
                     }
 
                     pLayer.name = sysName + "_Particle_" + (p < 10 ? "0" + p : p);
@@ -946,29 +1265,36 @@
                     if (fx) fx.property("ADBE Color Control-0001").setValue(rgbArr);
                 }
 
-                setSliderVal("WindBox - Size X", Math.max(10, getNum(editSizeX, 1200)));
+                function setCheckboxVal(effName, boolVal) {
+                    var fx = ctrlLayer.property("ADBE Effect Parade").property(effName);
+                    if (fx) fx.property("ADBE Checkbox Control-0001").setValue(boolVal ? 1 : 0);
+                }
+
+                setSliderVal("WindBox - Size X", Math.max(10, getNum(editSizeX, 1400)));
                 setSliderVal("WindBox - Size Y", Math.max(10, getNum(editSizeY, 800)));
                 setSliderVal("WindBox - Size Z", Math.max(10, getNum(editSizeZ, 1000)));
+                setCheckboxVal("WindBox - Align to Wind", chkAlignWind.value);
+                setCheckboxVal("WindBox - Cube Guide Layer", chkCubeGuide.value);
                 setColorVal("WindBox - Cube Fill Color", hexToRgb(cpCubeFill.value));
-                setSliderVal("WindBox - Cube Fill Opacity", Math.max(0, Math.min(100, getNum(editCubeSidesOp, 12))));
+                setSliderVal("WindBox - Cube Fill Opacity", Math.max(0, Math.min(100, getNum(editCubeSidesOp, 10))));
                 setColorVal("WindBox - Cube Stroke Color", hexToRgb(cpCubeStroke.value));
-                setSliderVal("WindBox - Cube Stroke Width", Math.max(0.5, getNum(editCubeStrokeW, 2)));
-                setSliderVal("WindBox - Cube Stroke Opacity", Math.max(0, Math.min(100, getNum(editCubeStrokeOp, 90))));
-                setSliderVal("WindBox - Wind Speed", getNum(editSpeed, 300));
-                setSliderVal("WindBox - Number of Particles", Math.max(1, getNum(editCount, 60)));
+                setSliderVal("WindBox - Cube Stroke Width", Math.max(0.5, getNum(editCubeStrokeW, 1.5)));
+                setSliderVal("WindBox - Cube Stroke Opacity", Math.max(0, Math.min(100, getNum(editCubeStrokeOp, 85))));
+                setSliderVal("WindBox - Wind Speed", getNum(editSpeed, 260));
+                setSliderVal("WindBox - Number of Particles", Math.max(1, getNum(editCount, 50)));
                 setSliderVal("WindBox - Direction X", getNum(editDirX, 1.0));
-                setSliderVal("WindBox - Direction Y", getNum(editDirY, 0.0));
-                setSliderVal("WindBox - Direction Z", getNum(editDirZ, 0.0));
-                setSliderVal("WindBox - Pos Wiggle Freq", Math.max(0, getNum(editPosFreq, 1.5)));
-                setSliderVal("WindBox - Pos Wiggle Amp X", Math.max(0, getNum(editPosAmpX, 60)));
-                setSliderVal("WindBox - Pos Wiggle Amp Y", Math.max(0, getNum(editPosAmpY, 60)));
+                setSliderVal("WindBox - Direction Y", getNum(editDirY, 0.3));
+                setSliderVal("WindBox - Direction Z", getNum(editDirZ, 0.2));
+                setSliderVal("WindBox - Pos Wiggle Freq", Math.max(0, getNum(editPosFreq, 1.6)));
+                setSliderVal("WindBox - Pos Wiggle Amp X", Math.max(0, getNum(editPosAmpX, 70)));
+                setSliderVal("WindBox - Pos Wiggle Amp Y", Math.max(0, getNum(editPosAmpY, 50)));
                 setSliderVal("WindBox - Pos Wiggle Amp Z", Math.max(0, getNum(editPosAmpZ, 60)));
-                setSliderVal("WindBox - Rot X Wiggle Freq", Math.max(0, getNum(editRotXFreq, 1.0)));
-                setSliderVal("WindBox - Rot X Wiggle Amp", getNum(editRotXAmp, 45));
-                setSliderVal("WindBox - Rot Y Wiggle Freq", Math.max(0, getNum(editRotYFreq, 1.0)));
-                setSliderVal("WindBox - Rot Y Wiggle Amp", getNum(editRotYAmp, 45));
-                setSliderVal("WindBox - Rot Z Wiggle Freq", Math.max(0, getNum(editRotZFreq, 1.0)));
-                setSliderVal("WindBox - Rot Z Wiggle Amp", getNum(editRotZAmp, 45));
+                setSliderVal("WindBox - Rot X Wiggle Freq", Math.max(0, getNum(editRotXFreq, 1.2)));
+                setSliderVal("WindBox - Rot X Wiggle Amp", getNum(editRotXAmp, 60));
+                setSliderVal("WindBox - Rot Y Wiggle Freq", Math.max(0, getNum(editRotYFreq, 1.2)));
+                setSliderVal("WindBox - Rot Y Wiggle Amp", getNum(editRotYAmp, 60));
+                setSliderVal("WindBox - Rot Z Wiggle Freq", Math.max(0, getNum(editRotZFreq, 1.5)));
+                setSliderVal("WindBox - Rot Z Wiggle Amp", getNum(editRotZAmp, 75));
             } catch (err) {
                 alert("Error syncing to Controller:\n" + err.toString(), "AE WindBox");
             } finally {
@@ -1018,29 +1344,40 @@
                 return fallbackHex;
             }
 
-            editSizeX.text = getSliderVal("WindBox - Size X", 1200).toString();
+            function getCheckboxVal(effName, fallbackBool) {
+                var fx = ctrlLayer.property("ADBE Effect Parade").property(effName);
+                if (fx) {
+                    var v = fx.property("ADBE Checkbox Control-0001").value;
+                    return (v === 1 || v === true);
+                }
+                return fallbackBool;
+            }
+
+            editSizeX.text = getSliderVal("WindBox - Size X", 1400).toString();
             editSizeY.text = getSliderVal("WindBox - Size Y", 800).toString();
             editSizeZ.text = getSliderVal("WindBox - Size Z", 1000).toString();
+            chkAlignWind.value = getCheckboxVal("WindBox - Align to Wind", true);
+            chkCubeGuide.value = getCheckboxVal("WindBox - Cube Guide Layer", true);
             cpCubeFill.setColor(getColorVal("WindBox - Cube Fill Color", "#8C8C8C"), false);
-            editCubeSidesOp.text = Math.round(getSliderVal("WindBox - Cube Fill Opacity", 12)).toString();
+            editCubeSidesOp.text = Math.round(getSliderVal("WindBox - Cube Fill Opacity", 10)).toString();
             cpCubeStroke.setColor(getColorVal("WindBox - Cube Stroke Color", "#FFFFFF"), false);
-            editCubeStrokeW.text = getSliderVal("WindBox - Cube Stroke Width", 2).toString();
-            editCubeStrokeOp.text = Math.round(getSliderVal("WindBox - Cube Stroke Opacity", 90)).toString();
-            editSpeed.text = getSliderVal("WindBox - Wind Speed", 300).toString();
-            editCount.text = Math.round(getSliderVal("WindBox - Number of Particles", 60)).toString();
+            editCubeStrokeW.text = getSliderVal("WindBox - Cube Stroke Width", 1.5).toString();
+            editCubeStrokeOp.text = Math.round(getSliderVal("WindBox - Cube Stroke Opacity", 85)).toString();
+            editSpeed.text = getSliderVal("WindBox - Wind Speed", 260).toString();
+            editCount.text = Math.round(getSliderVal("WindBox - Number of Particles", 50)).toString();
             editDirX.text = getSliderVal("WindBox - Direction X", 1.0).toString();
-            editDirY.text = getSliderVal("WindBox - Direction Y", 0.0).toString();
-            editDirZ.text = getSliderVal("WindBox - Direction Z", 0.0).toString();
-            editPosFreq.text = getSliderVal("WindBox - Pos Wiggle Freq", 1.5).toString();
-            editPosAmpX.text = getSliderVal("WindBox - Pos Wiggle Amp X", 60).toString();
-            editPosAmpY.text = getSliderVal("WindBox - Pos Wiggle Amp Y", 60).toString();
+            editDirY.text = getSliderVal("WindBox - Direction Y", 0.3).toString();
+            editDirZ.text = getSliderVal("WindBox - Direction Z", 0.2).toString();
+            editPosFreq.text = getSliderVal("WindBox - Pos Wiggle Freq", 1.6).toString();
+            editPosAmpX.text = getSliderVal("WindBox - Pos Wiggle Amp X", 70).toString();
+            editPosAmpY.text = getSliderVal("WindBox - Pos Wiggle Amp Y", 50).toString();
             editPosAmpZ.text = getSliderVal("WindBox - Pos Wiggle Amp Z", 60).toString();
-            editRotXFreq.text = getSliderVal("WindBox - Rot X Wiggle Freq", 1.0).toString();
-            editRotXAmp.text = getSliderVal("WindBox - Rot X Wiggle Amp", 45).toString();
-            editRotYFreq.text = getSliderVal("WindBox - Rot Y Wiggle Freq", 1.0).toString();
-            editRotYAmp.text = getSliderVal("WindBox - Rot Y Wiggle Amp", 45).toString();
-            editRotZFreq.text = getSliderVal("WindBox - Rot Z Wiggle Freq", 1.0).toString();
-            editRotZAmp.text = getSliderVal("WindBox - Rot Z Wiggle Amp", 45).toString();
+            editRotXFreq.text = getSliderVal("WindBox - Rot X Wiggle Freq", 1.2).toString();
+            editRotXAmp.text = getSliderVal("WindBox - Rot X Wiggle Amp", 60).toString();
+            editRotYFreq.text = getSliderVal("WindBox - Rot Y Wiggle Freq", 1.2).toString();
+            editRotYAmp.text = getSliderVal("WindBox - Rot Y Wiggle Amp", 60).toString();
+            editRotZFreq.text = getSliderVal("WindBox - Rot Z Wiggle Freq", 1.5).toString();
+            editRotZAmp.text = getSliderVal("WindBox - Rot Z Wiggle Amp", 75).toString();
         };
 
         // ==========================================

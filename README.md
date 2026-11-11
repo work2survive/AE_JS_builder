@@ -131,6 +131,10 @@ The simulator automatically detects and loads standalone production-ready After 
    - **Repository**: [work2survive/AE_windBox](https://github.com/work2survive/AE_windBox)
    - **Live Demo**: [https://work2survive.github.io/AE_JS_builder/?jsx=AE_WindBox_Panel.jsx&autobuild=true](https://work2survive.github.io/AE_JS_builder/?jsx=AE_WindBox_Panel.jsx&autobuild=true)
 
+8. **Text Roundabout** (`jsx/text_roundabout.jsx` - v1.0):
+   - Parametric 3D circular word carousel spinning around a central master 3D controller null, featuring 6 to 12 configurable random or custom words, -12 to +12 continuous spin speed control, 3D tilt, and orientation modes (carousel, inward, billboard).
+   - **Live Demo**: [https://work2survive.github.io/AE_JS_builder/?jsx=text_roundabout.jsx&autobuild=true](https://work2survive.github.io/AE_JS_builder/?jsx=text_roundabout.jsx&autobuild=true)
+
 ---
 
 ## How to Run
