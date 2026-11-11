@@ -542,7 +542,10 @@
                     }
                     const textAnchor = layer.justification === 'right' ? 'end' : (layer.justification === 'center' ? 'middle' : 'start');
                     const escapeXml = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-                    const tspans = lines.map((l, li) => `<tspan x="0" dy="${li === 0 ? 0 : (fs * 1.35)}">${escapeXml(l)}</tspan>`).join('');
+                    const lineStep = (layer.leading !== undefined && layer.leading > 0)
+                        ? layer.leading
+                        : (fs * 1.35 * ((layer.leadingPercent || 100) / 100));
+                    const tspans = lines.map((l, li) => `<tspan x="0" dy="${li === 0 ? 0 : lineStep}">${escapeXml(l)}</tspan>`).join('');
                     layerEl.innerHTML = `
                         <svg class="ae-layer-svg" style="overflow: visible;">
                             <text x="0" y="${fs * 0.9}" fill="${fill}" font-size="${fs}px" font-family="${layer.fontFamily || 'system-ui, -apple-system, sans-serif'}" text-anchor="${textAnchor}" style="user-select:none; font-weight:400;">

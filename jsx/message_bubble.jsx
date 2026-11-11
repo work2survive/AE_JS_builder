@@ -139,6 +139,20 @@
         }
     };
 
+    // -------------------------------------------------------------------------
+    // Common Messaging App Fonts & System Typography
+    // -------------------------------------------------------------------------
+    var FONTS = [
+        { name: "SF Pro (Apple / iOS)", css: "-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display', sans-serif", ae: "SFProText-Regular" },
+        { name: "Roboto (Google / Android)", css: "Roboto, 'Google Sans', sans-serif", ae: "Roboto-Regular" },
+        { name: "Segoe UI (Windows)", css: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif", ae: "SegoeUI" },
+        { name: "Helvetica Neue", css: "'Helvetica Neue', Helvetica, Arial, sans-serif", ae: "HelveticaNeue" },
+        { name: "Arial", css: "Arial, Helvetica, sans-serif", ae: "ArialMT" },
+        { name: "Inter", css: "Inter, sans-serif", ae: "Inter-Regular" },
+        { name: "Open Sans", css: "'Open Sans', sans-serif", ae: "OpenSans-Regular" },
+        { name: "System Default", css: "system-ui, -apple-system, sans-serif", ae: "" }
+    ];
+
     // Helper: Hex color to AE 0.0-1.0 float array
     function hexToRgb(hex) {
         if (!hex) return [1, 1, 1];
@@ -510,13 +524,35 @@
     dropStatus.helpTip = "Delivery and read receipt status indicator icon.";
 
     // -------------------------------------------------------------------------
-    // 6. Dimensions & Typography (Screen Width determines line splits)
+    // 6. Dimensions & Typography (Screen Width, Fonts, Padding, Leading)
     // -------------------------------------------------------------------------
     var pnlDim = win.add("panel", undefined, "Layout & Typography");
     pnlDim.orientation = "column";
     pnlDim.alignChildren = ["fill", "top"];
     pnlDim.spacing = 8;
     pnlDim.margins = 10;
+
+    // Font Family Row
+    var grpFont = pnlDim.add("group");
+    grpFont.orientation = "row";
+    grpFont.alignChildren = ["left", "center"];
+    var lblFont = grpFont.add("statictext", undefined, "Font Family:");
+    lblFont.preferredSize = [115, -1];
+
+    var fontOptions = [
+        "SF Pro (Apple / iOS)",
+        "Roboto (Google / Android)",
+        "Segoe UI (Windows)",
+        "Helvetica Neue",
+        "Arial",
+        "Inter",
+        "Open Sans",
+        "System Default"
+    ];
+    var dropFont = grpFont.add("dropdownlist", undefined, fontOptions);
+    dropFont.selection = 0; // Default: SF Pro
+    dropFont.preferredSize = [185, 26];
+    dropFont.helpTip = "Select font family commonly used across mobile messaging platforms.";
 
     // Screen Width Row (Determines where text line splits)
     var grpWidth = pnlDim.add("group");
@@ -557,6 +593,48 @@
         var v = Math.max(8, Math.min(120, parseFloat(txtSize.text) || 20));
         sldSize.value = v;
         txtSize.text = String(Math.round(v));
+    };
+
+    // Inner Padding Row (-10px to +10px)
+    var grpPad = pnlDim.add("group");
+    grpPad.orientation = "row";
+    grpPad.alignChildren = ["left", "center"];
+    var lblPad = grpPad.add("statictext", undefined, "Inner Padding (px):");
+    lblPad.preferredSize = [115, -1];
+    var sldPad = grpPad.add("slider", undefined, 0, -10, 10);
+    sldPad.alignment = ["fill", "center"];
+    var txtPad = grpPad.add("edittext", undefined, "0");
+    txtPad.characters = 3;
+    txtPad.helpTip = "Adjust bubble inner padding from -10px (tight) to +10px (spacious).";
+
+    sldPad.onChanging = function() {
+        txtPad.text = String(Math.round(sldPad.value));
+    };
+    txtPad.onChange = function() {
+        var v = Math.max(-10, Math.min(10, parseFloat(txtPad.text) || 0));
+        sldPad.value = v;
+        txtPad.text = String(Math.round(v));
+    };
+
+    // Leading / Line Height Row (50% to 150%)
+    var grpLeading = pnlDim.add("group");
+    grpLeading.orientation = "row";
+    grpLeading.alignChildren = ["left", "center"];
+    var lblLeading = grpLeading.add("statictext", undefined, "Leading (%):");
+    lblLeading.preferredSize = [115, -1];
+    var sldLeading = grpLeading.add("slider", undefined, 100, 50, 150);
+    sldLeading.alignment = ["fill", "center"];
+    var txtLeading = grpLeading.add("edittext", undefined, "100");
+    txtLeading.characters = 4;
+    txtLeading.helpTip = "Text line height / leading in percentage from 50% (compact) to 150% (relaxed).";
+
+    sldLeading.onChanging = function() {
+        txtLeading.text = String(Math.round(sldLeading.value));
+    };
+    txtLeading.onChange = function() {
+        var v = Math.max(50, Math.min(150, parseFloat(txtLeading.text) || 100));
+        sldLeading.value = v;
+        txtLeading.text = String(Math.round(v));
     };
 
     // -------------------------------------------------------------------------
@@ -712,6 +790,13 @@
             cpBubble.setColor(colorSet.bubble, false);
             cpText.setColor(colorSet.text, false);
         }
+
+        if (typeof dropFont !== "undefined" && dropFont) {
+            if (platformName === "Android RCS") dropFont.selection = 1; // Roboto
+            else if (platformName === "iOS Message" || platformName === "Instagram") dropFont.selection = 0; // SF Pro
+            else if (platformName === "WhatsApp") dropFont.selection = 3; // Helvetica Neue
+            else if (platformName === "Facebook Messenger") dropFont.selection = 2; // Segoe UI
+        }
     }
 
     dropPlatform.onChange = function() {
@@ -849,10 +934,17 @@
             var screenW = parseFloat(txtWidth.text) || 420;
             var textSize = parseFloat(txtSize.text) || 20;
 
+            var padOffset = parseFloat(txtPad.text) || 0;
+            var leadingPercent = parseFloat(txtLeading.text) || 100;
+            var leadingFactor = leadingPercent / 100;
+
+            var fontIdx = dropFont.selection ? dropFont.selection.index : 0;
+            var selectedFont = FONTS[fontIdx] || FONTS[0];
+
             // Chat messaging UX: Max bubble width is 72% of screen width
             var maxBubbleW = Math.max(120, screenW * 0.72);
-            var padX = Math.round(textSize * 0.75);
-            var padY = Math.round(textSize * 0.55);
+            var padX = Math.max(4, Math.round(textSize * 0.75) + padOffset);
+            var padY = Math.max(4, Math.round(textSize * 0.55) + padOffset);
             var maxTextW = maxBubbleW - (padX * 2);
 
             // Perform automatic word-wrapping
@@ -860,7 +952,7 @@
             var wrappedString = lines.join("\n");
             var measuredTextW = getLinesPixelBounds(lines, textSize);
 
-            var lineH = Math.round(textSize * 1.35);
+            var lineH = Math.round(textSize * 1.35 * leadingFactor);
             var textBlockH = lines.length * lineH;
 
             // Status Icon & Timestamp formatting
@@ -958,6 +1050,12 @@
 
                 var effStatus = parade.addProperty("ADBE Slider Control");
                 if (effStatus) { effStatus.name = "Status Icon Type"; effStatus.property(1).setValue(selStatusIdx); }
+
+                var effPad = parade.addProperty("ADBE Slider Control");
+                if (effPad) { effPad.name = "Inner Padding Offset"; effPad.property(1).setValue(padOffset); }
+
+                var effLead = parade.addProperty("ADBE Slider Control");
+                if (effLead) { effLead.name = "Leading Percent"; effLead.property(1).setValue(leadingPercent); }
 
                 var effCol = parade.addProperty("ADBE Color Control");
                 if (effCol) { effCol.name = "Bubble Color"; effCol.property(1).setValue(bubbleColor); }
@@ -1060,8 +1158,25 @@
             textLayer.parent = master;
             textLayer.fontSize = textSize;
             textLayer.fontColor = textColor;
+            textLayer.fontFamily = selectedFont.css;
+            textLayer.leading = lineH;
+            textLayer.leadingPercent = leadingPercent;
             textLayer.justification = "left";
             textLayer.transform.position.setValue([textLeftX, textTopY, -0.5]);
+
+            if (textLayer.property && textLayer.property("Source Text")) {
+                try {
+                    var textDoc = textLayer.property("Source Text").value;
+                    if (textDoc) {
+                        textDoc.autoLeading = false;
+                        textDoc.leading = lineH;
+                        if (selectedFont.ae) {
+                            try { textDoc.font = selectedFont.ae; } catch(eFont) {}
+                        }
+                        textLayer.property("Source Text").setValue(textDoc);
+                    }
+                } catch(eDoc) {}
+            }
 
             // 4. Timestamp & Status Row (allocated space for sent/delivered/read status icon)
             var timeRowRightX = (bubbleW / 2) - padX;
@@ -1080,6 +1195,7 @@
             timeLayer.parent = master;
             timeLayer.fontSize = timeFontSize;
             timeLayer.fontColor = timeColor;
+            timeLayer.fontFamily = selectedFont.css;
             timeLayer.justification = "right";
             timeLayer.transform.position.setValue([timeX, timeY, -0.5]);
 
@@ -1095,6 +1211,7 @@
                 statusLayer.parent = master;
                 statusLayer.fontSize = timeFontSize;
                 statusLayer.fontColor = statusColor;
+                statusLayer.fontFamily = selectedFont.css;
                 statusLayer.justification = "right";
                 statusLayer.transform.position.setValue([statusX, timeY, -0.5]);
             }
