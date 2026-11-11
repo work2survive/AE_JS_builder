@@ -1415,9 +1415,14 @@
     var lblStatusInfo = grpStatusInfo.add("statictext", undefined, "⏱ Auto Read: ~4.2s (based on text length)");
     lblStatusInfo.helpTip = "Calculated reading duration based on character and word count.";
 
+    var lastSentStatusIdx = 0; // Memory for sent status when toggling direction
+
     dropStatus.onChange = function() {
         var isAuto = (dropStatus.selection && dropStatus.selection.index === 0);
         grpStatusInfo.visible = isAuto;
+        if (radSent.value && dropStatus.selection) {
+            lastSentStatusIdx = dropStatus.selection.index;
+        }
     };
 
     // -------------------------------------------------------------------------
@@ -1873,9 +1878,17 @@
         syncColorsFromPlatform();
     };
     radSent.onClick = function() {
+        if (typeof dropStatus !== "undefined" && dropStatus) {
+            dropStatus.selection = (lastSentStatusIdx === 4) ? 0 : lastSentStatusIdx;
+            if (dropStatus.onChange) dropStatus.onChange();
+        }
         syncColorsFromPlatform();
     };
     radReceived.onClick = function() {
+        if (typeof dropStatus !== "undefined" && dropStatus) {
+            dropStatus.selection = 4; // Set to "None" by default for Received messages
+            if (dropStatus.onChange) dropStatus.onChange();
+        }
         syncColorsFromPlatform();
     };
     radLight.onClick = function() {
