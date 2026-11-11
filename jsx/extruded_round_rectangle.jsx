@@ -636,7 +636,7 @@
         var idx = dropDimPreset.selection.index - 1;
         if (idx < 0 || idx >= DIM_PRESETS.length) return;
         var p = DIM_PRESETS[idx];
-        setDim(p.width, p.height, p.depth, true);
+        applyPreset(p);
     };
 
     btnReloadDimPresets.onClick = function() {
@@ -673,6 +673,71 @@
     };
 
     populateDimPresetDropdown();
+
+    function applyPreset(p) {
+        if (!p) return;
+
+        // 1. Dimensions (Width, Height, Depth)
+        if (p.width !== undefined) {
+            var w = Math.max(sldW.minvalue, Math.min(sldW.maxvalue, p.width));
+            sldW.value = w; txtW.text = String(w);
+        }
+        if (p.height !== undefined) {
+            var h = Math.max(sldH.minvalue, Math.min(sldH.maxvalue, p.height));
+            sldH.value = h; txtH.text = String(h);
+        }
+        if (p.depth !== undefined) {
+            var d = Math.max(sldD.minvalue, Math.min(sldD.maxvalue, p.depth));
+            sldD.value = d; txtD.text = String(d);
+        }
+
+        // 2. Corner Radius
+        if (p.radius !== undefined && typeof sldMaster !== "undefined") {
+            var r = Math.max(0, Math.min(400, p.radius));
+            chkLink.value = true;
+            grpMaster.enabled = true;
+            grpGrid.enabled = false;
+            sldMaster.value = r; txtMaster.text = String(Math.round(r));
+            sldTL.value = r; txtTL.text = String(Math.round(r));
+            sldTR.value = r; txtTR.text = String(Math.round(r));
+            sldBL.value = r; txtBL.text = String(Math.round(r));
+            sldBR.value = r; txtBR.text = String(Math.round(r));
+        }
+
+        // 3. Fill Colors & Opacities
+        if (p.frontColor && typeof cpFront !== "undefined" && cpFront && typeof cpFront.setColor === "function") {
+            cpFront.setColor(p.frontColor, false);
+        }
+        if (p.backColor && typeof cpBack !== "undefined" && cpBack && typeof cpBack.setColor === "function") {
+            cpBack.setColor(p.backColor, false);
+        }
+        if (p.capsOpacity !== undefined && typeof sldCapOp !== "undefined" && sldCapOp && txtCapOp) {
+            var capOp = Math.max(0, Math.min(100, p.capsOpacity));
+            sldCapOp.value = capOp; txtCapOp.text = String(Math.round(capOp));
+        }
+        if (p.sidesColor && typeof cpSides !== "undefined" && cpSides && typeof cpSides.setColor === "function") {
+            cpSides.setColor(p.sidesColor, false);
+        }
+        if (p.sidesOpacity !== undefined && typeof sldSidesOp !== "undefined" && sldSidesOp && txtSidesOp) {
+            var sideOp = Math.max(0, Math.min(100, p.sidesOpacity));
+            sldSidesOp.value = sideOp; txtSidesOp.text = String(Math.round(sideOp));
+        }
+
+        // 4. Line / Stroke Width, Color & Opacity
+        if (p.strokeColor && typeof cpStroke !== "undefined" && cpStroke && typeof cpStroke.setColor === "function") {
+            cpStroke.setColor(p.strokeColor, false);
+        }
+        if (p.strokeWidth !== undefined && typeof sldThick !== "undefined" && sldThick && txtThick) {
+            var thick = Math.max(0, Math.min(30, p.strokeWidth));
+            sldThick.value = thick; txtThick.text = String(thick);
+        }
+        if (p.strokeOpacity !== undefined && typeof sldStrokeOp !== "undefined" && sldStrokeOp && txtStrokeOp) {
+            var stOp = Math.max(0, Math.min(100, p.strokeOpacity));
+            sldStrokeOp.value = stOp; txtStrokeOp.text = String(Math.round(stOp));
+        }
+
+        buildOrUpdateExtruded(false);
+    }
 
     function setDim(w, h, d, fromPreset) {
         w = Math.max(sldW.minvalue, Math.min(sldW.maxvalue, w));
@@ -946,6 +1011,14 @@
         return picker;
     }
 
+    function resetPresetDropdown() {
+        if (dropDimPreset && dropDimPreset.selection && dropDimPreset.selection.index !== 0) {
+            suppressPresetChange = true;
+            dropDimPreset.selection = 0;
+            suppressPresetChange = false;
+        }
+    }
+
     // Front Face Color
     var grpFrontCol = pnlStyle.add("group");
     grpFrontCol.orientation = "row";
@@ -953,7 +1026,7 @@
     var lblFrontCol = grpFrontCol.add("statictext", undefined, "Front Color:");
     lblFrontCol.preferredSize = [135, -1];
     var cpFront = createColorPicker(grpFrontCol, "#2288ee");
-    cpFront.onChange = function() { buildOrUpdateExtruded(false); };
+    cpFront.onChange = function() { resetPresetDropdown(); buildOrUpdateExtruded(false); };
 
     // Back Face Color
     var grpBackCol = pnlStyle.add("group");
@@ -962,7 +1035,7 @@
     var lblBackCol = grpBackCol.add("statictext", undefined, "Back Color:");
     lblBackCol.preferredSize = [135, -1];
     var cpBack = createColorPicker(grpBackCol, "#ee8822");
-    cpBack.onChange = function() { buildOrUpdateExtruded(false); };
+    cpBack.onChange = function() { resetPresetDropdown(); buildOrUpdateExtruded(false); };
 
     // Front / Back Caps Opacity
     var grpCapOp = pnlStyle.add("group");
@@ -982,7 +1055,7 @@
     var lblSidesCol = grpSidesCol.add("statictext", undefined, "Sides Color:");
     lblSidesCol.preferredSize = [135, -1];
     var cpSides = createColorPicker(grpSidesCol, "#1166cc");
-    cpSides.onChange = function() { buildOrUpdateExtruded(false); };
+    cpSides.onChange = function() { resetPresetDropdown(); buildOrUpdateExtruded(false); };
 
     // Sides / Walls Opacity
     var grpSidesOp = pnlStyle.add("group");
@@ -1002,7 +1075,7 @@
     var lblStroke = grpStroke.add("statictext", undefined, "Stroke Color:");
     lblStroke.preferredSize = [135, -1];
     var cpStroke = createColorPicker(grpStroke, "#ffffff");
-    cpStroke.onChange = function() { buildOrUpdateExtruded(false); };
+    cpStroke.onChange = function() { resetPresetDropdown(); buildOrUpdateExtruded(false); };
 
     // Stroke Width
     var grpThick = pnlStyle.add("group");
@@ -1071,13 +1144,12 @@
         };
     }
 
-    var onLiveUpdate = function() { buildOrUpdateExtruded(false); };
+    var onLiveUpdate = function() {
+        resetPresetDropdown();
+        buildOrUpdateExtruded(false);
+    };
     var onDimSliderUpdate = function() {
-        if (dropDimPreset && dropDimPreset.selection && dropDimPreset.selection.index !== 0) {
-            suppressPresetChange = true;
-            dropDimPreset.selection = 0;
-            suppressPresetChange = false;
-        }
+        resetPresetDropdown();
         buildOrUpdateExtruded(false);
     };
     hookSliderText(sldW, txtW, onDimSliderUpdate, true);
