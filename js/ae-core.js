@@ -1247,6 +1247,10 @@
             this._onChanged = null;
         }
 
+        get frameDuration() {
+            return 1.0 / (this.frameRate || 30);
+        }
+
         layer(nameOrIndex) {
             if (typeof nameOrIndex === 'number') {
                 return this.layers[nameOrIndex - 1] || null; // 1-indexed

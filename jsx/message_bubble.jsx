@@ -398,6 +398,135 @@
     ].join("\n");
 
     // -------------------------------------------------------------------------
+    // Entrance Animations: Bubble Grow (5 frames) + Typewriter Reveal (5 frames)
+    // -------------------------------------------------------------------------
+    var BUBBLE_GROW_EXPR = [
+        "// 5-Frame Bubble Entrance Grow Animation",
+        "(function() {",
+        "    function getVal(name, fallback) {",
+        "        try {",
+        "            if (thisLayer && thisLayer.hasParent) {",
+        "                var p = thisLayer.parent.effect(name)(1);",
+        "                return (p && typeof p.value !== 'undefined') ? p.value : (p !== undefined ? p : fallback);",
+        "            }",
+        "        } catch(e) {}",
+        "        try {",
+        "            var p2 = thisComp.layer('Bubble_Master_Controller').effect(name)(1);",
+        "            return (p2 && typeof p2.value !== 'undefined') ? p2.value : (p2 !== undefined ? p2 : fallback);",
+        "        } catch(e2) {}",
+        "        return fallback;",
+        "    }",
+        "",
+        "    var animOn = getVal('Animate Entrance', 1);",
+        "    if (animOn <= 0) return value;",
+        "",
+        "    var growFrames = Math.max(1, getVal('Bubble Grow Duration (frames)', 5));",
+        "    var fps = 30;",
+        "    try { fps = thisComp.frameRate; } catch(eFps) {}",
+        "    var fd = 1.0 / fps;",
+        "    try { if (thisComp.frameDuration) fd = thisComp.frameDuration; } catch(eFd) {}",
+        "",
+        "    var f = time / fd;",
+        "    if (f <= 0) return [0, 0];",
+        "    if (f >= growFrames) return value;",
+        "",
+        "    var p = f / growFrames;",
+        "    // Smooth snappy overshoot easing (easeOutBack)",
+        "    var c1 = 1.3;",
+        "    var c3 = c1 + 1.0;",
+        "    var eased = 1.0 + c3 * Math.pow(p - 1.0, 3) + c1 * Math.pow(p - 1.0, 2);",
+        "    var s = Math.max(0, Math.min(108, eased * 100));",
+        "    return [value[0] * (s / 100), value[1] * (s / 100)];",
+        "})();"
+    ].join("\n");
+
+    var BUBBLE_OPACITY_EXPR = [
+        "// Clean Entrance Opacity",
+        "(function() {",
+        "    var fps = 30;",
+        "    try { fps = thisComp.frameRate; } catch(e) {}",
+        "    var fd = 1.0 / fps;",
+        "    try { if (thisComp.frameDuration) fd = thisComp.frameDuration; } catch(e2) {}",
+        "    var f = time / fd;",
+        "    if (f < 0) return 0;",
+        "    return value;",
+        "})();"
+    ].join("\n");
+
+    var TYPEWRITER_EXPR = [
+        "// 5-Frame Typewriter Effect starting after Bubble Grow",
+        "(function() {",
+        "    function getVal(name, fallback) {",
+        "        try {",
+        "            if (thisLayer && thisLayer.hasParent) {",
+        "                var p = thisLayer.parent.effect(name)(1);",
+        "                return (p && typeof p.value !== 'undefined') ? p.value : (p !== undefined ? p : fallback);",
+        "            }",
+        "        } catch(e) {}",
+        "        try {",
+        "            var p2 = thisComp.layer('Bubble_Master_Controller').effect(name)(1);",
+        "            return (p2 && typeof p2.value !== 'undefined') ? p2.value : (p2 !== undefined ? p2 : fallback);",
+        "        } catch(e2) {}",
+        "        return fallback;",
+        "    }",
+        "",
+        "    var animOn = getVal('Animate Entrance', 1);",
+        "    if (animOn <= 0) return value;",
+        "",
+        "    var growFrames = Math.max(1, getVal('Bubble Grow Duration (frames)', 5));",
+        "    var typeFrames = Math.max(1, getVal('Typewriter Duration (frames)', 5));",
+        "    var fps = 30;",
+        "    try { fps = thisComp.frameRate; } catch(eFps) {}",
+        "    var fd = 1.0 / fps;",
+        "    try { if (thisComp.frameDuration) fd = thisComp.frameDuration; } catch(eFd) {}",
+        "",
+        "    var f = time / fd;",
+        "    var fullStr = String(value);",
+        "    if (f < growFrames) return '';",
+        "    if (f >= (growFrames + typeFrames)) return value;",
+        "",
+        "    var p = (f - growFrames) / typeFrames;",
+        "    var charCount = Math.max(1, Math.round(p * fullStr.length));",
+        "    return fullStr.substring(0, charCount);",
+        "})();"
+    ].join("\n");
+
+    var TIMECODE_ENTRANCE_EXPR = [
+        "// Entrance Fade In after Typewriter completion",
+        "(function() {",
+        "    function getVal(name, fallback) {",
+        "        try {",
+        "            if (thisLayer && thisLayer.hasParent) {",
+        "                var p = thisLayer.parent.effect(name)(1);",
+        "                return (p && typeof p.value !== 'undefined') ? p.value : (p !== undefined ? p : fallback);",
+        "            }",
+        "        } catch(e) {}",
+        "        try {",
+        "            var p2 = thisComp.layer('Bubble_Master_Controller').effect(name)(1);",
+        "            return (p2 && typeof p2.value !== 'undefined') ? p2.value : (p2 !== undefined ? p2 : fallback);",
+        "        } catch(e2) {}",
+        "        return fallback;",
+        "    }",
+        "",
+        "    var animOn = getVal('Animate Entrance', 1);",
+        "    if (animOn <= 0) return value;",
+        "",
+        "    var growFrames = Math.max(1, getVal('Bubble Grow Duration (frames)', 5));",
+        "    var typeFrames = Math.max(1, getVal('Typewriter Duration (frames)', 5));",
+        "    var fps = 30;",
+        "    try { fps = thisComp.frameRate; } catch(eFps) {}",
+        "    var fd = 1.0 / fps;",
+        "    try { if (thisComp.frameDuration) fd = thisComp.frameDuration; } catch(eFd) {}",
+        "",
+        "    var f = time / fd;",
+        "    var startF = growFrames + typeFrames;",
+        "    if (f < startF) return 0;",
+        "    if (f >= startF + 2) return value;",
+        "    return value * ((f - startF) / 2.0);",
+        "})();"
+    ].join("\n");
+
+    // -------------------------------------------------------------------------
     // iOS 18 Animated Text Effects - Dynamic Expressions Engine
     // -------------------------------------------------------------------------
     var POS_ANIM_EXPR = [
@@ -424,10 +553,32 @@
         "    var effectType = Math.round(getVal('Animation Effect Type', 0));",
         "    if (effectType === 0) return value;",
         "",
+        "    var animOn = getVal('Animate Entrance', 1);",
+        "    if (animOn > 0) {",
+        "        var growFrames = Math.max(1, getVal('Bubble Grow Duration (frames)', 5));",
+        "        var typeFrames = Math.max(1, getVal('Typewriter Duration (frames)', 5));",
+        "        var fps = 30;",
+        "        try { fps = thisComp.frameRate; } catch(eFps) {}",
+        "        var fd = 1.0 / fps;",
+        "        try { if (thisComp.frameDuration) fd = thisComp.frameDuration; } catch(eFd) {}",
+        "        if ((time / fd) < (growFrames + typeFrames)) return value;",
+        "    }",
+        "",
+        "    var animOn = getVal('Animate Entrance', 1);",
+        "    if (animOn > 0) {",
+        "        var growFrames = Math.max(1, getVal('Bubble Grow Duration (frames)', 5));",
+        "        var typeFrames = Math.max(1, getVal('Typewriter Duration (frames)', 5));",
+        "        var fps = 30;",
+        "        try { fps = thisComp.frameRate; } catch(eFps) {}",
+        "        var fd = 1.0 / fps;",
+        "        try { if (thisComp.frameDuration) fd = thisComp.frameDuration; } catch(eFd) {}",
+        "        if ((time / fd) < (growFrames + typeFrames)) return value;",
+        "    }",
+        "",
         "    var speed = Math.max(0.1, getVal('Animation Speed', 100) / 100);",
         "    var amp = Math.max(0, getVal('Animation Intensity', 100) / 100);",
         "    var t = time * speed;",
-        "    var dx = 0;",
+        "    var dx = 0;",,
         "    var dy = 0;",
         "",
         "    if (effectType === 3) {",
@@ -481,6 +632,17 @@
         "",
         "    var effectType = Math.round(getVal('Animation Effect Type', 0));",
         "    if (effectType === 0) return value;",
+        "",
+        "    var animOn = getVal('Animate Entrance', 1);",
+        "    if (animOn > 0) {",
+        "        var growFrames = Math.max(1, getVal('Bubble Grow Duration (frames)', 5));",
+        "        var typeFrames = Math.max(1, getVal('Typewriter Duration (frames)', 5));",
+        "        var fps = 30;",
+        "        try { fps = thisComp.frameRate; } catch(eFps) {}",
+        "        var fd = 1.0 / fps;",
+        "        try { if (thisComp.frameDuration) fd = thisComp.frameDuration; } catch(eFd) {}",
+        "        if ((time / fd) < (growFrames + typeFrames)) return value;",
+        "    }",
         "",
         "    var speed = Math.max(0.1, getVal('Animation Speed', 100) / 100);",
         "    var amp = Math.max(0, getVal('Animation Intensity', 100) / 100);",
@@ -548,6 +710,17 @@
         "    var effectType = Math.round(getVal('Animation Effect Type', 0));",
         "    if (effectType === 0) return value;",
         "",
+        "    var animOn = getVal('Animate Entrance', 1);",
+        "    if (animOn > 0) {",
+        "        var growFrames = Math.max(1, getVal('Bubble Grow Duration (frames)', 5));",
+        "        var typeFrames = Math.max(1, getVal('Typewriter Duration (frames)', 5));",
+        "        var fps = 30;",
+        "        try { fps = thisComp.frameRate; } catch(eFps) {}",
+        "        var fd = 1.0 / fps;",
+        "        try { if (thisComp.frameDuration) fd = thisComp.frameDuration; } catch(eFd) {}",
+        "        if ((time / fd) < (growFrames + typeFrames)) return value;",
+        "    }",
+        "",
         "    var speed = Math.max(0.1, getVal('Animation Speed', 100) / 100);",
         "    var amp = Math.max(0, getVal('Animation Intensity', 100) / 100);",
         "    var t = time * speed;",
@@ -594,6 +767,17 @@
         "",
         "    var effectType = Math.round(getVal('Animation Effect Type', 0));",
         "    if (effectType === 0) return value;",
+        "",
+        "    var animOn = getVal('Animate Entrance', 1);",
+        "    if (animOn > 0) {",
+        "        var growFrames = Math.max(1, getVal('Bubble Grow Duration (frames)', 5));",
+        "        var typeFrames = Math.max(1, getVal('Typewriter Duration (frames)', 5));",
+        "        var fps = 30;",
+        "        try { fps = thisComp.frameRate; } catch(eFps) {}",
+        "        var fd = 1.0 / fps;",
+        "        try { if (thisComp.frameDuration) fd = thisComp.frameDuration; } catch(eFd) {}",
+        "        if ((time / fd) < (growFrames + typeFrames)) return value;",
+        "    }",
         "",
         "    var speed = Math.max(0.1, getVal('Animation Speed', 100) / 100);",
         "    var amp = Math.max(0, getVal('Animation Intensity', 100) / 100);",
@@ -663,8 +847,19 @@
         "    if (mode === 2) return '✓✓';",
         "    if (mode === 1) return '✓✓';",
         "",
-        "    // Auto mode (0): Sent at t=0 ('✓'), Delivered at t >= deliveredTime ('✓✓')",
-        "    var deliveredTime = getVal('Delivered Time (s)', 0.8);",
+        "    // Auto mode (0): Sent at t=settleTime ('✓'), Delivered at t >= deliveredTime ('✓✓')",
+        "    var animOn = getVal('Animate Entrance', 1);",
+        "    var settleTime = 0;",
+        "    if (animOn > 0) {",
+        "        var growFrames = Math.max(1, getVal('Bubble Grow Duration (frames)', 5));",
+        "        var typeFrames = Math.max(1, getVal('Typewriter Duration (frames)', 5));",
+        "        var fps = 30;",
+        "        try { fps = thisComp.frameRate; } catch(eFps) {}",
+        "        var fd = 1.0 / fps;",
+        "        try { if (thisComp.frameDuration) fd = thisComp.frameDuration; } catch(eFd) {}",
+        "        settleTime = (growFrames + typeFrames) * fd;",
+        "    }",
+        "    var deliveredTime = settleTime + getVal('Delivered Time (s)', 0.8);",
         "    if (time < deliveredTime) {",
         "        return '✓';",
         "    } else {",
@@ -702,7 +897,19 @@
         "    if (mode === 1) return readCol;",
         "",
         "    // Auto mode (0): transitions from neutral to readCol at readTime",
-        "    var readTime = getVal('Read Time (s)', 3.5);",
+        "    var animOn = getVal('Animate Entrance', 1);",
+        "    var settleTime = 0;",
+        "    if (animOn > 0) {",
+        "        var growFrames = Math.max(1, getVal('Bubble Grow Duration (frames)', 5));",
+        "        var typeFrames = Math.max(1, getVal('Typewriter Duration (frames)', 5));",
+        "        var fps = 30;",
+        "        try { fps = thisComp.frameRate; } catch(eFps) {}",
+        "        var fd = 1.0 / fps;",
+        "        try { if (thisComp.frameDuration) fd = thisComp.frameDuration; } catch(eFd) {}",
+        "        settleTime = (growFrames + typeFrames) * fd;",
+        "    }",
+        "    var deliveredTime = settleTime + getVal('Delivered Time (s)', 0.8);",
+        "    var readTime = deliveredTime + getVal('Read Time (s)', 3.5);",
         "    if (time < readTime) {",
         "        return neutralCol;",
         "    } else {",
@@ -1155,6 +1362,14 @@
         sldAmp.value = v;
         txtAmp.text = String(Math.round(v));
     };
+
+    // Entrance Animation Row (Grow 5f + Typewriter 5f)
+    var grpEntrance = pnlAnim.add("group");
+    grpEntrance.orientation = "row";
+    grpEntrance.alignChildren = ["left", "center"];
+    var chkEntrance = grpEntrance.add("checkbox", undefined, "Entrance Animation (Grow 5f + Typewriter 5f)");
+    chkEntrance.value = true; // Default: Enabled
+    chkEntrance.helpTip = "Animate the bubble growing from left/right (5 frames), followed by a 5-frame typewriter text reveal.";
 
     // -------------------------------------------------------------------------
     // 8. Timestamp Section (Random time + Re-roll)
@@ -1623,6 +1838,15 @@
                 var effAmp = parade.addProperty("ADBE Slider Control");
                 if (effAmp) { effAmp.name = "Animation Intensity"; effAmp.property(1).setValue(animAmp); }
 
+                var effEnt = parade.addProperty("ADBE Checkbox Control");
+                if (effEnt) { effEnt.name = "Animate Entrance"; effEnt.property(1).setValue(chkEntrance.value ? 1 : 0); }
+
+                var effGrowF = parade.addProperty("ADBE Slider Control");
+                if (effGrowF) { effGrowF.name = "Bubble Grow Duration (frames)"; effGrowF.property(1).setValue(5); }
+
+                var effTypeF = parade.addProperty("ADBE Slider Control");
+                if (effTypeF) { effTypeF.name = "Typewriter Duration (frames)"; effTypeF.property(1).setValue(5); }
+
                 var effCol = parade.addProperty("ADBE Color Control");
                 if (effCol) { effCol.name = "Bubble Color"; effCol.property(1).setValue(bubbleColor); }
             }
@@ -1631,7 +1855,19 @@
             var bubbleLayer = comp.layers.addShape();
             bubbleLayer.name = isSent ? "Bubble_Sent" : "Bubble_Received";
             bubbleLayer.parent = master;
-            bubbleLayer.transform.position.setValue([0, 0, 0]);
+
+            // Anchor point placed at tail corner so bubble grows outward from tail
+            // Sent: grows from Right to Left; Received: grows from Left to Right
+            var originX = isSent ? (bubbleW / 2) : -(bubbleW / 2);
+            var originY = (bubbleH / 2);
+            var bAnchor = bubbleLayer.transform.anchorPoint || (bubbleLayer.property && bubbleLayer.property("ADBE Transform Group") && bubbleLayer.property("ADBE Transform Group").property("ADBE Anchor Point"));
+            if (bAnchor) {
+                bAnchor.setValue([originX, originY, 0]);
+            }
+            bubbleLayer.transform.position.setValue([originX, originY, 0]);
+
+            if (bubbleLayer.transform.scale) bubbleLayer.transform.scale.expression = BUBBLE_GROW_EXPR;
+            if (bubbleLayer.transform.opacity) bubbleLayer.transform.opacity.expression = BUBBLE_OPACITY_EXPR;
 
             // Add Effect Controls to Bubble Shape Layer (matching custom_rounded_rect)
             var bParade = bubbleLayer.property("ADBE Effect Parade") || bubbleLayer.property("Effects");
@@ -1754,6 +1990,9 @@
                         textLayer.property("Source Text").setValue(textDoc);
                     }
                 } catch(eDoc) {}
+                textLayer.property("Source Text").expression = TYPEWRITER_EXPR;
+            } else if (textLayer.sourceText) {
+                textLayer.sourceText.expression = TYPEWRITER_EXPR;
             }
 
             // 4. Timestamp & Status Row (allocated space for sent/delivered/read status icon)
@@ -1776,6 +2015,9 @@
             timeLayer.fontFamily = selectedFont.css;
             timeLayer.justification = "right";
             timeLayer.transform.position.setValue([timeX, timeY, -0.5]);
+            if (timeLayer.transform && timeLayer.transform.opacity) {
+                timeLayer.transform.opacity.expression = TIMECODE_ENTRANCE_EXPR;
+            }
 
             // 5. Dedicated Status / Read Icon Layer (Supports Auto Sent -> Delivered -> Read)
             var statusLayer = null;
@@ -1792,6 +2034,9 @@
                 statusLayer.fontFamily = selectedFont.css;
                 statusLayer.justification = "right";
                 statusLayer.transform.position.setValue([statusX, timeY, -0.5]);
+                if (statusLayer.transform && statusLayer.transform.opacity) {
+                    statusLayer.transform.opacity.expression = TIMECODE_ENTRANCE_EXPR;
+                }
 
                 // Attach dynamic status expressions (Auto / timing simulation)
                 if (statusLayer.sourceText) {
