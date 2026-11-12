@@ -494,6 +494,90 @@
             return d;
         }
 
+        renderTextContent(layer, time) {
+            let txt = '';
+            if (layer.sourceText) {
+                txt = String(layer.sourceText.getValueAtTime(time) || '');
+                if (!txt && layer.sourceText._baseValue && (!this.isPlaying || time < 0.05)) {
+                    txt = String(layer.sourceText._baseValue);
+                }
+            }
+            if (!txt && layer.text && typeof layer.text === 'string') {
+                txt = layer.text;
+            }
+            if (!txt) return '';
+
+            const fs = layer.fontSize || 24;
+            const lines = txt.split('\n');
+            let fill = '#ffffff';
+            let rawCol = null;
+            if (layer.effect && typeof layer.effect === 'function') {
+                const effCol = layer.effect('Status Color') || layer.effect('Status Fill Color') || layer.effect('Color') || layer.effect('Fill');
+                if (effCol) {
+                    const colProp = effCol.property('Color') || effCol.property(1);
+                    if (colProp && typeof colProp.getValueAtTime === 'function') {
+                        rawCol = colProp.getValueAtTime(time);
+                    }
+                }
+            }
+            if (!rawCol && layer.fontColor) {
+                rawCol = (typeof layer.fontColor.getValueAtTime === 'function') ? layer.fontColor.getValueAtTime(time) : layer.fontColor;
+            }
+            if (rawCol) {
+                if (Array.isArray(rawCol)) {
+                    const maxVal = Math.max(rawCol[0] || 0, rawCol[1] || 0, rawCol[2] || 0);
+                    const mult = (maxVal <= 1.0) ? 255 : 1;
+                    fill = `rgb(${Math.round(rawCol[0] * mult)}, ${Math.round(rawCol[1] * mult)}, ${Math.round(rawCol[2] * mult)})`;
+                } else {
+                    fill = String(rawCol);
+                }
+            }
+
+            const textAnchor = layer.justification === 'right' ? 'end' : (layer.justification === 'center' ? 'middle' : 'start');
+            const escapeXml = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            const lineStep = (layer.leading !== undefined && layer.leading > 0)
+                ? layer.leading
+                : (fs * 1.35 * ((layer.leadingPercent || 100) / 100));
+
+            // Clean separation: textFont for words/symbols, emojiFont specifically for emojis
+            const defaultEmojiStack = "'Noto Color Emoji', 'Segoe UI Emoji', 'Apple Color Emoji', sans-serif";
+            const emojiFont = layer.emojiFontFamily || defaultEmojiStack;
+            const textFont = layer.fontFamily || "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
+
+            // Regular expression matching Unicode emoji sequences, pictographs, variation selectors & ZWJ
+            const emojiRegex = /(\p{Extended_Pictographic}(?:[\uFE00-\uFE0F]|[\u{1F3FB}-\u{1F3FF}]|\u200D\p{Extended_Pictographic})*|[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]+)/gu;
+
+            const tspans = lines.map((l, li) => {
+                if (!l) {
+                    return `<tspan x="0" dy="${li === 0 ? 0 : lineStep}">&#160;</tspan>`;
+                }
+                const parts = [];
+                let lastIndex = 0;
+                let match;
+                emojiRegex.lastIndex = 0;
+                while ((match = emojiRegex.exec(l)) !== null) {
+                    if (match.index > lastIndex) {
+                        parts.push(`<tspan font-family="${textFont}">${escapeXml(l.substring(lastIndex, match.index))}</tspan>`);
+                    }
+                    parts.push(`<tspan font-family="${emojiFont}">${escapeXml(match[0])}</tspan>`);
+                    lastIndex = emojiRegex.lastIndex;
+                }
+                if (lastIndex < l.length) {
+                    parts.push(`<tspan font-family="${textFont}">${escapeXml(l.substring(lastIndex))}</tspan>`);
+                }
+                if (parts.length === 0) {
+                    parts.push(`<tspan font-family="${textFont}">${escapeXml(l)}</tspan>`);
+                }
+                return `<tspan x="0" dy="${li === 0 ? 0 : lineStep}">${parts.join('')}</tspan>`;
+            }).join('');
+
+            return `
+                <text x="0" y="${fs * 0.9}" fill="${fill}" font-size="${fs}px" text-anchor="${textAnchor}" style="user-select:none; font-weight:400;">
+                    ${tspans}
+                </text>
+            `;
+        }
+
         renderLayers(time) {
             if (!this.layersContainer) return;
 
@@ -537,11 +621,22 @@
                         if (!subLayer.enabled) continue;
                         const subMat = subLayer.getWorldMatrix(time);
                         const subCss = Mat4.toCSS(subMat);
-                        const subShapes = this.renderShapeContents(subLayer.contents, time);
-                        if (subShapes) {
+                        let subOpacity = (typeof subLayer.getWorldOpacity === 'function') ? subLayer.getWorldOpacity(time) : 1.0;
+                        if ((!this.isPlaying || time === 0) && subOpacity === 0) {
+                            subOpacity = 1.0;
+                        }
+
+                        let subContent = '';
+                        if (subLayer.contents && subLayer.contents.length > 0) {
+                            subContent = this.renderShapeContents(subLayer.contents, time);
+                        } else if (subLayer.sourceText || (typeof TextLayer !== 'undefined' && subLayer instanceof TextLayer)) {
+                            subContent = this.renderTextContent(subLayer, time);
+                        }
+
+                        if (subContent) {
                             subHtml += `
-                                <div class="ae-sublayer" style="position: absolute; left: 0; top: 0; width: 0; height: 0; transform-origin: 0 0 0; backface-visibility: visible; transform: ${subCss}; transform-style: preserve-3d;">
-                                    <svg class="ae-layer-svg" style="overflow: visible;">${subShapes}</svg>
+                                <div class="ae-sublayer" style="position: absolute; left: 0; top: 0; width: 0; height: 0; transform-origin: 0 0 0; backface-visibility: visible; transform: ${subCss}; opacity: ${subOpacity}; transform-style: preserve-3d;">
+                                    <svg class="ae-layer-svg" style="overflow: visible;">${subContent}</svg>
                                 </div>
                             `;
                         }
@@ -555,47 +650,10 @@
                         </svg>
                     `;
                 } else if (typeof TextLayer !== 'undefined' && layer instanceof TextLayer) {
-                    const txt = String(layer.sourceText ? layer.sourceText.getValueAtTime(time) : '');
-                    const fs = layer.fontSize || 24;
-                    const lines = txt.split('\n');
-                    let fill = '#ffffff';
-                    let rawCol = null;
-                    if (layer.effect && typeof layer.effect === 'function') {
-                        const effCol = layer.effect('Status Color') || layer.effect('Status Fill Color') || layer.effect('Color') || layer.effect('Fill');
-                        if (effCol) {
-                            const colProp = effCol.property('Color') || effCol.property(1);
-                            if (colProp && typeof colProp.getValueAtTime === 'function') {
-                                rawCol = colProp.getValueAtTime(time);
-                            }
-                        }
-                    }
-                    if (!rawCol && layer.fontColor) {
-                        rawCol = (typeof layer.fontColor.getValueAtTime === 'function') ? layer.fontColor.getValueAtTime(time) : layer.fontColor;
-                    }
-                    if (rawCol) {
-                        if (Array.isArray(rawCol)) {
-                            const maxVal = Math.max(rawCol[0] || 0, rawCol[1] || 0, rawCol[2] || 0);
-                            const mult = (maxVal <= 1.0) ? 255 : 1;
-                            fill = `rgb(${Math.round(rawCol[0] * mult)}, ${Math.round(rawCol[1] * mult)}, ${Math.round(rawCol[2] * mult)})`;
-                        } else {
-                            fill = String(rawCol);
-                        }
-                    }
-                    const textAnchor = layer.justification === 'right' ? 'end' : (layer.justification === 'center' ? 'middle' : 'start');
-                    const escapeXml = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-                    const lineStep = (layer.leading !== undefined && layer.leading > 0)
-                        ? layer.leading
-                        : (fs * 1.35 * ((layer.leadingPercent || 100) / 100));
-                    const tspans = lines.map((l, li) => `<tspan x="0" dy="${li === 0 ? 0 : lineStep}">${escapeXml(l)}</tspan>`).join('');
-                    const emojiFontStack = "'Noto Color Emoji', 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', sans-serif";
-                    const renderedFont = layer.fontFamily
-                        ? (layer.fontFamily.indexOf('Noto Color Emoji') !== -1 ? layer.fontFamily : `${layer.fontFamily}, ${emojiFontStack}`)
-                        : `system-ui, -apple-system, ${emojiFontStack}`;
+                    const textSvg = this.renderTextContent(layer, time);
                     layerEl.innerHTML = `
                         <svg class="ae-layer-svg" style="overflow: visible;">
-                            <text x="0" y="${fs * 0.9}" fill="${fill}" font-size="${fs}px" font-family="${renderedFont}" text-anchor="${textAnchor}" style="user-select:none; font-weight:400;">
-                                ${tspans}
-                            </text>
+                            ${textSvg}
                         </svg>
                     `;
                 }

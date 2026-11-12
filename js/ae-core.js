@@ -952,6 +952,7 @@
         get rotation() { return this.transform.rotation; }
         get opacity() { return this.transform.opacity; }
         get anchorPoint() { return this.transform.anchorPoint; }
+        get hasParent() { return Boolean(this.parent && this.parent instanceof Layer); }
 
         effect(nameOrIndex) {
             const eff = this.effects.property(nameOrIndex);
@@ -1213,6 +1214,7 @@
             this.fontSize = 24;
             this.fontColor = [1, 1, 1];
             this.fontFamily = 'system-ui, -apple-system, sans-serif';
+            this.emojiFontFamily = "'Noto Color Emoji', 'Segoe UI Emoji', 'Apple Color Emoji', sans-serif";
             this.justification = 'left'; // 'left' | 'center' | 'right'
         }
 
