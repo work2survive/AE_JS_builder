@@ -466,6 +466,8 @@
             fadeOutDist: 180,
             cameraFade: true,
             cameraFadeDist: 250,
+            randomFlipH: true,
+            randomFlipV: false,
             partSize: 28,
             partSizeRand: 45,
             scaleWigFreq: 1.0,
@@ -505,6 +507,8 @@
             fadeOutDist: 350,
             cameraFade: true,
             cameraFadeDist: 250,
+            randomFlipH: false,
+            randomFlipV: false,
             partSize: 240,
             partSizeRand: 50,
             scaleWigFreq: 0.3,
@@ -544,6 +548,8 @@
             fadeOutDist: 150,
             cameraFade: true,
             cameraFadeDist: 250,
+            randomFlipH: false,
+            randomFlipV: false,
             partSize: 18,
             partSizeRand: 60,
             scaleWigFreq: 1.5,
@@ -583,6 +589,8 @@
             fadeOutDist: 300,
             cameraFade: true,
             cameraFadeDist: 250,
+            randomFlipH: false,
+            randomFlipV: false,
             partSize: 380,
             partSizeRand: 35,
             scaleWigFreq: 0.0,
@@ -622,6 +630,8 @@
             fadeOutDist: 120,
             cameraFade: true,
             cameraFadeDist: 250,
+            randomFlipH: false,
+            randomFlipV: false,
             partSize: 14,
             partSizeRand: 50,
             scaleWigFreq: 0.8,
@@ -661,6 +671,8 @@
             fadeOutDist: 120,
             cameraFade: true,
             cameraFadeDist: 250,
+            randomFlipH: false,
+            randomFlipV: false,
             partSize: 14,
             partSizeRand: 40,
             scaleWigFreq: 1.2,
@@ -700,6 +712,8 @@
             fadeOutDist: 150,
             cameraFade: true,
             cameraFadeDist: 250,
+            randomFlipH: false,
+            randomFlipV: false,
             partSize: 100,
             partSizeRand: 30,
             scaleWigFreq: 0.5,
@@ -739,6 +753,8 @@
             fadeOutDist: 150,
             cameraFade: true,
             cameraFadeDist: 250,
+            randomFlipH: false,
+            randomFlipV: false,
             partSize: 100,
             partSizeRand: 30,
             scaleWigFreq: 0.5,
@@ -1368,6 +1384,18 @@
         editPartSizeRand.helpTip = "Percentage of size variation applied when particles are born (0 = identical, 100 = 0x to 2x variation)";
         grpPartSizeRand.add("statictext", undefined, "(Variation at birth)");
 
+        // Born Random Flip Controls (Horizontal & Vertical)
+        var grpFlip = tabSource.add("group");
+        grpFlip.orientation = "row";
+        grpFlip.alignChildren = ["left", "center"];
+        grpFlip.spacing = 10;
+        var chkFlipH = grpFlip.add("checkbox", undefined, "Random Flip Horizontal (Born)");
+        chkFlipH.value = false;
+        chkFlipH.helpTip = "Randomly flip particles horizontally (Scale X = -100%) when born";
+        var chkFlipV = grpFlip.add("checkbox", undefined, "Random Flip Vertical (Born)");
+        chkFlipV.value = false;
+        chkFlipV.helpTip = "Randomly flip particles vertically (Scale Y = -100%) when born";
+
         // Scale Wiggle (Dynamic breathing / pulsing)
         var pnlScaleWig = tabSource.add("panel", undefined, "Size Wiggle (Dynamic Pulsing / Breathing) - Animatable");
         pnlScaleWig.orientation = "row";
@@ -1420,6 +1448,8 @@
             if (preset.fadeOutDist !== undefined) editFadeOutDist.text = String(preset.fadeOutDist);
             if (preset.cameraFade !== undefined) chkCameraFade.value = Boolean(preset.cameraFade);
             if (preset.cameraFadeDist !== undefined) editCamFadeDist.text = String(preset.cameraFadeDist);
+            if (preset.randomFlipH !== undefined) chkFlipH.value = Boolean(preset.randomFlipH);
+            if (preset.randomFlipV !== undefined) chkFlipV.value = Boolean(preset.randomFlipV);
             if (preset.partSize !== undefined) editPartSize.text = String(preset.partSize);
             if (preset.partSizeRand !== undefined) editPartSizeRand.text = String(preset.partSizeRand);
             if (preset.scaleWigFreq !== undefined) editScaleWigFreq.text = String(preset.scaleWigFreq);
@@ -1580,6 +1610,8 @@
             var fadeOutDist = Math.max(0, getNum(editFadeOutDist, 150));
             var isCamFade = chkCameraFade.value;
             var camFadeDist = Math.max(1, getNum(editCamFadeDist, 250));
+            var isFlipH = chkFlipH.value;
+            var isFlipV = chkFlipV.value;
             var partSizeRand = Math.max(0, Math.min(100, getNum(editPartSizeRand, 45)));
             var scaleWigFreq = Math.max(0, getNum(editScaleWigFreq, 1.0));
             var scaleWigAmp = Math.max(0, getNum(editScaleWigAmp, 15));
@@ -1672,8 +1704,10 @@
                 addCheckbox(ctrlLayer, "WindBox - Fade Near Camera", isCamFade ? 1 : 0);
                 addSlider(ctrlLayer, "WindBox - Camera Fade Dist", camFadeDist);
 
-                // Particle Size Randomness & Size Wiggle Controls
+                // Particle Size Randomness, Flip & Size Wiggle Controls
                 addSlider(ctrlLayer, "WindBox - Size Random (%)", partSizeRand);
+                addCheckbox(ctrlLayer, "WindBox - Random Flip Horizontal", isFlipH ? 1 : 0);
+                addCheckbox(ctrlLayer, "WindBox - Random Flip Vertical", isFlipV ? 1 : 0);
                 addSlider(ctrlLayer, "WindBox - Scale Wiggle Freq", scaleWigFreq);
                 addSlider(ctrlLayer, "WindBox - Scale Wiggle Amp (%)", scaleWigAmp);
 
@@ -2013,13 +2047,20 @@
                     '    try { szRand = Math.max(0, ctrl.effect("WindBox - Size Random (%)")(1).value) / 100; } catch(e) {}',
                     '    var randMult = (szRand > 0) ? (1 + (random() - 0.5) * 2 * szRand) : 1;',
                     '    randMult = Math.max(0.05, randMult);',
+                    '    var rX = random();',
+                    '    var rY = random();',
+                    '    var flipH = 0, flipV = 0;',
+                    '    try { flipH = ctrl.effect("WindBox - Random Flip Horizontal")(1).value; } catch(e) {}',
+                    '    try { flipV = ctrl.effect("WindBox - Random Flip Vertical")(1).value; } catch(e) {}',
+                    '    var multX = (flipH > 0 && rX > 0.5) ? -1 : 1;',
+                    '    var multY = (flipV > 0 && rY > 0.5) ? -1 : 1;',
                     '    var sFreq = 0, sAmp = 0;',
                     '    try { sFreq = ctrl.effect("WindBox - Scale Wiggle Freq")(1).value; } catch(e) {}',
                     '    try { sAmp = ctrl.effect("WindBox - Scale Wiggle Amp (%)")(1).value; } catch(e) {}',
                     '    var tOff = pIndex * 23.45 + (seed % 100);',
                     '    var w = (sFreq > 0 && sAmp > 0) ? (wiggle(sFreq, sAmp, 1, 0.5, time + tOff)[0] - value[0]) : 0;',
                     '    var s = Math.max(0.1, value[0] * randMult * (1 + w / 100));',
-                    '    [s, s, s];',
+                    '    [s * multX, s * multY, s];',
                     '}'
                 ].join("\n");
 
