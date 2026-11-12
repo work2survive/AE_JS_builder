@@ -47,7 +47,7 @@
                 <div class="ae-viewport">
                     <div class="ae-viewport-overlay">
                         <div class="ae-viewport-header-left">
-                            <span class="ae-viewport-panel-title">viewport</span>
+                            <span class="ae-panel-title ae-viewport-panel-title">Viewport</span>
                             <div class="ae-cam-info">
                                 <span id="cam-view-name">Custom View 1</span> | 
                                 Orbit: <span id="cam-orbit-vals">-35°, 25°</span> | 

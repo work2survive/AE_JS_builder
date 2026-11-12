@@ -171,7 +171,7 @@
         JSON = JSONPolyfill;
     }
 
-    var SCRIPT_VERSION = "v1.4";
+    var SCRIPT_VERSION = "v1.5";
     var MAX_CHARS = 250;
 
     // -------------------------------------------------------------------------
@@ -1250,6 +1250,84 @@
         "})();"
     ].join("\n");
 
+    // Dynamic Bubble Anchor Point & Position Expression
+    var BUBBLE_TRANSFORM_EXPR = [
+        "// Dynamic Bubble Transform Alignment",
+        "(function() {",
+        "    function getVal(name, fallback) {",
+        "        try {",
+        "            if (thisLayer && thisLayer.hasParent) {",
+        "                var p = thisLayer.parent.effect(name)(1);",
+        "                return (p && typeof p.value !== 'undefined') ? p.value : (p !== undefined ? p : fallback);",
+        "            }",
+        "        } catch(e) {}",
+        "        try {",
+        "            var p2 = thisComp.layer('Bubble_Master_Controller').effect(name)(1);",
+        "            return (p2 && typeof p2.value !== 'undefined') ? p2.value : (p2 !== undefined ? p2 : fallback);",
+        "        } catch(e2) {}",
+        "        return fallback;",
+        "    }",
+        "    var w = Math.max(20, getVal('Bubble Width', 300));",
+        "    var h = Math.max(20, getVal('Bubble Height', 100));",
+        "    var isSent = (thisLayer.name.indexOf('Sent') !== -1) ? 1 : 0;",
+        "    var ox = isSent ? (w / 2) : -(w / 2);",
+        "    var oy = h / 2;",
+        "    return [ox, oy, 0];",
+        "})();"
+    ].join("\n");
+
+    // Dynamic Timestamp Position Expression (Equal Right/Bottom Margins when no status icon)
+    var TIMECODE_POS_EXPR = [
+        "// Dynamic Timestamp Position Tracking",
+        "(function() {",
+        "    function getVal(name, fallback) {",
+        "        try {",
+        "            if (thisLayer && thisLayer.hasParent) {",
+        "                var p = thisLayer.parent.effect(name)(1);",
+        "                return (p && typeof p.value !== 'undefined') ? p.value : (p !== undefined ? p : fallback);",
+        "            }",
+        "        } catch(e) {}",
+        "        try {",
+        "            var p2 = thisComp.layer('Bubble_Master_Controller').effect(name)(1);",
+        "            return (p2 && typeof p2.value !== 'undefined') ? p2.value : (p2 !== undefined ? p2 : fallback);",
+        "        } catch(e2) {}",
+        "        return fallback;",
+        "    }",
+        "    var w = Math.max(20, getVal('Bubble Width', 0));",
+        "    var h = Math.max(20, getVal('Bubble Height', 0));",
+        "    if (w <= 0 || h <= 0) return value;",
+        "    var rx = (w / 2) - value[0];",
+        "    var ry = (h / 2) - value[1];",
+        "    return [(w / 2) - rx, (h / 2) - ry, (value.length > 2 ? value[2] : -0.5)];",
+        "})();"
+    ].join("\n");
+
+    // Dynamic Status Icon Position Expression
+    var STATUS_POS_EXPR = [
+        "// Dynamic Status Icon Position Tracking",
+        "(function() {",
+        "    function getVal(name, fallback) {",
+        "        try {",
+        "            if (thisLayer && thisLayer.hasParent) {",
+        "                var p = thisLayer.parent.effect(name)(1);",
+        "                return (p && typeof p.value !== 'undefined') ? p.value : (p !== undefined ? p : fallback);",
+        "            }",
+        "        } catch(e) {}",
+        "        try {",
+        "            var p2 = thisComp.layer('Bubble_Master_Controller').effect(name)(1);",
+        "            return (p2 && typeof p2.value !== 'undefined') ? p2.value : (p2 !== undefined ? p2 : fallback);",
+        "        } catch(e2) {}",
+        "        return fallback;",
+        "    }",
+        "    var w = Math.max(20, getVal('Bubble Width', 0));",
+        "    var h = Math.max(20, getVal('Bubble Height', 0));",
+        "    if (w <= 0 || h <= 0) return value;",
+        "    var rx = (w / 2) - value[0];",
+        "    var ry = (h / 2) - value[1];",
+        "    return [(w / 2) - rx, (h / 2) - ry, (value.length > 2 ? value[2] : -0.5)];",
+        "})();"
+    ].join("\n");
+
     // -------------------------------------------------------------------------
     // iOS 18 Animated Text Effects - Dynamic Expressions Engine
     // -------------------------------------------------------------------------
@@ -1274,10 +1352,20 @@
         "        return fallback;",
         "    }",
         "",
-        "    var effectType = Math.round(getVal('Animation Effect Type', 0));",
-        "    if (effectType === 0) return value;",
+        "    var w = Math.max(20, getVal('Bubble Width', 0));",
+        "    var h = Math.max(20, getVal('Bubble Height', 0));",
+        "    var padOffset = getVal('Inner Padding Offset', 0);",
+        "    var textSize = getVal('Text Size', 20);",
+        "    var padX = Math.max(15, Math.round(textSize * 0.90)) + padOffset;",
+        "    var padY = Math.max(10, Math.round(textSize * 0.60)) + padOffset;",
+        "    var capHeight = Math.round(textSize * 0.72);",
+        "    var baseX = (w > 0) ? (-(w / 2) + padX) : value[0];",
+        "    var baseY = (h > 0) ? (-(h / 2) + padY + capHeight) : value[1];",
         "",
-        "    var animOn = getVal('Animate Entrance', 1);",
+        "    var effectType = Math.round(getVal('Animation Effect Type', 0));",
+        "    if (effectType === 0) return [baseX, baseY, (value.length > 2 ? value[2] : -0.5)];",
+        "",
+        "    var animOn = getVal('Animate Entrance', 0);",
         "    var growFrames = (animOn > 0) ? Math.max(0, getVal('Bubble Grow Duration (frames)', 5)) : 0;",
         "    var typeFrames = (animOn > 0) ? Math.max(0, getVal('Typewriter Duration (frames)', 5)) : 0;",
         "    var fps = 30;",
@@ -1287,13 +1375,13 @@
         "",
         "    var startFrame = growFrames + typeFrames;",
         "    var currentFrame = time / fd;",
-        "    if (currentFrame < startFrame) return value;",
+        "    if (currentFrame < startFrame) return [baseX, baseY, (value.length > 2 ? value[2] : -0.5)];",
         "",
         "    var elapsedFrames = currentFrame - startFrame;",
         "    var decayFrames = Math.max(0, getVal('Animation Decay (frames)', 30));",
         "    var decayFactor = 1.0;",
         "    if (decayFrames > 0) {",
-        "        if (elapsedFrames >= decayFrames) return value;",
+        "        if (elapsedFrames >= decayFrames) return [baseX, baseY, (value.length > 2 ? value[2] : -0.5)];",
         "        var p = elapsedFrames / decayFrames;",
         "        decayFactor = (1.0 - p) * (1.0 - p);",
         "    }",
@@ -1314,7 +1402,7 @@
         "        dx = Math.sin(t * freq * Math.PI * 2) * (8 * amp * decayFactor);",
         "    }",
         "",
-        "    return [value[0] + dx, value[1] + dy, (value.length > 2 ? value[2] : 0)];",
+        "    return [baseX + dx, baseY + dy, (value.length > 2 ? value[2] : -0.5)];",
         "})();"
     ].join("\n");
 
@@ -2452,7 +2540,7 @@
     pnlEntrance.margins = [10, 8, 10, 8];
 
     var chkEntrance = pnlEntrance.add("checkbox", undefined, "Entrance Animation (Grow + Typewriter)");
-    chkEntrance.value = true; // Default: Enabled
+    chkEntrance.value = false; // Default: Disabled until size works fine
     chkEntrance.helpTip = "Animate the bubble growing from tail corner, followed by a typewriter text reveal.";
 
     // Bubble Grow Duration Row (0 to 30 frames)
@@ -2510,6 +2598,11 @@
         sldType.enabled = en;
         txtType.enabled = en;
     };
+    // Initialize disabled state since chkEntrance is false by default
+    sldGrow.enabled = false;
+    txtGrow.enabled = false;
+    sldType.enabled = false;
+    txtType.enabled = false;
 
     // --- Panel 2: iOS Text Animation ---
     var pnlAnim = tabAnimation.add("panel", undefined, "iOS Text Animation");
@@ -3226,6 +3319,24 @@
                 if (cur.length > 0) lines.push(trimStr(cur));
                 lines.push("");
                 cur = "";
+                continue;
+            }
+            if (measureTypographyWidth(w, fontSize) > maxPixelWidth) {
+                if (cur.length > 0) {
+                    lines.push(trimStr(cur));
+                    cur = "";
+                }
+                var chunk = "";
+                for (var ci = 0; ci < w.length; ci++) {
+                    var testChunk = chunk + w.charAt(ci);
+                    if (measureTypographyWidth(testChunk, fontSize) > maxPixelWidth && chunk.length > 0) {
+                        lines.push(trimStr(chunk));
+                        chunk = w.charAt(ci);
+                    } else {
+                        chunk = testChunk;
+                    }
+                }
+                if (chunk.length > 0) cur = chunk;
                 continue;
             }
             var test = cur.length > 0 ? (cur + " " + w) : w;
