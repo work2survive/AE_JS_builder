@@ -1228,6 +1228,9 @@
         "        return fallback;",
         "    }",
         "",
+        "    var showTime = getVal('Show Timestamp', 1);",
+        "    if (showTime <= 0) return 0;",
+        "",
         "    var animOn = getVal('Animate Entrance', 1);",
         "    if (animOn <= 0) return value;",
         "",
@@ -1691,6 +1694,9 @@
         "        return fallback;",
         "    }",
         "",
+        "    var showTime = getVal('Show Timestamp', 1);",
+        "    if (showTime <= 0) return 0;",
+        "",
         "    var style = Math.round(getVal('Status Icon Style', 0));",
         "    if (style !== 1) return 0; // Visible when style === 1 (Standard Checks)",
         "    var mode = Math.round(getVal('Status Icon Mode', 0));",
@@ -1728,6 +1734,9 @@
         "        } catch(e2) {}",
         "        return fallback;",
         "    }",
+        "",
+        "    var showTime = getVal('Show Timestamp', 1);",
+        "    if (showTime <= 0) return 0;",
         "",
         "    var style = Math.round(getVal('Status Icon Style', 0));",
         "    if (style !== 0) return 0; // Visible when style === 0 (RCS Circled Checks)",
@@ -2256,22 +2265,24 @@
     chkTail.value = true; // Default: Show Tail
     chkTail.helpTip = "Toggle the chat pointer / tail at the bottom corner of the message bubble.";
 
-    // --- Panel: Timestamp (Randomized) ---
-    var pnlTime = tabMessage.add("panel", undefined, "Timestamp (Randomized)");
+    // --- Panel: Timestamp ---
+    var pnlTime = tabMessage.add("panel", undefined, "Timestamp");
     pnlTime.orientation = "row";
-    pnlTime.alignChildren = ["fill", "center"];
-    pnlTime.spacing = 8;
+    pnlTime.alignChildren = ["left", "center"];
+    pnlTime.spacing = 10;
     pnlTime.margins = [10, 8, 10, 8];
 
-    var lblTimeVal = pnlTime.add("statictext", undefined, "Time: " + currentRandomTime);
-    lblTimeVal.alignment = ["fill", "center"];
-    lblTimeVal.helpTip = "Timestamps are randomized for now. A dedicated custom time dialog will be added in a future update.";
+    var chkShowTime = pnlTime.add("checkbox", undefined, "Use Timestamp");
+    chkShowTime.value = true;
+    chkShowTime.helpTip = "Toggle message timestamp on/off (animatable boolean on master controller).";
 
-    var btnRerollTime = pnlTime.add("button", undefined, "🎲 Re-roll Time");
-    btnRerollTime.preferredSize = [135, 26];
-    btnRerollTime.onClick = function() {
-        currentRandomTime = generateRandomTime();
-        lblTimeVal.text = "Time: " + currentRandomTime;
+    var lblTimePrompt = pnlTime.add("statictext", undefined, "Time:");
+    var txtTime = pnlTime.add("edittext", undefined, currentRandomTime || "11:44 PM");
+    txtTime.preferredSize = [100, 24];
+    txtTime.helpTip = "Type the message timestamp (e.g. 11:44 PM, 9:41 AM, 14:30).";
+
+    chkShowTime.onClick = function() {
+        txtTime.enabled = this.value;
     };
 
     // =========================================================================
@@ -3455,14 +3466,20 @@
                 }
             }
 
-            var timeString = currentRandomTime;
+            var isTimeEnabled = (typeof chkShowTime !== "undefined" && chkShowTime) ? chkShowTime.value : true;
+            var timeString = (typeof txtTime !== "undefined" && txtTime && txtTime.text) ? trimStr(txtTime.text) : (currentRandomTime || "11:44 PM");
+            if (!timeString) timeString = "11:44 PM";
             var timeFontSize = Math.max(10, Math.round(textSize * 0.58));
-            var timeW = Math.round(timeString.length * timeFontSize * 0.55);
-            var statusW = (isSent && selStatusIdx !== 4)
+            var timeW = isTimeEnabled ? Math.round(measureTypographyWidth(timeString, timeFontSize)) : 0;
+            var hasStatus = (isSent && selStatusIdx !== 4 && isTimeEnabled);
+            var statusW = hasStatus
                 ? (isRCSStyle ? Math.round(timeFontSize * 1.55) : Math.round(timeFontSize * 1.35))
                 : 0;
             var statusSpacing = statusW > 0 ? 6 : 0;
-            var timeRowW = timeW + statusSpacing + statusW;
+            var timeRowW = isTimeEnabled ? (timeW + statusSpacing + statusW) : 0;
+
+            // Symmetrical margin bottom and right for timestamp when no delivery status
+            var timeMargin = Math.max(8, Math.round(padY * 0.65));
 
             // Bubble bounding dimensions
             var singleLine = (lines.length === 1);
@@ -3474,14 +3491,19 @@
             var effMeasuredW = Math.round(measuredTextW * scalePadFactor);
             var effTextH = Math.round(textBlockH * scalePadFactor);
 
-            if (singleLine && (effMeasuredW + timeRowW + padX * 2 + 16 < maxBubbleW)) {
+            if (singleLine && isTimeEnabled && (effMeasuredW + timeRowW + padX * 2 + 16 < maxBubbleW)) {
                 // Inline single line message + timestamp + status icon
                 bubbleW = effMeasuredW + timeRowW + (padX * 2) + 16;
                 bubbleH = effTextH + (padY * 2);
+            } else if (singleLine && !isTimeEnabled) {
+                // Inline single line message without timestamp
+                bubbleW = effMeasuredW + (padX * 2);
+                bubbleH = effTextH + (padY * 2);
             } else {
                 // Multiline message + bottom timestamp row
+                var bottomRowH = isTimeEnabled ? (timeFontSize + 6) : 0;
                 bubbleW = Math.max(effMeasuredW, timeRowW) + (padX * 2);
-                bubbleH = effTextH + (padY * 2) + timeFontSize + 6;
+                bubbleH = effTextH + (padY * 2) + bottomRowH;
             }
 
             var hasTail = chkTail.value;
@@ -3538,6 +3560,9 @@
 
                 var effTail = parade.addProperty("ADBE Checkbox Control");
                 if (effTail) { effTail.name = "Show Tail"; effTail.property(1).setValue(hasTail ? 1 : 0); }
+
+                var effShowTime = parade.addProperty("ADBE Checkbox Control");
+                if (effShowTime) { effShowTime.name = "Show Timestamp"; effShowTime.property(1).setValue(isTimeEnabled ? 1 : 0); }
 
                 var effStatus = parade.addProperty("ADBE Slider Control");
                 if (effStatus) { effStatus.name = "Status Icon Mode"; effStatus.property(1).setValue(selStatusIdx); }
@@ -3712,13 +3737,25 @@
             }
 
             // 4. Timestamp & Status Row (allocated space for sent/delivered/read status icon)
-            var timeRowRightX = (bubbleW / 2) - padX;
-            var timeY = (bubbleH / 2) - padY;
+            var timeRowRightX = 0;
+            var timeX = 0;
+            var timeY = (bubbleH / 2) - timeMargin;
+            var statusX = 0;
+            var statusCenterX = 0;
+            var statusCenterY = 0;
 
-            var statusX = timeRowRightX;
-            var timeX = (statusW > 0) ? (timeRowRightX - statusW - statusSpacing) : timeRowRightX;
-            var statusCenterX = timeRowRightX - (statusW / 2);
-            var statusCenterY = timeY - Math.round(timeFontSize * 0.32);
+            if (hasStatus) {
+                // With delivery status: checkmark sits at standard right padding
+                timeRowRightX = (bubbleW / 2) - padX;
+                statusX = timeRowRightX;
+                timeX = timeRowRightX - statusW - statusSpacing;
+                statusCenterX = timeRowRightX - (statusW / 2);
+                statusCenterY = timeY - Math.round(timeFontSize * 0.32);
+            } else {
+                // No delivery status: align timestamp closer to the right with SAME margin bottom and right!
+                timeRowRightX = (bubbleW / 2) - timeMargin;
+                timeX = timeRowRightX;
+            }
 
             var timeLayer = null;
             if (typeof comp.layers.addText === "function") {
@@ -3728,6 +3765,7 @@
             }
             timeLayer.name = "Timestamp_Text";
             timeLayer.parent = master;
+            timeLayer.enabled = isTimeEnabled;
             timeLayer.fontSize = timeFontSize;
             timeLayer.fontColor = timeColor;
             timeLayer.fontFamily = selectedFont.css;
@@ -4037,6 +4075,7 @@
                 addParentEffect("ADBE Slider Control", "Inner Padding Offset", padOffset);
                 addParentEffect("ADBE Slider Control", "Leading Percent", leadingPercent);
                 addParentEffect("ADBE Checkbox Control", "Show Tail", hasTail ? 1 : 0);
+                addParentEffect("ADBE Checkbox Control", "Show Timestamp", isTimeEnabled ? 1 : 0);
                 addParentEffect("ADBE Slider Control", "Screen Width", screenW);
                 addParentEffect("ADBE Slider Control", "Text Size", textSize);
 
@@ -4092,6 +4131,7 @@
                 linkPreMaster("Inner Padding Offset", false);
                 linkPreMaster("Leading Percent", false);
                 linkPreMaster("Show Tail", false);
+                linkPreMaster("Show Timestamp", false);
                 linkPreMaster("Screen Width", false);
                 linkPreMaster("Text Size", false);
 
@@ -4200,6 +4240,13 @@
                     updateCharCount();
                 }
             }
+            var timeL = getLayer(pComp, "Timestamp_Text");
+            if (timeL) {
+                var rawTime = getTextLayerString(timeL);
+                if (rawTime && rawTime !== "[object PropertyGroup]" && rawTime.indexOf("PropertyGroup") === -1) {
+                    txtTime.text = rawTime;
+                }
+            }
         }
 
         var effSource = pLayer || (pComp ? getLayer(pComp, "Bubble_Master_Controller") : null);
@@ -4236,6 +4283,14 @@
                 var eTail = effSource.effect("Show Tail");
                 if (eTail && eTail.property(1)) chkTail.value = (eTail.property(1).value >= 1);
             } catch(eTail2) {}
+
+            try {
+                var eTime = effSource.effect("Show Timestamp");
+                if (eTime && eTime.property(1)) {
+                    chkShowTime.value = (eTime.property(1).value >= 1);
+                    if (txtTime) txtTime.enabled = chkShowTime.value;
+                }
+            } catch(eTime2) {}
 
             try {
                 var eEnt = effSource.effect("Animate Entrance");
@@ -4422,14 +4477,20 @@
                 }
             }
 
-            var timeString = currentRandomTime;
+            var isTimeEnabled = (typeof chkShowTime !== "undefined" && chkShowTime) ? chkShowTime.value : true;
+            var timeString = (typeof txtTime !== "undefined" && txtTime && txtTime.text) ? trimStr(txtTime.text) : (currentRandomTime || "11:44 PM");
+            if (!timeString) timeString = "11:44 PM";
             var timeFontSize = Math.max(10, Math.round(textSize * 0.58));
-            var timeW = Math.round(timeString.length * timeFontSize * 0.55);
-            var statusW = (isSent && selStatusIdx !== 4)
+            var timeW = isTimeEnabled ? Math.round(measureTypographyWidth(timeString, timeFontSize)) : 0;
+            var hasStatus = (isSent && selStatusIdx !== 4 && isTimeEnabled);
+            var statusW = hasStatus
                 ? (isRCSStyle ? Math.round(timeFontSize * 1.55) : Math.round(timeFontSize * 1.35))
                 : 0;
             var statusSpacing = statusW > 0 ? 6 : 0;
-            var timeRowW = timeW + statusSpacing + statusW;
+            var timeRowW = isTimeEnabled ? (timeW + statusSpacing + statusW) : 0;
+
+            // Symmetrical margin bottom and right for timestamp when no delivery status
+            var timeMargin = Math.max(8, Math.round(padY * 0.65));
 
             var singleLine = (lines.length === 1);
             var bubbleW = 0;
@@ -4439,12 +4500,16 @@
             var effMeasuredW = Math.round(measuredTextW * scalePadFactor);
             var effTextH = Math.round(textBlockH * scalePadFactor);
 
-            if (singleLine && (effMeasuredW + timeRowW + padX * 2 + 16 < maxBubbleW)) {
+            if (singleLine && isTimeEnabled && (effMeasuredW + timeRowW + padX * 2 + 16 < maxBubbleW)) {
                 bubbleW = effMeasuredW + timeRowW + (padX * 2) + 16;
                 bubbleH = effTextH + (padY * 2);
+            } else if (singleLine && !isTimeEnabled) {
+                bubbleW = effMeasuredW + (padX * 2);
+                bubbleH = effTextH + (padY * 2);
             } else {
+                var bottomRowH = isTimeEnabled ? (timeFontSize + 6) : 0;
                 bubbleW = Math.max(effMeasuredW, timeRowW) + (padX * 2);
-                bubbleH = effTextH + (padY * 2) + timeFontSize + 6;
+                bubbleH = effTextH + (padY * 2) + bottomRowH;
             }
 
             var hasTail = chkTail.value;
@@ -4493,6 +4558,7 @@
                 setEffVal("Inner Padding Offset", padOffset);
                 setEffVal("Leading Percent", leadingPercent);
                 setEffVal("Show Tail", hasTail ? 1 : 0);
+                setEffVal("Show Timestamp", isTimeEnabled ? 1 : 0);
                 setEffVal("Screen Width", screenW);
                 setEffVal("Text Size", textSize);
             }
@@ -4601,15 +4667,27 @@
                 }
 
                 // Update Timestamp Text layer
-                var timeRowRightX = (bubbleW / 2) - padX;
-                var timeY = (bubbleH / 2) - padY;
-                var statusX = timeRowRightX;
-                var timeX = (statusW > 0) ? (timeRowRightX - statusW - statusSpacing) : timeRowRightX;
-                var statusCenterX = timeRowRightX - (statusW / 2);
-                var statusCenterY = timeY - Math.round(timeFontSize * 0.32);
+                var timeRowRightX = 0;
+                var timeX = 0;
+                var timeY = (bubbleH / 2) - timeMargin;
+                var statusX = 0;
+                var statusCenterX = 0;
+                var statusCenterY = 0;
+
+                if (hasStatus) {
+                    timeRowRightX = (bubbleW / 2) - padX;
+                    statusX = timeRowRightX;
+                    timeX = timeRowRightX - statusW - statusSpacing;
+                    statusCenterX = timeRowRightX - (statusW / 2);
+                    statusCenterY = timeY - Math.round(timeFontSize * 0.32);
+                } else {
+                    timeRowRightX = (bubbleW / 2) - timeMargin;
+                    timeX = timeRowRightX;
+                }
 
                 var timeLayer = getLayer(preCompItem, "Timestamp_Text");
                 if (timeLayer) {
+                    timeLayer.enabled = isTimeEnabled;
                     timeLayer.fontSize = timeFontSize;
                     timeLayer.fontColor = timeColor;
                     timeLayer.fontFamily = selectedFont.css;
@@ -4618,11 +4696,15 @@
                     }
                     timeLayer.emojiFontFamily = getActiveEmojiFontFamily();
                     formatTextLayer(timeLayer, timeString, timeFontSize, timeColor, justRight, null, getActiveFontCandidates(), getActiveEmojiCandidates());
+                    if (timeLayer.text !== undefined) {
+                        timeLayer.text = timeString;
+                    }
                 }
 
                 // Update Status text layer
                 var statusLayerText = getLayer(preCompItem, "Status_Icon_Text");
                 if (statusLayerText) {
+                    statusLayerText.enabled = hasStatus;
                     statusLayerText.fontSize = timeFontSize;
                     statusLayerText.fontColor = statusColor;
                     statusLayerText.fontFamily = selectedFont.css;
@@ -4635,8 +4717,11 @@
 
                 // Update Status RCS layer
                 var statusLayerRCS = getLayer(preCompItem, "Status_Icon_RCS");
-                if (statusLayerRCS && statusLayerRCS.transform && statusLayerRCS.transform.position) {
-                    statusLayerRCS.transform.position.setValue([statusCenterX, statusCenterY, -0.5]);
+                if (statusLayerRCS) {
+                    statusLayerRCS.enabled = hasStatus;
+                    if (statusLayerRCS.transform && statusLayerRCS.transform.position) {
+                        statusLayerRCS.transform.position.setValue([statusCenterX, statusCenterY, -0.5]);
+                    }
                 }
 
                 if (typeof preCompItem._onChanged === "function") {
