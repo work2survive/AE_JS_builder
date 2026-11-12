@@ -171,7 +171,7 @@
         JSON = JSONPolyfill;
     }
 
-    var SCRIPT_VERSION = "v1.1";
+    var SCRIPT_VERSION = "v1.2";
     var MAX_CHARS = 250;
 
     // -------------------------------------------------------------------------
@@ -1988,47 +1988,7 @@
     pnlHeader.add("statictext", undefined, "Chat bubble generator for iOS, Android RCS, WhatsApp, Instagram & Messenger.");
 
     // -------------------------------------------------------------------------
-    // 4. Message Text Panel (Max 250 characters, Emoji support)
-    // -------------------------------------------------------------------------
-    var pnlMessage = win.add("panel", undefined, "Message Content (Emojis Supported)");
-    pnlMessage.orientation = "column";
-    pnlMessage.alignChildren = ["fill", "top"];
-    pnlMessage.spacing = 6;
-    pnlMessage.margins = 10;
-
-    var txtMessage = pnlMessage.add("edittext", undefined, "Hey! Are we still meeting for lunch today? 😊🍕", { multiline: true });
-    txtMessage.preferredSize = [-1, 52];
-    txtMessage.helpTip = "Type your message text here (Max 250 characters). Emojis are supported.";
-
-    // Character Counter Label
-    var grpCharCount = pnlMessage.add("group");
-    grpCharCount.orientation = "row";
-    grpCharCount.alignChildren = ["right", "center"];
-    var lblCharCount = grpCharCount.add("statictext", undefined, "0 / " + MAX_CHARS + " chars");
-    lblCharCount.preferredSize = [120, -1];
-
-    function updateCharCount() {
-        var current = txtMessage.text || "";
-        if (current.length > MAX_CHARS) {
-            current = current.substring(0, MAX_CHARS);
-            txtMessage.text = current;
-        }
-        lblCharCount.text = current.length + " / " + MAX_CHARS + " chars";
-        if (typeof lblStatusInfo !== "undefined" && lblStatusInfo) {
-            var dur = calculateReadDuration(current);
-            lblStatusInfo.text = "⏱ Auto Read: ~" + (0.8 + dur).toFixed(1) + "s (based on text length)";
-        }
-    }
-
-    txtMessage.onChanging = function() {
-        updateCharCount();
-    };
-    txtMessage.onChange = function() {
-        updateCharCount();
-    };
-
-    // -------------------------------------------------------------------------
-    // 5. Color Picker Helper Function
+    // 4. Color Picker Helper Function
     // -------------------------------------------------------------------------
     function createColorPicker(parent, defaultHex, labelText, labelWidth) {
         var grp = parent.add("group");
@@ -2135,20 +2095,58 @@
     }
 
     // -------------------------------------------------------------------------
-    // 6. Tabbed Panel Navigation: Message, Appearance & Animation
+    // 5. Tabbed Panel Navigation: Message, Appearance, Animation & Help
     // -------------------------------------------------------------------------
     var tpanel = win.add("tabbedpanel", undefined);
     tpanel.alignChildren = ["fill", "top"];
     tpanel.alignment = ["fill", "top"];
 
     // =========================================================================
-    // TAB 1: MESSAGE (Platform & Appearance, Timestamp)
+    // TAB 1: MESSAGE (Message Content, Platform & Appearance, Timestamp)
     // =========================================================================
     var tabMessage = tpanel.add("tab", undefined, "Message");
     tabMessage.orientation = "column";
     tabMessage.alignChildren = ["fill", "top"];
     tabMessage.spacing = 8;
     tabMessage.margins = 8;
+
+    // --- Panel: Message Content (Max 250 characters, Emoji support) ---
+    var pnlMessage = tabMessage.add("panel", undefined, "Message Content (Emojis Supported)");
+    pnlMessage.orientation = "column";
+    pnlMessage.alignChildren = ["fill", "top"];
+    pnlMessage.spacing = 6;
+    pnlMessage.margins = 10;
+
+    var txtMessage = pnlMessage.add("edittext", undefined, "Hey! Are we still meeting for lunch today? 😊🍕", { multiline: true });
+    txtMessage.preferredSize = [-1, 52];
+    txtMessage.helpTip = "Type your message text here (Max 250 characters). Emojis are supported.";
+
+    // Character Counter Label
+    var grpCharCount = pnlMessage.add("group");
+    grpCharCount.orientation = "row";
+    grpCharCount.alignChildren = ["right", "center"];
+    var lblCharCount = grpCharCount.add("statictext", undefined, "0 / " + MAX_CHARS + " chars");
+    lblCharCount.preferredSize = [120, -1];
+
+    function updateCharCount() {
+        var current = txtMessage.text || "";
+        if (current.length > MAX_CHARS) {
+            current = current.substring(0, MAX_CHARS);
+            txtMessage.text = current;
+        }
+        lblCharCount.text = current.length + " / " + MAX_CHARS + " chars";
+        if (typeof lblStatusInfo !== "undefined" && lblStatusInfo) {
+            var dur = calculateReadDuration(current);
+            lblStatusInfo.text = "⏱ Auto Read: ~" + (0.8 + dur).toFixed(1) + "s (based on text length)";
+        }
+    }
+
+    txtMessage.onChanging = function() {
+        updateCharCount();
+    };
+    txtMessage.onChange = function() {
+        updateCharCount();
+    };
 
     // --- Panel: Platform & Appearance ---
     var pnlStyle = tabMessage.add("panel", undefined, "Platform & Appearance");

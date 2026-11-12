@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Test Scripts</title>
+</head>
+<body style="background:#1e1e1e; color:#eee; font-family:monospace; padding:20px;">
+    <h2>Testing Scripts Execution & Build</h2>
+    <div id="results"></div>
+    <div id="scriptui-dock-host"></div>
+    <div id="ae-viewport"><div id="ae-layers"></div></div>
+    <div id="ae-layers-tree"></div>
+
+    <script src="js/ae-core.js"></script>
+    <script src="js/scriptui.js"></script>
+    <script src="js/windows-color-picker.js"></script>
+    <script src="js/ae-renderer.js"></script>
+    <script src="js/presets.js"></script>
+    <script src="js/app.js"></script>
+
+    <script>
+    const log = (msg, pass) => {
+        const div = document.createElement('div');
+        div.style.color = pass === true ? '#4ade80' : (pass === false ? '#f87171' : '#fbbf24');
+        div.textContent = (pass === true ? '✔ PASS: ' : (pass === false ? '❌ FAIL: ' : 'ℹ INFO: ')) + msg;
+        document.getElementById('results').appendChild(div);
+        console.log(msg);
+    };
+
+    window.onerror = function(msg, url, line, col, err) {
+        log(`Uncaught error: ${msg} at line ${line}:${col} - Stack: ${err ? err.stack : 'none'}`, false);
+    };
+
+    async function testScript(url, name) {
+        log(`=== Testing ${name} (${url}) ===`, null);
+        try {
+            const res = await fetch(url);
+            if (!res.ok) {
+                log(`Failed to fetch ${url}: ${res.statusText}`, false);
+                return;
+            }
+            const code = await res.text();
+            
+            // Clean dock host
+            const dock = document.getElementById('scriptui-dock-host');
+            dock.innerHTML = '';
+            
+            // Run script using Function as in app.js
+            try {
+                const scriptFunc = new Function(
+                    'app', '$', 'CompItem', 'Shape', 'Window', 'Panel', 'Group', 'TabbedPanel', 'Tab', 'Mat4',
+                    `"use strict";\n${code}`
+                );
+                scriptFunc.call(window, app, $, CompItem, Shape, Window, Panel, Group, TabbedPanel, Tab, Mat4);
+                log(`Script ${name} parsed and executed without error`, true);
+            } catch (err) {
+                log(`Script parse/eval error in ${name}: ${err.message}\n${err.stack}`, false);
+                return;
+            }
+
+            // Find all buttons in dock host
+            const buttons = Array.from(dock.querySelectorAll('button'));
+            log(`Found ${buttons.length} buttons in panel: ` + buttons.map(b => b.textContent.trim()).join(' | '), null);
+
+            // Find build button
+            const buildBtn = buttons.slice().reverse().find(b => {
+                const txt = (b.textContent || '').toLowerCase();
+                return txt.includes('build') || txt.includes('create') || txt.includes('make');
+            }) || buttons[buttons.length - 1];
+
+            if (buildBtn) {
+                log(`Triggering click on button: "${buildBtn.textContent.trim()}"`, null);
+                try {
+                    buildBtn.click();
+                    log(`Click succeeded!`, true);
+                } catch (clickErr) {
+                    log(`Error during button click in ${name}: ${clickErr.message}\n${clickErr.stack}`, false);
+                    return;
+                }
+            } else {
+                log(`No button found in ${name}`, false);
+            }
+
+            // Check comp and layers
+            const comp = app.project.activeItem;
+            if (!comp) {
+                log(`No activeItem/comp exists after build!`, false);
+            } else {
+                log(`Comp "${comp.name}" has ${comp.layers.length} layers: ` + comp.layers.map(l => l.name).join(', '), true);
+                
+                // Test renderer
+                const renderer = new AERenderer(comp);
+                try {
+                    renderer.render(0);
+                    log(`Renderer.render(0) succeeded without error`, true);
+                } catch (rendErr) {
+                    log(`Renderer error in ${name}: ${rendErr.message}\n${rendErr.stack}`, false);
+                }
+            }
+
+        } catch (e) {
+            log(`Outer error testing ${name}: ${e.message}\n${e.stack}`, false);
+        }
+    }
+
+    async function runAll() {
+        await testScript('jsx/cube_maker.jsx', 'cube_maker.jsx');
+        await testScript('jsx/cylinder_maker.jsx', 'cylinder_maker.jsx');
+        await testScript('jsx/extruded_round_rectangle.jsx', 'extruded_round_rectangle.jsx');
+        window.__TESTS_COMPLETE__ = true;
+    }
+
+    window.addEventListener('load', () => {
+        runAll();
+    });
+    </script>
+</body>
+</html>
