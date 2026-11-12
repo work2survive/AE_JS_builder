@@ -2444,8 +2444,75 @@
     tabAnimation.spacing = 8;
     tabAnimation.margins = 8;
 
-    // --- Panel: Text Effects & Animation ---
-    var pnlAnim = tabAnimation.add("panel", undefined, "Text Effects & Animation (iOS 18)");
+    // --- Panel 1: Entrance ---
+    var pnlEntrance = tabAnimation.add("panel", undefined, "Entrance");
+    pnlEntrance.orientation = "column";
+    pnlEntrance.alignChildren = ["fill", "top"];
+    pnlEntrance.spacing = 6;
+    pnlEntrance.margins = [10, 8, 10, 8];
+
+    var chkEntrance = pnlEntrance.add("checkbox", undefined, "Entrance Animation (Grow + Typewriter)");
+    chkEntrance.value = true; // Default: Enabled
+    chkEntrance.helpTip = "Animate the bubble growing from tail corner, followed by a typewriter text reveal.";
+
+    // Bubble Grow Duration Row (0 to 30 frames)
+    var grpGrow = pnlEntrance.add("group");
+    grpGrow.orientation = "row";
+    grpGrow.alignChildren = ["left", "center"];
+    var lblGrow = grpGrow.add("statictext", undefined, "Bubble Grow (frames):");
+    lblGrow.preferredSize = [135, -1];
+    var sldGrow = grpGrow.add("slider", undefined, 5, 0, 30);
+    sldGrow.alignment = ["fill", "center"];
+    var txtGrow = grpGrow.add("edittext", undefined, "5");
+    txtGrow.characters = 3;
+    txtGrow.helpTip = "Duration of the bubble growth animation in frames (0 to 30).";
+
+    sldGrow.onChanging = function() {
+        txtGrow.text = String(Math.round(sldGrow.value));
+    };
+    sldGrow.onChange = function() {
+        txtGrow.text = String(Math.round(sldGrow.value));
+    };
+    txtGrow.onChange = function() {
+        var v = Math.max(0, Math.min(60, parseInt(txtGrow.text, 10) || 0));
+        sldGrow.value = v;
+        txtGrow.text = String(Math.round(v));
+    };
+
+    // Typewriter Duration Row (0 to 30 frames)
+    var grpType = pnlEntrance.add("group");
+    grpType.orientation = "row";
+    grpType.alignChildren = ["left", "center"];
+    var lblType = grpType.add("statictext", undefined, "Typewriter (frames):");
+    lblType.preferredSize = [135, -1];
+    var sldType = grpType.add("slider", undefined, 5, 0, 30);
+    sldType.alignment = ["fill", "center"];
+    var txtType = grpType.add("edittext", undefined, "5");
+    txtType.characters = 3;
+    txtType.helpTip = "Duration of the typewriter text reveal in frames (0 to 30).";
+
+    sldType.onChanging = function() {
+        txtType.text = String(Math.round(sldType.value));
+    };
+    sldType.onChange = function() {
+        txtType.text = String(Math.round(sldType.value));
+    };
+    txtType.onChange = function() {
+        var v = Math.max(0, Math.min(60, parseInt(txtType.text, 10) || 0));
+        sldType.value = v;
+        txtType.text = String(Math.round(v));
+    };
+
+    chkEntrance.onClick = function() {
+        var en = chkEntrance.value;
+        sldGrow.enabled = en;
+        txtGrow.enabled = en;
+        sldType.enabled = en;
+        txtType.enabled = en;
+    };
+
+    // --- Panel 2: iOS Text Animation ---
+    var pnlAnim = tabAnimation.add("panel", undefined, "iOS Text Animation");
     pnlAnim.orientation = "column";
     pnlAnim.alignChildren = ["fill", "top"];
     pnlAnim.spacing = 6;
@@ -2456,105 +2523,38 @@
     grpAnimDrop.orientation = "row";
     grpAnimDrop.alignChildren = ["left", "center"];
     var lblAnim = grpAnimDrop.add("statictext", undefined, "Animated Effect:");
-    lblAnim.preferredSize = [115, -1];
+    lblAnim.preferredSize = [135, -1];
 
     var animOptions = [
         "None (Static)",
-        "Big (Enlarge Pulse)",
-        "Small (Contract Scale)",
-        "Shake (Horizontal Wobble)",
         "Nod (Vertical Bobbing)",
-        "Explode (Burst & Decay)",
-        "Ripple (Wave Float)",
-        "Bloom (Radiant Glow)",
-        "Jitter (Chaotic Glitch)"
+        "Shake (Horizontal Wobble)",
+        "Blink (Pulse Opacity 50%-100%)"
     ];
     var dropAnim = grpAnimDrop.add("dropdownlist", undefined, animOptions);
     dropAnim.selection = 0; // Default: None
     dropAnim.preferredSize = [185, 26];
-    dropAnim.helpTip = "Select iOS 18 animated text effect.";
+    dropAnim.helpTip = "Select animated text effect (Nod, Shake, or Blink).";
 
-    // 8 iOS 18 Effect Preset Buttons (2 rows of 4 buttons)
-    var grpBtnRow1 = pnlAnim.add("group");
-    grpBtnRow1.orientation = "row";
-    grpBtnRow1.spacing = 4;
-    grpBtnRow1.alignChildren = ["fill", "center"];
+    // Decay Row (in frames, slider)
+    var grpDecay = pnlAnim.add("group");
+    grpDecay.orientation = "row";
+    grpDecay.alignChildren = ["left", "center"];
+    var lblDecay = grpDecay.add("statictext", undefined, "Decay (frames):");
+    lblDecay.preferredSize = [135, -1];
+    var sldDecay = grpDecay.add("slider", undefined, 30, 0, 120);
+    sldDecay.alignment = ["fill", "center"];
+    var txtDecay = grpDecay.add("edittext", undefined, "30");
+    txtDecay.characters = 4;
+    txtDecay.helpTip = "Duration over which the animation effect dampens/decays to stop in frames (0 = continuous loop).";
 
-    var btnBig     = grpBtnRow1.add("button", undefined, "Big");
-    var btnSmall   = grpBtnRow1.add("button", undefined, "Small");
-    var btnShake   = grpBtnRow1.add("button", undefined, "Shake");
-    var btnNod     = grpBtnRow1.add("button", undefined, "Nod");
-    btnBig.preferredSize   = [68, 24];
-    btnSmall.preferredSize = [68, 24];
-    btnShake.preferredSize = [68, 24];
-    btnNod.preferredSize   = [68, 24];
-
-    var grpBtnRow2 = pnlAnim.add("group");
-    grpBtnRow2.orientation = "row";
-    grpBtnRow2.spacing = 4;
-    grpBtnRow2.alignChildren = ["fill", "center"];
-
-    var btnExplode = grpBtnRow2.add("button", undefined, "Explode");
-    var btnRipple  = grpBtnRow2.add("button", undefined, "Ripple");
-    var btnBloom   = grpBtnRow2.add("button", undefined, "Bloom");
-    var btnJitter  = grpBtnRow2.add("button", undefined, "Jitter");
-    btnExplode.preferredSize = [68, 24];
-    btnRipple.preferredSize  = [68, 24];
-    btnBloom.preferredSize   = [68, 24];
-    btnJitter.preferredSize  = [68, 24];
-
-    var effectButtons = [
-        { btn: btnBig,     index: 1 },
-        { btn: btnSmall,   index: 2 },
-        { btn: btnShake,   index: 3 },
-        { btn: btnNod,     index: 4 },
-        { btn: btnExplode, index: 5 },
-        { btn: btnRipple,  index: 6 },
-        { btn: btnBloom,   index: 7 },
-        { btn: btnJitter,  index: 8 }
-    ];
-
-    function updateButtonHighlights(currentIdx) {
-        for (var b = 0; b < effectButtons.length; b++) {
-            var item = effectButtons[b];
-            var isSelected = (item.index === currentIdx);
-            if (item.btn.domElement) {
-                if (isSelected) {
-                    item.btn.domElement.style.backgroundColor = "#007aff";
-                    item.btn.domElement.style.color = "#ffffff";
-                    item.btn.domElement.style.borderColor = "#005bb5";
-                    item.btn.domElement.style.fontWeight = "bold";
-                } else {
-                    item.btn.domElement.style.backgroundColor = "";
-                    item.btn.domElement.style.color = "";
-                    item.btn.domElement.style.borderColor = "";
-                    item.btn.domElement.style.fontWeight = "normal";
-                }
-            }
-        }
-    }
-
-    function selectEffect(idx) {
-        dropAnim.selection = idx;
-        updateButtonHighlights(idx);
-    }
-
-    for (var b = 0; b < effectButtons.length; b++) {
-        (function(item) {
-            item.btn.onClick = function() {
-                var cur = dropAnim.selection ? dropAnim.selection.index : 0;
-                if (cur === item.index) {
-                    selectEffect(0); // Toggle off to None
-                } else {
-                    selectEffect(item.index);
-                }
-            };
-        })(effectButtons[b]);
-    }
-
-    dropAnim.onChange = function() {
-        var cur = dropAnim.selection ? dropAnim.selection.index : 0;
-        updateButtonHighlights(cur);
+    sldDecay.onChanging = function() {
+        txtDecay.text = String(Math.round(sldDecay.value));
+    };
+    sldDecay.onChange = function() {
+        var v = Math.max(0, Math.min(300, parseInt(txtDecay.text, 10) || 0));
+        sldDecay.value = v;
+        txtDecay.text = String(Math.round(v));
     };
 
     // Animation Speed Row (50% to 200%)
@@ -2562,7 +2562,7 @@
     grpSpeed.orientation = "row";
     grpSpeed.alignChildren = ["left", "center"];
     var lblSpeed = grpSpeed.add("statictext", undefined, "Anim Speed (%):");
-    lblSpeed.preferredSize = [115, -1];
+    lblSpeed.preferredSize = [135, -1];
     var sldSpeed = grpSpeed.add("slider", undefined, 100, 50, 200);
     sldSpeed.alignment = ["fill", "center"];
     var txtSpeed = grpSpeed.add("edittext", undefined, "100");
@@ -2583,7 +2583,7 @@
     grpAmp.orientation = "row";
     grpAmp.alignChildren = ["left", "center"];
     var lblAmp = grpAmp.add("statictext", undefined, "Intensity (%):");
-    lblAmp.preferredSize = [115, -1];
+    lblAmp.preferredSize = [135, -1];
     var sldAmp = grpAmp.add("slider", undefined, 100, 20, 200);
     sldAmp.alignment = ["fill", "center"];
     var txtAmp = grpAmp.add("edittext", undefined, "100");
@@ -2597,70 +2597,6 @@
         var v = Math.max(10, Math.min(300, parseFloat(txtAmp.text) || 100));
         sldAmp.value = v;
         txtAmp.text = String(Math.round(v));
-    };
-
-    // Entrance Animation Controls
-    var grpEntrance = pnlAnim.add("group");
-    grpEntrance.orientation = "row";
-    grpEntrance.alignChildren = ["left", "center"];
-    var chkEntrance = grpEntrance.add("checkbox", undefined, "Entrance Animation (Grow + Typewriter)");
-    chkEntrance.value = true; // Default: Enabled
-    chkEntrance.helpTip = "Animate the bubble growing from left/right, followed by a typewriter text reveal.";
-
-    // Bubble Grow Duration Row (0 to 20 frames)
-    var grpGrow = pnlAnim.add("group");
-    grpGrow.orientation = "row";
-    grpGrow.alignChildren = ["left", "center"];
-    var lblGrow = grpGrow.add("statictext", undefined, "Bubble Grow (frames):");
-    lblGrow.preferredSize = [125, -1];
-    var sldGrow = grpGrow.add("slider", undefined, 5, 0, 20);
-    sldGrow.alignment = ["fill", "center"];
-    var txtGrow = grpGrow.add("edittext", undefined, "5");
-    txtGrow.characters = 3;
-    txtGrow.helpTip = "Duration of the bubble growth animation in frames (0 to 20).";
-
-    sldGrow.onChanging = function() {
-        txtGrow.text = String(Math.round(sldGrow.value));
-    };
-    sldGrow.onChange = function() {
-        txtGrow.text = String(Math.round(sldGrow.value));
-    };
-    txtGrow.onChange = function() {
-        var v = Math.max(0, Math.min(20, parseInt(txtGrow.text, 10) || 0));
-        sldGrow.value = v;
-        txtGrow.text = String(Math.round(v));
-    };
-
-    // Typewriter Duration Row (0 to 20 frames)
-    var grpType = pnlAnim.add("group");
-    grpType.orientation = "row";
-    grpType.alignChildren = ["left", "center"];
-    var lblType = grpType.add("statictext", undefined, "Typewriter (frames):");
-    lblType.preferredSize = [125, -1];
-    var sldType = grpType.add("slider", undefined, 5, 0, 20);
-    sldType.alignment = ["fill", "center"];
-    var txtType = grpType.add("edittext", undefined, "5");
-    txtType.characters = 3;
-    txtType.helpTip = "Duration of the typewriter text reveal in frames (0 to 20).";
-
-    sldType.onChanging = function() {
-        txtType.text = String(Math.round(sldType.value));
-    };
-    sldType.onChange = function() {
-        txtType.text = String(Math.round(sldType.value));
-    };
-    txtType.onChange = function() {
-        var v = Math.max(0, Math.min(20, parseInt(txtType.text, 10) || 0));
-        sldType.value = v;
-        txtType.text = String(Math.round(v));
-    };
-
-    chkEntrance.onClick = function() {
-        var en = chkEntrance.value;
-        sldGrow.enabled = en;
-        txtGrow.enabled = en;
-        sldType.enabled = en;
-        txtType.enabled = en;
     };
 
     // Shared cross-platform URL opener helper
@@ -3456,10 +3392,11 @@
             var wrapMode = wrapModes[selWrapIdx] || "pretty";
 
             var selAnimIdx = dropAnim.selection ? dropAnim.selection.index : 0;
+            var animDecay = (typeof sldDecay !== "undefined" && sldDecay) ? Math.max(0, Math.round(sldDecay.value)) : 30;
             var animSpeed = parseFloat(txtSpeed.text) || 100;
             var animAmp = parseFloat(txtAmp.text) || 100;
-            var growFVal = (typeof sldGrow !== "undefined" && sldGrow) ? Math.max(0, Math.min(20, Math.round(sldGrow.value))) : 5;
-            var typeFVal = (typeof sldType !== "undefined" && sldType) ? Math.max(0, Math.min(20, Math.round(sldType.value))) : 5;
+            var growFVal = (typeof sldGrow !== "undefined" && sldGrow) ? Math.max(0, Math.min(60, Math.round(sldGrow.value))) : 5;
+            var typeFVal = (typeof sldType !== "undefined" && sldType) ? Math.max(0, Math.min(60, Math.round(sldType.value))) : 5;
 
             var fontIdx = dropFont.selection ? dropFont.selection.index : 0;
             var selectedFont = FONTS[fontIdx] || FONTS[0];
@@ -3475,7 +3412,7 @@
             var wrappedString = lines.join("\n");
             var measuredTextW = getLinesPixelBounds(lines, textSize);
 
-            var scalePadFactor = (selAnimIdx === 1) ? 1.24 : ((selAnimIdx === 5) ? 1.30 : 1.0);
+            var scalePadFactor = 1.0;
             var lineH = Math.max(Math.round(textSize * 1.15), Math.round(textSize * 1.35 * leadingFactor));
             var textBlockH = Math.round(((lines.length - 1) * lineH + Math.round(textSize * 0.95)) * scalePadFactor);
             if (lines.length <= 1) textBlockH = Math.round(textSize * 1.05 * scalePadFactor);
