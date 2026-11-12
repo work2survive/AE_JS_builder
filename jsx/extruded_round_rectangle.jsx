@@ -1,6 +1,6 @@
 // Co-authored & architected with Google DeepMind Antigravity.
 // =============================================================================
-// ADOBE AFTER EFFECTS EXTENDSCRIPT & SCRIPTUI PANEL: EXTRUDED ROUND RECTANGLE v1.3
+// ADOBE AFTER EFFECTS EXTENDSCRIPT & SCRIPTUI PANEL: EXTRUDED ROUND RECTANGLE v1.4
 // =============================================================================
 //
 // PURPOSE:
@@ -37,7 +37,7 @@
 (function(thisObj) {
     "use strict";
 
-    var SCRIPT_VERSION = "v1.3";
+    var SCRIPT_VERSION = "v1.4";
 
     // -------------------------------------------------------------------------
     // 1. ScriptUI Window / Dockable Panel Initialization
@@ -537,7 +537,7 @@
     pnlHeader.spacing = 3;
     pnlHeader.margins = [10, 8, 10, 8];
 
-    var lblDesc = pnlHeader.add("statictext", undefined, "v1.3 - Parametric 3D extruded rounded rectangle with procedural front/back caps and cylindrical corners.");
+    var lblDesc = pnlHeader.add("statictext", undefined, "v1.4 - Parametric 3D extruded rounded rectangle with procedural front/back caps and cylindrical corners.");
 
     // -------------------------------------------------------------------------
     // 4. Tabbed Panel (Geometry vs. Appearance)
