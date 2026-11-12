@@ -1296,9 +1296,21 @@
         "    var w = Math.max(20, getVal('Bubble Width', 0));",
         "    var h = Math.max(20, getVal('Bubble Height', 0));",
         "    if (w <= 0 || h <= 0) return value;",
-        "    var rx = (w / 2) - value[0];",
-        "    var ry = (h / 2) - value[1];",
-        "    return [(w / 2) - rx, (h / 2) - ry, (value.length > 2 ? value[2] : -0.5)];",
+        "    var textSize = getVal('Text Size', 20);",
+        "    var padOffset = getVal('Inner Padding Offset', 0);",
+        "    var padX = Math.max(15, Math.round(textSize * 0.90)) + padOffset;",
+        "    var padY = Math.max(10, Math.round(textSize * 0.60)) + padOffset;",
+        "    var timeMargin = Math.max(8, Math.round(padY * 0.65));",
+        "    var timeFontSize = Math.max(10, Math.round(textSize * 0.58));",
+        "    var statusMode = Math.round(getVal('Status Icon Mode', 4));",
+        "    var statusStyle = Math.round(getVal('Status Icon Style', 0));",
+        "    var isSent = (thisLayer.parent && thisLayer.parent.name.indexOf('Received') === -1) ? 1 : 0;",
+        "    var hasStatus = (isSent && statusMode !== 4);",
+        "    var statusW = hasStatus ? ((statusStyle === 0) ? Math.round(timeFontSize * 1.55) : Math.round(timeFontSize * 1.35)) : 0;",
+        "    var statusSpacing = statusW > 0 ? 6 : 0;",
+        "    var posX = hasStatus ? ((w / 2) - padX - statusW - statusSpacing) : ((w / 2) - timeMargin);",
+        "    var posY = (h / 2) - timeMargin;",
+        "    return [posX, posY, (value.length > 2 ? value[2] : -0.5)];",
         "})();"
     ].join("\n");
 
@@ -1322,9 +1334,18 @@
         "    var w = Math.max(20, getVal('Bubble Width', 0));",
         "    var h = Math.max(20, getVal('Bubble Height', 0));",
         "    if (w <= 0 || h <= 0) return value;",
-        "    var rx = (w / 2) - value[0];",
-        "    var ry = (h / 2) - value[1];",
-        "    return [(w / 2) - rx, (h / 2) - ry, (value.length > 2 ? value[2] : -0.5)];",
+        "    var textSize = getVal('Text Size', 20);",
+        "    var padOffset = getVal('Inner Padding Offset', 0);",
+        "    var padX = Math.max(15, Math.round(textSize * 0.90)) + padOffset;",
+        "    var padY = Math.max(10, Math.round(textSize * 0.60)) + padOffset;",
+        "    var timeMargin = Math.max(8, Math.round(padY * 0.65));",
+        "    var timeFontSize = Math.max(10, Math.round(textSize * 0.58));",
+        "    var isRCS = (thisLayer.name.indexOf('RCS') !== -1);",
+        "    var statusStyle = Math.round(getVal('Status Icon Style', 0));",
+        "    var statusW = (statusStyle === 0) ? Math.round(timeFontSize * 1.55) : Math.round(timeFontSize * 1.35);",
+        "    var posX = isRCS ? ((w / 2) - padX - (statusW / 2)) : ((w / 2) - padX);",
+        "    var posY = isRCS ? ((h / 2) - timeMargin - Math.round(timeFontSize * 0.32)) : ((h / 2) - timeMargin);",
+        "    return [posX, posY, (value.length > 2 ? value[2] : -0.5)];",
         "})();"
     ].join("\n");
 
@@ -3458,6 +3479,102 @@
     }
 
     // -------------------------------------------------------------------------
+    // Compute Bubble Layout Dimensions (Responsive single/multi-line & padding)
+    // -------------------------------------------------------------------------
+    function computeBubbleLayout(params) {
+        var msgText = params.msgText || "Hello! 👋";
+        var maxBubbleW = Math.max(80, params.maxBubbleW || 380);
+        var padX = params.padX;
+        var padY = params.padY;
+        var textSize = params.textSize || 20;
+        var leadingFactor = params.leadingFactor || 1.0;
+        var wrapMode = params.wrapMode || "pretty";
+        var isTimeEnabled = params.isTimeEnabled;
+        var timeString = params.timeString || "11:44 PM";
+        var isSent = params.isSent;
+        var selStatusIdx = params.selStatusIdx;
+        var isRCSStyle = params.isRCSStyle;
+        var cornerRadius = params.cornerRadius || 18;
+
+        var timeFontSize = Math.max(10, Math.round(textSize * 0.58));
+        var timeW = isTimeEnabled ? Math.round(measureTypographyWidth(timeString, timeFontSize)) : 0;
+        var hasStatus = (isSent && selStatusIdx !== 4 && isTimeEnabled);
+        var statusW = hasStatus
+            ? (isRCSStyle ? Math.round(timeFontSize * 1.55) : Math.round(timeFontSize * 1.35))
+            : 0;
+        var statusSpacing = statusW > 0 ? 6 : 0;
+        var timeRowW = isTimeEnabled ? (timeW + statusSpacing + statusW) : 0;
+
+        // 1. Initial text box width: maxBubbleW minus horizontal padding
+        var textBoxW = Math.max(30, maxBubbleW - (padX * 2));
+
+        // 2. Wrap text
+        var lines = wrapTextToLines(msgText, textBoxW, textSize, wrapMode);
+        var maxLineW = getLinesPixelBounds(lines, textSize);
+
+        // 3. Overflow protection: reduce text box size by 10 pixels until the bubble fits within maxBubbleW
+        var guard = 0;
+        while ((maxLineW + (padX * 2) > maxBubbleW) && (textBoxW > 30) && guard < 100) {
+            textBoxW -= 10;
+            lines = wrapTextToLines(msgText, textBoxW, textSize, wrapMode);
+            maxLineW = getLinesPixelBounds(lines, textSize);
+            guard++;
+        }
+
+        var wrappedString = lines.join("\n");
+        var singleLine = (lines.length === 1);
+
+        // 4. Width logic:
+        // Single line: check if inline timestamp + status fit inside maxBubbleW
+        var canFitInlineTime = singleLine && isTimeEnabled && (maxLineW + timeRowW + (padX * 2) + 16 <= maxBubbleW);
+
+        var bubbleW = 0;
+        if (canFitInlineTime) {
+            bubbleW = maxLineW + timeRowW + (padX * 2) + 16;
+        } else if (singleLine && !isTimeEnabled) {
+            bubbleW = maxLineW + (padX * 2);
+        } else {
+            // Multiline or non-inline: bubble width matches widest content line + padding
+            var contentW = isTimeEnabled ? Math.max(maxLineW, timeRowW) : maxLineW;
+            bubbleW = contentW + (padX * 2);
+        }
+        bubbleW = Math.min(bubbleW, maxBubbleW);
+
+        // 5. Height logic:
+        // Text block height from line count and leading
+        var lineH = Math.max(Math.round(textSize * 1.15), Math.round(textSize * 1.35 * leadingFactor));
+        var boxHeight = singleLine ? Math.round(textSize * 1.10) : Math.round((lines.length - 1) * lineH + (textSize * 1.10));
+
+        // If timestamp or delivery receipt is on its own row, allocate comfortable vertical room
+        var bottomRowH = (!canFitInlineTime && isTimeEnabled) ? (timeFontSize + 12) : 0;
+        var bubbleH = boxHeight + (padY * 2) + bottomRowH;
+        var minBubbleH = Math.max(36, Math.round(cornerRadius * 1.6));
+        bubbleH = Math.max(minBubbleH, bubbleH);
+
+        var timeMargin = Math.max(8, Math.round(padY * 0.65));
+
+        return {
+            lines: lines,
+            wrappedString: wrappedString,
+            maxLineW: maxLineW,
+            textBoxW: textBoxW,
+            bubbleW: bubbleW,
+            bubbleH: bubbleH,
+            lineH: lineH,
+            boxHeight: boxHeight,
+            singleLine: singleLine,
+            canFitInlineTime: canFitInlineTime,
+            timeFontSize: timeFontSize,
+            timeW: timeW,
+            statusW: statusW,
+            statusSpacing: statusSpacing,
+            timeRowW: timeRowW,
+            timeMargin: timeMargin,
+            hasStatus: hasStatus
+        };
+    }
+
+    // -------------------------------------------------------------------------
     // 10. Core Generation Engine: Build Message Bubble in Active Comp
     // -------------------------------------------------------------------------
     function buildMessageBubble() {
@@ -3516,17 +3633,6 @@
             var tailType = platformCfg.tailType || "modern";
             var padX = Math.max(Math.round(cornerRadius * 0.85), Math.round(textSize * 0.90)) + padOffset;
             var padY = Math.max(10, Math.round(textSize * 0.60)) + padOffset;
-            var maxTextW = Math.max(40, maxBubbleW - (padX * 2));
-
-            // Perform automatic word-wrapping
-            var lines = wrapTextToLines(msgText, maxTextW, textSize, wrapMode);
-            var wrappedString = lines.join("\n");
-            var measuredTextW = getLinesPixelBounds(lines, textSize);
-
-            var scalePadFactor = 1.0;
-            var lineH = Math.max(Math.round(textSize * 1.15), Math.round(textSize * 1.35 * leadingFactor));
-            var textBlockH = Math.round(((lines.length - 1) * lineH + Math.round(textSize * 0.95)) * scalePadFactor);
-            if (lines.length <= 1) textBlockH = Math.round(textSize * 1.05 * scalePadFactor);
 
             // Status Icon & Timestamp formatting (Auto, Read, Delivered, Sent, None)
             var selStatusIdx = dropStatus.selection ? dropStatus.selection.index : 0;
@@ -3560,40 +3666,38 @@
             var isTimeEnabled = (typeof chkShowTime !== "undefined" && chkShowTime) ? chkShowTime.value : true;
             var timeString = (typeof txtTime !== "undefined" && txtTime && txtTime.text) ? trimStr(txtTime.text) : (currentRandomTime || "11:44 PM");
             if (!timeString) timeString = "11:44 PM";
-            var timeFontSize = Math.max(10, Math.round(textSize * 0.58));
-            var timeW = isTimeEnabled ? Math.round(measureTypographyWidth(timeString, timeFontSize)) : 0;
-            var hasStatus = (isSent && selStatusIdx !== 4 && isTimeEnabled);
-            var statusW = hasStatus
-                ? (isRCSStyle ? Math.round(timeFontSize * 1.55) : Math.round(timeFontSize * 1.35))
-                : 0;
-            var statusSpacing = statusW > 0 ? 6 : 0;
-            var timeRowW = isTimeEnabled ? (timeW + statusSpacing + statusW) : 0;
 
-            // Symmetrical margin bottom and right for timestamp when no delivery status
-            var timeMargin = Math.max(8, Math.round(padY * 0.65));
+            // Sizing and text wrapping layout calculation
+            var layout = computeBubbleLayout({
+                msgText: msgText,
+                maxBubbleW: maxBubbleW,
+                padX: padX,
+                padY: padY,
+                textSize: textSize,
+                leadingFactor: leadingFactor,
+                wrapMode: wrapMode,
+                isTimeEnabled: isTimeEnabled,
+                timeString: timeString,
+                isSent: isSent,
+                selStatusIdx: selStatusIdx,
+                isRCSStyle: isRCSStyle,
+                cornerRadius: cornerRadius
+            });
 
-            // Bubble bounding dimensions
-            var singleLine = (lines.length === 1);
-            var bubbleW = 0;
-            var bubbleH = 0;
-
-            var effMeasuredW = Math.round(measuredTextW * scalePadFactor);
-            var effTextH = textBlockH;
-
-            if (singleLine && isTimeEnabled && (effMeasuredW + timeRowW + padX * 2 + 16 < maxBubbleW)) {
-                // Inline single line message + timestamp + status icon
-                bubbleW = effMeasuredW + timeRowW + (padX * 2) + 16;
-                bubbleH = effTextH + (padY * 2);
-            } else if (singleLine && !isTimeEnabled) {
-                // Inline single line message without timestamp
-                bubbleW = effMeasuredW + (padX * 2);
-                bubbleH = effTextH + (padY * 2);
-            } else {
-                // Multiline message + bottom timestamp row
-                var bottomRowH = isTimeEnabled ? (timeFontSize + 6) : 0;
-                bubbleW = Math.max(effMeasuredW, timeRowW) + (padX * 2);
-                bubbleH = effTextH + (padY * 2) + bottomRowH;
-            }
+            var lines = layout.lines;
+            var wrappedString = layout.wrappedString;
+            var bubbleW = layout.bubbleW;
+            var bubbleH = layout.bubbleH;
+            var lineH = layout.lineH;
+            var singleLine = layout.singleLine;
+            var canFitInlineTime = layout.canFitInlineTime;
+            var timeFontSize = layout.timeFontSize;
+            var timeW = layout.timeW;
+            var statusW = layout.statusW;
+            var statusSpacing = layout.statusSpacing;
+            var timeRowW = layout.timeRowW;
+            var timeMargin = layout.timeMargin;
+            var hasStatus = layout.hasStatus;
 
             var hasTail = chkTail.value;
             var cornerRadius = platformCfg.radius || 18;
@@ -3728,8 +3832,10 @@
             var bAnchor = bubbleLayer.transform.anchorPoint || (bubbleLayer.property && bubbleLayer.property("ADBE Transform Group") && bubbleLayer.property("ADBE Transform Group").property("ADBE Anchor Point"));
             if (bAnchor) {
                 bAnchor.setValue([originX, originY, 0]);
+                bAnchor.expression = BUBBLE_TRANSFORM_EXPR;
             }
             bubbleLayer.transform.position.setValue([originX, originY, 0]);
+            bubbleLayer.transform.position.expression = BUBBLE_TRANSFORM_EXPR;
 
             if (bubbleLayer.transform.scale) bubbleLayer.transform.scale.expression = BUBBLE_GROW_EXPR;
             if (bubbleLayer.transform.opacity) bubbleLayer.transform.opacity.expression = BUBBLE_OPACITY_EXPR;
@@ -3868,6 +3974,9 @@
             timeLayer.fontFamily = selectedFont.css;
             timeLayer.justification = "right";
             timeLayer.transform.position.setValue([timeX, timeY, -0.5]);
+            if (timeLayer.transform && timeLayer.transform.position) {
+                timeLayer.transform.position.expression = TIMECODE_POS_EXPR;
+            }
 
             timeLayer.emojiFontFamily = getActiveEmojiFontFamily();
             formatTextLayer(timeLayer, timeString, timeFontSize, timeColor, justRight, null, getActiveFontCandidates(), getActiveEmojiCandidates());
@@ -3893,6 +4002,9 @@
                 statusLayerText.fontFamily = selectedFont.css;
                 statusLayerText.justification = "right";
                 statusLayerText.transform.position.setValue([statusX, timeY, -0.5]);
+                if (statusLayerText.transform && statusLayerText.transform.position) {
+                    statusLayerText.transform.position.expression = STATUS_POS_EXPR;
+                }
 
                 statusLayerText.emojiFontFamily = getActiveEmojiFontFamily();
                 formatTextLayer(statusLayerText, statusString || "✓✓", timeFontSize, statusColor, justRight, null, getActiveFontCandidates(), getActiveEmojiCandidates());
@@ -3939,6 +4051,9 @@
                 statusLayerRCS.name = "Status_Icon_RCS";
                 statusLayerRCS.parent = master;
                 statusLayerRCS.transform.position.setValue([statusCenterX, statusCenterY, -0.5]);
+                if (statusLayerRCS.transform && statusLayerRCS.transform.position) {
+                    statusLayerRCS.transform.position.expression = STATUS_POS_EXPR;
+                }
                 if (statusLayerRCS.transform && statusLayerRCS.transform.opacity) {
                     statusLayerRCS.transform.opacity.expression = STATUS_RCS_OPACITY_EXPR;
                 }
@@ -4569,79 +4684,41 @@
 
             var cornerRadius = platformCfg.radius || 18;
             var tailType = platformCfg.tailType || "modern";
-            var padX = Math.max(Math.round(cornerRadius * 0.85), Math.round(textSize * 0.90)) + padOffset;
-            var padY = Math.max(10, Math.round(textSize * 0.60)) + padOffset;
-            var maxTextW = Math.max(40, maxBubbleW - (padX * 2));
-
-            var lines = wrapTextToLines(msgText, maxTextW, textSize, wrapMode);
-            var wrappedString = lines.join("\n");
-            var measuredTextW = getLinesPixelBounds(lines, textSize);
-
-            var scalePadFactor = 1.0;
-            var lineH = Math.max(Math.round(textSize * 1.15), Math.round(textSize * 1.35 * leadingFactor));
-            var textBlockH = Math.round(((lines.length - 1) * lineH + Math.round(textSize * 0.95)) * scalePadFactor);
-            if (lines.length <= 1) textBlockH = Math.round(textSize * 1.05 * scalePadFactor);
-
-            var selStatusIdx = dropStatus.selection ? dropStatus.selection.index : 0;
-            var isAutoStatus = (selStatusIdx === 0);
-            var selStatusStyleIdx = (typeof dropStatusStyle !== "undefined" && dropStatusStyle && dropStatusStyle.selection)
-                ? dropStatusStyle.selection.index
-                : (platformCfg.statusStyle === "rcs" || platformName === "Android RCS" ? 0 : 1);
-            var isRCSStyle = (selStatusStyleIdx === 0);
-
-            var deliveredTime = 0.8;
-            var readDuration = calculateReadDuration(msgText);
-            var readTime = Math.round((deliveredTime + readDuration) * 10) / 10;
-
-            var isDarkBubble = (bubbleColor[0] * 0.299 + bubbleColor[1] * 0.587 + bubbleColor[2] * 0.114) < 0.55;
-            var rcsReadCircleCol = isDarkBubble ? [1.0, 1.0, 1.0] : [0.18, 0.19, 0.21];
-            var rcsReadCheckCol = isDarkBubble ? bubbleColor : [1.0, 1.0, 1.0];
-            var standardReadColor = isDark ? [0.33, 0.74, 0.92] : [0.20, 0.72, 0.95];
-            var readColor = isRCSStyle ? rcsReadCircleCol : standardReadColor;
-            var statusColor = timeColor;
-
-            var statusString = "";
-            if (isSent && selStatusIdx !== 4) {
-                if (selStatusIdx === 0 || selStatusIdx === 1 || selStatusIdx === 2) {
-                    statusString = "✓✓";
-                } else if (selStatusIdx === 3) {
-                    statusString = "✓";
-                }
-            }
-
             var isTimeEnabled = (typeof chkShowTime !== "undefined" && chkShowTime) ? chkShowTime.value : true;
             var timeString = (typeof txtTime !== "undefined" && txtTime && txtTime.text) ? trimStr(txtTime.text) : (currentRandomTime || "11:44 PM");
             if (!timeString) timeString = "11:44 PM";
-            var timeFontSize = Math.max(10, Math.round(textSize * 0.58));
-            var timeW = isTimeEnabled ? Math.round(measureTypographyWidth(timeString, timeFontSize)) : 0;
-            var hasStatus = (isSent && selStatusIdx !== 4 && isTimeEnabled);
-            var statusW = hasStatus
-                ? (isRCSStyle ? Math.round(timeFontSize * 1.55) : Math.round(timeFontSize * 1.35))
-                : 0;
-            var statusSpacing = statusW > 0 ? 6 : 0;
-            var timeRowW = isTimeEnabled ? (timeW + statusSpacing + statusW) : 0;
 
-            // Symmetrical margin bottom and right for timestamp when no delivery status
-            var timeMargin = Math.max(8, Math.round(padY * 0.65));
+            // Sizing and text wrapping layout calculation
+            var layout = computeBubbleLayout({
+                msgText: msgText,
+                maxBubbleW: maxBubbleW,
+                padX: padX,
+                padY: padY,
+                textSize: textSize,
+                leadingFactor: leadingFactor,
+                wrapMode: wrapMode,
+                isTimeEnabled: isTimeEnabled,
+                timeString: timeString,
+                isSent: isSent,
+                selStatusIdx: selStatusIdx,
+                isRCSStyle: isRCSStyle,
+                cornerRadius: cornerRadius
+            });
 
-            var singleLine = (lines.length === 1);
-            var bubbleW = 0;
-            var bubbleH = 0;
-
-            var effMeasuredW = Math.round(measuredTextW * scalePadFactor);
-            var effTextH = textBlockH;
-
-            if (singleLine && isTimeEnabled && (effMeasuredW + timeRowW + padX * 2 + 16 < maxBubbleW)) {
-                bubbleW = effMeasuredW + timeRowW + (padX * 2) + 16;
-                bubbleH = effTextH + (padY * 2);
-            } else if (singleLine && !isTimeEnabled) {
-                bubbleW = effMeasuredW + (padX * 2);
-                bubbleH = effTextH + (padY * 2);
-            } else {
-                var bottomRowH = isTimeEnabled ? (timeFontSize + 6) : 0;
-                bubbleW = Math.max(effMeasuredW, timeRowW) + (padX * 2);
-                bubbleH = effTextH + (padY * 2) + bottomRowH;
-            }
+            var lines = layout.lines;
+            var wrappedString = layout.wrappedString;
+            var bubbleW = layout.bubbleW;
+            var bubbleH = layout.bubbleH;
+            var lineH = layout.lineH;
+            var singleLine = layout.singleLine;
+            var canFitInlineTime = layout.canFitInlineTime;
+            var timeFontSize = layout.timeFontSize;
+            var timeW = layout.timeW;
+            var statusW = layout.statusW;
+            var statusSpacing = layout.statusSpacing;
+            var timeRowW = layout.timeRowW;
+            var timeMargin = layout.timeMargin;
+            var hasStatus = layout.hasStatus;
 
             var hasTail = chkTail.value;
             var cornerRadius = platformCfg.radius || 18;
