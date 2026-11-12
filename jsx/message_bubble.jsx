@@ -261,9 +261,12 @@
             tailType: "modern",
             font: "Roboto (Google / Android)",
             fontIndex: 1,
-            fontFamily: "Roboto, 'Google Sans', 'Segoe UI', Arial, 'Noto Color Emoji', 'Apple Color Emoji', 'Segoe UI Emoji', sans-serif",
-            fonts: ["Roboto", "Google Sans", "Segoe UI", "Arial", "Noto Color Emoji", "sans-serif"],
-            aeFontCandidates: ["Roboto-Regular", "GoogleSans-Regular", "SegoeUI", "ArialMT", "Arial", "NotoColorEmoji"],
+            fontFamily: "Roboto, 'Google Sans', 'Segoe UI', Arial, sans-serif",
+            fonts: ["Roboto", "Google Sans", "Segoe UI", "Arial", "sans-serif"],
+            aeFontCandidates: ["Roboto-Regular", "GoogleSans-Regular", "SegoeUI", "ArialMT", "Arial"],
+            emojiFont: "Noto Color Emoji (Google)",
+            emojiFontFamily: "'Noto Color Emoji', 'Segoe UI Emoji', 'Apple Color Emoji', sans-serif",
+            emojiAeCandidates: ["NotoColorEmoji", "NotoColorEmoji-Regular", "SegoeUIEmoji", "AppleColorEmoji"],
             statusStyle: "rcs",
             light: {
                 sent:     { bubble: "#0b57d0", text: "#ffffff", time: "rgba(255,255,255,0.75)", check: "" },
@@ -280,9 +283,12 @@
             tailType: "ios",
             font: "SF Pro (Apple / iOS)",
             fontIndex: 0,
-            fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display', 'Helvetica Neue', Arial, 'Noto Color Emoji', 'Apple Color Emoji', 'Segoe UI Emoji', sans-serif",
-            fonts: ["SF Pro Text", "SF Pro Display", "-apple-system", "BlinkMacSystemFont", "Helvetica Neue", "Arial", "Noto Color Emoji", "sans-serif"],
-            aeFontCandidates: ["SFProText-Regular", "SFProDisplay-Regular", "HelveticaNeue", "ArialMT", "Arial", "NotoColorEmoji"],
+            fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display', 'Helvetica Neue', Arial, sans-serif",
+            fonts: ["SF Pro Text", "SF Pro Display", "-apple-system", "BlinkMacSystemFont", "Helvetica Neue", "Arial", "sans-serif"],
+            aeFontCandidates: ["SFProText-Regular", "SFProDisplay-Regular", "HelveticaNeue", "ArialMT", "Arial"],
+            emojiFont: "Apple Color Emoji (Apple)",
+            emojiFontFamily: "'Apple Color Emoji', 'Noto Color Emoji', 'Segoe UI Emoji', sans-serif",
+            emojiAeCandidates: ["AppleColorEmoji", "NotoColorEmoji", "NotoColorEmoji-Regular", "SegoeUIEmoji"],
             statusStyle: "standard",
             light: {
                 sent:     { bubble: "#007aff", text: "#ffffff", time: "rgba(255,255,255,0.75)", check: "" },
@@ -299,9 +305,12 @@
             tailType: "classic",
             font: "Helvetica Neue",
             fontIndex: 3,
-            fontFamily: "'Helvetica Neue', Helvetica, Arial, 'Noto Color Emoji', 'Apple Color Emoji', 'Segoe UI Emoji', sans-serif",
-            fonts: ["Helvetica Neue", "Helvetica", "Arial", "Noto Color Emoji", "sans-serif"],
-            aeFontCandidates: ["HelveticaNeue", "Helvetica", "ArialMT", "Arial", "NotoColorEmoji"],
+            fontFamily: "'Helvetica Neue', Helvetica, Arial, sans-serif",
+            fonts: ["Helvetica Neue", "Helvetica", "Arial", "sans-serif"],
+            aeFontCandidates: ["HelveticaNeue", "Helvetica", "ArialMT", "Arial"],
+            emojiFont: "Apple Color Emoji (Apple)",
+            emojiFontFamily: "'Apple Color Emoji', 'Noto Color Emoji', 'Segoe UI Emoji', sans-serif",
+            emojiAeCandidates: ["AppleColorEmoji", "NotoColorEmoji", "SegoeUIEmoji"],
             statusStyle: "standard",
             light: {
                 sent:     { bubble: "#d9fdd3", text: "#111b21", time: "#667781", check: "#53bdeb" },
@@ -318,9 +327,12 @@
             tailType: "none",
             font: "SF Pro (Apple / iOS)",
             fontIndex: 0,
-            fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Instagram Sans', 'Helvetica Neue', Arial, 'Noto Color Emoji', 'Apple Color Emoji', 'Segoe UI Emoji', sans-serif",
-            fonts: ["SF Pro Text", "Instagram Sans", "Helvetica Neue", "Arial", "Noto Color Emoji", "sans-serif"],
-            aeFontCandidates: ["SFProText-Regular", "HelveticaNeue", "ArialMT", "Arial", "NotoColorEmoji"],
+            fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Instagram Sans', 'Helvetica Neue', Arial, sans-serif",
+            fonts: ["SF Pro Text", "Instagram Sans", "Helvetica Neue", "Arial", "sans-serif"],
+            aeFontCandidates: ["SFProText-Regular", "HelveticaNeue", "ArialMT", "Arial"],
+            emojiFont: "Apple Color Emoji (Apple)",
+            emojiFontFamily: "'Apple Color Emoji', 'Noto Color Emoji', 'Segoe UI Emoji', sans-serif",
+            emojiAeCandidates: ["AppleColorEmoji", "NotoColorEmoji", "SegoeUIEmoji"],
             statusStyle: "standard",
             light: {
                 sent:     { bubble: "#3797f0", text: "#ffffff", time: "rgba(255,255,255,0.7)", check: "" },
@@ -337,9 +349,12 @@
             tailType: "none",
             font: "Segoe UI (Windows)",
             fontIndex: 2,
-            fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, Arial, 'Noto Color Emoji', 'Apple Color Emoji', 'Segoe UI Emoji', sans-serif",
-            fonts: ["Segoe UI", "Tahoma", "Geneva", "Arial", "Noto Color Emoji", "sans-serif"],
-            aeFontCandidates: ["SegoeUI", "Tahoma", "ArialMT", "Arial", "NotoColorEmoji"],
+            fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, Arial, sans-serif",
+            fonts: ["Segoe UI", "Tahoma", "Geneva", "Arial", "sans-serif"],
+            aeFontCandidates: ["SegoeUI", "Tahoma", "ArialMT", "Arial"],
+            emojiFont: "Segoe UI Emoji (Windows)",
+            emojiFontFamily: "'Segoe UI Emoji', 'Noto Color Emoji', 'Apple Color Emoji', sans-serif",
+            emojiAeCandidates: ["SegoeUIEmoji", "NotoColorEmoji", "AppleColorEmoji"],
             statusStyle: "standard",
             light: {
                 sent:     { bubble: "#0084ff", text: "#ffffff", time: "rgba(255,255,255,0.75)", check: "#0084ff" },
@@ -356,9 +371,12 @@
             tailType: "classic",
             font: "Open Sans",
             fontIndex: 6,
-            fontFamily: "'Open Sans', 'Segoe UI', Roboto, Arial, 'Noto Color Emoji', 'Apple Color Emoji', 'Segoe UI Emoji', sans-serif",
-            fonts: ["Open Sans", "Segoe UI", "Roboto", "Arial", "Noto Color Emoji", "sans-serif"],
-            aeFontCandidates: ["OpenSans-Regular", "OpenSans", "SegoeUI", "ArialMT", "Arial", "NotoColorEmoji"],
+            fontFamily: "'Open Sans', 'Segoe UI', Roboto, Arial, sans-serif",
+            fonts: ["Open Sans", "Segoe UI", "Roboto", "Arial", "sans-serif"],
+            aeFontCandidates: ["OpenSans-Regular", "OpenSans", "SegoeUI", "ArialMT", "Arial"],
+            emojiFont: "Apple Color Emoji (Apple)",
+            emojiFontFamily: "'Apple Color Emoji', 'Noto Color Emoji', 'Segoe UI Emoji', sans-serif",
+            emojiAeCandidates: ["AppleColorEmoji", "NotoColorEmoji", "SegoeUIEmoji"],
             statusStyle: "standard",
             light: {
                 sent:     { bubble: "#effdde", text: "#000000", time: "#4fae4e", check: "#4fae4e" },
@@ -375,9 +393,12 @@
             tailType: "none",
             font: "Inter",
             fontIndex: 5,
-            fontFamily: "Inter, 'gg sans', 'Segoe UI', Arial, 'Noto Color Emoji', 'Apple Color Emoji', 'Segoe UI Emoji', sans-serif",
-            fonts: ["Inter", "gg sans", "Segoe UI", "Arial", "Noto Color Emoji", "sans-serif"],
-            aeFontCandidates: ["Inter-Regular", "Inter", "SegoeUI", "ArialMT", "Arial", "NotoColorEmoji"],
+            fontFamily: "Inter, 'gg sans', 'Segoe UI', Arial, sans-serif",
+            fonts: ["Inter", "gg sans", "Segoe UI", "Arial", "sans-serif"],
+            aeFontCandidates: ["Inter-Regular", "Inter", "SegoeUI", "ArialMT", "Arial"],
+            emojiFont: "Twemoji Mozilla (Twitter)",
+            emojiFontFamily: "'Twemoji Mozilla', 'Twitter Color Emoji', 'Noto Color Emoji', 'Segoe UI Emoji', sans-serif",
+            emojiAeCandidates: ["TwemojiMozilla", "TwitterColorEmoji", "NotoColorEmoji", "SegoeUIEmoji"],
             statusStyle: "standard",
             light: {
                 sent:     { bubble: "#5865f2", text: "#ffffff", time: "rgba(255,255,255,0.75)", check: "" },
@@ -394,9 +415,12 @@
             tailType: "modern",
             font: "System Default",
             fontIndex: 7,
-            fontFamily: "system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, 'Noto Color Emoji', 'Apple Color Emoji', 'Segoe UI Emoji', sans-serif",
-            fonts: ["system-ui", "-apple-system", "Segoe UI", "Roboto", "Arial", "Noto Color Emoji", "sans-serif"],
-            aeFontCandidates: ["ArialMT", "Arial", "HelveticaNeue", "SegoeUI", "NotoColorEmoji"],
+            fontFamily: "system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
+            fonts: ["system-ui", "-apple-system", "Segoe UI", "Roboto", "Arial", "sans-serif"],
+            aeFontCandidates: ["ArialMT", "Arial", "HelveticaNeue", "SegoeUI"],
+            emojiFont: "Noto Color Emoji (Google)",
+            emojiFontFamily: "'Noto Color Emoji', 'Apple Color Emoji', 'Segoe UI Emoji', sans-serif",
+            emojiAeCandidates: ["NotoColorEmoji", "AppleColorEmoji", "SegoeUIEmoji"],
             statusStyle: "standard",
             light: {
                 sent:     { bubble: "#007aff", text: "#ffffff", time: "rgba(255,255,255,0.75)", check: "" },
@@ -2282,7 +2306,26 @@
     var dropFont = grpFont.add("dropdownlist", undefined, fontOptions);
     dropFont.selection = 0; // Default: SF Pro
     dropFont.preferredSize = [185, 26];
-    dropFont.helpTip = "Select font family commonly used across mobile messaging platforms (Emojis always use Noto Color Emoji / Apple Color Emoji / Segoe UI Emoji).";
+    dropFont.helpTip = "Select font family for message text. Emojis use the Emoji Font selected below.";
+
+    // Emoji Font Row (Allows per-preset preference & custom overrides)
+    var grpEmojiFont = pnlDim.add("group");
+    grpEmojiFont.orientation = "row";
+    grpEmojiFont.alignChildren = ["left", "center"];
+    var lblEmojiFont = grpEmojiFont.add("statictext", undefined, "Emoji Font:");
+    lblEmojiFont.preferredSize = [115, -1];
+
+    var emojiFontChoices = [
+        "Auto (Preset Default)",
+        "Noto Color Emoji (Google)",
+        "Apple Color Emoji (Apple)",
+        "Segoe UI Emoji (Windows)",
+        "Twemoji Mozilla (Twitter)"
+    ];
+    var dropEmojiFont = grpEmojiFont.add("dropdownlist", undefined, emojiFontChoices);
+    dropEmojiFont.selection = 0; // Default: Auto (Preset Default)
+    dropEmojiFont.preferredSize = [185, 26];
+    dropEmojiFont.helpTip = "Select font specifically used for emojis. Normal text retains the Font Family selected above.";
 
     // Screen Width Row (Determines where text line splits)
     var grpWidth = pnlDim.add("group");
@@ -2853,14 +2896,150 @@
             candidates.push(curFont.ae);
         }
 
-        // Always provide Noto Color Emoji and system emoji fallbacks
-        candidates.push("NotoColorEmoji");
-        candidates.push("NotoColorEmoji-Regular");
-        candidates.push("AppleColorEmoji");
-        candidates.push("SegoeUIEmoji");
-        candidates.push("SegoeUISymbol");
-
         return candidates;
+    }
+
+    function getActiveEmojiCandidates() {
+        var selIdx = (typeof dropPlatform !== "undefined" && dropPlatform && dropPlatform.selection) ? dropPlatform.selection.index : 0;
+        var platformName = platformKeys[selIdx] || "iOS Message";
+        var platformCfg = PLATFORMS[platformName] || DEFAULT_PLATFORMS[platformName] || DEFAULT_PLATFORMS["iOS Message"];
+
+        var emojiSel = (typeof dropEmojiFont !== "undefined" && dropEmojiFont && dropEmojiFont.selection) ? dropEmojiFont.selection.index : 0;
+
+        var candidates = [];
+        if (emojiSel === 1) { // Noto Color Emoji
+            candidates = ["NotoColorEmoji", "NotoColorEmoji-Regular", "SegoeUIEmoji", "AppleColorEmoji"];
+        } else if (emojiSel === 2) { // Apple Color Emoji
+            candidates = ["AppleColorEmoji", "NotoColorEmoji", "SegoeUIEmoji"];
+        } else if (emojiSel === 3) { // Segoe UI Emoji
+            candidates = ["SegoeUIEmoji", "NotoColorEmoji", "AppleColorEmoji"];
+        } else if (emojiSel === 4) { // Twemoji Mozilla
+            candidates = ["TwemojiMozilla", "TwitterColorEmoji", "NotoColorEmoji", "SegoeUIEmoji"];
+        } else {
+            // Auto: use platform preset's emojiAeCandidates or default
+            if (platformCfg && platformCfg.emojiAeCandidates && platformCfg.emojiAeCandidates.length > 0) {
+                candidates = platformCfg.emojiAeCandidates.slice(0);
+            } else {
+                candidates = ["NotoColorEmoji", "NotoColorEmoji-Regular", "AppleColorEmoji", "SegoeUIEmoji"];
+            }
+        }
+        return candidates;
+    }
+
+    function getActiveEmojiFontFamily() {
+        var selIdx = (typeof dropPlatform !== "undefined" && dropPlatform && dropPlatform.selection) ? dropPlatform.selection.index : 0;
+        var platformName = platformKeys[selIdx] || "iOS Message";
+        var platformCfg = PLATFORMS[platformName] || DEFAULT_PLATFORMS[platformName] || DEFAULT_PLATFORMS["iOS Message"];
+
+        var emojiSel = (typeof dropEmojiFont !== "undefined" && dropEmojiFont && dropEmojiFont.selection) ? dropEmojiFont.selection.index : 0;
+
+        if (emojiSel === 1) {
+            return "'Noto Color Emoji', 'Segoe UI Emoji', 'Apple Color Emoji', sans-serif";
+        } else if (emojiSel === 2) {
+            return "'Apple Color Emoji', 'Noto Color Emoji', 'Segoe UI Emoji', sans-serif";
+        } else if (emojiSel === 3) {
+            return "'Segoe UI Emoji', 'Noto Color Emoji', 'Apple Color Emoji', sans-serif";
+        } else if (emojiSel === 4) {
+            return "'Twemoji Mozilla', 'Twitter Color Emoji', 'Noto Color Emoji', 'Segoe UI Emoji', sans-serif";
+        }
+        return (platformCfg && platformCfg.emojiFontFamily) ? platformCfg.emojiFontFamily : "'Noto Color Emoji', 'Segoe UI Emoji', 'Apple Color Emoji', sans-serif";
+    }
+
+    function findEmojiSpans(str) {
+        var spans = [];
+        if (!str || typeof str !== "string") return spans;
+        var len = str.length;
+        var i = 0;
+        while (i < len) {
+            var code = str.charCodeAt(i);
+            var isEmoji = false;
+            var charLen = 1;
+
+            if (code >= 0xD800 && code <= 0xDBFF) {
+                if (i + 1 < len) {
+                    var low = str.charCodeAt(i + 1);
+                    if (low >= 0xDC00 && low <= 0xDFFF) {
+                        charLen = 2;
+                        if (code >= 0xD83C && code <= 0xD83F) {
+                            isEmoji = true;
+                        }
+                    }
+                }
+            } else {
+                if ((code >= 0x2600 && code <= 0x27BF) ||
+                    (code >= 0x2300 && code <= 0x23FF) ||
+                    (code >= 0x2B00 && code <= 0x2BFF) ||
+                    (code >= 0x200D && code <= 0x200D) ||
+                    (code >= 0xFE0E && code <= 0xFE0F)) {
+                    isEmoji = true;
+                }
+            }
+
+            if (isEmoji) {
+                var start = i;
+                var count = charLen;
+                i += charLen;
+                while (i < len) {
+                    var nextCode = str.charCodeAt(i);
+                    if (nextCode === 0xFE0F || nextCode === 0xFE0E) {
+                        count += 1;
+                        i += 1;
+                    } else if (nextCode === 0x200D) {
+                        count += 1;
+                        i += 1;
+                        if (i < len) {
+                            var nCode = str.charCodeAt(i);
+                            if (nCode >= 0xD800 && nCode <= 0xDBFF && (i + 1 < len)) {
+                                count += 2;
+                                i += 2;
+                            } else {
+                                count += 1;
+                                i += 1;
+                            }
+                        }
+                    } else if (nextCode >= 0xD83C && nextCode <= 0xD83F && (i + 1 < len)) {
+                        count += 2;
+                        i += 2;
+                    } else {
+                        break;
+                    }
+                }
+                spans.push({ start: start, length: count });
+            } else {
+                i += charLen;
+            }
+        }
+        return spans;
+    }
+
+    function applyEmojiFontToRanges(textProp, textStr, emojiCandidates) {
+        if (!textProp || !textStr || !emojiCandidates || emojiCandidates.length === 0) return;
+        var chosenEmojiFont = null;
+        for (var e = 0; e < emojiCandidates.length; e++) {
+            var fName = emojiCandidates[e];
+            if (fName && isFontAvailable(fName)) {
+                chosenEmojiFont = fName;
+                break;
+            }
+        }
+        var isWin = (typeof $ !== "undefined" && $.os && $.os.indexOf("Windows") !== -1);
+        if (!chosenEmojiFont) {
+            chosenEmojiFont = isWin ? "SegoeUIEmoji" : "AppleColorEmoji";
+        }
+
+        try {
+            if (typeof textProp.characterRange === "function") {
+                var spans = findEmojiSpans(textStr);
+                for (var s = 0; s < spans.length; s++) {
+                    try {
+                        var range = textProp.characterRange(spans[s].start, spans[s].length);
+                        if (range) {
+                            range.font = chosenEmojiFont;
+                        }
+                    } catch(eR) {}
+                }
+            }
+        } catch(eAll) {}
     }
 
     function applyFontWithFallback(textProp, candidateList) {
@@ -2931,7 +3110,7 @@
         return false;
     }
 
-    function formatTextLayer(lyr, textStr, fontSize, fontColor, justification, lineLeading, candidates) {
+    function formatTextLayer(lyr, textStr, fontSize, fontColor, justification, lineLeading, candidates, emojiCandidates) {
         if (!lyr) return;
         try {
             var prop = getTextProp(lyr);
@@ -2957,6 +3136,9 @@
             }
             prop.setValue(doc);
             applyFontWithFallback(prop, candidates);
+            if (emojiCandidates && emojiCandidates.length > 0 && textStr) {
+                applyEmojiFontToRanges(prop, textStr, emojiCandidates);
+            }
         } catch(eFmt) {}
     }
 
@@ -3013,6 +3195,10 @@
                     try { dropFont.onChange(); } catch(eDropF) {}
                 }
             }
+        }
+
+        if (typeof dropEmojiFont !== "undefined" && dropEmojiFont) {
+            dropEmojiFont.selection = 0; // Auto (Preset Default)
         }
 
         if (typeof dropStatusStyle !== "undefined" && dropStatusStyle) {
@@ -3480,7 +3666,8 @@
             var justLeft = (typeof ParagraphJustification !== "undefined" && ParagraphJustification && ParagraphJustification.LEFT_JUSTIFY) ? ParagraphJustification.LEFT_JUSTIFY : null;
             var justRight = (typeof ParagraphJustification !== "undefined" && ParagraphJustification && ParagraphJustification.RIGHT_JUSTIFY) ? ParagraphJustification.RIGHT_JUSTIFY : null;
 
-            formatTextLayer(textLayer, wrappedString, textSize, textColor, justLeft, lineH, getActiveFontCandidates());
+            textLayer.emojiFontFamily = getActiveEmojiFontFamily();
+            formatTextLayer(textLayer, wrappedString, textSize, textColor, justLeft, lineH, getActiveFontCandidates(), getActiveEmojiCandidates());
             if (textLayer.property && textLayer.property("Source Text")) {
                 textLayer.property("Source Text").expression = TYPEWRITER_EXPR;
             } else if (textLayer.sourceText) {
@@ -3510,7 +3697,8 @@
             timeLayer.justification = "right";
             timeLayer.transform.position.setValue([timeX, timeY, -0.5]);
 
-            formatTextLayer(timeLayer, timeString, timeFontSize, timeColor, justRight, null, getActiveFontCandidates());
+            timeLayer.emojiFontFamily = getActiveEmojiFontFamily();
+            formatTextLayer(timeLayer, timeString, timeFontSize, timeColor, justRight, null, getActiveFontCandidates(), getActiveEmojiCandidates());
 
             if (timeLayer.transform && timeLayer.transform.opacity) {
                 timeLayer.transform.opacity.expression = TIMECODE_ENTRANCE_EXPR;
@@ -3534,7 +3722,8 @@
                 statusLayerText.justification = "right";
                 statusLayerText.transform.position.setValue([statusX, timeY, -0.5]);
 
-                formatTextLayer(statusLayerText, statusString || "✓✓", timeFontSize, statusColor, justRight, null, getActiveFontCandidates());
+                statusLayerText.emojiFontFamily = getActiveEmojiFontFamily();
+                formatTextLayer(statusLayerText, statusString || "✓✓", timeFontSize, statusColor, justRight, null, getActiveFontCandidates(), getActiveEmojiCandidates());
                 if (statusLayerText.transform && statusLayerText.transform.opacity) {
                     statusLayerText.transform.opacity.expression = STATUS_TEXT_OPACITY_EXPR;
                 }
@@ -4365,7 +4554,8 @@
                     var justLeft = (typeof ParagraphJustification !== "undefined" && ParagraphJustification && ParagraphJustification.LEFT_JUSTIFY) ? ParagraphJustification.LEFT_JUSTIFY : null;
                     var justRight = (typeof ParagraphJustification !== "undefined" && ParagraphJustification && ParagraphJustification.RIGHT_JUSTIFY) ? ParagraphJustification.RIGHT_JUSTIFY : null;
 
-                    formatTextLayer(textLayer, wrappedString, textSize, textColor, justLeft, lineH, getActiveFontCandidates());
+                    textLayer.emojiFontFamily = getActiveEmojiFontFamily();
+                    formatTextLayer(textLayer, wrappedString, textSize, textColor, justLeft, lineH, getActiveFontCandidates(), getActiveEmojiCandidates());
                     if (textLayer.text !== undefined) {
                         textLayer.text = wrappedString;
                     }
@@ -4387,7 +4577,8 @@
                     if (timeLayer.transform && timeLayer.transform.position) {
                         timeLayer.transform.position.setValue([timeX, timeY, -0.5]);
                     }
-                    formatTextLayer(timeLayer, timeString, timeFontSize, timeColor, justRight, null, getActiveFontCandidates());
+                    timeLayer.emojiFontFamily = getActiveEmojiFontFamily();
+                    formatTextLayer(timeLayer, timeString, timeFontSize, timeColor, justRight, null, getActiveFontCandidates(), getActiveEmojiCandidates());
                 }
 
                 // Update Status text layer
@@ -4399,7 +4590,8 @@
                     if (statusLayerText.transform && statusLayerText.transform.position) {
                         statusLayerText.transform.position.setValue([statusX, timeY, -0.5]);
                     }
-                    formatTextLayer(statusLayerText, statusString || "✓✓", timeFontSize, statusColor, justRight, null, getActiveFontCandidates());
+                    statusLayerText.emojiFontFamily = getActiveEmojiFontFamily();
+                    formatTextLayer(statusLayerText, statusString || "✓✓", timeFontSize, statusColor, justRight, null, getActiveFontCandidates(), getActiveEmojiCandidates());
                 }
 
                 // Update Status RCS layer
