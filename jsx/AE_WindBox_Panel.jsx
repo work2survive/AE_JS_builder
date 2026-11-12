@@ -464,6 +464,8 @@
             numParticles: 50,
             fadeInDist: 180,
             fadeOutDist: 180,
+            cameraFade: true,
+            cameraFadeDist: 250,
             partSize: 28,
             partSizeRand: 45,
             scaleWigFreq: 1.0,
@@ -501,6 +503,8 @@
             numParticles: 22,
             fadeInDist: 350,
             fadeOutDist: 350,
+            cameraFade: true,
+            cameraFadeDist: 250,
             partSize: 240,
             partSizeRand: 50,
             scaleWigFreq: 0.3,
@@ -538,6 +542,8 @@
             numParticles: 70,
             fadeInDist: 150,
             fadeOutDist: 150,
+            cameraFade: true,
+            cameraFadeDist: 250,
             partSize: 18,
             partSizeRand: 60,
             scaleWigFreq: 1.5,
@@ -575,6 +581,8 @@
             numParticles: 24,
             fadeInDist: 300,
             fadeOutDist: 300,
+            cameraFade: true,
+            cameraFadeDist: 250,
             partSize: 380,
             partSizeRand: 35,
             scaleWigFreq: 0.0,
@@ -612,6 +620,8 @@
             numParticles: 60,
             fadeInDist: 120,
             fadeOutDist: 120,
+            cameraFade: true,
+            cameraFadeDist: 250,
             partSize: 14,
             partSizeRand: 50,
             scaleWigFreq: 0.8,
@@ -649,6 +659,8 @@
             numParticles: 60,
             fadeInDist: 120,
             fadeOutDist: 120,
+            cameraFade: true,
+            cameraFadeDist: 250,
             partSize: 14,
             partSizeRand: 40,
             scaleWigFreq: 1.2,
@@ -686,6 +698,8 @@
             numParticles: 20,
             fadeInDist: 150,
             fadeOutDist: 150,
+            cameraFade: true,
+            cameraFadeDist: 250,
             partSize: 100,
             partSizeRand: 30,
             scaleWigFreq: 0.5,
@@ -723,6 +737,8 @@
             numParticles: 20,
             fadeInDist: 150,
             fadeOutDist: 150,
+            cameraFade: true,
+            cameraFadeDist: 250,
             partSize: 100,
             partSizeRand: 30,
             scaleWigFreq: 0.5,
@@ -1086,21 +1102,39 @@
         var editCount = pnlCount.add("edittext", undefined, "50");
         editCount.characters = 5;
 
-        // Boundary Fade In/Out Panel
-        var pnlFade = tabFlow.add("panel", undefined, "Boundary Fade (Fade In / Out Distance) - Animatable");
-        pnlFade.orientation = "row";
-        pnlFade.alignChildren = ["fill", "center"];
-        pnlFade.spacing = 4;
+        // Boundary & Camera Fade Panel
+        var pnlFade = tabFlow.add("panel", undefined, "Particle Fade (Boundary & Camera) - Animatable");
+        pnlFade.orientation = "column";
+        pnlFade.alignChildren = ["fill", "top"];
+        pnlFade.spacing = 6;
+        pnlFade.margins = 6;
 
-        pnlFade.add("statictext", undefined, "Fade In Dist (px):");
-        var editFadeInDist = pnlFade.add("edittext", undefined, "150");
+        var grpBoundFade = pnlFade.add("group");
+        grpBoundFade.orientation = "row";
+        grpBoundFade.alignChildren = ["left", "center"];
+        grpBoundFade.spacing = 4;
+        grpBoundFade.add("statictext", undefined, "Fade In Dist (px):");
+        var editFadeInDist = grpBoundFade.add("edittext", undefined, "150");
         editFadeInDist.characters = 5;
         editFadeInDist.helpTip = "Distance from box entry boundary over which particle fades smoothly from 0 to 100% opacity";
 
-        pnlFade.add("statictext", undefined, "Fade Out Dist (px):");
-        var editFadeOutDist = pnlFade.add("edittext", undefined, "150");
+        grpBoundFade.add("statictext", undefined, "Fade Out Dist (px):");
+        var editFadeOutDist = grpBoundFade.add("edittext", undefined, "150");
         editFadeOutDist.characters = 5;
         editFadeOutDist.helpTip = "Distance to box exit boundary over which particle fades smoothly from 100% to 0 opacity";
+
+        var grpCamFade = pnlFade.add("group");
+        grpCamFade.orientation = "row";
+        grpCamFade.alignChildren = ["left", "center"];
+        grpCamFade.spacing = 6;
+        var chkCameraFade = grpCamFade.add("checkbox", undefined, "Fade Near Camera (Default ON)");
+        chkCameraFade.value = true;
+        chkCameraFade.helpTip = "Fade out particles that come too close to the active camera lens";
+
+        grpCamFade.add("statictext", undefined, "Near Fade Dist (px):");
+        var editCamFadeDist = grpCamFade.add("edittext", undefined, "250");
+        editCamFadeDist.characters = 5;
+        editCamFadeDist.helpTip = "Distance in pixels in front of the camera lens under which particles fade smoothly to 0 opacity";
 
         // ==========================================
         // TAB 2: VIRTUAL CUBE (GUIDE LAYER)
@@ -1384,6 +1418,8 @@
             if (preset.numParticles !== undefined) editCount.text = String(preset.numParticles);
             if (preset.fadeInDist !== undefined) editFadeInDist.text = String(preset.fadeInDist);
             if (preset.fadeOutDist !== undefined) editFadeOutDist.text = String(preset.fadeOutDist);
+            if (preset.cameraFade !== undefined) chkCameraFade.value = Boolean(preset.cameraFade);
+            if (preset.cameraFadeDist !== undefined) editCamFadeDist.text = String(preset.cameraFadeDist);
             if (preset.partSize !== undefined) editPartSize.text = String(preset.partSize);
             if (preset.partSizeRand !== undefined) editPartSizeRand.text = String(preset.partSizeRand);
             if (preset.scaleWigFreq !== undefined) editScaleWigFreq.text = String(preset.scaleWigFreq);
@@ -1542,6 +1578,8 @@
             var numParticles = Math.max(1, Math.round(getNum(editCount, 50)));
             var fadeInDist = Math.max(0, getNum(editFadeInDist, 150));
             var fadeOutDist = Math.max(0, getNum(editFadeOutDist, 150));
+            var isCamFade = chkCameraFade.value;
+            var camFadeDist = Math.max(1, getNum(editCamFadeDist, 250));
             var partSizeRand = Math.max(0, Math.min(100, getNum(editPartSizeRand, 45)));
             var scaleWigFreq = Math.max(0, getNum(editScaleWigFreq, 1.0));
             var scaleWigAmp = Math.max(0, getNum(editScaleWigAmp, 15));
@@ -1628,9 +1666,11 @@
                 addCheckbox(ctrlLayer, "WindBox - Align to Wind", alignToWind ? 1 : 0);
                 addSlider(ctrlLayer, "WindBox - Particle Type", particleType);
 
-                // Boundary Fade Controls
+                // Boundary & Camera Fade Controls
                 addSlider(ctrlLayer, "WindBox - Fade In Distance", fadeInDist);
                 addSlider(ctrlLayer, "WindBox - Fade Out Distance", fadeOutDist);
+                addCheckbox(ctrlLayer, "WindBox - Fade Near Camera", isCamFade ? 1 : 0);
+                addSlider(ctrlLayer, "WindBox - Camera Fade Dist", camFadeDist);
 
                 // Particle Size Randomness & Size Wiggle Controls
                 addSlider(ctrlLayer, "WindBox - Size Random (%)", partSizeRand);
@@ -1881,7 +1921,8 @@
                     '    var fadeIn = 0, fadeOut = 0;',
                     '    try { fadeIn = Math.max(0, ctrl.effect("WindBox - Fade In Distance")(1).value); } catch(e) {}',
                     '    try { fadeOut = Math.max(0, ctrl.effect("WindBox - Fade Out Distance")(1).value); } catch(e) {}',
-                    '    if (fadeIn <= 0 && fadeOut <= 0) { value; } else {',
+                    '    var boundFactor = 1;',
+                    '    if (fadeIn > 0 || fadeOut > 0) {',
                     '        var sX = Math.max(1, ctrl.effect("WindBox - Size X")(1).value);',
                     '        var sY = Math.max(1, ctrl.effect("WindBox - Size Y")(1).value);',
                     '        var sZ = Math.max(1, ctrl.effect("WindBox - Size Z")(1).value);',
@@ -1931,8 +1972,32 @@
                     '        }',
                     '        var fIn = (fadeIn > 0) ? Math.min(1, Math.max(0, dIn / fadeIn)) : 1;',
                     '        var fOut = (fadeOut > 0) ? Math.min(1, Math.max(0, dOut / fadeOut)) : 1;',
-                    '        value * (fIn * fOut);',
+                    '        boundFactor = fIn * fOut;',
                     '    }',
+                    '    var camFactor = 1;',
+                    '    var useCamFade = 0;',
+                    '    try { useCamFade = ctrl.effect("WindBox - Fade Near Camera")(1).value; } catch(e) {}',
+                    '    if (useCamFade > 0) {',
+                    '        var camFadeDist = 250;',
+                    '        try { camFadeDist = Math.max(1, ctrl.effect("WindBox - Camera Fade Dist")(1).value); } catch(e) {}',
+                    '        var camPos = [thisComp.width / 2, thisComp.height / 2, -1777.78];',
+                    '        var camForward = [0, 0, 1];',
+                    '        try {',
+                    '            if (thisComp.activeCamera) {',
+                    '                camPos = thisComp.activeCamera.toWorld([0, 0, 0]);',
+                    '                camForward = thisComp.activeCamera.toWorldVec([0, 0, 1]);',
+                    '            }',
+                    '        } catch(e) {}',
+                    '        var myPos = toWorld(anchorPoint);',
+                    '        var toPt = [myPos[0] - camPos[0], myPos[1] - camPos[1], myPos[2] - camPos[2]];',
+                    '        var depth = toPt[0] * camForward[0] + toPt[1] * camForward[1] + toPt[2] * camForward[2];',
+                    '        if (depth <= 0) {',
+                    '            camFactor = 0;',
+                    '        } else if (depth < camFadeDist) {',
+                    '            camFactor = depth / camFadeDist;',
+                    '        }',
+                    '    }',
+                    '    value * boundFactor * camFactor;',
                     '}'
                 ].join("\n");
 

@@ -1160,20 +1160,37 @@
         toWorld(point, time) {
             const t = (time !== undefined) ? time : (Property._currentEvaluationTime || 0);
             const m = this.getWorldMatrix(t);
-            const pt = Mat4.transformPoint(m, point || [0, 0, 0]);
-            return (point && point.length === 2) ? [pt[0], pt[1]] : pt;
+            const p = (point && point.value !== undefined) ? point.value : (point || [0, 0, 0]);
+            const pt = Mat4.transformPoint(m, p);
+            return (p && p.length === 2) ? [pt[0], pt[1]] : pt;
+        }
+
+        toWorldVec(vec, time) {
+            const t = (time !== undefined) ? time : (Property._currentEvaluationTime || 0);
+            const m = this.getWorldMatrix(t);
+            const v = (vec && vec.value !== undefined) ? vec.value : (vec || [0, 0, 1]);
+            const p0 = Mat4.transformPoint(m, [0, 0, 0]);
+            const p1 = Mat4.transformPoint(m, v);
+            const d = [p1[0] - p0[0], p1[1] - p0[1], p1[2] - p0[2]];
+            const len = Math.sqrt(d[0] * d[0] + d[1] * d[1] + d[2] * d[2]);
+            return (len > 0.000001) ? [d[0] / len, d[1] / len, d[2] / len] : [0, 0, 1];
         }
 
         toComp(point, time) {
             return this.toWorld(point, time);
         }
 
+        toCompVec(vec, time) {
+            return this.toWorldVec(vec, time);
+        }
+
         fromWorld(point, time) {
             const t = (time !== undefined) ? time : (Property._currentEvaluationTime || 0);
             const m = this.getWorldMatrix(t);
             const inv = Mat4.invert(m);
-            const pt = Mat4.transformPoint(inv, point || [0, 0, 0]);
-            return (point && point.length === 2) ? [pt[0], pt[1]] : pt;
+            const p = (point && point.value !== undefined) ? point.value : (point || [0, 0, 0]);
+            const pt = Mat4.transformPoint(inv, p);
+            return (p && p.length === 2) ? [pt[0], pt[1]] : pt;
         }
 
         fromComp(point, time) {
@@ -1367,6 +1384,26 @@
 
             this.layers = new LayerCollection(this);
             this._onChanged = null;
+        }
+
+        get activeCamera() {
+            const cam = this.layers.find(l => (l.matchName === 'ADBE Camera Layer' || (l.name && l.name.toLowerCase().includes('camera'))) && l.enabled);
+            if (cam) return cam;
+            const cx = this.width / 2;
+            const cy = this.height / 2;
+            const cz = -1777.78;
+            return {
+                name: 'Active Camera',
+                position: { value: [cx, cy, cz] },
+                toWorld: (pt = [0, 0, 0]) => {
+                    const p = (pt && pt.value !== undefined) ? pt.value : pt;
+                    return [cx + (p[0] || 0), cy + (p[1] || 0), cz + (p[2] || 0)];
+                },
+                toWorldVec: (v = [0, 0, 1]) => {
+                    const vec = (v && v.value !== undefined) ? v.value : v;
+                    return [vec[0] || 0, vec[1] || 0, vec[2] || 1];
+                }
+            };
         }
 
         get frameDuration() {

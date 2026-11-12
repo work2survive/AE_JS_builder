@@ -38,7 +38,9 @@
       "cubeFillOpacity": 10,
       "cubeStrokeColor": "#ffffff",
       "cubeStrokeWidth": 1.5,
-      "cubeStrokeOpacity": 85
+      "cubeStrokeOpacity": 85,
+      "cameraFade": true,
+      "cameraFadeDist": 250
     },
     {
       "name": "Drifting Clouds (Soft Gentle Float)",
@@ -75,7 +77,9 @@
       "cubeFillOpacity": 10,
       "cubeStrokeColor": "#ffffff",
       "cubeStrokeWidth": 1.5,
-      "cubeStrokeOpacity": 85
+      "cubeStrokeOpacity": 85,
+      "cameraFade": true,
+      "cameraFadeDist": 250
     },
     {
       "name": "Cosmic Stars (Twinkle & Shimmer)",
@@ -112,7 +116,9 @@
       "cubeFillOpacity": 10,
       "cubeStrokeColor": "#ffffff",
       "cubeStrokeWidth": 1.5,
-      "cubeStrokeOpacity": 85
+      "cubeStrokeOpacity": 85,
+      "cameraFade": true,
+      "cameraFadeDist": 250
     },
     {
       "name": "Parallax Mountains (Horizon Glide)",
@@ -149,7 +155,9 @@
       "cubeFillOpacity": 10,
       "cubeStrokeColor": "#ffffff",
       "cubeStrokeWidth": 1.5,
-      "cubeStrokeOpacity": 85
+      "cubeStrokeOpacity": 85,
+      "cameraFade": true,
+      "cameraFadeDist": 250
     },
     {
       "name": "3D Circles (Snow / Spores)",
@@ -186,7 +194,9 @@
       "cubeFillOpacity": 10,
       "cubeStrokeColor": "#ffffff",
       "cubeStrokeWidth": 1.5,
-      "cubeStrokeOpacity": 85
+      "cubeStrokeOpacity": 85,
+      "cameraFade": true,
+      "cameraFadeDist": 250
     },
     {
       "name": "3D Squares (Confetti / Debris)",
@@ -223,7 +233,9 @@
       "cubeFillOpacity": 10,
       "cubeStrokeColor": "#ffffff",
       "cubeStrokeWidth": 1.5,
-      "cubeStrokeOpacity": 85
+      "cubeStrokeOpacity": 85,
+      "cameraFade": true,
+      "cameraFadeDist": 250
     },
     {
       "name": "Project Composition...",
@@ -260,7 +272,9 @@
       "cubeFillOpacity": 10,
       "cubeStrokeColor": "#ffffff",
       "cubeStrokeWidth": 1.5,
-      "cubeStrokeOpacity": 85
+      "cubeStrokeOpacity": 85,
+      "cameraFade": true,
+      "cameraFadeDist": 250
     },
     {
       "name": "Selected Layer(s)",
@@ -297,7 +311,9 @@
       "cubeFillOpacity": 10,
       "cubeStrokeColor": "#ffffff",
       "cubeStrokeWidth": 1.5,
-      "cubeStrokeOpacity": 85
+      "cubeStrokeOpacity": 85,
+      "cameraFade": true,
+      "cameraFadeDist": 250
     }
   ]
 }

@@ -9,13 +9,12 @@
       "tailType": "modern",
       "font": "Roboto (Google / Android)",
       "fontIndex": 1,
-      "fontFamily": "Roboto, 'Google Sans', 'Segoe UI', Arial, 'Noto Color Emoji', 'Apple Color Emoji', 'Segoe UI Emoji', sans-serif",
+      "fontFamily": "Roboto, 'Google Sans', 'Segoe UI', Arial, sans-serif",
       "fonts": [
         "Roboto",
         "Google Sans",
         "Segoe UI",
         "Arial",
-        "Noto Color Emoji",
         "sans-serif"
       ],
       "aeFontCandidates": [
@@ -23,8 +22,7 @@
         "GoogleSans-Regular",
         "SegoeUI",
         "ArialMT",
-        "Arial",
-        "NotoColorEmoji"
+        "Arial"
       ],
       "statusStyle": "rcs",
       "light": {
@@ -54,7 +52,15 @@
           "time": "#9aa0a6",
           "check": ""
         }
-      }
+      },
+      "emojiFont": "Noto Color Emoji (Google)",
+      "emojiFontFamily": "'Noto Color Emoji', 'Segoe UI Emoji', 'Apple Color Emoji', sans-serif",
+      "emojiAeCandidates": [
+        "NotoColorEmoji",
+        "NotoColorEmoji-Regular",
+        "SegoeUIEmoji",
+        "AppleColorEmoji"
+      ]
     },
     "iOS Message": {
       "label": "iOS message style",
@@ -62,7 +68,7 @@
       "tailType": "ios",
       "font": "SF Pro (Apple / iOS)",
       "fontIndex": 0,
-      "fontFamily": "-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display', 'Helvetica Neue', Arial, 'Noto Color Emoji', 'Apple Color Emoji', 'Segoe UI Emoji', sans-serif",
+      "fontFamily": "-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display', 'Helvetica Neue', Arial, sans-serif",
       "fonts": [
         "SF Pro Text",
         "SF Pro Display",
@@ -70,7 +76,6 @@
         "BlinkMacSystemFont",
         "Helvetica Neue",
         "Arial",
-        "Noto Color Emoji",
         "sans-serif"
       ],
       "aeFontCandidates": [
@@ -78,8 +83,7 @@
         "SFProDisplay-Regular",
         "HelveticaNeue",
         "ArialMT",
-        "Arial",
-        "NotoColorEmoji"
+        "Arial"
       ],
       "statusStyle": "standard",
       "light": {
@@ -109,7 +113,15 @@
           "time": "#8e8e93",
           "check": ""
         }
-      }
+      },
+      "emojiFont": "Apple Color Emoji (Apple)",
+      "emojiFontFamily": "'Apple Color Emoji', 'Noto Color Emoji', 'Segoe UI Emoji', sans-serif",
+      "emojiAeCandidates": [
+        "AppleColorEmoji",
+        "NotoColorEmoji",
+        "NotoColorEmoji-Regular",
+        "SegoeUIEmoji"
+      ]
     },
     "WhatsApp": {
       "label": "WhatsApp style",
@@ -117,20 +129,18 @@
       "tailType": "classic",
       "font": "Helvetica Neue",
       "fontIndex": 3,
-      "fontFamily": "'Helvetica Neue', Helvetica, Arial, 'Noto Color Emoji', 'Apple Color Emoji', 'Segoe UI Emoji', sans-serif",
+      "fontFamily": "'Helvetica Neue', Helvetica, Arial, sans-serif",
       "fonts": [
         "Helvetica Neue",
         "Helvetica",
         "Arial",
-        "Noto Color Emoji",
         "sans-serif"
       ],
       "aeFontCandidates": [
         "HelveticaNeue",
         "Helvetica",
         "ArialMT",
-        "Arial",
-        "NotoColorEmoji"
+        "Arial"
       ],
       "statusStyle": "standard",
       "light": {
@@ -160,7 +170,14 @@
           "time": "#8696a0",
           "check": ""
         }
-      }
+      },
+      "emojiFont": "Apple Color Emoji (Apple)",
+      "emojiFontFamily": "'Apple Color Emoji', 'Noto Color Emoji', 'Segoe UI Emoji', sans-serif",
+      "emojiAeCandidates": [
+        "AppleColorEmoji",
+        "NotoColorEmoji",
+        "SegoeUIEmoji"
+      ]
     },
     "Instagram": {
       "label": "Instagram style",
@@ -168,21 +185,19 @@
       "tailType": "none",
       "font": "SF Pro (Apple / iOS)",
       "fontIndex": 0,
-      "fontFamily": "-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Instagram Sans', 'Helvetica Neue', Arial, 'Noto Color Emoji', 'Apple Color Emoji', 'Segoe UI Emoji', sans-serif",
+      "fontFamily": "-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Instagram Sans', 'Helvetica Neue', Arial, sans-serif",
       "fonts": [
         "SF Pro Text",
         "Instagram Sans",
         "Helvetica Neue",
         "Arial",
-        "Noto Color Emoji",
         "sans-serif"
       ],
       "aeFontCandidates": [
         "SFProText-Regular",
         "HelveticaNeue",
         "ArialMT",
-        "Arial",
-        "NotoColorEmoji"
+        "Arial"
       ],
       "statusStyle": "standard",
       "light": {
@@ -212,7 +227,14 @@
           "time": "#a8a8a8",
           "check": ""
         }
-      }
+      },
+      "emojiFont": "Apple Color Emoji (Apple)",
+      "emojiFontFamily": "'Apple Color Emoji', 'Noto Color Emoji', 'Segoe UI Emoji', sans-serif",
+      "emojiAeCandidates": [
+        "AppleColorEmoji",
+        "NotoColorEmoji",
+        "SegoeUIEmoji"
+      ]
     },
     "Facebook Messenger": {
       "label": "Messenger style",
@@ -220,21 +242,19 @@
       "tailType": "none",
       "font": "Segoe UI (Windows)",
       "fontIndex": 2,
-      "fontFamily": "'Segoe UI', Tahoma, Geneva, Verdana, Arial, 'Noto Color Emoji', 'Apple Color Emoji', 'Segoe UI Emoji', sans-serif",
+      "fontFamily": "'Segoe UI', Tahoma, Geneva, Verdana, Arial, sans-serif",
       "fonts": [
         "Segoe UI",
         "Tahoma",
         "Geneva",
         "Arial",
-        "Noto Color Emoji",
         "sans-serif"
       ],
       "aeFontCandidates": [
         "SegoeUI",
         "Tahoma",
         "ArialMT",
-        "Arial",
-        "NotoColorEmoji"
+        "Arial"
       ],
       "statusStyle": "standard",
       "light": {
@@ -264,7 +284,14 @@
           "time": "#b0b3b8",
           "check": ""
         }
-      }
+      },
+      "emojiFont": "Segoe UI Emoji (Windows)",
+      "emojiFontFamily": "'Segoe UI Emoji', 'Noto Color Emoji', 'Apple Color Emoji', sans-serif",
+      "emojiAeCandidates": [
+        "SegoeUIEmoji",
+        "NotoColorEmoji",
+        "AppleColorEmoji"
+      ]
     },
     "Telegram": {
       "label": "Telegram style",
@@ -272,13 +299,12 @@
       "tailType": "classic",
       "font": "Open Sans",
       "fontIndex": 6,
-      "fontFamily": "'Open Sans', 'Segoe UI', Roboto, Arial, 'Noto Color Emoji', 'Apple Color Emoji', 'Segoe UI Emoji', sans-serif",
+      "fontFamily": "'Open Sans', 'Segoe UI', Roboto, Arial, sans-serif",
       "fonts": [
         "Open Sans",
         "Segoe UI",
         "Roboto",
         "Arial",
-        "Noto Color Emoji",
         "sans-serif"
       ],
       "aeFontCandidates": [
@@ -286,8 +312,7 @@
         "OpenSans",
         "SegoeUI",
         "ArialMT",
-        "Arial",
-        "NotoColorEmoji"
+        "Arial"
       ],
       "statusStyle": "standard",
       "light": {
@@ -317,7 +342,14 @@
           "time": "#708499",
           "check": ""
         }
-      }
+      },
+      "emojiFont": "Apple Color Emoji (Apple)",
+      "emojiFontFamily": "'Apple Color Emoji', 'Noto Color Emoji', 'Segoe UI Emoji', sans-serif",
+      "emojiAeCandidates": [
+        "AppleColorEmoji",
+        "NotoColorEmoji",
+        "SegoeUIEmoji"
+      ]
     },
     "Discord": {
       "label": "Discord style",
@@ -325,13 +357,12 @@
       "tailType": "none",
       "font": "Inter",
       "fontIndex": 5,
-      "fontFamily": "Inter, 'gg sans', 'Segoe UI', Arial, 'Noto Color Emoji', 'Apple Color Emoji', 'Segoe UI Emoji', sans-serif",
+      "fontFamily": "Inter, 'gg sans', 'Segoe UI', Arial, sans-serif",
       "fonts": [
         "Inter",
         "gg sans",
         "Segoe UI",
         "Arial",
-        "Noto Color Emoji",
         "sans-serif"
       ],
       "aeFontCandidates": [
@@ -339,8 +370,7 @@
         "Inter",
         "SegoeUI",
         "ArialMT",
-        "Arial",
-        "NotoColorEmoji"
+        "Arial"
       ],
       "statusStyle": "standard",
       "light": {
@@ -370,7 +400,15 @@
           "time": "#949ba4",
           "check": ""
         }
-      }
+      },
+      "emojiFont": "Twemoji Mozilla (Twitter)",
+      "emojiFontFamily": "'Twemoji Mozilla', 'Twitter Color Emoji', 'Noto Color Emoji', 'Segoe UI Emoji', sans-serif",
+      "emojiAeCandidates": [
+        "TwemojiMozilla",
+        "TwitterColorEmoji",
+        "NotoColorEmoji",
+        "SegoeUIEmoji"
+      ]
     },
     "Custom": {
       "label": "Custom Preset",
@@ -378,22 +416,20 @@
       "tailType": "modern",
       "font": "System Default",
       "fontIndex": 7,
-      "fontFamily": "system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, 'Noto Color Emoji', 'Apple Color Emoji', 'Segoe UI Emoji', sans-serif",
+      "fontFamily": "system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
       "fonts": [
         "system-ui",
         "-apple-system",
         "Segoe UI",
         "Roboto",
         "Arial",
-        "Noto Color Emoji",
         "sans-serif"
       ],
       "aeFontCandidates": [
         "ArialMT",
         "Arial",
         "HelveticaNeue",
-        "SegoeUI",
-        "NotoColorEmoji"
+        "SegoeUI"
       ],
       "statusStyle": "standard",
       "light": {
@@ -423,7 +459,14 @@
           "time": "#8e8e93",
           "check": ""
         }
-      }
+      },
+      "emojiFont": "Noto Color Emoji (Google)",
+      "emojiFontFamily": "'Noto Color Emoji', 'Apple Color Emoji', 'Segoe UI Emoji', sans-serif",
+      "emojiAeCandidates": [
+        "NotoColorEmoji",
+        "AppleColorEmoji",
+        "SegoeUIEmoji"
+      ]
     }
   }
 }
