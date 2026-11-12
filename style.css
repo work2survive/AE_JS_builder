@@ -437,8 +437,15 @@ body.is-resizing-h .ae-resizer-h {
     cursor: grab;
 }
 
-.ae-viewport:active {
-    cursor: grabbing;
+.ae-viewport:active,
+.ae-viewport.is-orbiting,
+body.body-viewport-orbiting {
+    cursor: grabbing !important;
+}
+
+.ae-viewport.is-panning,
+body.body-viewport-panning {
+    cursor: move !important;
 }
 
 .ae-viewport-overlay {

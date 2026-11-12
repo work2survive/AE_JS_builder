@@ -167,6 +167,11 @@
                 this.updateCameraTransform();
             }, { passive: false });
 
+            // Prevent default browser context menu on viewport to allow Right-Click Pan
+            vp.addEventListener('contextmenu', (e) => {
+                e.preventDefault();
+            });
+
             // Mouse down for orbit or pan
             vp.addEventListener('mousedown', (e) => {
                 if (e.target.closest('.ae-viewport-controls')) return;
@@ -175,10 +180,15 @@
                     // Left click: Orbit
                     this.camera.isDragging = true;
                     this.camera.isPanning = false;
-                } else if (e.button === 1 || (e.button === 0 && e.altKey)) {
-                    // Middle click or Alt+Left click: Pan
+                    vp.classList.add('is-orbiting');
+                    document.body.classList.add('body-viewport-orbiting');
+                } else if (e.button === 1 || e.button === 2 || (e.button === 0 && e.altKey)) {
+                    // Right click (button 2), Middle click (button 1), or Alt+Left click: Pan
+                    e.preventDefault();
                     this.camera.isPanning = true;
                     this.camera.isDragging = false;
+                    vp.classList.add('is-panning');
+                    document.body.classList.add('body-viewport-panning');
                 }
                 this.camera.lastMouseX = e.clientX;
                 this.camera.lastMouseY = e.clientY;
@@ -199,11 +209,26 @@
                     this.camera.orbitY = Math.max(-89.9, Math.min(89.9, this.camera.orbitY));
                     this.viewNameEl.textContent = 'Custom View';
                 } else if (this.camera.isPanning) {
-                    // Pan relative to distance and current zoom magnification
+                    // Pan relative to distance, current zoom magnification, and camera orientation
                     const curZoom = this.camera.zoom || 1.0;
-                    const panSpeed = (this.camera.distance / curZoom) * 0.0012;
-                    this.camera.targetX -= dx * panSpeed * 1.5;
-                    this.camera.targetY -= dy * panSpeed * 1.5;
+                    const panSpeed = (this.camera.distance / curZoom) * 0.0012 * 1.5;
+
+                    const radX = (this.camera.orbitX || 0) * Math.PI / 180;
+                    const radY = (this.camera.orbitY || 0) * Math.PI / 180;
+
+                    const sinX = Math.sin(radX);
+                    const cosX = Math.cos(radX);
+                    const sinY = Math.sin(radY);
+                    const cosY = Math.cos(radY);
+
+                    // 3D camera pan vector inverse projected into world space
+                    const worldDeltaX = (dx * cosX + dy * sinY * sinX) * panSpeed;
+                    const worldDeltaY = (dy * cosY) * panSpeed;
+                    const worldDeltaZ = (dx * sinX - dy * sinY * cosX) * panSpeed;
+
+                    this.camera.targetX -= worldDeltaX;
+                    this.camera.targetY -= worldDeltaY;
+                    this.camera.targetZ -= worldDeltaZ;
                 }
 
                 this.updateCameraTransform();
@@ -212,6 +237,8 @@
             window.addEventListener('mouseup', () => {
                 this.camera.isDragging = false;
                 this.camera.isPanning = false;
+                vp.classList.remove('is-orbiting', 'is-panning');
+                document.body.classList.remove('body-viewport-orbiting', 'body-viewport-panning');
             });
 
             // Camera buttons
