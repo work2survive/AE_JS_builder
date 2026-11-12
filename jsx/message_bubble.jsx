@@ -171,7 +171,7 @@
         JSON = JSONPolyfill;
     }
 
-    var SCRIPT_VERSION = "v1.2";
+    var SCRIPT_VERSION = "v1.3";
     var MAX_CHARS = 250;
 
     // -------------------------------------------------------------------------
@@ -2130,12 +2130,23 @@
     txtMessage.preferredSize = [-1, 52];
     txtMessage.helpTip = "Type your message text here (Max 250 characters). Emojis are supported.";
 
-    // Character Counter Label
-    var grpCharCount = pnlMessage.add("group");
-    grpCharCount.orientation = "row";
-    grpCharCount.alignChildren = ["right", "center"];
-    var lblCharCount = grpCharCount.add("statictext", undefined, "0 / " + MAX_CHARS + " chars");
-    lblCharCount.preferredSize = [120, -1];
+    // Text Wrap & Character Counter Row
+    var grpWrapAndCount = pnlMessage.add("group");
+    grpWrapAndCount.orientation = "row";
+    grpWrapAndCount.alignChildren = ["fill", "center"];
+
+    var grpTextWrap = grpWrapAndCount.add("group");
+    grpTextWrap.orientation = "row";
+    grpTextWrap.alignChildren = ["left", "center"];
+    var lblTextWrap = grpTextWrap.add("statictext", undefined, "Text Wrap:");
+    lblTextWrap.preferredSize = [68, -1];
+    var dropTextWrap = grpTextWrap.add("dropdownlist", undefined, ["none", "pretty", "balance"]);
+    dropTextWrap.selection = 1; // Default: "pretty"
+    dropTextWrap.preferredSize = [95, 24];
+    dropTextWrap.helpTip = "Text wrap mode:\n• none: No auto-wrapping (only manual line breaks)\n• pretty: Greedy wrapping with orphan prevention (equivalent to CSS text-wrap: pretty)\n• balance: Balances line lengths evenly across lines (equivalent to CSS text-wrap: balance)";
+
+    var lblCharCount = grpWrapAndCount.add("statictext", undefined, "0 / " + MAX_CHARS + " chars");
+    lblCharCount.alignment = ["right", "center"];
 
     function updateCharCount() {
         var current = txtMessage.text || "";
@@ -2336,23 +2347,23 @@
     dropEmojiFont.preferredSize = [185, 26];
     dropEmojiFont.helpTip = "Select font specifically used for emojis. Normal text retains the Font Family selected above.";
 
-    // Screen Width Row (Determines where text line splits)
+    // Max Bubble Width Row (Directly governs maximum bubble width)
     var grpWidth = pnlDim.add("group");
     grpWidth.orientation = "row";
     grpWidth.alignChildren = ["left", "center"];
-    var lblWidth = grpWidth.add("statictext", undefined, "Screen Width (px):");
-    lblWidth.preferredSize = [115, -1];
-    var sldWidth = grpWidth.add("slider", undefined, 420, 300, 1920);
+    var lblWidth = grpWidth.add("statictext", undefined, "Max Bubble Width (px):");
+    lblWidth.preferredSize = [135, -1];
+    var sldWidth = grpWidth.add("slider", undefined, 380, 120, 1200);
     sldWidth.alignment = ["fill", "center"];
-    var txtWidth = grpWidth.add("edittext", undefined, "420");
+    var txtWidth = grpWidth.add("edittext", undefined, "380");
     txtWidth.characters = 5;
-    txtWidth.helpTip = "Mobile screen width in pixels. Text wraps so the bubble does not exceed 72% of this width.";
+    txtWidth.helpTip = "Maximum bubble width in pixels. Text wraps so the bubble does not exceed this width.";
 
     sldWidth.onChanging = function() {
         txtWidth.text = String(Math.round(sldWidth.value));
     };
     txtWidth.onChange = function() {
-        var v = Math.max(200, Math.min(3840, parseFloat(txtWidth.text) || 420));
+        var v = Math.max(100, Math.min(2400, parseFloat(txtWidth.text) || 380));
         sldWidth.value = v;
         txtWidth.text = String(Math.round(v));
     };
@@ -2362,7 +2373,7 @@
     grpSize.orientation = "row";
     grpSize.alignChildren = ["left", "center"];
     var lblSize = grpSize.add("statictext", undefined, "Text Size (px):");
-    lblSize.preferredSize = [115, -1];
+    lblSize.preferredSize = [135, -1];
     var sldSize = grpSize.add("slider", undefined, 20, 12, 60);
     sldSize.alignment = ["fill", "center"];
     var txtSize = grpSize.add("edittext", undefined, "20");
@@ -2377,44 +2388,44 @@
         txtSize.text = String(Math.round(v));
     };
 
-    // Inner Padding Row (-10px to +10px)
+    // Inner Padding Row (-15px to +25px)
     var grpPad = pnlDim.add("group");
     grpPad.orientation = "row";
     grpPad.alignChildren = ["left", "center"];
     var lblPad = grpPad.add("statictext", undefined, "Inner Padding (px):");
-    lblPad.preferredSize = [115, -1];
-    var sldPad = grpPad.add("slider", undefined, 0, -10, 10);
+    lblPad.preferredSize = [135, -1];
+    var sldPad = grpPad.add("slider", undefined, 0, -15, 25);
     sldPad.alignment = ["fill", "center"];
     var txtPad = grpPad.add("edittext", undefined, "0");
     txtPad.characters = 3;
-    txtPad.helpTip = "Adjust bubble inner padding from -10px (tight) to +10px (spacious).";
+    txtPad.helpTip = "Adjust bubble inner padding from -15px (compact) to +25px (spacious).";
 
     sldPad.onChanging = function() {
         txtPad.text = String(Math.round(sldPad.value));
     };
     txtPad.onChange = function() {
-        var v = Math.max(-10, Math.min(10, parseFloat(txtPad.text) || 0));
+        var v = Math.max(-15, Math.min(25, parseFloat(txtPad.text) || 0));
         sldPad.value = v;
         txtPad.text = String(Math.round(v));
     };
 
-    // Leading / Line Height Row (50% to 150%)
+    // Leading / Line Height Row (70% to 160%)
     var grpLeading = pnlDim.add("group");
     grpLeading.orientation = "row";
     grpLeading.alignChildren = ["left", "center"];
     var lblLeading = grpLeading.add("statictext", undefined, "Leading (%):");
-    lblLeading.preferredSize = [115, -1];
-    var sldLeading = grpLeading.add("slider", undefined, 100, 50, 150);
+    lblLeading.preferredSize = [135, -1];
+    var sldLeading = grpLeading.add("slider", undefined, 100, 70, 160);
     sldLeading.alignment = ["fill", "center"];
     var txtLeading = grpLeading.add("edittext", undefined, "100");
     txtLeading.characters = 4;
-    txtLeading.helpTip = "Text line height / leading in percentage from 50% (compact) to 150% (relaxed).";
+    txtLeading.helpTip = "Text line height / leading in percentage from 70% (compact) to 160% (relaxed).";
 
     sldLeading.onChanging = function() {
         txtLeading.text = String(Math.round(sldLeading.value));
     };
     txtLeading.onChange = function() {
-        var v = Math.max(50, Math.min(150, parseFloat(txtLeading.text) || 100));
+        var v = Math.max(70, Math.min(160, parseFloat(txtLeading.text) || 100));
         sldLeading.value = v;
         txtLeading.text = String(Math.round(v));
     };
@@ -3333,32 +3344,123 @@
         return w;
     }
 
-    function wrapTextToLines(rawText, maxPixelWidth, fontSize) {
-        if (!rawText) return [""];
-        var words = rawText.replace(/\r\n/g, "\n").split(/(\s+)/);
+    function greedyWrap(words, maxPixelWidth, fontSize) {
         var lines = [];
-        var currentLine = "";
-
+        var cur = "";
         for (var i = 0; i < words.length; i++) {
-            var word = words[i];
-            if (word === "\n") {
-                lines.push(currentLine);
-                currentLine = "";
+            var w = words[i];
+            if (w === "\n") {
+                if (cur.length > 0) lines.push(trimStr(cur));
+                lines.push("");
+                cur = "";
                 continue;
             }
-            var testLine = currentLine + word;
-            if (measureTypographyWidth(testLine, fontSize) > maxPixelWidth && trimStr(currentLine).length > 0) {
-                lines.push(trimStr(currentLine));
-                currentLine = trimLeftStr(word);
+            var test = cur.length > 0 ? (cur + " " + w) : w;
+            if (measureTypographyWidth(test, fontSize) > maxPixelWidth && cur.length > 0) {
+                lines.push(trimStr(cur));
+                cur = w;
             } else {
-                currentLine = testLine;
+                cur = test;
             }
         }
-        if (currentLine.length > 0) {
-            lines.push(trimStr(currentLine));
+        if (cur.length > 0) {
+            lines.push(trimStr(cur));
+        }
+        return lines;
+    }
+
+    function wrapTextToLines(rawText, maxPixelWidth, fontSize, wrapMode) {
+        if (!rawText) return [""];
+        wrapMode = wrapMode || "pretty";
+
+        var normalized = rawText.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+        var paragraphs = normalized.split("\n");
+        var allLines = [];
+
+        for (var p = 0; p < paragraphs.length; p++) {
+            var para = paragraphs[p];
+            if (!trimStr(para)) {
+                allLines.push("");
+                continue;
+            }
+
+            if (wrapMode === "none") {
+                allLines.push(para);
+                continue;
+            }
+
+            var rawWords = para.split(/\s+/);
+            var words = [];
+            for (var rw = 0; rw < rawWords.length; rw++) {
+                if (rawWords[rw].length > 0) words.push(rawWords[rw]);
+            }
+            if (words.length === 0) continue;
+
+            if (wrapMode === "pretty") {
+                var pLines = greedyWrap(words, maxPixelWidth, fontSize);
+                // Orphan prevention: if the last line has only 1 word and penultimate line has >= 2 words
+                if (pLines.length >= 2) {
+                    var lastWords = pLines[pLines.length - 1].split(/\s+/);
+                    var penultWords = pLines[pLines.length - 2].split(/\s+/);
+                    if (lastWords.length === 1 && penultWords.length >= 2) {
+                        var borrowed = penultWords.pop();
+                        var newPenult = penultWords.join(" ");
+                        var newLast = borrowed + " " + pLines[pLines.length - 1];
+                        if (measureTypographyWidth(newLast, fontSize) <= maxPixelWidth) {
+                            pLines[pLines.length - 2] = newPenult;
+                            pLines[pLines.length - 1] = newLast;
+                        }
+                    }
+                }
+                for (var li = 0; li < pLines.length; li++) allLines.push(pLines[li]);
+            } else if (wrapMode === "balance") {
+                var baseLines = greedyWrap(words, maxPixelWidth, fontSize);
+                var targetN = baseLines.length;
+                if (targetN <= 1) {
+                    for (var bi = 0; bi < baseLines.length; bi++) allLines.push(baseLines[bi]);
+                    continue;
+                }
+                var maxSingleWordW = 0;
+                for (var wi = 0; wi < words.length; wi++) {
+                    var ww = measureTypographyWidth(words[wi], fontSize);
+                    if (ww > maxSingleWordW) maxSingleWordW = ww;
+                }
+                var low = maxSingleWordW;
+                var high = maxPixelWidth;
+                var bestLines = baseLines;
+                var bestVar = 1e9;
+                var steps = 24;
+                for (var s = 0; s <= steps; s++) {
+                    var testW = low + (high - low) * (s / steps);
+                    var cand = greedyWrap(words, testW, fontSize);
+                    if (cand.length === targetN) {
+                        var sum = 0;
+                        var lens = [];
+                        for (var ci = 0; ci < cand.length; ci++) {
+                            var lw = measureTypographyWidth(cand[ci], fontSize);
+                            lens.push(lw);
+                            sum += lw;
+                        }
+                        var avg = sum / cand.length;
+                        var v = 0;
+                        for (var vi = 0; vi < lens.length; vi++) {
+                            var diff = lens[vi] - avg;
+                            v += diff * diff;
+                        }
+                        if (v < bestVar) {
+                            bestVar = v;
+                            bestLines = cand;
+                        }
+                    }
+                }
+                for (var bli = 0; bli < bestLines.length; bli++) allLines.push(bestLines[bli]);
+            } else {
+                var defLines = greedyWrap(words, maxPixelWidth, fontSize);
+                for (var di = 0; di < defLines.length; di++) allLines.push(defLines[di]);
+            }
         }
 
-        return lines.length > 0 ? lines : [""];
+        return allLines.length > 0 ? allLines : [""];
     }
 
     // Measure maximum line pixel width
@@ -3405,12 +3507,16 @@
             var textColor = hexToRgb(cpText.value);
             var timeColor = hexToRgb(colorSet ? colorSet.time : "#888888");
 
-            var screenW = parseFloat(txtWidth.text) || 420;
+            var maxBubbleW = Math.max(80, parseFloat(txtWidth.text) || 380);
             var textSize = parseFloat(txtSize.text) || 20;
 
             var padOffset = parseFloat(txtPad.text) || 0;
             var leadingPercent = parseFloat(txtLeading.text) || 100;
             var leadingFactor = leadingPercent / 100;
+
+            var selWrapIdx = (typeof dropTextWrap !== "undefined" && dropTextWrap && dropTextWrap.selection) ? dropTextWrap.selection.index : 1;
+            var wrapModes = ["none", "pretty", "balance"];
+            var wrapMode = wrapModes[selWrapIdx] || "pretty";
 
             var selAnimIdx = dropAnim.selection ? dropAnim.selection.index : 0;
             var animSpeed = parseFloat(txtSpeed.text) || 100;
@@ -3421,21 +3527,21 @@
             var fontIdx = dropFont.selection ? dropFont.selection.index : 0;
             var selectedFont = FONTS[fontIdx] || FONTS[0];
 
-            // Chat messaging UX: Max bubble width is 72% of screen width
-            var maxBubbleW = Math.max(120, screenW * 0.72);
             var cornerRadius = platformCfg.radius || 18;
             var tailType = platformCfg.tailType || "modern";
             var padX = Math.max(Math.round(cornerRadius * 0.85), Math.round(textSize * 0.90)) + padOffset;
             var padY = Math.max(10, Math.round(textSize * 0.60)) + padOffset;
-            var maxTextW = maxBubbleW - (padX * 2);
+            var maxTextW = Math.max(40, maxBubbleW - (padX * 2));
 
             // Perform automatic word-wrapping
-            var lines = wrapTextToLines(msgText, maxTextW, textSize);
+            var lines = wrapTextToLines(msgText, maxTextW, textSize, wrapMode);
             var wrappedString = lines.join("\n");
             var measuredTextW = getLinesPixelBounds(lines, textSize);
 
-            var lineH = Math.round(textSize * 1.35 * leadingFactor);
-            var textBlockH = lines.length * lineH;
+            var scalePadFactor = (selAnimIdx === 1) ? 1.24 : ((selAnimIdx === 5) ? 1.30 : 1.0);
+            var lineH = Math.max(Math.round(textSize * 1.15), Math.round(textSize * 1.35 * leadingFactor));
+            var textBlockH = Math.round(((lines.length - 1) * lineH + Math.round(textSize * 0.95)) * scalePadFactor);
+            if (lines.length <= 1) textBlockH = Math.round(textSize * 1.05 * scalePadFactor);
 
             // Status Icon & Timestamp formatting (Auto, Read, Delivered, Sent, None)
             var selStatusIdx = dropStatus.selection ? dropStatus.selection.index : 0;
@@ -3486,10 +3592,8 @@
             var bubbleW = 0;
             var bubbleH = 0;
 
-            // Headroom expansion for scaling effects (Big, Explode)
-            var scalePadFactor = (selAnimIdx === 1) ? 1.24 : ((selAnimIdx === 5) ? 1.30 : 1.0);
             var effMeasuredW = Math.round(measuredTextW * scalePadFactor);
-            var effTextH = Math.round(textBlockH * scalePadFactor);
+            var effTextH = textBlockH;
 
             if (singleLine && isTimeEnabled && (effMeasuredW + timeRowW + padX * 2 + 16 < maxBubbleW)) {
                 // Inline single line message + timestamp + status icon
@@ -3526,13 +3630,12 @@
 
             var compCenter = [comp.width / 2, comp.height / 2, 0];
 
-            // Horizontal alignment within screen:
-            // Sent: Right-anchored; Received: Left-anchored
-            var screenMargin = Math.round(screenW * 0.04);
-            var halfScreenW = screenW / 2;
+            // Horizontal alignment within composition:
+            // Sent: Right-column; Received: Left-column
+            var colHalfW = Math.min(comp.width * 0.44, Math.max(maxBubbleW * 0.6, 220));
             var posX = isSent
-                ? (compCenter[0] + halfScreenW - screenMargin - (bubbleW / 2))
-                : (compCenter[0] - halfScreenW + screenMargin + (bubbleW / 2));
+                ? (compCenter[0] + colHalfW - (bubbleW / 2))
+                : (compCenter[0] - colHalfW + (bubbleW / 2));
             var posY = compCenter[1];
 
             // 1. Master Controller Layer
@@ -3546,8 +3649,11 @@
             // Add Effect Controls to Master Controller
             var parade = master.property("ADBE Effect Parade") || master.property("Effects");
             if (parade && parade.addProperty) {
+                var effMaxW = parade.addProperty("ADBE Slider Control");
+                if (effMaxW) { effMaxW.name = "Max Bubble Width"; effMaxW.property(1).setValue(maxBubbleW); }
+
                 var effW = parade.addProperty("ADBE Slider Control");
-                if (effW) { effW.name = "Screen Width"; effW.property(1).setValue(screenW); }
+                if (effW) { effW.name = "Screen Width"; effW.property(1).setValue(maxBubbleW); }
 
                 var effSize = parade.addProperty("ADBE Slider Control");
                 if (effSize) { effSize.name = "Text Size"; effSize.property(1).setValue(textSize); }
@@ -3557,6 +3663,9 @@
 
                 var effBH = parade.addProperty("ADBE Slider Control");
                 if (effBH) { effBH.name = "Bubble Height"; effBH.property(1).setValue(bubbleH); }
+
+                var effWrap = parade.addProperty("ADBE Slider Control");
+                if (effWrap) { effWrap.name = "Text Wrap Mode"; effWrap.property(1).setValue(selWrapIdx); }
 
                 var effTail = parade.addProperty("ADBE Checkbox Control");
                 if (effTail) { effTail.name = "Show Tail"; effTail.property(1).setValue(hasTail ? 1 : 0); }
@@ -4072,11 +4181,13 @@
                 addParentEffect("ADBE Color Control", "Status Read Check Color", rcsReadCheckCol);
                 addParentEffect("ADBE Slider Control", "Bubble Width", bubbleW);
                 addParentEffect("ADBE Slider Control", "Bubble Height", bubbleH);
+                addParentEffect("ADBE Slider Control", "Max Bubble Width", maxBubbleW);
+                addParentEffect("ADBE Slider Control", "Text Wrap Mode", selWrapIdx);
                 addParentEffect("ADBE Slider Control", "Inner Padding Offset", padOffset);
                 addParentEffect("ADBE Slider Control", "Leading Percent", leadingPercent);
                 addParentEffect("ADBE Checkbox Control", "Show Tail", hasTail ? 1 : 0);
                 addParentEffect("ADBE Checkbox Control", "Show Timestamp", isTimeEnabled ? 1 : 0);
-                addParentEffect("ADBE Slider Control", "Screen Width", screenW);
+                addParentEffect("ADBE Slider Control", "Screen Width", maxBubbleW);
                 addParentEffect("ADBE Slider Control", "Text Size", textSize);
 
                 precompLayer.selected = true;
@@ -4128,6 +4239,8 @@
                 linkPreMaster("Status Read Check Color", true);
                 linkPreMaster("Bubble Width", false);
                 linkPreMaster("Bubble Height", false);
+                linkPreMaster("Max Bubble Width", false);
+                linkPreMaster("Text Wrap Mode", false);
                 linkPreMaster("Inner Padding Offset", false);
                 linkPreMaster("Leading Percent", false);
                 linkPreMaster("Show Tail", false);
@@ -4260,9 +4373,23 @@
             } catch(eC) {}
 
             try {
-                var eW = effSource.effect("Screen Width");
-                if (eW && eW.property(1)) txtWidth.text = String(Math.round(eW.property(1).value));
+                var eW = effSource.effect("Max Bubble Width") || effSource.effect("Screen Width");
+                if (eW && eW.property(1)) {
+                    var valW = Math.round(eW.property(1).value);
+                    txtWidth.text = String(valW);
+                    if (sldWidth) sldWidth.value = valW;
+                }
             } catch(eW2) {}
+
+            try {
+                var eWrap = effSource.effect("Text Wrap Mode");
+                if (eWrap && eWrap.property(1) && dropTextWrap) {
+                    var wrapIdx = Math.round(eWrap.property(1).value);
+                    if (wrapIdx >= 0 && wrapIdx < dropTextWrap.items.length) {
+                        dropTextWrap.selection = wrapIdx;
+                    }
+                }
+            } catch(eWrap2) {}
 
             try {
                 var eS = effSource.effect("Text Size");
@@ -4420,12 +4547,16 @@
             var textColor = hexToRgb(cpText.value);
             var timeColor = hexToRgb(colorSet ? colorSet.time : "#888888");
 
-            var screenW = parseFloat(txtWidth.text) || 420;
+            var maxBubbleW = Math.max(80, parseFloat(txtWidth.text) || 380);
             var textSize = parseFloat(txtSize.text) || 20;
 
             var padOffset = parseFloat(txtPad.text) || 0;
             var leadingPercent = parseFloat(txtLeading.text) || 100;
             var leadingFactor = leadingPercent / 100;
+
+            var selWrapIdx = (typeof dropTextWrap !== "undefined" && dropTextWrap && dropTextWrap.selection) ? dropTextWrap.selection.index : 1;
+            var wrapModes = ["none", "pretty", "balance"];
+            var wrapMode = wrapModes[selWrapIdx] || "pretty";
 
             var selAnimIdx = dropAnim.selection ? dropAnim.selection.index : 0;
             var animSpeed = parseFloat(txtSpeed.text) || 100;
@@ -4436,19 +4567,20 @@
             var fontIdx = dropFont.selection ? dropFont.selection.index : 0;
             var selectedFont = FONTS[fontIdx] || FONTS[0];
 
-            var maxBubbleW = Math.max(120, screenW * 0.72);
             var cornerRadius = platformCfg.radius || 18;
             var tailType = platformCfg.tailType || "modern";
             var padX = Math.max(Math.round(cornerRadius * 0.85), Math.round(textSize * 0.90)) + padOffset;
             var padY = Math.max(10, Math.round(textSize * 0.60)) + padOffset;
-            var maxTextW = maxBubbleW - (padX * 2);
+            var maxTextW = Math.max(40, maxBubbleW - (padX * 2));
 
-            var lines = wrapTextToLines(msgText, maxTextW, textSize);
+            var lines = wrapTextToLines(msgText, maxTextW, textSize, wrapMode);
             var wrappedString = lines.join("\n");
             var measuredTextW = getLinesPixelBounds(lines, textSize);
 
-            var lineH = Math.round(textSize * 1.35 * leadingFactor);
-            var textBlockH = lines.length * lineH;
+            var scalePadFactor = (selAnimIdx === 1) ? 1.24 : ((selAnimIdx === 5) ? 1.30 : 1.0);
+            var lineH = Math.max(Math.round(textSize * 1.15), Math.round(textSize * 1.35 * leadingFactor));
+            var textBlockH = Math.round(((lines.length - 1) * lineH + Math.round(textSize * 0.95)) * scalePadFactor);
+            if (lines.length <= 1) textBlockH = Math.round(textSize * 1.05 * scalePadFactor);
 
             var selStatusIdx = dropStatus.selection ? dropStatus.selection.index : 0;
             var isAutoStatus = (selStatusIdx === 0);
@@ -4496,9 +4628,8 @@
             var bubbleW = 0;
             var bubbleH = 0;
 
-            var scalePadFactor = (selAnimIdx === 1) ? 1.24 : ((selAnimIdx === 5) ? 1.30 : 1.0);
             var effMeasuredW = Math.round(measuredTextW * scalePadFactor);
-            var effTextH = Math.round(textBlockH * scalePadFactor);
+            var effTextH = textBlockH;
 
             if (singleLine && isTimeEnabled && (effMeasuredW + timeRowW + padX * 2 + 16 < maxBubbleW)) {
                 bubbleW = effMeasuredW + timeRowW + (padX * 2) + 16;
@@ -4529,60 +4660,86 @@
                 }
             }
 
+            function setLayerEffVal(targetLayer, name, val) {
+                if (!targetLayer) return;
+                try {
+                    var eff = null;
+                    if (targetLayer.effect) {
+                        eff = targetLayer.effect(name);
+                    }
+                    if (!eff && targetLayer.property) {
+                        var parade = targetLayer.property("ADBE Effect Parade") || targetLayer.property("Effects");
+                        if (parade) eff = parade.property(name);
+                    }
+                    if (eff && eff.property(1) && typeof eff.property(1).setValue === "function") {
+                        eff.property(1).setValue(val);
+                    }
+                } catch(eEff) {}
+            }
+
+            function updateAllMasterEffects(targetLayer) {
+                if (!targetLayer) return;
+                setLayerEffVal(targetLayer, "Bubble Color", bubbleColor);
+                setLayerEffVal(targetLayer, "Animate Entrance", chkEntrance.value ? 1 : 0);
+                setLayerEffVal(targetLayer, "Bubble Grow Duration (frames)", growFVal);
+                setLayerEffVal(targetLayer, "Typewriter Duration (frames)", typeFVal);
+                setLayerEffVal(targetLayer, "Animation Effect Type", selAnimIdx);
+                setLayerEffVal(targetLayer, "Animation Speed", animSpeed);
+                setLayerEffVal(targetLayer, "Animation Intensity", animAmp);
+                setLayerEffVal(targetLayer, "Delivered Time (s)", deliveredTime);
+                setLayerEffVal(targetLayer, "Read Time (s)", readTime);
+                setLayerEffVal(targetLayer, "Status Icon Mode", selStatusIdx);
+                setLayerEffVal(targetLayer, "Status Icon Style", selStatusStyleIdx);
+                setLayerEffVal(targetLayer, "Status Neutral Color", timeColor);
+                setLayerEffVal(targetLayer, "Status Read Color", readColor);
+                setLayerEffVal(targetLayer, "Status Read Check Color", rcsReadCheckCol);
+                setLayerEffVal(targetLayer, "Bubble Width", bubbleW);
+                setLayerEffVal(targetLayer, "Bubble Height", bubbleH);
+                setLayerEffVal(targetLayer, "Max Bubble Width", maxBubbleW);
+                setLayerEffVal(targetLayer, "Screen Width", maxBubbleW);
+                setLayerEffVal(targetLayer, "Text Wrap Mode", selWrapIdx);
+                setLayerEffVal(targetLayer, "Inner Padding Offset", padOffset);
+                setLayerEffVal(targetLayer, "Leading Percent", leadingPercent);
+                setLayerEffVal(targetLayer, "Show Tail", hasTail ? 1 : 0);
+                setLayerEffVal(targetLayer, "Show Timestamp", isTimeEnabled ? 1 : 0);
+                setLayerEffVal(targetLayer, "Text Size", textSize);
+            }
+
             // 1. Update Master Effects on precompLayer (in parent comp)
-            if (precompLayer && precompLayer.effect) {
-                function setEffVal(name, val) {
-                    try {
-                        var eff = precompLayer.effect(name);
-                        if (eff && eff.property(1) && typeof eff.property(1).setValue === "function") {
-                            eff.property(1).setValue(val);
-                        }
-                    } catch(eEff) {}
-                }
-                setEffVal("Bubble Color", bubbleColor);
-                setEffVal("Animate Entrance", chkEntrance.value ? 1 : 0);
-                setEffVal("Bubble Grow Duration (frames)", growFVal);
-                setEffVal("Typewriter Duration (frames)", typeFVal);
-                setEffVal("Animation Effect Type", selAnimIdx);
-                setEffVal("Animation Speed", animSpeed);
-                setEffVal("Animation Intensity", animAmp);
-                setEffVal("Delivered Time (s)", deliveredTime);
-                setEffVal("Read Time (s)", readTime);
-                setEffVal("Status Icon Mode", selStatusIdx);
-                setEffVal("Status Icon Style", selStatusStyleIdx);
-                setEffVal("Status Neutral Color", timeColor);
-                setEffVal("Status Read Color", readColor);
-                setEffVal("Status Read Check Color", rcsReadCheckCol);
-                setEffVal("Bubble Width", bubbleW);
-                setEffVal("Bubble Height", bubbleH);
-                setEffVal("Inner Padding Offset", padOffset);
-                setEffVal("Leading Percent", leadingPercent);
-                setEffVal("Show Tail", hasTail ? 1 : 0);
-                setEffVal("Show Timestamp", isTimeEnabled ? 1 : 0);
-                setEffVal("Screen Width", screenW);
-                setEffVal("Text Size", textSize);
+            if (precompLayer) {
+                updateAllMasterEffects(precompLayer);
             }
 
             // 2. Update layers inside precomp
             if (preCompItem) {
                 var compCenter = [preCompItem.width / 2, preCompItem.height / 2, 0];
-                var screenMargin = Math.round(screenW * 0.04);
-                var halfScreenW = screenW / 2;
+                var colHalfW = Math.min(preCompItem.width * 0.44, Math.max(maxBubbleW * 0.6, 220));
                 var posX = isSent
-                    ? (compCenter[0] + halfScreenW - screenMargin - (bubbleW / 2))
-                    : (compCenter[0] - halfScreenW + screenMargin + (bubbleW / 2));
+                    ? (compCenter[0] + colHalfW - (bubbleW / 2))
+                    : (compCenter[0] - colHalfW + (bubbleW / 2));
                 var posY = compCenter[1];
 
                 // Master controller inside precomp
                 var master = getLayer(preCompItem, "Bubble_Master_Controller");
-                if (master && master.transform && master.transform.position) {
-                    master.transform.position.setValue([posX, posY, 0]);
+                if (master) {
+                    updateAllMasterEffects(master);
+                    if (master.transform && master.transform.position) {
+                        master.transform.position.setValue([posX, posY, 0]);
+                    }
                 }
 
                 // Bubble Shape layer
                 var bubbleLayer = getLayer(preCompItem, "Bubble_Sent") || getLayer(preCompItem, "Bubble_Received");
                 if (bubbleLayer) {
                     bubbleLayer.name = isSent ? "Bubble_Sent" : "Bubble_Received";
+                    setLayerEffVal(bubbleLayer, "Width", bubbleW);
+                    setLayerEffVal(bubbleLayer, "Height", bubbleH);
+                    setLayerEffVal(bubbleLayer, "Radius Top-Left", rTL);
+                    setLayerEffVal(bubbleLayer, "Radius Top-Right", rTR);
+                    setLayerEffVal(bubbleLayer, "Radius Bottom-Right", rBR);
+                    setLayerEffVal(bubbleLayer, "Radius Bottom-Left", rBL);
+                    setLayerEffVal(bubbleLayer, "Show Tail", hasTail ? 1 : 0);
+
                     var originX = isSent ? (bubbleW / 2) : -(bubbleW / 2);
                     var originY = (bubbleH / 2);
                     var bAnchor = bubbleLayer.transform.anchorPoint || (bubbleLayer.property && bubbleLayer.property("ADBE Transform Group") && bubbleLayer.property("ADBE Transform Group").property("ADBE Anchor Point"));
