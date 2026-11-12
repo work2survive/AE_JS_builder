@@ -367,6 +367,557 @@
         }
     }
 
+
+    // =========================================================================
+    // JSON POLYFILL (Safe ExtendScript JSON parser & stringifier)
+    // =========================================================================
+    var JSONPolyfill = (function() {
+        if (typeof JSON === "object" && JSON && typeof JSON.stringify === "function" && typeof JSON.parse === "function") {
+            return JSON;
+        }
+        var escapable = /[\\\"\x00-\x1f\x7f-\x9f\u00ad\u0600-\u0604\u070f\u17b4\u17b5\u200c-\u200f\u2028-\u202f\u2060-\u206f\ufeff\ufff0-\uffff]/g;
+        var meta = { '\b': '\\b', '\t': '\\t', '\n': '\\n', '\f': '\\f', '\r': '\\r', '"': '\\"', '\\': '\\\\' };
+        function quote(string) {
+            escapable.lastIndex = 0;
+            return escapable.test(string) ? '"' + string.replace(escapable, function(a) {
+                var c = meta[a];
+                return typeof c === 'string' ? c : '\\u' + ('0000' + a.charCodeAt(0).toString(16)).slice(-4);
+            }) + '"' : '"' + string + '"';
+        }
+        var repSpace = '';
+        function str(key, holder, gap) {
+            var value = holder[key];
+            switch (typeof value) {
+                case 'string': return quote(value);
+                case 'number': return isFinite(value) ? String(value) : 'null';
+                case 'boolean': return String(value);
+                case 'object':
+                    if (!value) return 'null';
+                    var mind = gap;
+                    gap += repSpace;
+                    var partial = [];
+                    if (Object.prototype.toString.apply(value) === '[object Array]') {
+                        for (var i = 0; i < value.length; i += 1) {
+                            partial[i] = str(i, value, gap) || 'null';
+                        }
+                        var v = partial.length === 0 ? '[]' : gap ? '[\n' + gap + partial.join(',\n' + gap) + '\n' + mind + ']' : '[' + partial.join(',') + ']';
+                        gap = mind;
+                        return v;
+                    }
+                    for (var k in value) {
+                        if (Object.prototype.hasOwnProperty.call(value, k)) {
+                            var res = str(k, value, gap);
+                            if (res) partial.push((gap ? quote(k) + ': ' : quote(k) + ':') + res);
+                        }
+                    }
+                    var result = partial.length === 0 ? '{}' : gap ? '{\n' + gap + partial.join(',\n' + gap) + '\n' + mind + '}' : '{' + partial.join(',') + '}';
+                    gap = mind;
+                    return result;
+            }
+            return undefined;
+        }
+        return {
+            stringify: function(value, replacer, space) {
+                repSpace = '';
+                if (typeof space === 'number') {
+                    for (var i = 0; i < space; i += 1) repSpace += ' ';
+                } else if (typeof space === 'string') {
+                    repSpace = space;
+                }
+                return str('', { '': value }, '');
+            },
+            parse: function(text) {
+                if (!text) return null;
+                var rx_one = /^[\],:{}\s]*$/;
+                var rx_two = /\\(?:["\\\/bfnrt]|u[0-9a-fA-F]{4})/g;
+                var rx_three = /"[^"\\\n\r]*"|true|false|null|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?/g;
+                var rx_four = /(?:^|:|,)(?:\s*\[)+/g;
+                if (rx_one.test(text.replace(rx_two, '@').replace(rx_three, ']').replace(rx_four, ''))) {
+                    return eval('(' + text + ')');
+                }
+                throw new SyntaxError('JSON.parse: Invalid JSON string');
+            }
+        };
+    })();
+
+    // =========================================================================
+    // EXTERNAL PRESETS (JSON file, auto-created in "AE_windbox/presets.json")
+    // =========================================================================
+    var PRESETS_FOLDER_NAME = "AE_windbox";
+    var PRESETS_FILE_NAME = "presets.json";
+    var currentPresetsFolder = null;
+    var currentPresetsFile = null;
+
+    var DEFAULT_PRESETS = [
+        {
+            name: "Falling Leaves (Organic Flutter & Tumble)",
+            sourceIndex: 0,
+            masterSeed: 12345,
+            sizeX: 1400,
+            sizeY: 800,
+            sizeZ: 1000,
+            windSpeed: 260,
+            dirX: 1.0,
+            dirY: 0.3,
+            dirZ: 0.2,
+            alignToWind: true,
+            numParticles: 50,
+            fadeInDist: 180,
+            fadeOutDist: 180,
+            partSize: 28,
+            partSizeRand: 45,
+            scaleWigFreq: 1.0,
+            scaleWigAmp: 15,
+            partColor: "#44aa33",
+            posFreq: 1.6,
+            posAmpX: 70,
+            posAmpY: 50,
+            posAmpZ: 60,
+            rotXFreq: 1.2,
+            rotXAmp: 60,
+            rotYFreq: 1.2,
+            rotYAmp: 60,
+            rotZFreq: 1.5,
+            rotZAmp: 75,
+            cubeGuide: true,
+            cubeFillColor: "#8c8c8c",
+            cubeFillOpacity: 10,
+            cubeStrokeColor: "#ffffff",
+            cubeStrokeWidth: 1.5,
+            cubeStrokeOpacity: 85
+        },
+        {
+            name: "Drifting Clouds (Soft Gentle Float)",
+            sourceIndex: 1,
+            masterSeed: 24680,
+            sizeX: 3600,
+            sizeY: 850,
+            sizeZ: 2800,
+            windSpeed: 65,
+            dirX: 0.85,
+            dirY: -0.12,
+            dirZ: -0.65,
+            alignToWind: false,
+            numParticles: 22,
+            fadeInDist: 350,
+            fadeOutDist: 350,
+            partSize: 240,
+            partSizeRand: 50,
+            scaleWigFreq: 0.3,
+            scaleWigAmp: 10,
+            partColor: "#f0f4f8",
+            posFreq: 0.2,
+            posAmpX: 35,
+            posAmpY: 20,
+            posAmpZ: 30,
+            rotXFreq: 0.1,
+            rotXAmp: 2,
+            rotYFreq: 0.1,
+            rotYAmp: 3,
+            rotZFreq: 0.15,
+            rotZAmp: 4,
+            cubeGuide: true,
+            cubeFillColor: "#8c8c8c",
+            cubeFillOpacity: 10,
+            cubeStrokeColor: "#ffffff",
+            cubeStrokeWidth: 1.5,
+            cubeStrokeOpacity: 85
+        },
+        {
+            name: "Cosmic Stars (Twinkle & Shimmer)",
+            sourceIndex: 2,
+            masterSeed: 13579,
+            sizeX: 1500,
+            sizeY: 1000,
+            sizeZ: 1500,
+            windSpeed: 40,
+            dirX: 0.4,
+            dirY: -0.2,
+            dirZ: 0.4,
+            alignToWind: false,
+            numParticles: 70,
+            fadeInDist: 150,
+            fadeOutDist: 150,
+            partSize: 18,
+            partSizeRand: 60,
+            scaleWigFreq: 1.5,
+            scaleWigAmp: 35,
+            partColor: "#ffea00",
+            posFreq: 0.8,
+            posAmpX: 40,
+            posAmpY: 40,
+            posAmpZ: 40,
+            rotXFreq: 0.5,
+            rotXAmp: 20,
+            rotYFreq: 0.5,
+            rotYAmp: 20,
+            rotZFreq: 0.8,
+            rotZAmp: 45,
+            cubeGuide: true,
+            cubeFillColor: "#8c8c8c",
+            cubeFillOpacity: 10,
+            cubeStrokeColor: "#ffffff",
+            cubeStrokeWidth: 1.5,
+            cubeStrokeOpacity: 85
+        },
+        {
+            name: "Parallax Mountains (Horizon Glide)",
+            sourceIndex: 3,
+            masterSeed: 98765,
+            sizeX: 3200,
+            sizeY: 250,
+            sizeZ: 3600,
+            windSpeed: 220,
+            dirX: 0.0,
+            dirY: 0.0,
+            dirZ: -1.0,
+            alignToWind: false,
+            numParticles: 24,
+            fadeInDist: 300,
+            fadeOutDist: 300,
+            partSize: 380,
+            partSizeRand: 35,
+            scaleWigFreq: 0.0,
+            scaleWigAmp: 0,
+            partColor: "#3a4a5e",
+            posFreq: 0.1,
+            posAmpX: 20,
+            posAmpY: 0,
+            posAmpZ: 0,
+            rotXFreq: 0.0,
+            rotXAmp: 0,
+            rotYFreq: 0.0,
+            rotYAmp: 0,
+            rotZFreq: 0.0,
+            rotZAmp: 0,
+            cubeGuide: true,
+            cubeFillColor: "#8c8c8c",
+            cubeFillOpacity: 10,
+            cubeStrokeColor: "#ffffff",
+            cubeStrokeWidth: 1.5,
+            cubeStrokeOpacity: 85
+        },
+        {
+            name: "3D Circles (Snow / Spores)",
+            sourceIndex: 4,
+            masterSeed: 54321,
+            sizeX: 1200,
+            sizeY: 800,
+            sizeZ: 1000,
+            windSpeed: 200,
+            dirX: 1.0,
+            dirY: 0.0,
+            dirZ: 0.0,
+            alignToWind: false,
+            numParticles: 60,
+            fadeInDist: 120,
+            fadeOutDist: 120,
+            partSize: 14,
+            partSizeRand: 50,
+            scaleWigFreq: 0.8,
+            scaleWigAmp: 20,
+            partColor: "#ffffff",
+            posFreq: 1.0,
+            posAmpX: 50,
+            posAmpY: 50,
+            posAmpZ: 50,
+            rotXFreq: 0.5,
+            rotXAmp: 30,
+            rotYFreq: 0.5,
+            rotYAmp: 30,
+            rotZFreq: 0.5,
+            rotZAmp: 30,
+            cubeGuide: true,
+            cubeFillColor: "#8c8c8c",
+            cubeFillOpacity: 10,
+            cubeStrokeColor: "#ffffff",
+            cubeStrokeWidth: 1.5,
+            cubeStrokeOpacity: 85
+        },
+        {
+            name: "3D Squares (Confetti / Debris)",
+            sourceIndex: 5,
+            masterSeed: 67890,
+            sizeX: 1200,
+            sizeY: 800,
+            sizeZ: 1000,
+            windSpeed: 250,
+            dirX: 1.0,
+            dirY: 0.2,
+            dirZ: 0.1,
+            alignToWind: true,
+            numParticles: 60,
+            fadeInDist: 120,
+            fadeOutDist: 120,
+            partSize: 14,
+            partSizeRand: 40,
+            scaleWigFreq: 1.2,
+            scaleWigAmp: 25,
+            partColor: "#ff3b30",
+            posFreq: 1.2,
+            posAmpX: 60,
+            posAmpY: 60,
+            posAmpZ: 60,
+            rotXFreq: 1.5,
+            rotXAmp: 90,
+            rotYFreq: 1.5,
+            rotYAmp: 90,
+            rotZFreq: 2.0,
+            rotZAmp: 120,
+            cubeGuide: true,
+            cubeFillColor: "#8c8c8c",
+            cubeFillOpacity: 10,
+            cubeStrokeColor: "#ffffff",
+            cubeStrokeWidth: 1.5,
+            cubeStrokeOpacity: 85
+        },
+        {
+            name: "Project Composition...",
+            sourceIndex: 6,
+            masterSeed: 12345,
+            sizeX: 1600,
+            sizeY: 900,
+            sizeZ: 1400,
+            windSpeed: 200,
+            dirX: 1.0,
+            dirY: 0.0,
+            dirZ: 0.0,
+            alignToWind: true,
+            numParticles: 20,
+            fadeInDist: 150,
+            fadeOutDist: 150,
+            partSize: 100,
+            partSizeRand: 30,
+            scaleWigFreq: 0.5,
+            scaleWigAmp: 10,
+            partColor: "#44aa33",
+            posFreq: 1.0,
+            posAmpX: 40,
+            posAmpY: 40,
+            posAmpZ: 40,
+            rotXFreq: 0.5,
+            rotXAmp: 20,
+            rotYFreq: 0.5,
+            rotYAmp: 20,
+            rotZFreq: 0.5,
+            rotZAmp: 20,
+            cubeGuide: true,
+            cubeFillColor: "#8c8c8c",
+            cubeFillOpacity: 10,
+            cubeStrokeColor: "#ffffff",
+            cubeStrokeWidth: 1.5,
+            cubeStrokeOpacity: 85
+        },
+        {
+            name: "Selected Layer(s)",
+            sourceIndex: 7,
+            masterSeed: 12345,
+            sizeX: 1600,
+            sizeY: 900,
+            sizeZ: 1400,
+            windSpeed: 200,
+            dirX: 1.0,
+            dirY: 0.0,
+            dirZ: 0.0,
+            alignToWind: true,
+            numParticles: 20,
+            fadeInDist: 150,
+            fadeOutDist: 150,
+            partSize: 100,
+            partSizeRand: 30,
+            scaleWigFreq: 0.5,
+            scaleWigAmp: 10,
+            partColor: "#44aa33",
+            posFreq: 1.0,
+            posAmpX: 40,
+            posAmpY: 40,
+            posAmpZ: 40,
+            rotXFreq: 0.5,
+            rotXAmp: 20,
+            rotYFreq: 0.5,
+            rotYAmp: 20,
+            rotZFreq: 0.5,
+            rotZAmp: 20,
+            cubeGuide: true,
+            cubeFillColor: "#8c8c8c",
+            cubeFillOpacity: 10,
+            cubeStrokeColor: "#ffffff",
+            cubeStrokeWidth: 1.5,
+            cubeStrokeOpacity: 85
+        }
+    ];
+
+    function cloneDefaultPresets() {
+        var arr = [];
+        for (var i = 0; i < DEFAULT_PRESETS.length; i++) {
+            var item = DEFAULT_PRESETS[i];
+            var copy = {};
+            for (var k in item) {
+                if (item.hasOwnProperty(k)) copy[k] = item[k];
+            }
+            arr.push(copy);
+        }
+        return arr;
+    }
+
+    var ACTIVE_PRESETS = cloneDefaultPresets();
+
+    function getPresetsFolder() {
+        if (typeof Folder === "undefined") return null;
+        var candidates = [];
+
+        // 1. Next to current script file
+        try {
+            if (typeof $.fileName !== "undefined" && $.fileName) {
+                var scriptFile = new File($.fileName);
+                if (scriptFile.exists && scriptFile.parent) {
+                    candidates.push(new Folder(scriptFile.parent.fsName + "/" + PRESETS_FOLDER_NAME));
+                    if (scriptFile.parent.parent && scriptFile.parent.parent.exists) {
+                        candidates.push(new Folder(scriptFile.parent.parent.fsName + "/" + PRESETS_FOLDER_NAME));
+                    }
+                }
+            }
+        } catch (e1) {}
+
+        // 2. Folder.current
+        try {
+            if (Folder.current) {
+                candidates.push(new Folder(Folder.current.fsName + "/" + PRESETS_FOLDER_NAME));
+            }
+        } catch (eCurr) {}
+
+        // 3. User AppData / Documents
+        try {
+            if (Folder.userData) {
+                candidates.push(new Folder(Folder.userData.fsName + "/Adobe/After Effects/" + PRESETS_FOLDER_NAME));
+            }
+        } catch (e2) {}
+        try {
+            if (Folder.myDocuments) {
+                candidates.push(new Folder(Folder.myDocuments.fsName + "/Adobe/After Effects/" + PRESETS_FOLDER_NAME));
+            }
+        } catch (e3) {}
+
+        // 1. Existing folder containing presets.json
+        for (var i = 0; i < candidates.length; i++) {
+            if (candidates[i] && candidates[i].exists) {
+                var testF = new File(candidates[i].fsName + "/" + PRESETS_FILE_NAME);
+                if (testF.exists) return candidates[i];
+            }
+        }
+
+        // 2. Any existing folder
+        for (var j = 0; j < candidates.length; j++) {
+            if (candidates[j] && candidates[j].exists) return candidates[j];
+        }
+
+        // 3. First run: auto-create the folder
+        for (var c = 0; c < candidates.length; c++) {
+            try {
+                if (candidates[c] && candidates[c].create()) return candidates[c];
+            } catch (eCreate) {}
+        }
+
+        return candidates.length > 0 ? candidates[0] : null;
+    }
+
+    function ensurePresetsFile(folder) {
+        if (!folder || typeof File === "undefined") return null;
+        var pFile = new File(folder.fsName + "/" + PRESETS_FILE_NAME);
+        if (pFile.exists) return pFile;
+
+        try {
+            if (!folder.exists && !folder.create()) {
+                return pFile;
+            }
+            pFile.encoding = "UTF-8";
+            if (pFile.open("w")) {
+                var dataObj = {
+                    "$schema": "https://json-schema.org/draft/2020-12/schema",
+                    "description": "After Effects WindBox - Presets configuration. Edit freely or add your own custom presets, then click the reload button (🔄) in the panel.",
+                    "version": "1.2",
+                    "presets": cloneDefaultPresets()
+                };
+                pFile.write(JSONPolyfill.stringify(dataObj, null, 2));
+                pFile.close();
+            }
+        } catch (eWrite) {}
+        return pFile;
+    }
+
+    function parsePresetObject(raw, fallbackName) {
+        if (!raw || typeof raw !== "object") return null;
+        var p = {};
+        p.name = (raw.name !== undefined && String(raw.name).length > 0) ? String(raw.name) : fallbackName;
+        p.sourceIndex = (raw.sourceIndex !== undefined) ? Number(raw.sourceIndex) : 0;
+        p.masterSeed = (raw.masterSeed !== undefined) ? Number(raw.masterSeed) : 12345;
+        p.sizeX = (raw.sizeX !== undefined) ? Number(raw.sizeX) : 1400;
+        p.sizeY = (raw.sizeY !== undefined) ? Number(raw.sizeY) : 800;
+        p.sizeZ = (raw.sizeZ !== undefined) ? Number(raw.sizeZ) : 1000;
+        p.windSpeed = (raw.windSpeed !== undefined) ? Number(raw.windSpeed) : 260;
+        p.dirX = (raw.dirX !== undefined) ? Number(raw.dirX) : 1.0;
+        p.dirY = (raw.dirY !== undefined) ? Number(raw.dirY) : 0.3;
+        p.dirZ = (raw.dirZ !== undefined) ? Number(raw.dirZ) : 0.2;
+        p.alignToWind = (raw.alignToWind !== undefined) ? Boolean(raw.alignToWind) : true;
+        p.numParticles = (raw.numParticles !== undefined) ? Number(raw.numParticles) : 50;
+        p.fadeInDist = (raw.fadeInDist !== undefined) ? Number(raw.fadeInDist) : 150;
+        p.fadeOutDist = (raw.fadeOutDist !== undefined) ? Number(raw.fadeOutDist) : 150;
+        p.partSize = (raw.partSize !== undefined) ? Number(raw.partSize) : 28;
+        p.partSizeRand = (raw.partSizeRand !== undefined) ? Number(raw.partSizeRand) : 45;
+        p.scaleWigFreq = (raw.scaleWigFreq !== undefined) ? Number(raw.scaleWigFreq) : 1.0;
+        p.scaleWigAmp = (raw.scaleWigAmp !== undefined) ? Number(raw.scaleWigAmp) : 15;
+        p.partColor = (raw.partColor !== undefined) ? String(raw.partColor) : "#44aa33";
+        p.posFreq = (raw.posFreq !== undefined) ? Number(raw.posFreq) : 1.6;
+        p.posAmpX = (raw.posAmpX !== undefined) ? Number(raw.posAmpX) : 70;
+        p.posAmpY = (raw.posAmpY !== undefined) ? Number(raw.posAmpY) : 50;
+        p.posAmpZ = (raw.posAmpZ !== undefined) ? Number(raw.posAmpZ) : 60;
+        p.rotXFreq = (raw.rotXFreq !== undefined) ? Number(raw.rotXFreq) : 1.2;
+        p.rotXAmp = (raw.rotXAmp !== undefined) ? Number(raw.rotXAmp) : 60;
+        p.rotYFreq = (raw.rotYFreq !== undefined) ? Number(raw.rotYFreq) : 1.2;
+        p.rotYAmp = (raw.rotYAmp !== undefined) ? Number(raw.rotYAmp) : 60;
+        p.rotZFreq = (raw.rotZFreq !== undefined) ? Number(raw.rotZFreq) : 1.5;
+        p.rotZAmp = (raw.rotZAmp !== undefined) ? Number(raw.rotZAmp) : 75;
+        p.cubeGuide = (raw.cubeGuide !== undefined) ? Boolean(raw.cubeGuide) : true;
+        p.cubeFillColor = (raw.cubeFillColor !== undefined) ? String(raw.cubeFillColor) : "#8c8c8c";
+        p.cubeFillOpacity = (raw.cubeFillOpacity !== undefined) ? Number(raw.cubeFillOpacity) : 10;
+        p.cubeStrokeColor = (raw.cubeStrokeColor !== undefined) ? String(raw.cubeStrokeColor) : "#ffffff";
+        p.cubeStrokeWidth = (raw.cubeStrokeWidth !== undefined) ? Number(raw.cubeStrokeWidth) : 1.5;
+        p.cubeStrokeOpacity = (raw.cubeStrokeOpacity !== undefined) ? Number(raw.cubeStrokeOpacity) : 85;
+        return p;
+    }
+
+    function loadPresetsFromFile() {
+        ACTIVE_PRESETS = cloneDefaultPresets();
+        currentPresetsFolder = getPresetsFolder();
+        if (!currentPresetsFolder) return 0;
+        currentPresetsFile = ensurePresetsFile(currentPresetsFolder);
+        if (!currentPresetsFile || !currentPresetsFile.exists) return 0;
+
+        try {
+            currentPresetsFile.encoding = "UTF-8";
+            if (currentPresetsFile.open("r")) {
+                var content = currentPresetsFile.read();
+                currentPresetsFile.close();
+                if (content && content.replace(/^\s+|\s+$/g, "").length > 0) {
+                    var parsed = JSONPolyfill.parse(content);
+                    var list = (parsed && parsed.presets) ? parsed.presets : parsed;
+                    var loaded = [];
+                    if (list && typeof list.length === "number") {
+                        for (var i = 0; i < list.length; i++) {
+                            var pItem = parsePresetObject(list[i], "Preset " + (i + 1));
+                            if (pItem) loaded.push(pItem);
+                        }
+                    }
+                    if (loaded.length > 0) {
+                        ACTIVE_PRESETS = loaded;
+                        return loaded.length;
+                    }
+                }
+            }
+        } catch (eLoad) {}
+        return ACTIVE_PRESETS.length;
+    }
+
     // ==========================================
     // UI BUILDER
     // ==========================================
@@ -447,17 +998,12 @@
         grpPreset.spacing = 6;
 
         grpPreset.add("statictext", undefined, "Preset:");
-        var dropPreset = grpPreset.add("dropdownlist", undefined, [
-            "🍃 Falling Leaves (Organic Flutter & Tumble)",
-            "☁️ Drifting Clouds (Soft Gentle Float)",
-            "⭐ Cosmic Stars (Twinkle & Shimmer)",
-            "⛰️ Parallax Mountains (Horizon Glide)",
-            "⚪ 3D Circles (Snow / Spores)",
-            "⬛ 3D Squares (Confetti / Debris)",
-            "🎬 Project Composition...",
-            "🎯 Selected Layer(s)"
-        ]);
-        dropPreset.selection = 0; // Default to Leaves!
+        var dropPreset = grpPreset.add("dropdownlist", undefined, []);
+        dropPreset.preferredSize = [230, 24];
+
+        var btnReloadPresets = grpPreset.add("button", undefined, "🔄");
+        btnReloadPresets.maximumSize = [28, 24];
+        btnReloadPresets.helpTip = "Reload presets from AE_windbox/presets.json (auto-creates if missing)";
 
         // ---------- TABBED PANEL ----------
         var tpanel = win.add("tabbedpanel");
@@ -821,126 +1367,79 @@
 
         dropSource.onChange = handleSourceChange;
 
-        // Preset synchronization logic
-        dropPreset.onChange = function () {
-            var pIdx = dropPreset.selection.index;
-            if (pIdx === 0) { // 🍃 Leaves
-                dropSource.selection = 0;
-                editMasterSeed.text = "12345";
-                editSizeX.text = "1400"; editSizeY.text = "800"; editSizeZ.text = "1000";
-                editSpeed.text = "260"; editDirX.text = "1.0"; editDirY.text = "0.3"; editDirZ.text = "0.2";
-                chkAlignWind.value = true;
-                editCount.text = "50";
-                editFadeInDist.text = "180"; editFadeOutDist.text = "180";
-                editPartSize.text = "28"; editPartSizeRand.text = "45";
-                editScaleWigFreq.text = "1.0"; editScaleWigAmp.text = "15";
-                cpPartColor.setColor("#44aa33", false);
-                editPosFreq.text = "1.6"; editPosAmpX.text = "70"; editPosAmpY.text = "50"; editPosAmpZ.text = "60";
-                editRotXAmp.text = "60"; editRotXFreq.text = "1.2";
-                editRotYAmp.text = "60"; editRotYFreq.text = "1.2";
-                editRotZAmp.text = "75"; editRotZFreq.text = "1.5";
-
-            } else if (pIdx === 1) { // ☁️ Clouds (Wider volume, diagonal wind passing gently in front of camera)
-                dropSource.selection = 1;
-                editMasterSeed.text = "24680";
-                editSizeX.text = "3600"; // Much wider volume spanning far past viewport edges
-                editSizeY.text = "850";  // Vertical sky span
-                editSizeZ.text = "2800"; // Deep volume passing in front of and around the camera
-                editSpeed.text = "65";   // Gentle, serene drift speed
-                editDirX.text = "0.85";  // Diagonal X: drift left-to-right
-                editDirY.text = "-0.12"; // Gentle upward atmospheric lift
-                editDirZ.text = "-0.65"; // Diagonal Z: drift towards camera to pass directly in front of the lens
-                chkAlignWind.value = false; // Stand facing camera as soft billboard clouds
-                editCount.text = "22";
-                editFadeInDist.text = "350"; editFadeOutDist.text = "350";
-                editPartSize.text = "240"; editPartSizeRand.text = "50";
-                editScaleWigFreq.text = "0.3"; editScaleWigAmp.text = "10";
-                cpPartColor.setColor("#f0f4f8", false);
-                editPosFreq.text = "0.2";
-                editPosAmpX.text = "35";
-                editPosAmpY.text = "20";
-                editPosAmpZ.text = "30";
-                editRotXAmp.text = "2"; editRotXFreq.text = "0.1";
-                editRotYAmp.text = "3"; editRotYFreq.text = "0.1";
-                editRotZAmp.text = "4"; editRotZFreq.text = "0.15";
-
-            } else if (pIdx === 2) { // ⭐ Stars
-                dropSource.selection = 2;
-                editMasterSeed.text = "13579";
-                editSizeX.text = "1500"; editSizeY.text = "1000"; editSizeZ.text = "1500";
-                editSpeed.text = "40"; editDirX.text = "0.4"; editDirY.text = "-0.2"; editDirZ.text = "0.4";
-                chkAlignWind.value = false;
-                editCount.text = "70";
-                editFadeInDist.text = "150"; editFadeOutDist.text = "150";
-                editPartSize.text = "18"; editPartSizeRand.text = "60";
-                editScaleWigFreq.text = "1.5"; editScaleWigAmp.text = "35";
-                cpPartColor.setColor("#ffea00", false);
-                editPosFreq.text = "0.8"; editPosAmpX.text = "40"; editPosAmpY.text = "40"; editPosAmpZ.text = "40";
-                editRotXAmp.text = "20"; editRotXFreq.text = "0.5";
-                editRotYAmp.text = "20"; editRotYFreq.text = "0.5";
-                editRotZAmp.text = "45"; editRotZFreq.text = "0.8";
-
-            } else if (pIdx === 3) { // ⛰️ Mountains (Generated around X Axis, moving via Z wind towards camera)
-                dropSource.selection = 3;
-                editMasterSeed.text = "98765";
-                editSizeX.text = "3200"; // Wide horizontal horizon span along X
-                editSizeY.text = "250";  // Height constrained to horizon ground plane
-                editSizeZ.text = "3600"; // Deep depth volume corridor
-                editSpeed.text = "220";  // Forward travel speed towards camera
-                editDirX.text = "0.0";
-                editDirY.text = "0.0";
-                editDirZ.text = "-1.0";  // Move using Z wind towards the camera!
-                chkAlignWind.value = false; // Stand upright facing the camera as billboard cards
-                editCount.text = "24";
-                editFadeInDist.text = "300"; editFadeOutDist.text = "300";
-                editPartSize.text = "380"; editPartSizeRand.text = "35";
-                editScaleWigFreq.text = "0.0"; editScaleWigAmp.text = "0";
-                cpPartColor.setColor("#3a4a5e", false);
-                editPosFreq.text = "0.1";
-                editPosAmpX.text = "20";
-                editPosAmpY.text = "0";  // Ground anchored, no vertical bobbing
-                editPosAmpZ.text = "0";
-                editRotXAmp.text = "0"; editRotXFreq.text = "0.0";
-                editRotYAmp.text = "0"; editRotYFreq.text = "0.0";
-                editRotZAmp.text = "0"; editRotZFreq.text = "0.0";
-
-            } else if (pIdx === 4) { // ⚪ 3D Circles
-                dropSource.selection = 4;
-                editMasterSeed.text = "54321";
-                editSizeX.text = "1200"; editSizeY.text = "800"; editSizeZ.text = "1000";
-                editSpeed.text = "200"; editDirX.text = "1.0"; editDirY.text = "0.0"; editDirZ.text = "0.0";
-                chkAlignWind.value = false;
-                editCount.text = "60";
-                editFadeInDist.text = "120"; editFadeOutDist.text = "120";
-                editPartSize.text = "14"; editPartSizeRand.text = "50";
-                editScaleWigFreq.text = "0.8"; editScaleWigAmp.text = "20";
-                cpPartColor.setColor("#ffffff", false);
-
-            } else if (pIdx === 5) { // ⬛ 3D Squares
-                dropSource.selection = 5;
-                editMasterSeed.text = "67890";
-                editSizeX.text = "1200"; editSizeY.text = "800"; editSizeZ.text = "1000";
-                editSpeed.text = "250"; editDirX.text = "1.0"; editDirY.text = "0.2"; editDirZ.text = "0.1";
-                chkAlignWind.value = true;
-                editCount.text = "60";
-                editFadeInDist.text = "120"; editFadeOutDist.text = "120";
-                editPartSize.text = "14"; editPartSizeRand.text = "40";
-                editScaleWigFreq.text = "1.2"; editScaleWigAmp.text = "25";
-                cpPartColor.setColor("#ff3b30", false);
-
-            } else if (pIdx === 6) { // 🎬 Project Comp
-                dropSource.selection = 6;
-                chkAlignWind.value = true;
-
-            } else if (pIdx === 7) { // 🎯 Selected Layers
-                dropSource.selection = 7;
-                chkAlignWind.value = true;
+        function applyPreset(preset) {
+            if (!preset) return;
+            if (preset.sourceIndex !== undefined && preset.sourceIndex >= 0 && preset.sourceIndex < dropSource.items.length) {
+                dropSource.selection = preset.sourceIndex;
             }
+            if (preset.masterSeed !== undefined) editMasterSeed.text = String(preset.masterSeed);
+            if (preset.sizeX !== undefined) editSizeX.text = String(preset.sizeX);
+            if (preset.sizeY !== undefined) editSizeY.text = String(preset.sizeY);
+            if (preset.sizeZ !== undefined) editSizeZ.text = String(preset.sizeZ);
+            if (preset.windSpeed !== undefined) editSpeed.text = String(preset.windSpeed);
+            if (preset.dirX !== undefined) editDirX.text = String(preset.dirX);
+            if (preset.dirY !== undefined) editDirY.text = String(preset.dirY);
+            if (preset.dirZ !== undefined) editDirZ.text = String(preset.dirZ);
+            if (preset.alignToWind !== undefined) chkAlignWind.value = Boolean(preset.alignToWind);
+            if (preset.numParticles !== undefined) editCount.text = String(preset.numParticles);
+            if (preset.fadeInDist !== undefined) editFadeInDist.text = String(preset.fadeInDist);
+            if (preset.fadeOutDist !== undefined) editFadeOutDist.text = String(preset.fadeOutDist);
+            if (preset.partSize !== undefined) editPartSize.text = String(preset.partSize);
+            if (preset.partSizeRand !== undefined) editPartSizeRand.text = String(preset.partSizeRand);
+            if (preset.scaleWigFreq !== undefined) editScaleWigFreq.text = String(preset.scaleWigFreq);
+            if (preset.scaleWigAmp !== undefined) editScaleWigAmp.text = String(preset.scaleWigAmp);
+            if (preset.partColor !== undefined) cpPartColor.setColor(preset.partColor, false);
+            if (preset.posFreq !== undefined) editPosFreq.text = String(preset.posFreq);
+            if (preset.posAmpX !== undefined) editPosAmpX.text = String(preset.posAmpX);
+            if (preset.posAmpY !== undefined) editPosAmpY.text = String(preset.posAmpY);
+            if (preset.posAmpZ !== undefined) editPosAmpZ.text = String(preset.posAmpZ);
+            if (preset.rotXFreq !== undefined) editRotXFreq.text = String(preset.rotXFreq);
+            if (preset.rotXAmp !== undefined) editRotXAmp.text = String(preset.rotXAmp);
+            if (preset.rotYFreq !== undefined) editRotYFreq.text = String(preset.rotYFreq);
+            if (preset.rotYAmp !== undefined) editRotYAmp.text = String(preset.rotYAmp);
+            if (preset.rotZFreq !== undefined) editRotZFreq.text = String(preset.rotZFreq);
+            if (preset.rotZAmp !== undefined) editRotZAmp.text = String(preset.rotZAmp);
+            if (preset.cubeGuide !== undefined) chkCubeGuide.value = Boolean(preset.cubeGuide);
+            if (preset.cubeFillColor !== undefined) cpCubeFill.setColor(preset.cubeFillColor, false);
+            if (preset.cubeFillOpacity !== undefined) editCubeSidesOp.text = String(preset.cubeFillOpacity);
+            if (preset.cubeStrokeColor !== undefined) cpCubeStroke.setColor(preset.cubeStrokeColor, false);
+            if (preset.cubeStrokeWidth !== undefined) editCubeStrokeW.text = String(preset.cubeStrokeWidth);
+            if (preset.cubeStrokeOpacity !== undefined) editCubeStrokeOp.text = String(preset.cubeStrokeOpacity);
             handleSourceChange();
+        }
+
+        function populatePresetDropdown() {
+            dropPreset.removeAll();
+            for (var p = 0; p < ACTIVE_PRESETS.length; p++) {
+                dropPreset.add("item", ACTIVE_PRESETS[p].name);
+            }
+            if (dropPreset.items.length > 0) {
+                dropPreset.selection = 0;
+            }
+        }
+
+        dropPreset.onChange = function () {
+            if (dropPreset.selection && dropPreset.selection.index >= 0 && dropPreset.selection.index < ACTIVE_PRESETS.length) {
+                applyPreset(ACTIVE_PRESETS[dropPreset.selection.index]);
+            }
         };
 
-        // Select first tab
-        tpanel.selection = 0;
+        btnReloadPresets.onClick = function () {
+            loadPresetsFromFile();
+            populatePresetDropdown();
+            if (dropPreset.selection) {
+                applyPreset(ACTIVE_PRESETS[dropPreset.selection.index]);
+            }
+        };
+
+        // Initial loading of external presets
+        loadPresetsFromFile();
+        populatePresetDropdown();
+        if (dropPreset.items.length > 0) {
+            dropPreset.selection = 0;
+            applyPreset(ACTIVE_PRESETS[0]);
+        }
+
 
         // ==========================================
         // ACTION BUTTONS
@@ -952,8 +1451,6 @@
 
         var btnCreate = grpActions.add("button", undefined, "Build / Create WindBox + Cube");
         btnCreate.preferredSize.height = 34;
-
-
 
         // ---------- REPOSITORY FOOTER LINK ----------
         var grpRepoLink = win.add("group");
