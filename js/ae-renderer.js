@@ -46,10 +46,13 @@
             this.container.innerHTML = `
                 <div class="ae-viewport">
                     <div class="ae-viewport-overlay">
-                        <div class="ae-cam-info">
-                            <span id="cam-view-name">Custom View 1</span> | 
-                            Orbit: <span id="cam-orbit-vals">-35°, 25°</span> | 
-                            Zoom: <span id="cam-zoom-val">100%</span>
+                        <div class="ae-viewport-header-left">
+                            <span class="ae-viewport-panel-title">viewport</span>
+                            <div class="ae-cam-info">
+                                <span id="cam-view-name">Custom View 1</span> | 
+                                Orbit: <span id="cam-orbit-vals">-35°, 25°</span> | 
+                                Zoom: <span id="cam-zoom-val">100%</span>
+                            </div>
                         </div>
                         <div class="ae-viewport-controls">
                             <button id="btn-reset-cam" title="Reset Camera">Reset Cam</button>
