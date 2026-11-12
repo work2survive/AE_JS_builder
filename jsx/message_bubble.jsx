@@ -171,7 +171,7 @@
         JSON = JSONPolyfill;
     }
 
-    var SCRIPT_VERSION = "v1.3";
+    var SCRIPT_VERSION = "v1.4";
     var MAX_CHARS = 250;
 
     // -------------------------------------------------------------------------
@@ -3577,6 +3577,9 @@
                 var effAnim = parade.addProperty("ADBE Slider Control");
                 if (effAnim) { effAnim.name = "Animation Effect Type"; effAnim.property(1).setValue(selAnimIdx); }
 
+                var effDecay = parade.addProperty("ADBE Slider Control");
+                if (effDecay) { effDecay.name = "Animation Decay (frames)"; effDecay.property(1).setValue(animDecay); }
+
                 var effSpeed = parade.addProperty("ADBE Slider Control");
                 if (effSpeed) { effSpeed.name = "Animation Speed"; effSpeed.property(1).setValue(animSpeed); }
 
@@ -4044,6 +4047,7 @@
                 addParentEffect("ADBE Slider Control", "Bubble Grow Duration (frames)", growFVal);
                 addParentEffect("ADBE Slider Control", "Typewriter Duration (frames)", typeFVal);
                 addParentEffect("ADBE Slider Control", "Animation Effect Type", selAnimIdx);
+                addParentEffect("ADBE Slider Control", "Animation Decay (frames)", animDecay);
                 addParentEffect("ADBE Slider Control", "Animation Speed", animSpeed);
                 addParentEffect("ADBE Slider Control", "Animation Intensity", animAmp);
                 addParentEffect("ADBE Slider Control", "Delivered Time (s)", deliveredTime);
@@ -4102,6 +4106,7 @@
                 linkPreMaster("Bubble Grow Duration (frames)", false);
                 linkPreMaster("Typewriter Duration (frames)", false);
                 linkPreMaster("Animation Effect Type", false);
+                linkPreMaster("Animation Decay (frames)", false);
                 linkPreMaster("Animation Speed", false);
                 linkPreMaster("Animation Intensity", false);
                 linkPreMaster("Delivered Time (s)", false);
@@ -4327,6 +4332,15 @@
             } catch(eA2) {}
 
             try {
+                var eDecay = effSource.effect("Animation Decay (frames)");
+                if (eDecay && eDecay.property(1) && typeof sldDecay !== "undefined" && sldDecay) {
+                    var dVal = Math.round(eDecay.property(1).value);
+                    sldDecay.value = dVal;
+                    if (txtDecay) txtDecay.text = String(dVal);
+                }
+            } catch(eD2) {}
+
+            try {
                 var eSpeed = effSource.effect("Animation Speed");
                 if (eSpeed && eSpeed.property(1)) txtSpeed.text = String(Math.round(eSpeed.property(1).value));
             } catch(eSp2) {}
@@ -4433,10 +4447,11 @@
             var wrapMode = wrapModes[selWrapIdx] || "pretty";
 
             var selAnimIdx = dropAnim.selection ? dropAnim.selection.index : 0;
+            var animDecay = (typeof sldDecay !== "undefined" && sldDecay) ? Math.max(0, Math.round(sldDecay.value)) : 30;
             var animSpeed = parseFloat(txtSpeed.text) || 100;
             var animAmp = parseFloat(txtAmp.text) || 100;
-            var growFVal = (typeof sldGrow !== "undefined" && sldGrow) ? Math.max(0, Math.min(20, Math.round(sldGrow.value))) : 5;
-            var typeFVal = (typeof sldType !== "undefined" && sldType) ? Math.max(0, Math.min(20, Math.round(sldType.value))) : 5;
+            var growFVal = (typeof sldGrow !== "undefined" && sldGrow) ? Math.max(0, Math.min(60, Math.round(sldGrow.value))) : 5;
+            var typeFVal = (typeof sldType !== "undefined" && sldType) ? Math.max(0, Math.min(60, Math.round(sldType.value))) : 5;
 
             var fontIdx = dropFont.selection ? dropFont.selection.index : 0;
             var selectedFont = FONTS[fontIdx] || FONTS[0];
@@ -4451,7 +4466,7 @@
             var wrappedString = lines.join("\n");
             var measuredTextW = getLinesPixelBounds(lines, textSize);
 
-            var scalePadFactor = (selAnimIdx === 1) ? 1.24 : ((selAnimIdx === 5) ? 1.30 : 1.0);
+            var scalePadFactor = 1.0;
             var lineH = Math.max(Math.round(textSize * 1.15), Math.round(textSize * 1.35 * leadingFactor));
             var textBlockH = Math.round(((lines.length - 1) * lineH + Math.round(textSize * 0.95)) * scalePadFactor);
             if (lines.length <= 1) textBlockH = Math.round(textSize * 1.05 * scalePadFactor);
@@ -4558,6 +4573,7 @@
                 setLayerEffVal(targetLayer, "Bubble Grow Duration (frames)", growFVal);
                 setLayerEffVal(targetLayer, "Typewriter Duration (frames)", typeFVal);
                 setLayerEffVal(targetLayer, "Animation Effect Type", selAnimIdx);
+                setLayerEffVal(targetLayer, "Animation Decay (frames)", animDecay);
                 setLayerEffVal(targetLayer, "Animation Speed", animSpeed);
                 setLayerEffVal(targetLayer, "Animation Intensity", animAmp);
                 setLayerEffVal(targetLayer, "Delivered Time (s)", deliveredTime);
