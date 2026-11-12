@@ -2751,8 +2751,11 @@
     pnlHelpFonts.spacing = 6;
     pnlHelpFonts.margins = [10, 8, 10, 8];
 
-    var lblEmojiDesc = pnlHelpFonts.add("statictext", undefined, "Emojis always use Google's Noto Color Emoji, falling back to Segoe UI Emoji (Windows) or Apple Color Emoji (macOS) if not installed.", { multiline: true });
-    lblEmojiDesc.preferredSize = [-1, 32];
+    var lblEmojiDesc = pnlHelpFonts.add("statictext", undefined, "Emojis prioritize Google's Noto Color Emoji, falling back to Segoe UI Emoji (Windows) or Apple Color Emoji (macOS) if not installed.", { multiline: true });
+    lblEmojiDesc.preferredSize = [-1, 28];
+
+    var lblAeEmojiNote = pnlHelpFonts.add("statictext", undefined, "💡 Adobe After Effects Emoji Note: AE's text engine natively supports OpenType-SVG color fonts (e.g. Segoe UI Emoji, Apple Color Emoji, or OpenType-SVG builds of Noto). Google's standard web TTF uses COLRv1 which AE renders as sharp vector monochrome outlines.", { multiline: true });
+    lblAeEmojiNote.preferredSize = [-1, 46];
 
     var grpFontBtns1 = pnlHelpFonts.add("group");
     grpFontBtns1.orientation = "row";
@@ -2847,18 +2850,30 @@
     function isFontAvailable(postScriptName) {
         if (!postScriptName) return false;
         try {
-            if (typeof app !== "undefined" && app.fonts && typeof app.fonts.getFontsByName === "function") {
-                var list = app.fonts.getFontsByName(postScriptName);
-                if (list && list.length > 0) return true;
-                return false;
+            if (typeof app !== "undefined" && app.fonts) {
+                if (typeof app.fonts.getFontsByName === "function") {
+                    var list = app.fonts.getFontsByName(postScriptName);
+                    if (list && list.length > 0) return true;
+                }
+                if (app.fonts.allFonts && app.fonts.allFonts.length) {
+                    var cleanTarget = postScriptName.toLowerCase().replace(/[\s\-_]/g, "");
+                    for (var fi = 0; fi < app.fonts.allFonts.length; fi++) {
+                        var fObj = app.fonts.allFonts[fi];
+                        var ps = (fObj.postScriptName || "").toLowerCase().replace(/[\s\-_]/g, "");
+                        var fam = (fObj.familyName || "").toLowerCase().replace(/[\s\-_]/g, "");
+                        if (ps === cleanTarget || fam === cleanTarget || ps.indexOf(cleanTarget) !== -1 || fam.indexOf(cleanTarget) !== -1) {
+                            return true;
+                        }
+                    }
+                }
             }
         } catch(eFonts) {}
 
-        // On Windows, Apple proprietary fonts (SF Pro, Helvetica Neue) are NOT present unless custom-installed
+        // On Windows, Apple proprietary fonts (SF Pro, Apple Color Emoji) are NOT present unless custom-installed
         var isWin = (typeof $ !== "undefined" && $.os && $.os.indexOf("Windows") !== -1);
         if (isWin) {
             var lower = postScriptName.toLowerCase();
-            if (lower.indexOf("sfpro") !== -1 || lower.indexOf("helvetica") !== -1) {
+            if (lower.indexOf("sfpro") !== -1 || lower.indexOf("applecolor") !== -1) {
                 return false;
             }
         }
@@ -3010,7 +3025,7 @@
         return spans;
     }
 
-    function applyEmojiFontToRanges(textProp, textStr, emojiCandidates) {
+    function applyEmojiFontToRanges(textProp, textStr, emojiCandidates, fontSize) {
         if (!textProp || !textStr || !emojiCandidates || emojiCandidates.length === 0) return;
         var chosenEmojiFont = null;
         for (var e = 0; e < emojiCandidates.length; e++) {
@@ -3033,6 +3048,9 @@
                         var range = textProp.characterRange(spans[s].start, spans[s].length);
                         if (range) {
                             range.font = chosenEmojiFont;
+                            if (typeof fontSize === "number" && fontSize > 0) {
+                                range.fontSize = Math.round(fontSize * 1.06);
+                            }
                         }
                     } catch(eR) {}
                 }
@@ -3135,7 +3153,7 @@
             prop.setValue(doc);
             applyFontWithFallback(prop, candidates);
             if (emojiCandidates && emojiCandidates.length > 0 && textStr) {
-                applyEmojiFontToRanges(prop, textStr, emojiCandidates);
+                applyEmojiFontToRanges(prop, textStr, emojiCandidates, fontSize);
             }
         } catch(eFmt) {}
     }
@@ -3250,33 +3268,65 @@
     };
 
     // -------------------------------------------------------------------------
-    // 9. Word-Wrapping Engine: Splits text into lines based on screen width
+    // 9. Word-Wrapping & Unified Typography Measurement Engine
     // -------------------------------------------------------------------------
+    function measureTypographyWidth(str, fontSize) {
+        if (!str) return 0;
+        var w = 0;
+        var len = str.length;
+        var i = 0;
+        while (i < len) {
+            var code = str.charCodeAt(i);
+            // High surrogate (0xD800 to 0xDBFF) followed by low surrogate (0xDC00 to 0xDFFF)
+            if (code >= 0xD800 && code <= 0xDBFF && (i + 1 < len)) {
+                var nextCode = str.charCodeAt(i + 1);
+                if (nextCode >= 0xDC00 && nextCode <= 0xDFFF) {
+                    w += fontSize * 1.15;
+                    i += 2;
+                    // Skip trailing variation selectors (FE0E/FE0F) or skin tones
+                    while (i < len) {
+                        var extraCode = str.charCodeAt(i);
+                        if (extraCode === 0xFE0F || extraCode === 0xFE0E) {
+                            i += 1;
+                        } else if (extraCode === 0x200D) {
+                            i += 1;
+                            if (i < len && str.charCodeAt(i) >= 0xD800 && str.charCodeAt(i) <= 0xDBFF && (i + 1 < len)) {
+                                i += 2;
+                            } else if (i < len) {
+                                i += 1;
+                            }
+                        } else if (extraCode >= 0xD83C && extraCode <= 0xD83F && (i + 1 < len)) {
+                            i += 2;
+                        } else {
+                            break;
+                        }
+                    }
+                    continue;
+                }
+            }
+            if (code > 255) {
+                w += fontSize * 1.15;
+            } else if ("ijl|!.,:;'I `".indexOf(str.charAt(i)) !== -1) {
+                w += fontSize * 0.28;
+            } else if ("wmWM@#%&".indexOf(str.charAt(i)) !== -1) {
+                w += fontSize * 0.80;
+            } else if ("frt-()[]{}".indexOf(str.charAt(i)) !== -1) {
+                w += fontSize * 0.38;
+            } else if (" ".indexOf(str.charAt(i)) !== -1) {
+                w += fontSize * 0.32;
+            } else {
+                w += fontSize * 0.52;
+            }
+            i++;
+        }
+        return w;
+    }
+
     function wrapTextToLines(rawText, maxPixelWidth, fontSize) {
         if (!rawText) return [""];
-        // Clean multi-spaces & break into words
         var words = rawText.replace(/\r\n/g, "\n").split(/(\s+)/);
         var lines = [];
         var currentLine = "";
-
-        // Average character widths based on typography
-        function measureStr(str) {
-            var w = 0;
-            for (var i = 0; i < str.length; i++) {
-                var code = str.charCodeAt(i);
-                // Unicode emojis / surrogate pairs / wide glyphs
-                if (code > 255 || (code >= 55296 && code <= 56319)) {
-                    w += fontSize * 1.1;
-                } else if ("ijl|!.,:;'I".indexOf(str.charAt(i)) !== -1) {
-                    w += fontSize * 0.28;
-                } else if ("wmWM@#%&".indexOf(str.charAt(i)) !== -1) {
-                    w += fontSize * 0.78;
-                } else {
-                    w += fontSize * 0.52;
-                }
-            }
-            return w;
-        }
 
         for (var i = 0; i < words.length; i++) {
             var word = words[i];
@@ -3286,7 +3336,7 @@
                 continue;
             }
             var testLine = currentLine + word;
-            if (measureStr(testLine) > maxPixelWidth && trimStr(currentLine).length > 0) {
+            if (measureTypographyWidth(testLine, fontSize) > maxPixelWidth && trimStr(currentLine).length > 0) {
                 lines.push(trimStr(currentLine));
                 currentLine = trimLeftStr(word);
             } else {
@@ -3304,20 +3354,7 @@
     function getLinesPixelBounds(lines, fontSize) {
         var maxW = 0;
         for (var i = 0; i < lines.length; i++) {
-            var line = lines[i];
-            var w = 0;
-            for (var c = 0; c < line.length; c++) {
-                var code = line.charCodeAt(c);
-                if (code > 255 || (code >= 55296 && code <= 56319)) {
-                    w += fontSize * 1.1;
-                } else if ("ijl|!.,:;'I".indexOf(line.charAt(c)) !== -1) {
-                    w += fontSize * 0.28;
-                } else if ("wmWM@#%&".indexOf(line.charAt(c)) !== -1) {
-                    w += fontSize * 0.78;
-                } else {
-                    w += fontSize * 0.52;
-                }
-            }
+            var w = measureTypographyWidth(lines[i], fontSize);
             if (w > maxW) maxW = w;
         }
         return Math.max(30, maxW);
@@ -3375,8 +3412,10 @@
 
             // Chat messaging UX: Max bubble width is 72% of screen width
             var maxBubbleW = Math.max(120, screenW * 0.72);
-            var padX = Math.max(4, Math.round(textSize * 0.75) + padOffset);
-            var padY = Math.max(4, Math.round(textSize * 0.55) + padOffset);
+            var cornerRadius = platformCfg.radius || 18;
+            var tailType = platformCfg.tailType || "modern";
+            var padX = Math.max(Math.round(cornerRadius * 0.85), Math.round(textSize * 0.90)) + padOffset;
+            var padY = Math.max(10, Math.round(textSize * 0.60)) + padOffset;
             var maxTextW = maxBubbleW - (padX * 2);
 
             // Perform automatic word-wrapping
@@ -3630,7 +3669,7 @@
 
             // 3. Message Text Layer (proper cap-height alignment prevents clipping top border)
             var textLayer = null;
-            var capHeight = Math.round(textSize * 0.76);
+            var capHeight = Math.round(textSize * 0.72);
             var textTopY = -(bubbleH / 2) + padY + capHeight;
             var textLeftX = -(bubbleW / 2) + padX;
 
@@ -3674,12 +3713,12 @@
 
             // 4. Timestamp & Status Row (allocated space for sent/delivered/read status icon)
             var timeRowRightX = (bubbleW / 2) - padX;
-            var timeY = (bubbleH / 2) - Math.round(padY * 0.6) - timeFontSize;
+            var timeY = (bubbleH / 2) - padY;
 
             var statusX = timeRowRightX;
             var timeX = (statusW > 0) ? (timeRowRightX - statusW - statusSpacing) : timeRowRightX;
             var statusCenterX = timeRowRightX - (statusW / 2);
-            var statusCenterY = timeY + Math.round(timeFontSize * 0.44);
+            var statusCenterY = timeY - Math.round(timeFontSize * 0.32);
 
             var timeLayer = null;
             if (typeof comp.layers.addText === "function") {
@@ -4343,8 +4382,10 @@
             var selectedFont = FONTS[fontIdx] || FONTS[0];
 
             var maxBubbleW = Math.max(120, screenW * 0.72);
-            var padX = Math.max(4, Math.round(textSize * 0.75) + padOffset);
-            var padY = Math.max(4, Math.round(textSize * 0.55) + padOffset);
+            var cornerRadius = platformCfg.radius || 18;
+            var tailType = platformCfg.tailType || "modern";
+            var padX = Math.max(Math.round(cornerRadius * 0.85), Math.round(textSize * 0.90)) + padOffset;
+            var padY = Math.max(10, Math.round(textSize * 0.60)) + padOffset;
             var maxTextW = maxBubbleW - (padX * 2);
 
             var lines = wrapTextToLines(msgText, maxTextW, textSize);
@@ -4537,7 +4578,7 @@
 
                 // Update Message Text layer
                 var textLayer = getLayer(preCompItem, "Message_Text");
-                var capHeight = Math.round(textSize * 0.76);
+                var capHeight = Math.round(textSize * 0.72);
                 var textTopY = -(bubbleH / 2) + padY + capHeight;
                 var textLeftX = -(bubbleW / 2) + padX;
                 if (textLayer) {
@@ -4561,11 +4602,11 @@
 
                 // Update Timestamp Text layer
                 var timeRowRightX = (bubbleW / 2) - padX;
-                var timeY = (bubbleH / 2) - Math.round(padY * 0.6) - timeFontSize;
+                var timeY = (bubbleH / 2) - padY;
                 var statusX = timeRowRightX;
                 var timeX = (statusW > 0) ? (timeRowRightX - statusW - statusSpacing) : timeRowRightX;
                 var statusCenterX = timeRowRightX - (statusW / 2);
-                var statusCenterY = timeY + Math.round(timeFontSize * 0.44);
+                var statusCenterY = timeY - Math.round(timeFontSize * 0.32);
 
                 var timeLayer = getLayer(preCompItem, "Timestamp_Text");
                 if (timeLayer) {

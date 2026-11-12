@@ -559,7 +559,7 @@
                     if (match.index > lastIndex) {
                         parts.push(`<tspan font-family="${textFont}">${escapeXml(l.substring(lastIndex, match.index))}</tspan>`);
                     }
-                    parts.push(`<tspan font-family="${emojiFont}">${escapeXml(match[0])}</tspan>`);
+                    parts.push(`<tspan font-family="${emojiFont}" font-size="${Math.round(fs * 1.05)}px">${escapeXml(match[0])}</tspan>`);
                     lastIndex = emojiRegex.lastIndex;
                 }
                 if (lastIndex < l.length) {
@@ -572,7 +572,7 @@
             }).join('');
 
             return `
-                <text x="0" y="${fs * 0.9}" fill="${fill}" font-size="${fs}px" text-anchor="${textAnchor}" style="user-select:none; font-weight:400;">
+                <text x="0" y="0" fill="${fill}" font-size="${fs}px" text-anchor="${textAnchor}" style="user-select:none; font-weight:400;">
                     ${tspans}
                 </text>
             `;

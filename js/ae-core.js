@@ -1245,16 +1245,40 @@
         }
 
         sourceRectAtTime(time, includeExtents) {
-            const str = String(this.sourceText.getValueAtTime(time || 0) || '');
+            let str = '';
+            if (this.sourceText) {
+                str = String(this.sourceText.getValueAtTime(time || 0) || '');
+                if (!str && this.sourceText._baseValue) {
+                    str = String(this.sourceText._baseValue);
+                }
+            }
+            if (!str && this.text && typeof this.text === 'string') {
+                str = this.text;
+            }
             const lines = str.split('\n');
             const fs = this.fontSize || 24;
             const lineH = fs * 1.35;
             let maxW = 0;
             for (const line of lines) {
                 let w = 0;
-                for (let i = 0; i < line.length; i++) {
+                let i = 0;
+                while (i < line.length) {
                     const code = line.charCodeAt(i);
-                    w += (code > 255 ? fs * 1.0 : fs * 0.55);
+                    if (code >= 0xD800 && code <= 0xDBFF && (i + 1 < line.length)) {
+                        w += fs * 1.15;
+                        i += 2;
+                        continue;
+                    }
+                    if (code > 255) {
+                        w += fs * 1.15;
+                    } else if ("ijl|!.,:;'I `".indexOf(line.charAt(i)) !== -1) {
+                        w += fs * 0.28;
+                    } else if ("wmWM@#%&".indexOf(line.charAt(i)) !== -1) {
+                        w += fs * 0.80;
+                    } else {
+                        w += fs * 0.52;
+                    }
+                    i++;
                 }
                 if (w > maxW) maxW = w;
             }
