@@ -1095,11 +1095,14 @@
         }
 
         // Calculate 4x4 World Transformation Matrix at given time
-        getWorldMatrix(time) {
+        getWorldMatrix(time, fallbackZeroScale = false) {
             const t = this.transform;
             const anchor = t.anchorPoint.getValueAtTime(time);
             const pos    = t.position.getValueAtTime(time);
-            const scale  = t.scale.getValueAtTime(time);
+            let scale    = t.scale.getValueAtTime(time);
+            if (fallbackZeroScale && scale && scale[0] === 0 && scale[1] === 0) {
+                scale = (t.scale._baseValue && t.scale._baseValue[0] > 0) ? t.scale._baseValue : [100, 100];
+            }
             const orient = t.orientation.getValueAtTime(time);
             const xRot   = t.xRotation.getValueAtTime(time);
             const yRot   = t.yRotation.getValueAtTime(time);
@@ -1141,7 +1144,7 @@
 
             // 5. Parent transformation hierarchy
             if (this.parent && this.parent instanceof Layer) {
-                const parentMatrix = this.parent.getWorldMatrix(time);
+                const parentMatrix = this.parent.getWorldMatrix(time, fallbackZeroScale);
                 m = Mat4.multiply(parentMatrix, m);
             }
 

@@ -604,7 +604,8 @@
                 layerEl.style.zIndex = layers.length - i;
 
                 // 3D Matrix & CSS Transformation
-                const worldMat = layer.getWorldMatrix(time);
+                const isStaticPreview = (!this.isPlaying || time === 0);
+                const worldMat = layer.getWorldMatrix(time, isStaticPreview);
                 const cssMat = Mat4.toCSS(worldMat);
                 const opacity = layer.getWorldOpacity(time);
 
@@ -616,13 +617,13 @@
                 if (layer.source && layer.source.layers) {
                     layer.source.time = time;
                     let subHtml = '';
-                    for (let s = 0; s < layer.source.layers.length; s++) {
+                    for (let s = layer.source.layers.length - 1; s >= 0; s--) {
                         const subLayer = layer.source.layers[s];
                         if (!subLayer.enabled) continue;
-                        const subMat = subLayer.getWorldMatrix(time);
+                        const subMat = subLayer.getWorldMatrix(time, isStaticPreview);
                         const subCss = Mat4.toCSS(subMat);
                         let subOpacity = (typeof subLayer.getWorldOpacity === 'function') ? subLayer.getWorldOpacity(time) : 1.0;
-                        if ((!this.isPlaying || time === 0) && subOpacity === 0) {
+                        if (isStaticPreview && subOpacity === 0) {
                             subOpacity = 1.0;
                         }
 
@@ -636,8 +637,9 @@
                         }
 
                         if (subContent) {
+                            const subZ = layer.source.layers.length - s;
                             subHtml += `
-                                <div class="ae-sublayer" style="position: absolute; left: 0; top: 0; width: 0; height: 0; transform-origin: 0 0 0; backface-visibility: visible; transform: ${subCss}; opacity: ${subOpacity}; transform-style: preserve-3d;">
+                                <div class="ae-sublayer" style="position: absolute; left: 0; top: 0; width: 0; height: 0; transform-origin: 0 0 0; backface-visibility: visible; transform: ${subCss}; opacity: ${subOpacity}; z-index: ${subZ}; transform-style: preserve-3d;">
                                     <svg class="ae-layer-svg" style="overflow: visible;">${subContent}</svg>
                                 </div>
                             `;
