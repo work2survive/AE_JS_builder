@@ -627,10 +627,12 @@
                         }
 
                         let subContent = '';
-                        if (subLayer.contents && subLayer.contents.length > 0) {
-                            subContent = this.renderShapeContents(subLayer.contents, time);
-                        } else if (subLayer.sourceText || (typeof TextLayer !== 'undefined' && subLayer instanceof TextLayer)) {
+                        if (typeof TextLayer !== 'undefined' && subLayer instanceof TextLayer) {
                             subContent = this.renderTextContent(subLayer, time);
+                        } else if (subLayer.sourceText) {
+                            subContent = this.renderTextContent(subLayer, time);
+                        } else if (subLayer.contents) {
+                            subContent = this.renderShapeContents(subLayer.contents, time);
                         }
 
                         if (subContent) {
