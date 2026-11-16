@@ -42,7 +42,10 @@
       "cameraFade": true,
       "cameraFadeDist": 250,
       "randomFlipH": true,
-      "randomFlipV": false
+      "randomFlipV": false,
+      "fadeMode": 0,
+      "fadeInFrames": 20,
+      "fadeOutFrames": 20
     },
     {
       "name": "Drifting Clouds (Soft Gentle Float)",
@@ -83,7 +86,10 @@
       "cameraFade": true,
       "cameraFadeDist": 250,
       "randomFlipH": false,
-      "randomFlipV": false
+      "randomFlipV": false,
+      "fadeMode": 0,
+      "fadeInFrames": 20,
+      "fadeOutFrames": 20
     },
     {
       "name": "Cosmic Stars (Twinkle & Shimmer)",
@@ -124,7 +130,10 @@
       "cameraFade": true,
       "cameraFadeDist": 250,
       "randomFlipH": false,
-      "randomFlipV": false
+      "randomFlipV": false,
+      "fadeMode": 0,
+      "fadeInFrames": 20,
+      "fadeOutFrames": 20
     },
     {
       "name": "Parallax Mountains (Horizon Glide)",
@@ -165,7 +174,10 @@
       "cameraFade": true,
       "cameraFadeDist": 250,
       "randomFlipH": false,
-      "randomFlipV": false
+      "randomFlipV": false,
+      "fadeMode": 0,
+      "fadeInFrames": 20,
+      "fadeOutFrames": 20
     },
     {
       "name": "3D Circles (Snow / Spores)",
@@ -206,7 +218,10 @@
       "cameraFade": true,
       "cameraFadeDist": 250,
       "randomFlipH": false,
-      "randomFlipV": false
+      "randomFlipV": false,
+      "fadeMode": 0,
+      "fadeInFrames": 20,
+      "fadeOutFrames": 20
     },
     {
       "name": "3D Squares (Confetti / Debris)",
@@ -247,7 +262,10 @@
       "cameraFade": true,
       "cameraFadeDist": 250,
       "randomFlipH": false,
-      "randomFlipV": false
+      "randomFlipV": false,
+      "fadeMode": 0,
+      "fadeInFrames": 20,
+      "fadeOutFrames": 20
     },
     {
       "name": "Project Composition...",
@@ -288,7 +306,10 @@
       "cameraFade": true,
       "cameraFadeDist": 250,
       "randomFlipH": false,
-      "randomFlipV": false
+      "randomFlipV": false,
+      "fadeMode": 0,
+      "fadeInFrames": 20,
+      "fadeOutFrames": 20
     },
     {
       "name": "Selected Layer(s)",
@@ -329,7 +350,10 @@
       "cameraFade": true,
       "cameraFadeDist": 250,
       "randomFlipH": false,
-      "randomFlipV": false
+      "randomFlipV": false,
+      "fadeMode": 0,
+      "fadeInFrames": 20,
+      "fadeOutFrames": 20
     }
   ]
 }

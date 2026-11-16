@@ -480,6 +480,9 @@
             numParticles: 24,
             fadeInDist: 180,
             fadeOutDist: 180,
+            fadeMode: 0,
+            fadeInFrames: 20,
+            fadeOutFrames: 20,
             cameraFade: true,
             cameraFadeDist: 250,
             randomFlipH: true,
@@ -521,6 +524,9 @@
             numParticles: 22,
             fadeInDist: 350,
             fadeOutDist: 350,
+            fadeMode: 0,
+            fadeInFrames: 20,
+            fadeOutFrames: 20,
             cameraFade: true,
             cameraFadeDist: 250,
             randomFlipH: false,
@@ -562,6 +568,9 @@
             numParticles: 30,
             fadeInDist: 150,
             fadeOutDist: 150,
+            fadeMode: 0,
+            fadeInFrames: 20,
+            fadeOutFrames: 20,
             cameraFade: true,
             cameraFadeDist: 250,
             randomFlipH: false,
@@ -603,6 +612,9 @@
             numParticles: 24,
             fadeInDist: 300,
             fadeOutDist: 300,
+            fadeMode: 0,
+            fadeInFrames: 20,
+            fadeOutFrames: 20,
             cameraFade: true,
             cameraFadeDist: 250,
             randomFlipH: false,
@@ -644,6 +656,9 @@
             numParticles: 25,
             fadeInDist: 120,
             fadeOutDist: 120,
+            fadeMode: 0,
+            fadeInFrames: 20,
+            fadeOutFrames: 20,
             cameraFade: true,
             cameraFadeDist: 250,
             randomFlipH: false,
@@ -685,6 +700,9 @@
             numParticles: 25,
             fadeInDist: 120,
             fadeOutDist: 120,
+            fadeMode: 0,
+            fadeInFrames: 20,
+            fadeOutFrames: 20,
             cameraFade: true,
             cameraFadeDist: 250,
             randomFlipH: false,
@@ -726,6 +744,9 @@
             numParticles: 20,
             fadeInDist: 150,
             fadeOutDist: 150,
+            fadeMode: 0,
+            fadeInFrames: 20,
+            fadeOutFrames: 20,
             cameraFade: true,
             cameraFadeDist: 250,
             randomFlipH: false,
@@ -767,6 +788,9 @@
             numParticles: 20,
             fadeInDist: 150,
             fadeOutDist: 150,
+            fadeMode: 0,
+            fadeInFrames: 20,
+            fadeOutFrames: 20,
             cameraFade: true,
             cameraFadeDist: 250,
             randomFlipH: false,
@@ -1141,13 +1165,24 @@
 
         var lblCountWarn = pnlCount.add("statictext", undefined, "⚠️ Limited to " + MAX_PARTICLE_LIMIT + " max for performance. For large amounts, use Trapcode Particular.");
 
-        // Boundary & Camera Fade Panel
-        var pnlFade = tabFlow.add("panel", undefined, "Particle Fade (Boundary & Camera) - Animatable");
+        // Particle Fade Panel (Birth / Boundary Exit / Camera)
+        var pnlFade = tabFlow.add("panel", undefined, "Particle Fade (Birth / Boundary Exit / Camera) - Animatable");
         pnlFade.orientation = "column";
         pnlFade.alignChildren = ["fill", "top"];
         pnlFade.spacing = 6;
         pnlFade.margins = 6;
 
+        // Mode Row: Distance to Edge (px) vs Time in Frames
+        var grpFadeModeRow = pnlFade.add("group");
+        grpFadeModeRow.orientation = "row";
+        grpFadeModeRow.alignChildren = ["left", "center"];
+        grpFadeModeRow.spacing = 6;
+        grpFadeModeRow.add("statictext", undefined, "Fade Mode:");
+        var dropFadeMode = grpFadeModeRow.add("dropdownlist", undefined, ["Distance to Edge (px)", "Time in Frames"]);
+        dropFadeMode.selection = 0;
+        dropFadeMode.helpTip = "Select whether particles fade gradually based on spatial distance to the box boundary (px) or duration in timeline frames.";
+
+        // Distance inputs row
         var grpBoundFade = pnlFade.add("group");
         grpBoundFade.orientation = "row";
         grpBoundFade.alignChildren = ["left", "center"];
@@ -1155,12 +1190,35 @@
         grpBoundFade.add("statictext", undefined, "Fade In Dist (px):");
         var editFadeInDist = grpBoundFade.add("edittext", undefined, "150");
         editFadeInDist.characters = 5;
-        editFadeInDist.helpTip = "Distance from box entry boundary over which particle fades smoothly from 0 to 100% opacity";
+        editFadeInDist.helpTip = "Distance in pixels from entry boundary over which particle fades smoothly from 0% to 100% opacity";
 
         grpBoundFade.add("statictext", undefined, "Fade Out Dist (px):");
         var editFadeOutDist = grpBoundFade.add("edittext", undefined, "150");
         editFadeOutDist.characters = 5;
-        editFadeOutDist.helpTip = "Distance to box exit boundary over which particle fades smoothly from 100% to 0 opacity";
+        editFadeOutDist.helpTip = "Distance in pixels to exit boundary over which particle fades smoothly from 100% to 0% opacity";
+
+        // Frames inputs row
+        var grpFramesFade = pnlFade.add("group");
+        grpFramesFade.orientation = "row";
+        grpFramesFade.alignChildren = ["left", "center"];
+        grpFramesFade.spacing = 4;
+        grpFramesFade.add("statictext", undefined, "Fade In (Frames):");
+        var editFadeInFrames = grpFramesFade.add("edittext", undefined, "20");
+        editFadeInFrames.characters = 5;
+        editFadeInFrames.helpTip = "Duration in timeline frames over which born particles fade smoothly from 0% to 100% opacity";
+
+        grpFramesFade.add("statictext", undefined, "Fade Out (Frames):");
+        var editFadeOutFrames = grpFramesFade.add("edittext", undefined, "20");
+        editFadeOutFrames.characters = 5;
+        editFadeOutFrames.helpTip = "Duration in timeline frames over which particles fade smoothly to 0% opacity as they leave the boundaries";
+
+        function updateFadeModeUI() {
+            var isFrames = (dropFadeMode.selection && dropFadeMode.selection.index === 1);
+            grpBoundFade.enabled = !isFrames;
+            grpFramesFade.enabled = isFrames;
+        }
+        dropFadeMode.onChange = updateFadeModeUI;
+        updateFadeModeUI();
 
         var grpCamFade = pnlFade.add("group");
         grpCamFade.orientation = "row";
@@ -1467,8 +1525,14 @@
             if (preset.dirZ !== undefined) editDirZ.text = String(preset.dirZ);
             if (preset.alignToWind !== undefined) chkAlignWind.value = Boolean(preset.alignToWind);
             if (preset.numParticles !== undefined) editCount.text = String(Math.min(MAX_PARTICLE_LIMIT, Math.max(1, preset.numParticles)));
+            if (preset.fadeMode !== undefined) {
+                dropFadeMode.selection = (preset.fadeMode === 1 || preset.fadeMode === "frames") ? 1 : 0;
+                updateFadeModeUI();
+            }
             if (preset.fadeInDist !== undefined) editFadeInDist.text = String(preset.fadeInDist);
             if (preset.fadeOutDist !== undefined) editFadeOutDist.text = String(preset.fadeOutDist);
+            if (preset.fadeInFrames !== undefined) editFadeInFrames.text = String(preset.fadeInFrames);
+            if (preset.fadeOutFrames !== undefined) editFadeOutFrames.text = String(preset.fadeOutFrames);
             if (preset.cameraFade !== undefined) chkCameraFade.value = Boolean(preset.cameraFade);
             if (preset.cameraFadeDist !== undefined) editCamFadeDist.text = String(preset.cameraFadeDist);
             if (preset.randomFlipH !== undefined) chkFlipH.value = Boolean(preset.randomFlipH);
@@ -1635,8 +1699,11 @@
             var dirZ = getNum(editDirZ, 0.2);
             var alignToWind = chkAlignWind.value;
             var numParticles = Math.max(1, Math.min(MAX_PARTICLE_LIMIT, Math.round(getNum(editCount, 20))));
+            var fadeModeIdx = dropFadeMode.selection ? dropFadeMode.selection.index : 0; // 0=Dist, 1=Frames
             var fadeInDist = Math.max(0, getNum(editFadeInDist, 150));
             var fadeOutDist = Math.max(0, getNum(editFadeOutDist, 150));
+            var fadeInFrames = Math.max(0, getNum(editFadeInFrames, 20));
+            var fadeOutFrames = Math.max(0, getNum(editFadeOutFrames, 20));
             var isCamFade = chkCameraFade.value;
             var camFadeDist = Math.max(1, getNum(editCamFadeDist, 250));
             var isFlipH = chkFlipH.value;
@@ -1725,8 +1792,11 @@
                     { type: "slider",   name: "WindBox - Direction Z",            val: dirZ },
                     { type: "checkbox", name: "WindBox - Align to Wind",          val: alignToWind ? 1 : 0 },
                     { type: "slider",   name: "WindBox - Particle Type",          val: particleType },
+                    { type: "slider",   name: "WindBox - Fade Mode (1=Dist, 2=Frames)", val: fadeModeIdx + 1 },
                     { type: "slider",   name: "WindBox - Fade In Distance",       val: fadeInDist },
                     { type: "slider",   name: "WindBox - Fade Out Distance",      val: fadeOutDist },
+                    { type: "slider",   name: "WindBox - Fade In Frames",         val: fadeInFrames },
+                    { type: "slider",   name: "WindBox - Fade Out Frames",        val: fadeOutFrames },
                     { type: "checkbox", name: "WindBox - Fade Near Camera",       val: isCamFade ? 1 : 0 },
                     { type: "slider",   name: "WindBox - Camera Fade Dist",       val: camFadeDist },
                     { type: "slider",   name: "WindBox - Size Random (%)",        val: partSizeRand },
@@ -1989,20 +2059,31 @@
                     'var activeCount = ctrl.effect("WindBox - Number of Particles")(1).value;',
                     'var pIndex = effect("WindBox Particle Index")(1).value;',
                     'if (pIndex > activeCount) { 0; } else {',
+                    '    var fadeMode = 1;',
+                    '    try { fadeMode = Math.round(ctrl.effect("WindBox - Fade Mode (1=Dist, 2=Frames)")(1).value); } catch(e) {}',
+                    '    var sX = Math.max(1, ctrl.effect("WindBox - Size X")(1).value);',
+                    '    var sY = Math.max(1, ctrl.effect("WindBox - Size Y")(1).value);',
+                    '    var sZ = Math.max(1, ctrl.effect("WindBox - Size Z")(1).value);',
+                    '    var spd = ctrl.effect("WindBox - Wind Speed")(1).value;',
+                    '    var dX = ctrl.effect("WindBox - Direction X")(1).value;',
+                    '    var dY = ctrl.effect("WindBox - Direction Y")(1).value;',
+                    '    var dZ = ctrl.effect("WindBox - Direction Z")(1).value;',
+                    '    var len = Math.sqrt(dX * dX + dY * dY + dZ * dZ);',
+                    '    var dir = (len > 0.0001) ? [dX / len, dY / len, dZ / len] : [1, 0, 0];',
                     '    var fadeIn = 0, fadeOut = 0;',
-                    '    try { fadeIn = Math.max(0, ctrl.effect("WindBox - Fade In Distance")(1).value); } catch(e) {}',
-                    '    try { fadeOut = Math.max(0, ctrl.effect("WindBox - Fade Out Distance")(1).value); } catch(e) {}',
+                    '    if (fadeMode === 2) {',
+                    '        var inF = 0, outF = 0;',
+                    '        try { inF = Math.max(0, ctrl.effect("WindBox - Fade In Frames")(1).value); } catch(e) {}',
+                    '        try { outF = Math.max(0, ctrl.effect("WindBox - Fade Out Frames")(1).value); } catch(e) {}',
+                    '        var frameSpd = Math.max(0.1, Math.abs(spd)) * thisComp.frameDuration;',
+                    '        fadeIn = inF * frameSpd;',
+                    '        fadeOut = outF * frameSpd;',
+                    '    } else {',
+                    '        try { fadeIn = Math.max(0, ctrl.effect("WindBox - Fade In Distance")(1).value); } catch(e) {}',
+                    '        try { fadeOut = Math.max(0, ctrl.effect("WindBox - Fade Out Distance")(1).value); } catch(e) {}',
+                    '    }',
                     '    var boundFactor = 1;',
                     '    if (fadeIn > 0 || fadeOut > 0) {',
-                    '        var sX = Math.max(1, ctrl.effect("WindBox - Size X")(1).value);',
-                    '        var sY = Math.max(1, ctrl.effect("WindBox - Size Y")(1).value);',
-                    '        var sZ = Math.max(1, ctrl.effect("WindBox - Size Z")(1).value);',
-                    '        var spd = ctrl.effect("WindBox - Wind Speed")(1).value;',
-                    '        var dX = ctrl.effect("WindBox - Direction X")(1).value;',
-                    '        var dY = ctrl.effect("WindBox - Direction Y")(1).value;',
-                    '        var dZ = ctrl.effect("WindBox - Direction Z")(1).value;',
-                    '        var len = Math.sqrt(dX * dX + dY * dY + dZ * dZ);',
-                    '        var dir = (len > 0.0001) ? [dX / len, dY / len, dZ / len] : [1, 0, 0];',
                     '        var seed = 12345;',
                     '        try { seed = ctrl.effect("WindBox - Random Seed")(1).value; } catch(e) {}',
                     '        seedRandom(seed + pIndex * 9973 + 17, true);',
