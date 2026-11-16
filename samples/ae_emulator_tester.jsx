@@ -414,17 +414,22 @@
     treeControl.preferredSize = [-1, 95];
 
     var nodeRoot = treeControl.add("node", "Project: AE Calibration Suite");
-    var subComp = nodeRoot.add("node", "Comp: AE_Emulator_Tester_Comp (1920x1080)");
-    subComp.add("item", "Layer: TEST_00_Grid_Background");
-    subComp.add("item", "Layer: TEST_01_Calibration_Grid");
-    subComp.add("item", "Layer: TEST_02_Font_Section_Title");
-    subComp.add("item", "Layer: TEST_05_Geometric_Shapes");
-    subComp.add("item", "Layer: TEST_07_Stroke_Styles_Showcase");
-
-    var subAssets = nodeRoot.add("node", "Typography Palettes");
-    subAssets.add("item", "Font: Segoe UI (Clean Modern)");
-    subAssets.add("item", "Font: Georgia (Classic Serif)");
-    subAssets.add("item", "Font: Courier New (Fixed Width)");
+    if (nodeRoot && typeof nodeRoot.add === "function") {
+        var subComp = nodeRoot.add("node", "Comp: AE_Emulator_Tester_Comp (1920x1080)");
+        if (subComp && typeof subComp.add === "function") {
+            subComp.add("item", "Layer: TEST_00_Grid_Background");
+            subComp.add("item", "Layer: TEST_01_Calibration_Grid");
+            subComp.add("item", "Layer: TEST_02_Font_Section_Title");
+            subComp.add("item", "Layer: TEST_05_Geometric_Shapes");
+            subComp.add("item", "Layer: TEST_07_Stroke_Styles_Showcase");
+        }
+        var subAssets = nodeRoot.add("node", "Typography Palettes");
+        if (subAssets && typeof subAssets.add === "function") {
+            subAssets.add("item", "Font: Segoe UI (Clean Modern)");
+            subAssets.add("item", "Font: Georgia (Classic Serif)");
+            subAssets.add("item", "Font: Courier New (Fixed Width)");
+        }
+    }
 
     // -------------------------------------------------------------------------
     // 3. Bottom Subtle Repository Link

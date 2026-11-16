@@ -1127,6 +1127,29 @@
         }
     }
 
+    function createTreeNode(type, text, parent) {
+        return {
+            type: type,
+            text: String(text || ''),
+            items: [],
+            expanded: true,
+            selected: false,
+            parent: parent || null,
+            add(subType, subText) {
+                const child = createTreeNode(subType, subText, this);
+                this.items.push(child);
+                return child;
+            },
+            remove(child) {
+                const idx = this.items.indexOf(child);
+                if (idx !== -1) this.items.splice(idx, 1);
+            },
+            removeAll() {
+                this.items = [];
+            }
+        };
+    }
+
     class TreeView extends UIElement {
         constructor(text, container, properties) {
             super('treeview', text, container, properties);
@@ -1144,23 +1167,20 @@
         }
 
         add(type, text) {
-            const node = {
-                type: type,
-                text: String(text || ''),
-                items: [],
-                expanded: true,
-                add(subType, subText) {
-                    const sub = {
-                        type: subType,
-                        text: String(subText || ''),
-                        items: []
-                    };
-                    this.items.push(sub);
-                    return sub;
-                }
-            };
+            const node = createTreeNode(type, text, this);
             this.items.push(node);
             return node;
+        }
+
+        remove(child) {
+            const idx = this.items.indexOf(child);
+            if (idx !== -1) this.items.splice(idx, 1);
+        }
+
+        removeAll() {
+            this.items = [];
+            this._selection = null;
+            if (this.domElement) this.domElement.innerHTML = '';
         }
 
         renderDOM() {
