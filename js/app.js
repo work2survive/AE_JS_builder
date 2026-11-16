@@ -8,13 +8,13 @@
     'use strict';
 
     // -------------------------------------------------------------
-    // Version Management (v1.2.1)
+    // Version Management (v1.2.2)
     // -------------------------------------------------------------
     function computeDailyVersion() {
-        return '1.2.1';
+        return '1.2.2';
     }
 
-    const APP_VERSION = '1.2.1';
+    const APP_VERSION = '1.2.2';
     global.EMULATOR_VERSION = APP_VERSION;
 
     let renderer = null;

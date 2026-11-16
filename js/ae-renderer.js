@@ -53,6 +53,12 @@
                                 Orbit: <span id="cam-orbit-vals">-35°, 25°</span> | 
                                 Zoom: <span id="cam-zoom-val">100%</span>
                             </div>
+                            <select id="ae-viewport-resolution" class="ae-viewport-res-select" title="Composition Resolution: 1080p (1920×1080)">
+                                <option value="720p">720p</option>
+                                <option value="1080p" selected>1080p</option>
+                                <option value="1440p">1440p</option>
+                                <option value="4k">4k</option>
+                            </select>
                         </div>
                         <div class="ae-viewport-controls">
                             <button id="btn-reset-cam" title="Reset Camera">Reset Cam</button>
@@ -174,7 +180,7 @@
 
             // Mouse down for orbit or pan
             vp.addEventListener('mousedown', (e) => {
-                if (e.target.closest('.ae-viewport-controls')) return;
+                if (e.target.closest('.ae-viewport-controls') || e.target.closest('.ae-viewport-header-left')) return;
 
                 if (e.button === 0 && !e.altKey) {
                     // Left click: Orbit
@@ -248,10 +254,95 @@
             document.getElementById('btn-cam-top').onclick = () => this.setCameraView('top');
             document.getElementById('btn-cam-right').onclick = () => this.setCameraView('right');
 
+            // Composition Resolution dropdown
+            const resSelect = document.getElementById('ae-viewport-resolution');
+            if (resSelect) {
+                resSelect.addEventListener('change', (e) => {
+                    this.setResolution(e.target.value);
+                });
+            }
+            this.syncResolutionDropdown();
+
             // Recalculate on comp change
             this.comp._onChanged = () => {
+                this.syncResolutionDropdown();
                 this.renderLayers(this.comp.time);
             };
+        }
+
+        setResolution(presetKey) {
+            const PRESETS = {
+                '720p':  { width: 1280, height: 720,  label: '720p' },
+                '1080p': { width: 1920, height: 1080, label: '1080p' },
+                '1440p': { width: 2560, height: 1440, label: '1440p' },
+                '4k':    { width: 3840, height: 2160, label: '4k' }
+            };
+            const target = PRESETS[presetKey];
+            if (!target || !this.comp) return;
+
+            const prevW = this.comp.width;
+            const prevH = this.comp.height;
+
+            this.comp.width = target.width;
+            this.comp.height = target.height;
+
+            // Update composition canvas DOM element size
+            const canvas = document.getElementById('ae-comp-canvas');
+            if (canvas) {
+                canvas.style.width = `${target.width}px`;
+                canvas.style.height = `${target.height}px`;
+            }
+
+            // Keep camera target centered if it was centered on the comp
+            if (Math.abs(this.camera.targetX - prevW / 2) < 2 && Math.abs(this.camera.targetY - prevH / 2) < 2) {
+                this.camera.targetX = target.width / 2;
+                this.camera.targetY = target.height / 2;
+            }
+            this.updateCameraTransform();
+
+            this.syncResolutionDropdown();
+
+            if (this.comp._onChanged) {
+                this.comp._onChanged();
+            }
+            this.renderLayers(this.comp.time);
+        }
+
+        syncResolutionDropdown() {
+            const resSelect = document.getElementById('ae-viewport-resolution');
+            if (!resSelect || !this.comp) return;
+
+            const w = this.comp.width;
+            const h = this.comp.height;
+
+            let customOpt = resSelect.querySelector('option[value="custom"]');
+
+            if (w === 1280 && h === 720) {
+                if (customOpt) customOpt.remove();
+                resSelect.value = '720p';
+                resSelect.title = 'Composition Resolution: 720p (1280×720)';
+            } else if (w === 1920 && h === 1080) {
+                if (customOpt) customOpt.remove();
+                resSelect.value = '1080p';
+                resSelect.title = 'Composition Resolution: 1080p (1920×1080)';
+            } else if (w === 2560 && h === 1440) {
+                if (customOpt) customOpt.remove();
+                resSelect.value = '1440p';
+                resSelect.title = 'Composition Resolution: 1440p (2560×1440)';
+            } else if (w === 3840 && h === 2160) {
+                if (customOpt) customOpt.remove();
+                resSelect.value = '4k';
+                resSelect.title = 'Composition Resolution: 4k (3840×2160)';
+            } else {
+                if (!customOpt) {
+                    customOpt = document.createElement('option');
+                    customOpt.value = 'custom';
+                    resSelect.appendChild(customOpt);
+                }
+                customOpt.textContent = `Custom (${w}×${h})`;
+                resSelect.value = 'custom';
+                resSelect.title = `Composition Resolution: Custom (${w}×${h})`;
+            }
         }
 
         setCameraView(preset) {

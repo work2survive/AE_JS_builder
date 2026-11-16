@@ -1604,7 +1604,7 @@
     }
 
     class CompItem {
-        constructor(name = 'Comp 1', width = 1280, height = 720, pixelAspect = 1, duration = 10, frameRate = 30) {
+        constructor(name = 'Comp 1', width = 1920, height = 1080, pixelAspect = 1, duration = 10, frameRate = 30) {
             this.name = name;
             this.width = width;
             this.height = height;
@@ -1703,7 +1703,7 @@
     };
 
     // Default Comp
-    app.project.addComp('Main Comp', 1280, 720, 1, 10, 30);
+    app.project.addComp('Main Comp', 1920, 1080, 1, 10, 30);
 
     // Global Dollar object in ExtendScript ($)
     const $ = {

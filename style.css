@@ -498,6 +498,41 @@ body.body-viewport-panning {
     color: #bbb;
 }
 
+.ae-viewport-res-select {
+    background: rgba(20, 20, 20, 0.75);
+    backdrop-filter: blur(4px);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 4px;
+    padding: 3px 8px;
+    font-size: 11px;
+    font-weight: 600;
+    color: #ccc;
+    cursor: pointer;
+    outline: none;
+    pointer-events: auto;
+    height: 25px;
+    box-sizing: border-box;
+    transition: border-color 0.15s ease, background-color 0.15s ease, color 0.15s ease;
+}
+
+.ae-viewport-res-select:hover {
+    border-color: rgba(255, 255, 255, 0.35);
+    background: rgba(35, 35, 35, 0.9);
+    color: #fff;
+}
+
+.ae-viewport-res-select:focus {
+    border-color: var(--ae-blue, #2c8cff);
+    box-shadow: 0 0 4px rgba(44, 140, 255, 0.35);
+    color: #fff;
+}
+
+.ae-viewport-res-select option {
+    background-color: #1e1e1e;
+    color: #d6d6d6;
+    font-size: 11px;
+}
+
 .ae-viewport-controls {
     pointer-events: auto;
     display: flex;
