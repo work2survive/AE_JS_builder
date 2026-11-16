@@ -1032,35 +1032,53 @@
         }
 
         function addOrSetSlider(layer, name, val) {
-            var parade = layer.property("ADBE Effect Parade");
+            var parade = layer.property("ADBE Effect Parade") || layer.property("Effects");
+            if (!parade) return null;
             var effect = parade.property(name);
             if (!effect) {
                 effect = parade.addProperty("ADBE Slider Control");
                 effect.name = name;
             }
-            effect.property(1).setValue(val);
+            if (effect) {
+                var p = effect.property(1) || effect.property("Slider");
+                if (p && typeof p.setValue === "function") {
+                    p.setValue(val);
+                }
+            }
             return effect;
         }
 
         function addOrSetCheckbox(layer, name, val) {
-            var parade = layer.property("ADBE Effect Parade");
+            var parade = layer.property("ADBE Effect Parade") || layer.property("Effects");
+            if (!parade) return null;
             var effect = parade.property(name);
             if (!effect) {
                 effect = parade.addProperty("ADBE Checkbox Control");
                 effect.name = name;
             }
-            effect.property(1).setValue(val ? 1 : 0);
+            if (effect) {
+                var p = effect.property(1) || effect.property("Checkbox");
+                if (p && typeof p.setValue === "function") {
+                    p.setValue(val ? 1 : 0);
+                }
+            }
             return effect;
         }
 
         function addOrSetColor(layer, name, rgbVal) {
-            var parade = layer.property("ADBE Effect Parade");
+            var parade = layer.property("ADBE Effect Parade") || layer.property("Effects");
+            if (!parade) return null;
             var effect = parade.property(name);
             if (!effect) {
                 effect = parade.addProperty("ADBE Color Control");
                 effect.name = name;
             }
-            effect.property(1).setValue(rgbVal);
+            if (effect) {
+                var p = effect.property(1) || effect.property("Color");
+                if (p && typeof p.setValue === "function") {
+                    p.setValue(rgbVal);
+                }
+            }
             return effect;
         }
 
@@ -1094,52 +1112,54 @@
             var contents = spiralGroup.property("ADBE Vectors Group");
 
             // Fill (optional or background)
-            var fill = contents.property("ADBE Vector Graphic - Fill");
+            var fill = contents.property("ADBE Vector Graphic - Fill") || contents.property("Spiral Fill");
             if (!fill && (params.enableFill || isNew)) {
                 fill = contents.addProperty("ADBE Vector Graphic - Fill");
                 fill.name = "Spiral Fill";
             }
             if (fill) {
                 try {
-                    fill.property("ADBE Vector Fill Color").setValue(hexToRgb(params.fillColor));
-                    fill.property("ADBE Vector Fill Opacity").setValue(params.enableFill ? params.fillOpacity : 0);
+                    var fCol = fill.property("ADBE Vector Fill Color") || fill.property("Color") || fill.property(1);
+                    if (fCol && typeof fCol.setValue === "function") fCol.setValue(hexToRgb(params.fillColor));
+                    var fOp = fill.property("ADBE Vector Fill Opacity") || fill.property("Opacity") || fill.property(2);
+                    if (fOp && typeof fOp.setValue === "function") fOp.setValue(params.enableFill ? params.fillOpacity : 0);
                     fill.enabled = params.enableFill;
                 } catch(eF2) {}
             }
 
             // Path
-            var pathShape = contents.property("ADBE Vector Shape - Group");
+            var pathShape = contents.property("ADBE Vector Shape - Group") || contents.property("Spiral Path");
             if (!pathShape) {
                 pathShape = contents.addProperty("ADBE Vector Shape - Group");
                 pathShape.name = "Spiral Path";
             }
-            var pathProp = pathShape.property("ADBE Vector Shape");
-            if (params.liveRig) {
-                pathProp.expression = SPIRAL_PATH_EXPR;
-            } else {
-                pathProp.expression = "";
-                // Bake static path if Live Rig disabled
-                // Evaluated via quick local JS generator
-                var staticPath = computeStaticShapePath(params);
-                pathProp.setValue(staticPath);
+            var pathProp = pathShape ? (pathShape.property("ADBE Vector Shape") || pathShape.property("Path") || pathShape.property(1)) : null;
+            if (pathProp) {
+                if (params.liveRig) {
+                    pathProp.expression = SPIRAL_PATH_EXPR;
+                } else {
+                    pathProp.expression = "";
+                    var staticPath = computeStaticShapePath(params);
+                    if (typeof pathProp.setValue === "function") pathProp.setValue(staticPath);
+                }
             }
 
             // Stroke & Taper
-            var stroke = contents.property("ADBE Vector Graphic - Stroke");
+            var stroke = contents.property("ADBE Vector Graphic - Stroke") || contents.property("Spiral Stroke");
             if (!stroke) {
                 stroke = contents.addProperty("ADBE Vector Graphic - Stroke");
                 stroke.name = "Spiral Stroke";
             }
-            var strokeColProp = stroke.property("ADBE Vector Stroke Color");
-            var strokeOpProp = stroke.property("ADBE Vector Stroke Opacity");
-            var strokeWProp = stroke.property("ADBE Vector Stroke Width");
-            var lineCapProp = stroke.property("ADBE Vector Stroke Line Cap");
-            var lineJoinProp = stroke.property("ADBE Vector Stroke Line Join");
+            var strokeColProp = stroke ? (stroke.property("ADBE Vector Stroke Color") || stroke.property("Color") || stroke.property(1)) : null;
+            var strokeOpProp = stroke ? (stroke.property("ADBE Vector Stroke Opacity") || stroke.property("Opacity") || stroke.property(2)) : null;
+            var strokeWProp = stroke ? (stroke.property("ADBE Vector Stroke Width") || stroke.property("Stroke Width") || stroke.property(3)) : null;
+            var lineCapProp = stroke ? (stroke.property("ADBE Vector Stroke Line Cap") || stroke.property("Line Cap")) : null;
+            var lineJoinProp = stroke ? (stroke.property("ADBE Vector Stroke Line Join") || stroke.property("Line Join")) : null;
 
-            if (strokeColProp) strokeColProp.setValue(hexToRgb(params.strokeColor));
-            if (strokeOpProp) strokeOpProp.setValue(params.strokeOpacity);
-            if (lineCapProp) lineCapProp.setValue(params.lineCapIndex + 1); // 1: Butt, 2: Round, 3: Projecting
-            if (lineJoinProp) lineJoinProp.setValue(2); // Round join
+            if (strokeColProp && typeof strokeColProp.setValue === "function") strokeColProp.setValue(hexToRgb(params.strokeColor));
+            if (strokeOpProp && typeof strokeOpProp.setValue === "function") strokeOpProp.setValue(params.strokeOpacity);
+            if (lineCapProp && typeof lineCapProp.setValue === "function") lineCapProp.setValue(params.lineCapIndex + 1);
+            if (lineJoinProp && typeof lineJoinProp.setValue === "function") lineJoinProp.setValue(2);
 
             var maxThick = Math.max(params.startThickness, params.endThickness, 0.001);
             if (strokeWProp) {
@@ -1147,13 +1167,13 @@
                     strokeWProp.expression = STROKE_WIDTH_EXPR;
                 } else {
                     strokeWProp.expression = "";
-                    strokeWProp.setValue(maxThick);
+                    if (typeof strokeWProp.setValue === "function") strokeWProp.setValue(maxThick);
                 }
             }
 
             // Native After Effects Stroke Taper (CC 2020 v17.0+)
             try {
-                var taper = stroke.property("ADBE Vector Taper") || stroke.property("Taper") || stroke.property("ADBE Vector Stroke Taper");
+                var taper = stroke ? (stroke.property("ADBE Vector Taper") || stroke.property("Taper") || stroke.property("ADBE Vector Stroke Taper")) : null;
                 if (taper) {
                     var sWidthProp = taper.property("ADBE Vector Taper Start Width") || taper.property("Start Width") || taper.property(3);
                     var eWidthProp = taper.property("ADBE Vector Taper End Width") || taper.property("End Width") || taper.property(4);
@@ -1165,24 +1185,24 @@
                     // Set direct initial values
                     var sWVal = (params.startThickness / maxThick) * 100;
                     var eWVal = (params.endThickness / maxThick) * 100;
-                    if (sWidthProp) sWidthProp.setValue(sWVal);
-                    if (eWidthProp) eWidthProp.setValue(eWVal);
+                    if (sWidthProp && typeof sWidthProp.setValue === "function") sWidthProp.setValue(sWVal);
+                    if (eWidthProp && typeof eWidthProp.setValue === "function") eWidthProp.setValue(eWVal);
 
                     if (params.continuousTaper) {
                         if (params.startThickness <= params.endThickness) {
-                            if (sLenProp) sLenProp.setValue(100);
-                            if (eLenProp) eLenProp.setValue(0);
+                            if (sLenProp && typeof sLenProp.setValue === "function") sLenProp.setValue(100);
+                            if (eLenProp && typeof eLenProp.setValue === "function") eLenProp.setValue(0);
                         } else {
-                            if (sLenProp) sLenProp.setValue(0);
-                            if (eLenProp) eLenProp.setValue(100);
+                            if (sLenProp && typeof sLenProp.setValue === "function") sLenProp.setValue(0);
+                            if (eLenProp && typeof eLenProp.setValue === "function") eLenProp.setValue(100);
                         }
                     } else {
-                        if (sLenProp) sLenProp.setValue(params.taperStartLen);
-                        if (eLenProp) eLenProp.setValue(params.taperEndLen);
+                        if (sLenProp && typeof sLenProp.setValue === "function") sLenProp.setValue(params.taperStartLen);
+                        if (eLenProp && typeof eLenProp.setValue === "function") eLenProp.setValue(params.taperEndLen);
                     }
 
-                    if (sEaseProp) sEaseProp.setValue(params.taperStartEase);
-                    if (eEaseProp) eEaseProp.setValue(params.taperEndEase);
+                    if (sEaseProp && typeof sEaseProp.setValue === "function") sEaseProp.setValue(params.taperStartEase);
+                    if (eEaseProp && typeof eEaseProp.setValue === "function") eEaseProp.setValue(params.taperEndEase);
 
                     // Apply live expressions if requested
                     if (params.liveRig) {
@@ -1205,7 +1225,7 @@
 
             // Trim Paths
             if (params.addTrimPaths) {
-                var trim = contents.property("ADBE Vector Filter - Trim");
+                var trim = contents.property("ADBE Vector Filter - Trim") || contents.property("Trim Paths");
                 if (!trim) {
                     try {
                         trim = contents.addProperty("ADBE Vector Filter - Trim");
@@ -1214,12 +1234,12 @@
                 }
                 if (trim) {
                     try {
-                        var trStart = trim.property("ADBE Vector Trim Start") || trim.property("Start");
-                        var trEnd = trim.property("ADBE Vector Trim End") || trim.property("End");
-                        var trOff = trim.property("ADBE Vector Trim Offset") || trim.property("Offset");
-                        if (trStart && trStart.value === undefined) trStart.setValue(0);
-                        if (trEnd && trEnd.value === undefined) trEnd.setValue(100);
-                        if (trOff && trOff.value === undefined) trOff.setValue(0);
+                        var trStart = trim.property("ADBE Vector Trim Start") || trim.property("Start") || trim.property(1);
+                        var trEnd = trim.property("ADBE Vector Trim End") || trim.property("End") || trim.property(2);
+                        var trOff = trim.property("ADBE Vector Trim Offset") || trim.property("Offset") || trim.property(3);
+                        if (trStart && typeof trStart.setValue === "function" && trStart.value === undefined) trStart.setValue(0);
+                        if (trEnd && typeof trEnd.setValue === "function" && trEnd.value === undefined) trEnd.setValue(100);
+                        if (trOff && typeof trOff.setValue === "function" && trOff.value === undefined) trOff.setValue(0);
                     } catch(eTrProps) {}
                 }
             }
@@ -1338,8 +1358,16 @@
                 layer.name = presetName + " Shape";
                 layer.notShyable = true;
 
-                // Center in viewport
-                layer.property("Position").setValue([comp.width / 2, comp.height / 2]);
+                // Center in viewport (safely handle native AE Transform Group and simulator)
+                try {
+                    var trGroup = layer.property("ADBE Transform Group") || layer.property("Transform");
+                    var posProp = trGroup ? (trGroup.property("ADBE Position") || trGroup.property("Position") || trGroup.property(1) || trGroup.property(2)) : null;
+                    if (!posProp && layer.transform) posProp = layer.transform.position;
+                    if (!posProp) posProp = layer.property("Position");
+                    if (posProp && typeof posProp.setValue === "function") {
+                        posProp.setValue([comp.width / 2, comp.height / 2]);
+                    }
+                } catch(ePos) {}
 
                 applySpiralParametersToLayer(layer, params, true);
                 layer.selected = true;

@@ -1067,6 +1067,28 @@
             this.properties.push(this.transform);
         }
 
+        property(nameOrIndex) {
+            if (typeof nameOrIndex === 'string') {
+                const clean = nameOrIndex.toLowerCase();
+                if (clean === 'position' || clean === 'adbe position') {
+                    return this.transform ? this.transform.position : null;
+                }
+                if (clean === 'scale' || clean === 'adbe scale') {
+                    return this.transform ? this.transform.scale : null;
+                }
+                if (clean === 'rotation' || clean === 'adbe rotate z' || clean === 'z rotation') {
+                    return this.transform ? this.transform.rotation : null;
+                }
+                if (clean === 'opacity' || clean === 'adbe opacity') {
+                    return this.transform ? this.transform.opacity : null;
+                }
+                if (clean === 'anchor point' || clean === 'adbe anchor point') {
+                    return this.transform ? this.transform.anchorPoint : null;
+                }
+            }
+            return super.property(nameOrIndex);
+        }
+
         get position() { return this.transform.position; }
         get scale() { return this.transform.scale; }
         get orientation() { return this.transform.orientation; }
