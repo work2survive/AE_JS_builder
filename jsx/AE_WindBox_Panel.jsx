@@ -1172,15 +1172,15 @@
         pnlFade.spacing = 6;
         pnlFade.margins = 6;
 
-        // Mode Row: Distance to Edge (px) vs Time in Frames
+        // Mode Row: None (Default) vs Distance (px) vs Time in Frames
         var grpFadeModeRow = pnlFade.add("group");
         grpFadeModeRow.orientation = "row";
         grpFadeModeRow.alignChildren = ["left", "center"];
         grpFadeModeRow.spacing = 6;
         grpFadeModeRow.add("statictext", undefined, "Fade Mode:");
-        var dropFadeMode = grpFadeModeRow.add("dropdownlist", undefined, ["Distance to Edge (px)", "Time in Frames"]);
-        dropFadeMode.selection = 0;
-        dropFadeMode.helpTip = "Select whether particles fade gradually based on spatial distance to the box boundary (px) or duration in timeline frames.";
+        var dropFadeMode = grpFadeModeRow.add("dropdownlist", undefined, ["None (Default)", "Distance to Edge (px)", "Time in Frames"]);
+        dropFadeMode.selection = 0; // Default None
+        dropFadeMode.helpTip = "Choose boundary fade mode: 'None' (default, no edge fade), 'Distance to Edge' (fades over pixel distance from entry/exit edges), or 'Time in Frames' (fades over timeline frames).";
 
         // Distance inputs row
         var grpBoundFade = pnlFade.add("group");
@@ -1213,9 +1213,11 @@
         editFadeOutFrames.helpTip = "Duration in timeline frames over which particles fade smoothly to 0% opacity as they leave the boundaries";
 
         function updateFadeModeUI() {
-            var isFrames = (dropFadeMode.selection && dropFadeMode.selection.index === 1);
-            grpBoundFade.enabled = !isFrames;
-            grpFramesFade.enabled = isFrames;
+            var mode = dropFadeMode.selection ? dropFadeMode.selection.index : 0;
+            // mode 0: None, mode 1: Distance, mode 2: Frames
+            grpBoundFade.enabled = (mode === 1);
+            grpFramesFade.enabled = (mode === 2);
+            grpCamFade.enabled = (mode === 0);
         }
         dropFadeMode.onChange = updateFadeModeUI;
         updateFadeModeUI();
@@ -1526,7 +1528,15 @@
             if (preset.alignToWind !== undefined) chkAlignWind.value = Boolean(preset.alignToWind);
             if (preset.numParticles !== undefined) editCount.text = String(Math.min(MAX_PARTICLE_LIMIT, Math.max(1, preset.numParticles)));
             if (preset.fadeMode !== undefined) {
-                dropFadeMode.selection = (preset.fadeMode === 1 || preset.fadeMode === "frames") ? 1 : 0;
+                if (typeof preset.fadeMode === "string") {
+                    var fm = preset.fadeMode.toLowerCase();
+                    dropFadeMode.selection = (fm === "frames" || fm === "2") ? 2 : ((fm === "dist" || fm === "distance" || fm === "1") ? 1 : 0);
+                } else {
+                    dropFadeMode.selection = Math.max(0, Math.min(2, parseInt(preset.fadeMode, 10) || 0));
+                }
+                updateFadeModeUI();
+            } else {
+                dropFadeMode.selection = 0; // Default None
                 updateFadeModeUI();
             }
             if (preset.fadeInDist !== undefined) editFadeInDist.text = String(preset.fadeInDist);
@@ -1792,7 +1802,7 @@
                     { type: "slider",   name: "WindBox - Direction Z",            val: dirZ },
                     { type: "checkbox", name: "WindBox - Align to Wind",          val: alignToWind ? 1 : 0 },
                     { type: "slider",   name: "WindBox - Particle Type",          val: particleType },
-                    { type: "slider",   name: "WindBox - Fade Mode (1=Dist, 2=Frames)", val: fadeModeIdx + 1 },
+                    { type: "slider",   name: "WindBox - Fade Mode (0=None, 1=Dist, 2=Frames)", val: fadeModeIdx + 1 },
                     { type: "slider",   name: "WindBox - Fade In Distance",       val: fadeInDist },
                     { type: "slider",   name: "WindBox - Fade Out Distance",      val: fadeOutDist },
                     { type: "slider",   name: "WindBox - Fade In Frames",         val: fadeInFrames },
@@ -2059,8 +2069,8 @@
                     'var activeCount = ctrl.effect("WindBox - Number of Particles")(1).value;',
                     'var pIndex = effect("WindBox Particle Index")(1).value;',
                     'if (pIndex > activeCount) { 0; } else {',
-                    '    var fadeMode = 1;',
-                    '    try { fadeMode = Math.round(ctrl.effect("WindBox - Fade Mode (1=Dist, 2=Frames)")(1).value); } catch(e) {}',
+                    '    var fadeMode = 0;',
+                    '    try { fadeMode = Math.round(ctrl.effect("WindBox - Fade Mode (0=None, 1=Dist, 2=Frames)")(1).value); } catch(e) {}',
                     '    var sX = Math.max(1, ctrl.effect("WindBox - Size X")(1).value);',
                     '    var sY = Math.max(1, ctrl.effect("WindBox - Size Y")(1).value);',
                     '    var sZ = Math.max(1, ctrl.effect("WindBox - Size Z")(1).value);',
@@ -2070,92 +2080,97 @@
                     '    var dZ = ctrl.effect("WindBox - Direction Z")(1).value;',
                     '    var len = Math.sqrt(dX * dX + dY * dY + dZ * dZ);',
                     '    var dir = (len > 0.0001) ? [dX / len, dY / len, dZ / len] : [1, 0, 0];',
-                    '    var fadeIn = 0, fadeOut = 0;',
-                    '    if (fadeMode === 2) {',
-                    '        var inF = 0, outF = 0;',
-                    '        try { inF = Math.max(0, ctrl.effect("WindBox - Fade In Frames")(1).value); } catch(e) {}',
-                    '        try { outF = Math.max(0, ctrl.effect("WindBox - Fade Out Frames")(1).value); } catch(e) {}',
-                    '        var frameSpd = Math.max(0.1, Math.abs(spd)) * thisComp.frameDuration;',
-                    '        fadeIn = inF * frameSpd;',
-                    '        fadeOut = outF * frameSpd;',
-                    '    } else {',
-                    '        try { fadeIn = Math.max(0, ctrl.effect("WindBox - Fade In Distance")(1).value); } catch(e) {}',
-                    '        try { fadeOut = Math.max(0, ctrl.effect("WindBox - Fade Out Distance")(1).value); } catch(e) {}',
-                    '    }',
                     '    var boundFactor = 1;',
-                    '    if (fadeIn > 0 || fadeOut > 0) {',
-                    '        var seed = 12345;',
-                    '        try { seed = ctrl.effect("WindBox - Random Seed")(1).value; } catch(e) {}',
-                    '        seedRandom(seed + pIndex * 9973 + 17, true);',
-                    '        var pType = 0;',
-                    '        try { pType = ctrl.effect("WindBox - Particle Type")(1).value; } catch(e) {}',
-                    '        var isMnt = (pType === 3);',
-                    '        var isCloud = (pType === 1);',
-                    '        var initY = isMnt ? (sY * 0.35 + (random() - 0.5) * (sY * 0.1)) : (isCloud ? (-sY * 0.12 + (random() - 0.5) * (sY * 0.75)) : ((random() - 0.5) * sY));',
-                    '        var initPos = [(random() - 0.5) * sX, initY, (random() - 0.5) * sZ];',
-                    '        var dist = spd * time;',
-                    '        function wrapAxis(val, size) {',
-                    '            var shifted = val + size * 0.5;',
-                    '            var m = shifted % size;',
-                    '            if (m < 0) m += size;',
-                    '            return m - size * 0.5;',
+                    '    if (fadeMode === 1 || fadeMode === 2) {',
+                    '        var fadeIn = 0, fadeOut = 0;',
+                    '        if (fadeMode === 2) {',
+                    '            var inF = 0, outF = 0;',
+                    '            try { inF = Math.max(0, ctrl.effect("WindBox - Fade In Frames")(1).value); } catch(e) {}',
+                    '            try { outF = Math.max(0, ctrl.effect("WindBox - Fade Out Frames")(1).value); } catch(e) {}',
+                    '            var frameSpd = Math.max(0.1, Math.abs(spd)) * thisComp.frameDuration;',
+                    '            fadeIn = inF * frameSpd;',
+                    '            fadeOut = outF * frameSpd;',
+                    '        } else {',
+                    '            try { fadeIn = Math.max(0, ctrl.effect("WindBox - Fade In Distance")(1).value); } catch(e) {}',
+                    '            try { fadeOut = Math.max(0, ctrl.effect("WindBox - Fade Out Distance")(1).value); } catch(e) {}',
                     '        }',
-                    '        var bx = wrapAxis(initPos[0] + dir[0] * dist, sX);',
-                    '        var by = wrapAxis(initPos[1] + dir[1] * dist, sY);',
-                    '        var bz = wrapAxis(initPos[2] + dir[2] * dist, sZ);',
-                    '        var dIn = 999999, dOut = 999999;',
-                    '        if (Math.abs(dir[0]) > 0.001) {',
-                    '            var inX = (dir[0] > 0) ? (bx + sX * 0.5) : (sX * 0.5 - bx);',
-                    '            var outX = (dir[0] > 0) ? (sX * 0.5 - bx) : (bx + sX * 0.5);',
-                    '            dIn = Math.min(dIn, inX / Math.abs(dir[0]));',
-                    '            dOut = Math.min(dOut, outX / Math.abs(dir[0]));',
+                    '        if (fadeIn > 0 || fadeOut > 0) {',
+                    '            var seed = 12345;',
+                    '            try { seed = ctrl.effect("WindBox - Random Seed")(1).value; } catch(e) {}',
+                    '            seedRandom(seed + pIndex * 9973 + 17, true);',
+                    '            var pType = 0;',
+                    '            try { pType = ctrl.effect("WindBox - Particle Type")(1).value; } catch(e) {}',
+                    '            var isMnt = (pType === 3);',
+                    '            var isCloud = (pType === 1);',
+                    '            var initY = isMnt ? (sY * 0.35 + (random() - 0.5) * (sY * 0.1)) : (isCloud ? (-sY * 0.12 + (random() - 0.5) * (sY * 0.75)) : ((random() - 0.5) * sY));',
+                    '            var initPos = [(random() - 0.5) * sX, initY, (random() - 0.5) * sZ];',
+                    '            var dist = spd * time;',
+                    '            function wrapAxis(val, size) {',
+                    '                var shifted = val + size * 0.5;',
+                    '                var m = shifted % size;',
+                    '                if (m < 0) m += size;',
+                    '                return m - size * 0.5;',
+                    '            }',
+                    '            var bx = wrapAxis(initPos[0] + dir[0] * dist, sX);',
+                    '            var by = wrapAxis(initPos[1] + dir[1] * dist, sY);',
+                    '            var bz = wrapAxis(initPos[2] + dir[2] * dist, sZ);',
+                    '            var dIn = 999999, dOut = 999999;',
+                    '            if (Math.abs(dir[0]) > 0.001) {',
+                    '                var inX = (dir[0] > 0) ? (bx + sX * 0.5) : (sX * 0.5 - bx);',
+                    '                var outX = (dir[0] > 0) ? (sX * 0.5 - bx) : (bx + sX * 0.5);',
+                    '                dIn = Math.min(dIn, inX / Math.abs(dir[0]));',
+                    '                dOut = Math.min(dOut, outX / Math.abs(dir[0]));',
+                    '            }',
+                    '            if (Math.abs(dir[1]) > 0.001) {',
+                    '                var inY = (dir[1] > 0) ? (by + sY * 0.5) : (sY * 0.5 - by);',
+                    '                var outY = (dir[1] > 0) ? (sY * 0.5 - by) : (by + sY * 0.5);',
+                    '                dIn = Math.min(dIn, inY / Math.abs(dir[1]));',
+                    '                dOut = Math.min(dOut, outY / Math.abs(dir[1]));',
+                    '            }',
+                    '            if (Math.abs(dir[2]) > 0.001) {',
+                    '                var inZ = (dir[2] > 0) ? (bz + sZ * 0.5) : (sZ * 0.5 - bz);',
+                    '                var outZ = (dir[2] > 0) ? (sZ * 0.5 - bz) : (bz + sZ * 0.5);',
+                    '                dIn = Math.min(dIn, inZ / Math.abs(dir[2]));',
+                    '                dOut = Math.min(dOut, outZ / Math.abs(dir[2]));',
+                    '            }',
+                    '            var fIn = (fadeIn > 0) ? Math.min(1, Math.max(0, dIn / fadeIn)) : 1;',
+                    '            var fOut = (fadeOut > 0) ? Math.min(1, Math.max(0, dOut / fadeOut)) : 1;',
+                    '            boundFactor = fIn * fOut;',
                     '        }',
-                    '        if (Math.abs(dir[1]) > 0.001) {',
-                    '            var inY = (dir[1] > 0) ? (by + sY * 0.5) : (sY * 0.5 - by);',
-                    '            var outY = (dir[1] > 0) ? (sY * 0.5 - by) : (by + sY * 0.5);',
-                    '            dIn = Math.min(dIn, inY / Math.abs(dir[1]));',
-                    '            dOut = Math.min(dOut, outY / Math.abs(dir[1]));',
-                    '        }',
-                    '        if (Math.abs(dir[2]) > 0.001) {',
-                    '            var inZ = (dir[2] > 0) ? (bz + sZ * 0.5) : (sZ * 0.5 - bz);',
-                    '            var outZ = (dir[2] > 0) ? (sZ * 0.5 - bz) : (bz + sZ * 0.5);',
-                    '            dIn = Math.min(dIn, inZ / Math.abs(dir[2]));',
-                    '            dOut = Math.min(dOut, outZ / Math.abs(dir[2]));',
-                    '        }',
-                    '        var fIn = (fadeIn > 0) ? Math.min(1, Math.max(0, dIn / fadeIn)) : 1;',
-                    '        var fOut = (fadeOut > 0) ? Math.min(1, Math.max(0, dOut / fadeOut)) : 1;',
-                    '        boundFactor = fIn * fOut;',
                     '    }',
                     '    var camFactor = 1;',
-                    '    var useCamFade = 0;',
-                    '    try { useCamFade = ctrl.effect("WindBox - Fade Near Camera")(1).value; } catch(e) {}',
-                    '    if (useCamFade > 0) {',
-                    '        var camFadeDist = 250;',
-                    '        try { camFadeDist = Math.max(1, ctrl.effect("WindBox - Camera Fade Dist")(1).value); } catch(e) {}',
-                    '        var camPos = [thisComp.width / 2, thisComp.height / 2, -1777.78];',
-                    '        var camForward = [0, 0, 1];',
-                    '        try {',
-                    '            if (thisComp.activeCamera) {',
-                    '                camPos = thisComp.activeCamera.toWorld([0, 0, 0]);',
-                    '                camForward = thisComp.activeCamera.toWorldVec([0, 0, 1]);',
-                    '            } else if (comp("' + parentComp.name + '").activeCamera) {',
-                    '                var pCam = comp("' + parentComp.name + '").activeCamera;',
-                    '                camPos = pCam.toWorld([0, 0, 0]);',
-                    '                camForward = pCam.toWorldVec([0, 0, 1]);',
+                    '    if (fadeMode === 0) {',
+                    '        var useCamFade = 0;',
+                    '        try { useCamFade = ctrl.effect("WindBox - Fade Near Camera")(1).value; } catch(e) {}',
+                    '        if (useCamFade > 0) {',
+                    '            var camFadeDist = 250;',
+                    '            try { camFadeDist = Math.max(1, ctrl.effect("WindBox - Camera Fade Dist")(1).value); } catch(e) {}',
+                    '            var camPos = [thisComp.width / 2, thisComp.height / 2, -1777.78];',
+                    '            var camForward = [0, 0, 1];',
+                    '            try {',
+                    '                if (thisComp.activeCamera) {',
+                    '                    camPos = thisComp.activeCamera.toWorld([0, 0, 0]);',
+                    '                    camForward = thisComp.activeCamera.toWorldVec([0, 0, 1]);',
+                    '                } else if (comp("' + parentComp.name + '").activeCamera) {',
+                    '                    var pCam = comp("' + parentComp.name + '").activeCamera;',
+                    '                    camPos = pCam.toWorld([0, 0, 0]);',
+                    '                    camForward = pCam.toWorldVec([0, 0, 1]);',
+                    '                }',
+                    '            } catch(e) {}',
+                    '            var myPos = toWorld(anchorPoint);',
+                    '            var toPt = [myPos[0] - camPos[0], myPos[1] - camPos[1], myPos[2] - camPos[2]];',
+                    '            var depth = toPt[0] * camForward[0] + toPt[1] * camForward[1] + toPt[2] * camForward[2];',
+                    '            if (depth <= 0) {',
+                    '                camFactor = 0;',
+                    '            } else if (depth < camFadeDist) {',
+                    '                camFactor = depth / camFadeDist;',
                     '            }',
-                    '        } catch(e) {}',
-                    '        var myPos = toWorld(anchorPoint);',
-                    '        var toPt = [myPos[0] - camPos[0], myPos[1] - camPos[1], myPos[2] - camPos[2]];',
-                    '        var depth = toPt[0] * camForward[0] + toPt[1] * camForward[1] + toPt[2] * camForward[2];',
-                    '        if (depth <= 0) {',
-                    '            camFactor = 0;',
-                    '        } else if (depth < camFadeDist) {',
-                    '            camFactor = depth / camFadeDist;',
                     '        }',
                     '    }',
                     '    value * boundFactor * camFactor;',
                     '}'
-                ].join("\n");
+                ].join("
+");
 
                 var scaleExpr = [
                     'var ctrl = thisComp.layer("' + ctrlName + '");',

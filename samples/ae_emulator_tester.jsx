@@ -117,12 +117,12 @@
     grpFontSize.alignment = ["fill", "top"];
     var lblFontSize = grpFontSize.add("statictext", undefined, "Font Size (px):");
     lblFontSize.preferredSize = [105, -1];
-    var sldFontSize = grpFontSize.add("slider", undefined, 20, 12, 36);
-    sldFontSize.minvalue = 12;
-    sldFontSize.maxvalue = 36;
-    sldFontSize.value = 20;
+    var sldFontSize = grpFontSize.add("slider", undefined, 15, 10, 28);
+    sldFontSize.minvalue = 10;
+    sldFontSize.maxvalue = 28;
+    sldFontSize.value = 15;
     sldFontSize.alignment = ["fill", "center"];
-    var txtFontSize = grpFontSize.add("edittext", undefined, "20");
+    var txtFontSize = grpFontSize.add("edittext", undefined, "15");
     txtFontSize.characters = 3;
 
     // Stroke Width Slider + EditText
@@ -131,12 +131,12 @@
     grpStroke.alignment = ["fill", "top"];
     var lblStroke = grpStroke.add("statictext", undefined, "Stroke Width (px):");
     lblStroke.preferredSize = [105, -1];
-    var sldStroke = grpStroke.add("slider", undefined, 4, 1, 16);
+    var sldStroke = grpStroke.add("slider", undefined, 3, 1, 12);
     sldStroke.minvalue = 1;
-    sldStroke.maxvalue = 16;
-    sldStroke.value = 4;
+    sldStroke.maxvalue = 12;
+    sldStroke.value = 3;
     sldStroke.alignment = ["fill", "center"];
-    var txtStroke = grpStroke.add("edittext", undefined, "4");
+    var txtStroke = grpStroke.add("edittext", undefined, "3");
     txtStroke.characters = 3;
 
     // Synchronize slider and text inputs
@@ -152,8 +152,8 @@
             txt.text = String(v);
         };
     }
-    hookSliderText(sldFontSize, txtFontSize, 12, 36);
-    hookSliderText(sldStroke, txtStroke, 1, 16);
+    hookSliderText(sldFontSize, txtFontSize, 10, 28);
+    hookSliderText(sldStroke, txtStroke, 1, 12);
 
     // Progress Bar Indicator
     var grpProgress = tabHarness.add("group");
@@ -696,8 +696,8 @@
             if (doFonts) {
                 var txtHead = comp.layers.addText("SYSTEM FONTS & TYPOGRAPHY HARNESS (POSITION & METRICS)");
                 txtHead.name = "TEST_02_Font_Section_Title";
-                txtHead.transform.position.setValue([80, 70, 0]);
-                setupTextDocument(txtHead, "SYSTEM FONTS & TYPOGRAPHY HARNESS (POSITION & METRICS)", "Segoe UI", 16, [0.4, 0.8, 1.0], "left");
+                txtHead.transform.position.setValue([110, 95, 0]);
+                setupTextDocument(txtHead, "SYSTEM FONTS & TYPOGRAPHY HARNESS (POSITION & METRICS)", "Segoe UI", 14, [0.4, 0.8, 1.0], "left");
 
                 var fontsToTest = [
                     { name: "Segoe UI",        label: "Segoe UI (Standard UI Sans)",      color: [1.0, 1.0, 1.0] },
@@ -709,8 +709,8 @@
                     { name: "Impact",          label: "Impact (Condensed Display)",       color: [1.0, 0.45, 0.45] }
                 ];
 
-                var startY = 135;
-                var rowSpacing = 120;
+                var startY = 145;
+                var rowSpacing = 90;
                 var pangramSentence = "The quick brown fox jumps over the lazy dog.";
                 var numberSymbols = "0123456789 - [!@#$%&*+-=]";
 
@@ -720,18 +720,18 @@
 
                     var lblLyr = comp.layers.addText(fInfo.label);
                     lblLyr.name = "TEST_03_Font_" + (fi + 1) + "_Label";
-                    lblLyr.transform.position.setValue([80, posY, 0]);
-                    setupTextDocument(lblLyr, "[" + (fi + 1) + "] " + fInfo.label, "Segoe UI", 13, [0.55, 0.65, 0.80], "left");
+                    lblLyr.transform.position.setValue([110, posY, 0]);
+                    setupTextDocument(lblLyr, "[" + (fi + 1) + "] " + fInfo.label, "Segoe UI", 11, [0.55, 0.65, 0.80], "left");
 
                     var panLyr = comp.layers.addText(pangramSentence);
                     panLyr.name = "TEST_03_Font_" + (fi + 1) + "_Pangram";
-                    panLyr.transform.position.setValue([80, posY + 28, 0]);
+                    panLyr.transform.position.setValue([110, posY + 22, 0]);
                     setupTextDocument(panLyr, pangramSentence, fInfo.name, baseFontSize, fInfo.color, "left");
 
                     var numLyr = comp.layers.addText(numberSymbols);
                     numLyr.name = "TEST_03_Font_" + (fi + 1) + "_Numbers";
-                    numLyr.transform.position.setValue([80, posY + 54, 0]);
-                    setupTextDocument(numLyr, numberSymbols, fInfo.name, Math.round(baseFontSize * 0.8), [0.70, 0.75, 0.85], "left");
+                    numLyr.transform.position.setValue([110, posY + 43, 0]);
+                    setupTextDocument(numLyr, numberSymbols, fInfo.name, Math.round(baseFontSize * 0.75), [0.70, 0.75, 0.85], "left");
                 }
             }
             progBar.value = 65;
@@ -740,12 +740,12 @@
             // MODULE 3: GEOMETRIC SHAPES (ELLIPTICAL & POLYGONAL)
             // =================================================================
             if (doShapes) {
-                var shapeColX = 1050;
+                var shapeColX = 1040;
 
                 var shapeHead = comp.layers.addText("GEOMETRIC SHAPES: ELLIPSES & POLYGONS (AE POSSIBILITIES)");
                 shapeHead.name = "TEST_04_Shapes_Section_Title";
-                shapeHead.transform.position.setValue([shapeColX, 70, 0]);
-                setupTextDocument(shapeHead, "GEOMETRIC SHAPES: ELLIPSES & POLYGONS", "Segoe UI", 16, [0.4, 0.8, 1.0], "left");
+                shapeHead.transform.position.setValue([shapeColX, 95, 0]);
+                setupTextDocument(shapeHead, "GEOMETRIC SHAPES: ELLIPSES & POLYGONS", "Segoe UI", 14, [0.4, 0.8, 1.0], "left");
 
                 var shapeLayer = comp.layers.addShape();
                 shapeLayer.name = "TEST_05_Geometric_Shapes";
@@ -757,18 +757,19 @@
 
                 var sContents = shapeLayer.property("Contents");
 
+                // Row 1 (Y = 175): 5 shapes (Circle, Oval, Triangle, Pentagon, Hexagon)
                 // 1. Regular Circle with Radial Gradient Fill
                 var grpCircle = sContents.addProperty("ADBE Vector Group");
                 grpCircle.name = "1_Circle_Radial_Gradient";
                 var ell1 = grpCircle.property("Contents").addProperty("ADBE Vector Shape - Ellipse");
-                ell1.property("Size").setValue([110, 110]);
-                ell1.property("Position").setValue([shapeColX + 60, 170]);
+                ell1.property("Size").setValue([76, 76]);
+                ell1.property("Position").setValue([1110, 175]);
 
                 if (doGradients) {
                     var gFill1 = grpCircle.property("Contents").addProperty("ADBE Vector Graphic - G-Fill");
                     gFill1.property("Type").setValue(2);
-                    gFill1.property("Start Point").setValue([shapeColX + 50, 160]);
-                    gFill1.property("End Point").setValue([shapeColX + 115, 215]);
+                    gFill1.property("Start Point").setValue([1100, 165]);
+                    gFill1.property("End Point").setValue([1145, 210]);
                     gFill1.property("Colors").setValue([
                         [0.0, [1.0, 0.85, 0.1]],
                         [1.0, [0.95, 0.25, 0.1]]
@@ -781,18 +782,18 @@
                 sStrk1.property("Color").setValue([1.0, 1.0, 1.0]);
                 sStrk1.property("Stroke Width").setValue(baseStrokeWidth);
 
-                // 2. Stretched Ellipse (150x75) with Linear Gradient Fill
+                // 2. Stretched Ellipse (104x56) with Linear Gradient Fill
                 var grpOval = sContents.addProperty("ADBE Vector Group");
                 grpOval.name = "2_Oval_Linear_Gradient";
                 var ell2 = grpOval.property("Contents").addProperty("ADBE Vector Shape - Ellipse");
-                ell2.property("Size").setValue([150, 75]);
-                ell2.property("Position").setValue([shapeColX + 225, 170]);
+                ell2.property("Size").setValue([104, 56]);
+                ell2.property("Position").setValue([1245, 175]);
 
                 if (doGradients) {
                     var gFill2 = grpOval.property("Contents").addProperty("ADBE Vector Graphic - G-Fill");
                     gFill2.property("Type").setValue(1);
-                    gFill2.property("Start Point").setValue([shapeColX + 150, 170]);
-                    gFill2.property("End Point").setValue([shapeColX + 300, 170]);
+                    gFill2.property("Start Point").setValue([1195, 175]);
+                    gFill2.property("End Point").setValue([1295, 175]);
                     gFill2.property("Colors").setValue([
                         [0.0, [0.0, 0.85, 1.0]],
                         [1.0, [0.85, 0.1, 0.95]]
@@ -811,8 +812,8 @@
                 var polyTri = grpTri.property("Contents").addProperty("ADBE Vector Shape - Star");
                 polyTri.property("Type").setValue(2);
                 polyTri.property("Points").setValue(3);
-                polyTri.property("Position").setValue([shapeColX + 375, 170]);
-                polyTri.property("Outer Radius").setValue(55);
+                polyTri.property("Position").setValue([1380, 175]);
+                polyTri.property("Outer Radius").setValue(40);
 
                 var fFillTri = grpTri.property("Contents").addProperty("ADBE Vector Graphic - Fill");
                 fFillTri.property("Color").setValue([0.95, 0.35, 0.25]);
@@ -826,8 +827,8 @@
                 var polyPent = grpPent.property("Contents").addProperty("ADBE Vector Shape - Star");
                 polyPent.property("Type").setValue(2);
                 polyPent.property("Points").setValue(5);
-                polyPent.property("Position").setValue([shapeColX + 510, 170]);
-                polyPent.property("Outer Radius").setValue(55);
+                polyPent.property("Position").setValue([1515, 175]);
+                polyPent.property("Outer Radius").setValue(40);
 
                 var fFillPent = grpPent.property("Contents").addProperty("ADBE Vector Graphic - Fill");
                 fFillPent.property("Color").setValue([0.15, 0.75, 0.45]);
@@ -841,8 +842,8 @@
                 var polyHex = grpHex.property("Contents").addProperty("ADBE Vector Shape - Star");
                 polyHex.property("Type").setValue(2);
                 polyHex.property("Points").setValue(6);
-                polyHex.property("Position").setValue([shapeColX + 645, 170]);
-                polyHex.property("Outer Radius").setValue(55);
+                polyHex.property("Position").setValue([1650, 175]);
+                polyHex.property("Outer Radius").setValue(40);
 
                 var fFillHex = grpHex.property("Contents").addProperty("ADBE Vector Graphic - Fill");
                 fFillHex.property("Color").setValue([0.15, 0.20, 0.30]);
@@ -851,27 +852,28 @@
                 if (doGradients) {
                     var gStrkHex = grpHex.property("Contents").addProperty("ADBE Vector Graphic - G-Stroke");
                     gStrkHex.property("Type").setValue(1);
-                    gStrkHex.property("Start Point").setValue([shapeColX + 590, 170]);
-                    gStrkHex.property("End Point").setValue([shapeColX + 700, 170]);
+                    gStrkHex.property("Start Point").setValue([1610, 175]);
+                    gStrkHex.property("End Point").setValue([1690, 175]);
                     gStrkHex.property("Colors").setValue([
                         [0.0, [0.0, 1.0, 0.85]],
                         [1.0, [1.0, 0.9, 0.1]]
                     ]);
-                    gStrkHex.property("Stroke Width").setValue(baseStrokeWidth + 2);
+                    gStrkHex.property("Stroke Width").setValue(baseStrokeWidth + 1.5);
                 } else {
                     var sStrkHex = grpHex.property("Contents").addProperty("ADBE Vector Graphic - Stroke");
                     sStrkHex.property("Color").setValue([0.0, 1.0, 0.85]);
                     sStrkHex.property("Stroke Width").setValue(baseStrokeWidth);
                 }
 
+                // Row 2 (Y = 285): 4 shapes (Octagon, Star, Starburst, Concentric Rings)
                 // 6. Octagon (8-Sided Polygon)
                 var grpOct = sContents.addProperty("ADBE Vector Group");
                 grpOct.name = "6_Octagon_Polygon";
                 var polyOct = grpOct.property("Contents").addProperty("ADBE Vector Shape - Star");
                 polyOct.property("Type").setValue(2);
                 polyOct.property("Points").setValue(8);
-                polyOct.property("Position").setValue([shapeColX + 775, 170]);
-                polyOct.property("Outer Radius").setValue(55);
+                polyOct.property("Position").setValue([1110, 285]);
+                polyOct.property("Outer Radius").setValue(40);
 
                 var fFillOct = grpOct.property("Contents").addProperty("ADBE Vector Graphic - Fill");
                 fFillOct.property("Color").setValue([0.65, 0.25, 0.85]);
@@ -885,9 +887,9 @@
                 var polyStar = grpStar.property("Contents").addProperty("ADBE Vector Shape - Star");
                 polyStar.property("Type").setValue(1);
                 polyStar.property("Points").setValue(5);
-                polyStar.property("Position").setValue([shapeColX + 60, 310]);
-                polyStar.property("Outer Radius").setValue(60);
-                polyStar.property("Inner Radius").setValue(26);
+                polyStar.property("Position").setValue([1245, 285]);
+                polyStar.property("Outer Radius").setValue(44);
+                polyStar.property("Inner Radius").setValue(19);
 
                 var fFillStar = grpStar.property("Contents").addProperty("ADBE Vector Graphic - Fill");
                 fFillStar.property("Color").setValue([1.0, 0.80, 0.05]);
@@ -901,9 +903,9 @@
                 var polyBurst = grpBurst.property("Contents").addProperty("ADBE Vector Shape - Star");
                 polyBurst.property("Type").setValue(1);
                 polyBurst.property("Points").setValue(8);
-                polyBurst.property("Position").setValue([shapeColX + 225, 310]);
-                polyBurst.property("Outer Radius").setValue(60);
-                polyBurst.property("Inner Radius").setValue(34);
+                polyBurst.property("Position").setValue([1380, 285]);
+                polyBurst.property("Outer Radius").setValue(44);
+                polyBurst.property("Inner Radius").setValue(25);
 
                 var fFillBurst = grpBurst.property("Contents").addProperty("ADBE Vector Graphic - Fill");
                 fFillBurst.property("Color").setValue([0.95, 0.20, 0.50]);
@@ -915,14 +917,14 @@
                 var grpRings = sContents.addProperty("ADBE Vector Group");
                 grpRings.name = "9_Concentric_Rings";
                 for (var rIdx = 1; rIdx <= 3; rIdx++) {
-                    var rRad = rIdx * 18;
+                    var rRad = rIdx * 14;
                     var cRing = grpRings.property("Contents").addProperty("ADBE Vector Shape - Ellipse");
                     cRing.property("Size").setValue([rRad * 2, rRad * 2]);
-                    cRing.property("Position").setValue([shapeColX + 375, 310]);
+                    cRing.property("Position").setValue([1515, 285]);
                 }
                 var sStrkRings = grpRings.property("Contents").addProperty("ADBE Vector Graphic - Stroke");
                 sStrkRings.property("Color").setValue([0.2, 0.8, 1.0]);
-                sStrkRings.property("Stroke Width").setValue(2.5);
+                sStrkRings.property("Stroke Width").setValue(2);
             }
             progBar.value = 85;
 
@@ -930,13 +932,13 @@
             // MODULE 4: STROKE STYLES (CAPS, JOINS, DASHES & GAPS)
             // =================================================================
             if (doStrokes) {
-                var strokeColX = 1050;
-                var strokeTopY = 440;
+                var strokeColX = 1040;
+                var strokeTopY = 380;
 
                 var strkHead = comp.layers.addText("STROKE STYLES SHOWCASE (LINE CAPS, JOINS, DASHES & GAPS)");
                 strkHead.name = "TEST_06_Strokes_Section_Title";
                 strkHead.transform.position.setValue([strokeColX, strokeTopY, 0]);
-                setupTextDocument(strkHead, "STROKE STYLES SHOWCASE (CAPS, JOINS, DASHES)", "Segoe UI", 16, [0.4, 0.8, 1.0], "left");
+                setupTextDocument(strkHead, "STROKE STYLES SHOWCASE (CAPS, JOINS, DASHES)", "Segoe UI", 14, [0.4, 0.8, 1.0], "left");
 
                 var strokeLayer = comp.layers.addShape();
                 strokeLayer.name = "TEST_07_Stroke_Styles_Showcase";
@@ -946,9 +948,9 @@
 
                 // Line Caps (Butt vs Round vs Projecting)
                 var capLabels = [
-                    { cap: 1, name: "Butt Cap (1)",        y: strokeTopY + 55,  col: [0.95, 0.4, 0.3] },
-                    { cap: 2, name: "Round Cap (2)",       y: strokeTopY + 95,  col: [0.3, 0.85, 0.5] },
-                    { cap: 3, name: "Projecting Cap (3)",  y: strokeTopY + 135, col: [0.3, 0.65, 1.0] }
+                    { cap: 1, name: "Butt Cap (1)",        y: strokeTopY + 45,  col: [0.95, 0.4, 0.3] },
+                    { cap: 2, name: "Round Cap (2)",       y: strokeTopY + 80,  col: [0.3, 0.85, 0.5] },
+                    { cap: 3, name: "Projecting Cap (3)",  y: strokeTopY + 115, col: [0.3, 0.65, 1.0] }
                 ];
 
                 for (var cIdx = 0; cIdx < capLabels.length; cIdx++) {
@@ -956,14 +958,14 @@
 
                     var cLbl = comp.layers.addText(capInfo.name);
                     cLbl.name = "TEST_08_Cap_" + (cIdx + 1) + "_Label";
-                    cLbl.transform.position.setValue([strokeColX, capInfo.y - 12, 0]);
-                    setupTextDocument(cLbl, capInfo.name, "Segoe UI", 12, [0.75, 0.80, 0.90], "left");
+                    cLbl.transform.position.setValue([strokeColX, capInfo.y - 10, 0]);
+                    setupTextDocument(cLbl, capInfo.name, "Segoe UI", 11, [0.75, 0.80, 0.90], "left");
 
                     var capGroup = strkContents.addProperty("ADBE Vector Group");
                     capGroup.name = "Cap_Line_" + capInfo.name;
                     var cPath = capGroup.property("Contents").addProperty("ADBE Vector Shape - Path");
                     var cShape = new Shape();
-                    cShape.vertices = [[strokeColX + 160, capInfo.y], [strokeColX + 380, capInfo.y]];
+                    cShape.vertices = [[strokeColX + 140, capInfo.y], [strokeColX + 320, capInfo.y]];
                     cShape.inTangents = [[0, 0], [0, 0]];
                     cShape.outTangents = [[0, 0], [0, 0]];
                     cShape.closed = false;
@@ -971,15 +973,15 @@
 
                     var cStroke = capGroup.property("Contents").addProperty("ADBE Vector Graphic - Stroke");
                     cStroke.property("Color").setValue(capInfo.col);
-                    cStroke.property("Stroke Width").setValue(14);
+                    cStroke.property("Stroke Width").setValue(11);
                     cStroke.property("Line Cap").setValue(capInfo.cap);
                 }
 
                 // Line Joins (Miter vs Round vs Bevel)
                 var joinLabels = [
-                    { join: 1, name: "Miter Join (1)", y: strokeTopY + 55,  xOff: 430, col: [1.0, 0.75, 0.2] },
-                    { join: 2, name: "Round Join (2)", y: strokeTopY + 95,  xOff: 430, col: [0.85, 0.35, 0.9] },
-                    { join: 3, name: "Bevel Join (3)", y: strokeTopY + 135, xOff: 430, col: [0.2, 0.9, 0.85] }
+                    { join: 1, name: "Miter Join (1)", y: strokeTopY + 45,  xOff: 360, col: [1.0, 0.75, 0.2] },
+                    { join: 2, name: "Round Join (2)", y: strokeTopY + 80,  xOff: 360, col: [0.85, 0.35, 0.9] },
+                    { join: 3, name: "Bevel Join (3)", y: strokeTopY + 115, xOff: 360, col: [0.2, 0.9, 0.85] }
                 ];
 
                 for (var jIdx = 0; jIdx < joinLabels.length; jIdx++) {
@@ -987,34 +989,34 @@
 
                     var jLbl = comp.layers.addText(joinInfo.name);
                     jLbl.name = "TEST_09_Join_" + (jIdx + 1) + "_Label";
-                    jLbl.transform.position.setValue([strokeColX + joinInfo.xOff, joinInfo.y - 12, 0]);
-                    setupTextDocument(jLbl, joinInfo.name, "Segoe UI", 12, [0.75, 0.80, 0.90], "left");
+                    jLbl.transform.position.setValue([strokeColX + joinInfo.xOff, joinInfo.y - 10, 0]);
+                    setupTextDocument(jLbl, joinInfo.name, "Segoe UI", 11, [0.75, 0.80, 0.90], "left");
 
                     var jGroup = strkContents.addProperty("ADBE Vector Group");
                     jGroup.name = "Join_Path_" + joinInfo.name;
                     var jPath = jGroup.property("Contents").addProperty("ADBE Vector Shape - Path");
                     var jShape = new Shape();
-                    var jBaseX = strokeColX + joinInfo.xOff + 140;
+                    var jBaseX = strokeColX + joinInfo.xOff + 115;
                     jShape.vertices = [
-                        [jBaseX, joinInfo.y + 12],
-                        [jBaseX + 40, joinInfo.y - 14],
-                        [jBaseX + 80, joinInfo.y + 12],
-                        [jBaseX + 120, joinInfo.y - 14]
+                        [jBaseX, joinInfo.y + 10],
+                        [jBaseX + 30, joinInfo.y - 10],
+                        [jBaseX + 60, joinInfo.y + 10],
+                        [jBaseX + 90, joinInfo.y - 10]
                     ];
-                    jShape.inTangents = [[0, 0], [0, 0], [0, 0], [0, 0]];
-                    jShape.outTangents = [[0, 0], [0, 0], [0, 0], [0, 0]];
+                    jShape.inTangents = [[0, 0], [0, 0]];
+                    jShape.outTangents = [[0, 0], [0, 0]];
                     jShape.closed = false;
                     jPath.property("Path").setValue(jShape);
 
                     var jStroke = jGroup.property("Contents").addProperty("ADBE Vector Graphic - Stroke");
                     jStroke.property("Color").setValue(joinInfo.col);
-                    jStroke.property("Stroke Width").setValue(10);
+                    jStroke.property("Stroke Width").setValue(8);
                     jStroke.property("Line Join").setValue(joinInfo.join);
                     jStroke.property("Miter Limit").setValue(4);
                 }
 
                 // Dashes & Gaps Patterns
-                var dashTopY = strokeTopY + 185;
+                var dashTopY = strokeTopY + 160;
                 var dashPatterns = [
                     { name: "Solid Line (No Dash)",           dash: null,       cap: 1, col: [1.0, 1.0, 1.0] },
                     { name: "Standard Dash (16px / 8px Gap)", dash: [16, 8],    cap: 1, col: [0.2, 0.8, 1.0] },
@@ -1024,18 +1026,18 @@
 
                 for (var dIdx = 0; dIdx < dashPatterns.length; dIdx++) {
                     var dPat = dashPatterns[dIdx];
-                    var dY = dashTopY + (dIdx * 48);
+                    var dY = dashTopY + (dIdx * 42);
 
                     var dLbl = comp.layers.addText(dPat.name);
                     dLbl.name = "TEST_10_Dash_" + (dIdx + 1) + "_Label";
-                    dLbl.transform.position.setValue([strokeColX, dY - 10, 0]);
-                    setupTextDocument(dLbl, dPat.name, "Segoe UI", 12, [0.70, 0.75, 0.85], "left");
+                    dLbl.transform.position.setValue([strokeColX, dY - 8, 0]);
+                    setupTextDocument(dLbl, dPat.name, "Segoe UI", 11, [0.70, 0.75, 0.85], "left");
 
                     var dGroup = strkContents.addProperty("ADBE Vector Group");
                     dGroup.name = "Dash_Pattern_" + (dIdx + 1);
                     var dPath = dGroup.property("Contents").addProperty("ADBE Vector Shape - Path");
                     var dShape = new Shape();
-                    dShape.vertices = [[strokeColX + 260, dY], [strokeColX + 780, dY]];
+                    dShape.vertices = [[strokeColX + 220, dY], [strokeColX + 660, dY]];
                     dShape.inTangents = [[0, 0], [0, 0]];
                     dShape.outTangents = [[0, 0], [0, 0]];
                     dShape.closed = false;
@@ -1043,7 +1045,7 @@
 
                     var dStroke = dGroup.property("Contents").addProperty("ADBE Vector Graphic - Stroke");
                     dStroke.property("Color").setValue(dPat.col);
-                    dStroke.property("Stroke Width").setValue(baseStrokeWidth + 2);
+                    dStroke.property("Stroke Width").setValue(baseStrokeWidth + 1.5);
                     dStroke.property("Line Cap").setValue(dPat.cap);
 
                     if (dPat.dash) {
