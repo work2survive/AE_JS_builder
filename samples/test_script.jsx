@@ -42,7 +42,8 @@
     starLayer.parent = ring; // Parented to the ring!
 
     var starGroup = starLayer.property("Contents").addProperty("ADBE Vector Group");
-    var pathProp = starGroup.property("Contents").addProperty("ADBE Vector Shape - Path");
+    var pathGroup = starGroup.property("Contents").addProperty("ADBE Vector Shape - Group");
+    var pathProp = pathGroup.property("ADBE Vector Shape") || pathGroup.property("Path") || pathGroup;
 
     var star = new Shape();
     var points = 5;
@@ -60,7 +61,7 @@
         star.outTangents.push([0, 0]);
     }
     star.closed = true;
-    pathProp.property("Path").setValue(star);
+    pathProp.setValue(star);
 
     var starFill = starGroup.property("Contents").addProperty("ADBE Vector Graphic - Fill");
     starFill.property("Color").setValue([1.0, 0.8, 0.1]);

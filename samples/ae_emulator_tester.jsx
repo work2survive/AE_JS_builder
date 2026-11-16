@@ -517,6 +517,13 @@
         textLayer.justification = cleanJust;
     }
 
+    function addVectorPath(containerGroup, shapeObj) {
+        var pathGroup = containerGroup.property("Contents").addProperty("ADBE Vector Shape - Group");
+        var pathProp = pathGroup.property("ADBE Vector Shape") || pathGroup.property("Path") || pathGroup;
+        pathProp.setValue(shapeObj);
+        return pathGroup;
+    }
+
     function runHarnessBuild() {
         var comp = ensureActiveComp();
         if (!comp) {
@@ -580,7 +587,6 @@
                 // Minor Grid Lines (every 50px)
                 var minorGroup = gridContents.addProperty("ADBE Vector Group");
                 minorGroup.name = "Minor Grid (50px)";
-                var minorPathProp = minorGroup.property("Contents").addProperty("ADBE Vector Shape - Path");
                 var minorShape = new Shape();
                 minorShape.vertices = [];
                 minorShape.inTangents = [];
@@ -607,7 +613,7 @@
                     }
                 }
                 minorShape.closed = false;
-                minorPathProp.property("Path").setValue(minorShape);
+                addVectorPath(minorGroup, minorShape);
 
                 var minorStroke = minorGroup.property("Contents").addProperty("ADBE Vector Graphic - Stroke");
                 minorStroke.property("Color").setValue([0.25, 0.35, 0.50]);
@@ -617,7 +623,6 @@
                 // Major Grid Lines (every 100px)
                 var majorGroup = gridContents.addProperty("ADBE Vector Group");
                 majorGroup.name = "Major Grid (100px)";
-                var majorPathProp = majorGroup.property("Contents").addProperty("ADBE Vector Shape - Path");
                 var majorShape = new Shape();
                 majorShape.vertices = [];
                 majorShape.inTangents = [];
@@ -640,7 +645,7 @@
                     majorShape.outTangents.push([0, 0]);
                 }
                 majorShape.closed = false;
-                majorPathProp.property("Path").setValue(majorShape);
+                addVectorPath(majorGroup, majorShape);
 
                 var majorStroke = majorGroup.property("Contents").addProperty("ADBE Vector Graphic - Stroke");
                 majorStroke.property("Color").setValue([0.35, 0.55, 0.85]);
@@ -650,7 +655,6 @@
                 // Origin Center Crosshairs (at centerX, centerY)
                 var centerGroup = gridContents.addProperty("ADBE Vector Group");
                 centerGroup.name = "Center Origin Crosshairs";
-                var centerPathProp = centerGroup.property("Contents").addProperty("ADBE Vector Shape - Path");
                 var centerShape = new Shape();
                 centerShape.vertices = [
                     [centerX, 0], [centerX, compH],
@@ -659,7 +663,7 @@
                 centerShape.inTangents = [[0, 0], [0, 0], [0, 0], [0, 0]];
                 centerShape.outTangents = [[0, 0], [0, 0], [0, 0], [0, 0]];
                 centerShape.closed = false;
-                centerPathProp.property("Path").setValue(centerShape);
+                addVectorPath(centerGroup, centerShape);
 
                 var centerStroke = centerGroup.property("Contents").addProperty("ADBE Vector Graphic - Stroke");
                 centerStroke.property("Color").setValue([1.0, 0.65, 0.1]); // Amber gold
@@ -963,13 +967,12 @@
 
                     var capGroup = strkContents.addProperty("ADBE Vector Group");
                     capGroup.name = "Cap_Line_" + capInfo.name;
-                    var cPath = capGroup.property("Contents").addProperty("ADBE Vector Shape - Path");
                     var cShape = new Shape();
                     cShape.vertices = [[strokeColX + 140, capInfo.y], [strokeColX + 320, capInfo.y]];
                     cShape.inTangents = [[0, 0], [0, 0]];
                     cShape.outTangents = [[0, 0], [0, 0]];
                     cShape.closed = false;
-                    cPath.property("Path").setValue(cShape);
+                    addVectorPath(capGroup, cShape);
 
                     var cStroke = capGroup.property("Contents").addProperty("ADBE Vector Graphic - Stroke");
                     cStroke.property("Color").setValue(capInfo.col);
@@ -994,7 +997,6 @@
 
                     var jGroup = strkContents.addProperty("ADBE Vector Group");
                     jGroup.name = "Join_Path_" + joinInfo.name;
-                    var jPath = jGroup.property("Contents").addProperty("ADBE Vector Shape - Path");
                     var jShape = new Shape();
                     var jBaseX = strokeColX + joinInfo.xOff + 115;
                     jShape.vertices = [
@@ -1006,7 +1008,7 @@
                     jShape.inTangents = [[0, 0], [0, 0]];
                     jShape.outTangents = [[0, 0], [0, 0]];
                     jShape.closed = false;
-                    jPath.property("Path").setValue(jShape);
+                    addVectorPath(jGroup, jShape);
 
                     var jStroke = jGroup.property("Contents").addProperty("ADBE Vector Graphic - Stroke");
                     jStroke.property("Color").setValue(joinInfo.col);
@@ -1035,13 +1037,12 @@
 
                     var dGroup = strkContents.addProperty("ADBE Vector Group");
                     dGroup.name = "Dash_Pattern_" + (dIdx + 1);
-                    var dPath = dGroup.property("Contents").addProperty("ADBE Vector Shape - Path");
                     var dShape = new Shape();
                     dShape.vertices = [[strokeColX + 220, dY], [strokeColX + 660, dY]];
                     dShape.inTangents = [[0, 0], [0, 0]];
                     dShape.outTangents = [[0, 0], [0, 0]];
                     dShape.closed = false;
-                    dPath.property("Path").setValue(dShape);
+                    addVectorPath(dGroup, dShape);
 
                     var dStroke = dGroup.property("Contents").addProperty("ADBE Vector Graphic - Stroke");
                     dStroke.property("Color").setValue(dPat.col);

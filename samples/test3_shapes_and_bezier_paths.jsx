@@ -51,7 +51,8 @@ starLayer.transform.position.setValue([center[0] + 250, center[1], 0]);
 starLayer.transform.yRotation.expression = "wiggle(0.5, 60)";
 
 var starGroup = starLayer.property("Contents").addProperty("ADBE Vector Group");
-var pathProp = starGroup.property("Contents").addProperty("ADBE Vector Shape - Path");
+var pathGroup = starGroup.property("Contents").addProperty("ADBE Vector Shape - Group");
+var pathProp = pathGroup.property("ADBE Vector Shape") || pathGroup.property("Path") || pathGroup;
 
 // Construct 5-point star path
 var star = new Shape();
@@ -78,7 +79,7 @@ for (var i = 0; i < points * 2; i++) {
     }
 }
 star.closed = true;
-pathProp.property("Path").setValue(star);
+pathProp.setValue(star);
 
 var starFill = starGroup.property("Contents").addProperty("ADBE Vector Graphic - Fill");
 starFill.property("Color").setValue([0.9, 0.8, 0.2]);

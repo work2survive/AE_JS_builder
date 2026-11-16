@@ -849,7 +849,16 @@
 
                 // Precomposition or Shape Layer SVG Render
                 if (layer.source && layer.source.layers) {
-                    layer.source.time = time;
+                    let subTime = time;
+                    if (layer.timeRemap && layer.timeRemapEnabled) {
+                        try {
+                            const trVal = layer.timeRemap.getValueAtTime(time);
+                            if (typeof trVal === 'number' && !isNaN(trVal)) {
+                                subTime = trVal;
+                            }
+                        } catch (eTR) {}
+                    }
+                    layer.source.time = subTime;
                     let subHtml = '';
                     for (let s = layer.source.layers.length - 1; s >= 0; s--) {
                         const subLayer = layer.source.layers[s];

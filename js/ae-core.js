@@ -1187,9 +1187,30 @@
             }
         }
 
+        get canSetTimeRemapEnabled() {
+            return Boolean(this.source || this._canTimeRemap);
+        }
+
+        get timeRemapEnabled() {
+            return Boolean(this._timeRemapEnabled);
+        }
+
+        set timeRemapEnabled(val) {
+            this._timeRemapEnabled = Boolean(val);
+            if (this._timeRemapEnabled && !this.timeRemap) {
+                this.timeRemap = new Property('Time Remap', 'ADBE Time Remapping', 0, 'number');
+                this.timeRemap.parentProperty = this;
+                this.properties.push(this.timeRemap);
+            }
+            if (this.containingComp && this.containingComp._onChanged) {
+                this.containingComp._onChanged();
+            }
+        }
+
         property(nameOrIndex) {
             if (nameOrIndex === 'Transform' || nameOrIndex === 'ADBE Transform Group') return this.transform;
             if (nameOrIndex === 'Effects' || nameOrIndex === 'ADBE Effect Parade') return this.effects;
+            if (nameOrIndex === 'Time Remap' || nameOrIndex === 'ADBE Time Remapping') return this.timeRemap || null;
             return super.property(nameOrIndex);
         }
 
