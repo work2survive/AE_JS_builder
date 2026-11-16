@@ -4799,7 +4799,7 @@
                         gGroup.name = "Guides";
                         var gContents = gGroup.property("ADBE Vectors Group") || gGroup.property("Contents");
                         if (gContents && gContents.addProperty) {
-                            var pLeft = gContents.addProperty("ADBE Vector Shape - Path");
+                            var pLeft = gContents.addProperty("ADBE Vector Shape - Group");
                             if (pLeft) {
                                 pLeft.name = "Left Guide";
                                 var pLeftProp = pLeft.property("ADBE Vector Shape") || pLeft.property("Path") || pLeft.property(1);
@@ -4815,7 +4815,7 @@
                                     pLeftProp.expression = GUIDE_LEFT_PATH_EXPR;
                                 }
                             }
-                            var pRight = gContents.addProperty("ADBE Vector Shape - Path");
+                            var pRight = gContents.addProperty("ADBE Vector Shape - Group");
                             if (pRight) {
                                 pRight.name = "Right Guide";
                                 var pRightProp = pRight.property("ADBE Vector Shape") || pRight.property("Path") || pRight.property(1);
@@ -5596,7 +5596,7 @@
                             gGroup.name = "Guides";
                             var gContents = gGroup.property("ADBE Vectors Group") || gGroup.property("Contents");
                             if (gContents && gContents.addProperty) {
-                                var pLeft = gContents.addProperty("ADBE Vector Shape - Path");
+                                var pLeft = gContents.addProperty("ADBE Vector Shape - Group");
                                 if (pLeft) {
                                     pLeft.name = "Left Guide";
                                     var pLeftProp = pLeft.property("ADBE Vector Shape") || pLeft.property("Path") || pLeft.property(1);
@@ -5612,7 +5612,7 @@
                                         pLeftProp.expression = GUIDE_LEFT_PATH_EXPR;
                                     }
                                 }
-                                var pRight = gContents.addProperty("ADBE Vector Shape - Path");
+                                var pRight = gContents.addProperty("ADBE Vector Shape - Group");
                                 if (pRight) {
                                     pRight.name = "Right Guide";
                                     var pRightProp = pRight.property("ADBE Vector Shape") || pRight.property("Path") || pRight.property(1);
