@@ -4852,10 +4852,10 @@
                     }
                 }
             }
-            // 6. Precompose all created layers into "message_" + random hex number
+            // 6. Precompose all created layers into "bubble_" + random hex number
             var randHex = Math.floor(Math.random() * 65536).toString(16).toLowerCase();
             while (randHex.length < 4) randHex = "0" + randHex;
-            var precompName = "message_" + randHex;
+            var precompName = "bubble_" + randHex;
             var createdLayers = [master, bubbleLayer, textLayer, timeLayer];
             if (guideLayer) createdLayers.push(guideLayer);
             if (hasStatus && statusLayerText) createdLayers.push(statusLayerText);
@@ -5023,9 +5023,9 @@
     // -------------------------------------------------------------------------
     function isMessageBubbleLayer(lyr) {
         if (!lyr) return false;
-        if (lyr.name && /^message_[0-9a-fA-F]+/i.test(lyr.name)) return true;
+        if (lyr.name && /^(?:bubble|message)_[0-9a-fA-F]+/i.test(lyr.name)) return true;
         if (lyr.source && lyr.source instanceof CompItem) {
-            if (/^message_[0-9a-fA-F]+/i.test(lyr.source.name)) return true;
+            if (/^(?:bubble|message)_[0-9a-fA-F]+/i.test(lyr.source.name)) return true;
             if (isMessageBubbleComp(lyr.source)) return true;
         }
         try {
@@ -5043,7 +5043,7 @@
     }
     function isMessageBubbleComp(compItem) {
         if (!compItem || !(compItem instanceof CompItem)) return false;
-        if (compItem.name && /^message_[0-9a-fA-F]+/i.test(compItem.name)) return true;
+        if (compItem.name && /^(?:bubble|message)_[0-9a-fA-F]+/i.test(compItem.name)) return true;
         if (getLayer(compItem, "Bubble_Master_Controller")) return true;
         return false;
     }
