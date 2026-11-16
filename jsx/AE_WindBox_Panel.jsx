@@ -507,7 +507,8 @@
             cubeFillOpacity: 10,
             cubeStrokeColor: "#ffffff",
             cubeStrokeWidth: 1.5,
-            cubeStrokeOpacity: 85
+            cubeStrokeOpacity: 85,
+            compPlaybackMode: 1
         },
         {
             name: "Drifting Clouds (Soft Gentle Float)",
@@ -551,7 +552,8 @@
             cubeFillOpacity: 10,
             cubeStrokeColor: "#ffffff",
             cubeStrokeWidth: 1.5,
-            cubeStrokeOpacity: 85
+            cubeStrokeOpacity: 85,
+            compPlaybackMode: 1
         },
         {
             name: "Cosmic Stars (Twinkle & Shimmer)",
@@ -595,7 +597,8 @@
             cubeFillOpacity: 10,
             cubeStrokeColor: "#ffffff",
             cubeStrokeWidth: 1.5,
-            cubeStrokeOpacity: 85
+            cubeStrokeOpacity: 85,
+            compPlaybackMode: 1
         },
         {
             name: "Parallax Mountains (Horizon Glide)",
@@ -639,7 +642,8 @@
             cubeFillOpacity: 10,
             cubeStrokeColor: "#ffffff",
             cubeStrokeWidth: 1.5,
-            cubeStrokeOpacity: 85
+            cubeStrokeOpacity: 85,
+            compPlaybackMode: 1
         },
         {
             name: "3D Circles (Snow / Spores)",
@@ -683,7 +687,8 @@
             cubeFillOpacity: 10,
             cubeStrokeColor: "#ffffff",
             cubeStrokeWidth: 1.5,
-            cubeStrokeOpacity: 85
+            cubeStrokeOpacity: 85,
+            compPlaybackMode: 1
         },
         {
             name: "3D Squares (Confetti / Debris)",
@@ -727,7 +732,8 @@
             cubeFillOpacity: 10,
             cubeStrokeColor: "#ffffff",
             cubeStrokeWidth: 1.5,
-            cubeStrokeOpacity: 85
+            cubeStrokeOpacity: 85,
+            compPlaybackMode: 1
         },
         {
             name: "Project Composition...",
@@ -771,7 +777,8 @@
             cubeFillOpacity: 10,
             cubeStrokeColor: "#ffffff",
             cubeStrokeWidth: 1.5,
-            cubeStrokeOpacity: 85
+            cubeStrokeOpacity: 85,
+            compPlaybackMode: 1
         },
         {
             name: "Selected Layer(s)",
@@ -815,7 +822,8 @@
             cubeFillOpacity: 10,
             cubeStrokeColor: "#ffffff",
             cubeStrokeWidth: 1.5,
-            cubeStrokeOpacity: 85
+            cubeStrokeOpacity: 85,
+            compPlaybackMode: 1
         }
     ];
 
@@ -955,6 +963,14 @@
         p.cubeStrokeColor = (raw.cubeStrokeColor !== undefined) ? String(raw.cubeStrokeColor) : "#ffffff";
         p.cubeStrokeWidth = (raw.cubeStrokeWidth !== undefined) ? Number(raw.cubeStrokeWidth) : 1.5;
         p.cubeStrokeOpacity = (raw.cubeStrokeOpacity !== undefined) ? Number(raw.cubeStrokeOpacity) : 85;
+        p.cameraFade = (raw.cameraFade !== undefined) ? Boolean(raw.cameraFade) : true;
+        p.cameraFadeDist = (raw.cameraFadeDist !== undefined) ? Number(raw.cameraFadeDist) : 250;
+        p.randomFlipH = (raw.randomFlipH !== undefined) ? Boolean(raw.randomFlipH) : false;
+        p.randomFlipV = (raw.randomFlipV !== undefined) ? Boolean(raw.randomFlipV) : false;
+        p.fadeMode = (raw.fadeMode !== undefined) ? Number(raw.fadeMode) : 0;
+        p.fadeInFrames = (raw.fadeInFrames !== undefined) ? Number(raw.fadeInFrames) : 20;
+        p.fadeOutFrames = (raw.fadeOutFrames !== undefined) ? Number(raw.fadeOutFrames) : 20;
+        p.compPlaybackMode = (raw.compPlaybackMode !== undefined) ? Number(raw.compPlaybackMode) : 1;
         return p;
     }
 
@@ -1450,6 +1466,24 @@
             updateProjectCompsList();
         };
 
+        // Comp Particle Playback Options (for Composition & Layer particle sources)
+        var pnlCompPlayback = tabSource.add("panel", undefined, "Composition Particle Playback Behavior");
+        pnlCompPlayback.orientation = "row";
+        pnlCompPlayback.alignChildren = ["left", "center"];
+        pnlCompPlayback.spacing = 6;
+        pnlCompPlayback.margins = 6;
+
+        pnlCompPlayback.add("statictext", undefined, "Playback Mode:");
+        var dropCompPlayback = pnlCompPlayback.add("dropdownlist", undefined, [
+            "1. Random Paused Frame at Birth (Default)",
+            "2. Random Start Frame, Loop (Cycle)",
+            "3. Random Start Frame, Loop (Bounce)",
+            "4. Random Start Frame, Random Direction (Fwd/Back)",
+            "5. Start Always at Frame 1"
+        ]);
+        dropCompPlayback.selection = 0; // Default: Option 1
+        dropCompPlayback.helpTip = "Controls time playback for composition particles:\n1 = Freezes on a random frame at birth (Default)\n2 = Starts at random frame, loops forward (cycle)\n3 = Starts at random frame, loops back-and-forth (bounce)\n4 = Starts at random frame, randomly plays forward or backwards\n5 = Every particle starts at Frame 1 and loops";
+
         var grpPartSize = tabSource.add("group");
         grpPartSize.orientation = "row";
         grpPartSize.alignChildren = ["left", "center"];
@@ -1505,12 +1539,14 @@
             grpProjComp.visible = (idx === 6);
             grpPartSize.enabled = (idx <= 5);
             grpPartCol.enabled = (idx <= 5);
+            pnlCompPlayback.enabled = (idx >= 6);
             if (idx === 6) {
                 updateProjectCompsList();
             }
         }
 
         dropSource.onChange = handleSourceChange;
+        handleSourceChange();
 
         function applyPreset(preset) {
             if (!preset) return;
@@ -1568,6 +1604,13 @@
             if (preset.cubeStrokeColor !== undefined) cpCubeStroke.setColor(preset.cubeStrokeColor, false);
             if (preset.cubeStrokeWidth !== undefined) editCubeStrokeW.text = String(preset.cubeStrokeWidth);
             if (preset.cubeStrokeOpacity !== undefined) editCubeStrokeOp.text = String(preset.cubeStrokeOpacity);
+            if (preset.compPlaybackMode !== undefined) {
+                var cpm = parseInt(preset.compPlaybackMode, 10);
+                var selIdx = (cpm >= 1 && cpm <= 5) ? (cpm - 1) : Math.max(0, Math.min(4, cpm));
+                dropCompPlayback.selection = selIdx;
+            } else {
+                dropCompPlayback.selection = 0;
+            }
             handleSourceChange();
         }
 
@@ -1743,6 +1786,7 @@
             var cubeStrokeOp = Math.max(0, Math.min(100, getNum(editCubeStrokeOp, 85)));
 
             var particleType = dropSource.selection.index;
+            var compPlaybackMode = dropCompPlayback.selection ? (dropCompPlayback.selection.index + 1) : 1;
             var shapeSize = Math.max(1, getNum(editPartSize, 28));
             var partBaseColor = hexToRgb(cpPartColor.value);
 
@@ -1802,7 +1846,8 @@
                     { type: "slider",   name: "WindBox - Direction Z",            val: dirZ },
                     { type: "checkbox", name: "WindBox - Align to Wind",          val: alignToWind ? 1 : 0 },
                     { type: "slider",   name: "WindBox - Particle Type",          val: particleType },
-                    { type: "slider",   name: "WindBox - Fade Mode (0=None, 1=Dist, 2=Frames)", val: fadeModeIdx + 1 },
+                    { type: "slider",   name: "WindBox - Fade Mode (0=None, 1=Dist, 2=Frames)", val: fadeModeIdx },
+                    { type: "slider",   name: "WindBox - Comp Playback Mode (1=Pause, 2=Cycle, 3=Bounce, 4=RandomDir, 5=Frame1)", val: compPlaybackMode },
                     { type: "slider",   name: "WindBox - Fade In Distance",       val: fadeInDist },
                     { type: "slider",   name: "WindBox - Fade Out Distance",      val: fadeOutDist },
                     { type: "slider",   name: "WindBox - Fade In Frames",         val: fadeInFrames },
@@ -2200,6 +2245,60 @@
                     '}'
                 ].join("\n");
 
+                var timeRemapExpr = [
+                    'var ctrl = thisComp.layer("' + ctrlName + '");',
+                    'var pIndex = effect("WindBox Particle Index")(1).value;',
+                    'var seed = 12345;',
+                    'try { seed = ctrl.effect("WindBox - Random Seed")(1).value; } catch(e) {}',
+                    'var mode = 1;',
+                    'try { mode = Math.round(ctrl.effect("WindBox - Comp Playback Mode (1=Pause, 2=Cycle, 3=Bounce, 4=RandomDir, 5=Frame1)")(1).value); } catch(e) {}',
+                    'var dur = 2.0;',
+                    'try { if (source && source.duration > 0) dur = source.duration; } catch(e) {}',
+                    'var fps = 30;',
+                    'try { if (source && source.frameRate > 0) fps = source.frameRate; } catch(e) {}',
+                    'var totalFrames = Math.max(1, Math.round(dur * fps));',
+                    'seedRandom(seed + pIndex * 9973 + 31, true);',
+                    'var tRemap = 0;',
+                    'if (mode === 1) {',
+                    '    // 1. Random paused frame at birth (default)',
+                    '    var randFrame = Math.floor(random() * totalFrames);',
+                    '    tRemap = randFrame / fps;',
+                    '} else if (mode === 2) {',
+                    '    // 2. Random start frame, loop (cycle)',
+                    '    var startFrame = Math.floor(random() * totalFrames);',
+                    '    var offsetTime = startFrame / fps;',
+                    '    var t = (time + offsetTime) % dur;',
+                    '    if (t < 0) t += dur;',
+                    '    tRemap = t;',
+                    '} else if (mode === 3) {',
+                    '    // 3. Random start frame, loop (bounce)',
+                    '    var startFrame = Math.floor(random() * totalFrames);',
+                    '    var offsetTime = startFrame / fps;',
+                    '    var cycle = 2 * dur;',
+                    '    var t = (time + offsetTime) % cycle;',
+                    '    if (t < 0) t += cycle;',
+                    '    if (t > dur) t = 2 * dur - t;',
+                    '    tRemap = t;',
+                    '} else if (mode === 4) {',
+                    '    // 4. Random start frame, random direction (fwd/back)',
+                    '    var startFrame = Math.floor(random() * totalFrames);',
+                    '    var offsetTime = startFrame / fps;',
+                    '    var playDir = (random() < 0.5) ? -1 : 1;',
+                    '    var t = (offsetTime + playDir * time) % dur;',
+                    '    if (t < 0) t += dur;',
+                    '    tRemap = t;',
+                    '} else if (mode === 5) {',
+                    '    // 5. Start always at frame 1',
+                    '    var startT = Math.min(Math.max(0, dur - (1 / fps)), 1 / fps);',
+                    '    var playRange = Math.max(1 / fps, dur - startT);',
+                    '    var t = startT + (time % playRange);',
+                    '    tRemap = t;',
+                    '} else {',
+                    '    tRemap = time % dur;',
+                    '}',
+                    'Math.min(Math.max(0, dur - 0.001), Math.max(0, tRemap));'
+                ].join("\n");
+
                 // 5. GENERATE PARTICLE LAYERS
                 for (var p = 1; p <= numParticles; p++) {
                     var pLayer;
@@ -2243,6 +2342,20 @@
 
                     var scaleProp = xform.property("ADBE Scale") || xform.scale;
                     if (scaleProp) scaleProp.expression = scaleExpr;
+
+                    if (particleType === 6 || particleType === 7) {
+                        try {
+                            if (pLayer.canSetTimeRemapEnabled) {
+                                pLayer.timeRemapEnabled = true;
+                            } else if ("timeRemapEnabled" in pLayer) {
+                                pLayer.timeRemapEnabled = true;
+                            }
+                        } catch (eTR) {}
+                        var trProp = pLayer.property("ADBE Time Remapping") || pLayer.property("Time Remap") || pLayer.timeRemap;
+                        if (trProp) {
+                            trProp.expression = timeRemapExpr;
+                        }
+                    }
 
                     allCreatedLayers.push(pLayer);
                 }

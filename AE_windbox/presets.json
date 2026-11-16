@@ -45,7 +45,8 @@
       "randomFlipV": false,
       "fadeMode": 0,
       "fadeInFrames": 20,
-      "fadeOutFrames": 20
+      "fadeOutFrames": 20,
+      "compPlaybackMode": 1
     },
     {
       "name": "Drifting Clouds (Soft Gentle Float)",
@@ -89,7 +90,8 @@
       "randomFlipV": false,
       "fadeMode": 0,
       "fadeInFrames": 20,
-      "fadeOutFrames": 20
+      "fadeOutFrames": 20,
+      "compPlaybackMode": 1
     },
     {
       "name": "Cosmic Stars (Twinkle & Shimmer)",
@@ -133,7 +135,8 @@
       "randomFlipV": false,
       "fadeMode": 0,
       "fadeInFrames": 20,
-      "fadeOutFrames": 20
+      "fadeOutFrames": 20,
+      "compPlaybackMode": 1
     },
     {
       "name": "Parallax Mountains (Horizon Glide)",
@@ -177,7 +180,8 @@
       "randomFlipV": false,
       "fadeMode": 0,
       "fadeInFrames": 20,
-      "fadeOutFrames": 20
+      "fadeOutFrames": 20,
+      "compPlaybackMode": 1
     },
     {
       "name": "3D Circles (Snow / Spores)",
@@ -221,7 +225,8 @@
       "randomFlipV": false,
       "fadeMode": 0,
       "fadeInFrames": 20,
-      "fadeOutFrames": 20
+      "fadeOutFrames": 20,
+      "compPlaybackMode": 1
     },
     {
       "name": "3D Squares (Confetti / Debris)",
@@ -265,7 +270,8 @@
       "randomFlipV": false,
       "fadeMode": 0,
       "fadeInFrames": 20,
-      "fadeOutFrames": 20
+      "fadeOutFrames": 20,
+      "compPlaybackMode": 1
     },
     {
       "name": "Project Composition...",
@@ -309,7 +315,8 @@
       "randomFlipV": false,
       "fadeMode": 0,
       "fadeInFrames": 20,
-      "fadeOutFrames": 20
+      "fadeOutFrames": 20,
+      "compPlaybackMode": 1
     },
     {
       "name": "Selected Layer(s)",
@@ -353,7 +360,8 @@
       "randomFlipV": false,
       "fadeMode": 0,
       "fadeInFrames": 20,
-      "fadeOutFrames": 20
+      "fadeOutFrames": 20,
+      "compPlaybackMode": 1
     }
   ]
 }
