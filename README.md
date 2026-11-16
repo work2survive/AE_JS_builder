@@ -28,28 +28,44 @@ Supports the core AE vector shapes:
 - **Rectangles** (`ADBE Vector Shape - Rect`): `Size [w, h]`, `Position [x, y]`, `Roundness`
 - **Ellipses / Circles** (`ADBE Vector Shape - Ellipse`): `Size [w, h]`, `Position [x, y]`
 - **Bézier Paths** (`ADBE Vector Shape - Path`): Full `new Shape()` object with `vertices`, `inTangents`, `outTangents`, and `closed`
-- **Fills & Strokes**: RGB color, opacity, and stroke width
+- **Fills & Gradients**: Solid flat RGB, opacity, linear gradients (`ADBE Vector Graphic - G-Fill`), and radial gradients
+- **Strokes & Dashes**: Solid, dashed, dotted pearls, line caps (Butt, Round, Square), line joins (Miter, Round, Bevel), and miter limits
 
-### 3. Interactive 3D Camera Controls
+### 3. Variable-Width Stroke Taper Engine (`ADBE Vector Taper`)
+Full procedural emulation of Adobe After Effects' native Stroke Taper feature (`ADBE Vector Taper`):
+- **ExtendScript DOM Parity**: Complete property group support on both standard strokes (`ADBE Vector Graphic - Stroke`) and gradient strokes (`ADBE Vector Graphic - G-Stroke`):
+  - **Start Length** (`ADBE Vector Taper Start Length`): `0%` to `100%` (or pixels)
+  - **End Length** (`ADBE Vector Taper End Length`): `0%` to `100%` (or pixels)
+  - **Start Width** (`ADBE Vector Taper Start Width`): `0%` to `100%` (percentage of base stroke width)
+  - **End Width** (`ADBE Vector Taper End Width`): `0%` to `100%`
+  - **Start Ease** & **End Ease** (`ADBE Vector Taper Start/End Ease`): `-100%` to `+100%` curvature easing
+  - **Length Units** (`ADBE Vector Taper Length Units`): `1` (Percentage), `2` (Pixels)
+- **High-Fidelity Procedural Geometry**: Evaluates analytical Bézier curve derivatives to compute continuous normal vectors, offset boundary envelopes ($\mathbf{P}_L, \mathbf{P}_R$), and proportional length scaling ($L_s + L_e > L$).
+- **Terminal Caps**: Seamlessly transitions into needle-sharp points ($0\%$ width), semicircular round caps, butt caps, or projecting square caps.
+- **Universal Shape Support**: Works seamlessly across custom Bézier paths, rectangles, ellipses, and star/polygonal shapes.
+- **Timeline & Live Scrubbing**: Twirlable `Taper` group under each stroke row in the timeline with animatable badges and interactive drag-scrub controls.
+
+### 4. Interactive 3D Camera Controls
 - **Orbit Camera**: Left-click and drag anywhere on the composition viewport to rotate around the Point of Interest in 3D (`Custom View 1`).
 - **Two-Stage Zoom Architecture**:
   - **Dolly Distance Guard**: Preserves natural 3D depth down to a safe minimum distance ($900\text{ px}$) so geometry never hits the CSS 3D near-plane singularity.
   - **Canvas Magnification Zoom**: Seamlessly transitions to 2D canvas magnification (up to $1000\%$) for ultra-close inspection without perspective distortion or stretched polygons.
-- **Pan Camera**: Middle-click or `Alt + Left-click` drag to truck/pedestal.
+- **Pan Camera**: Right-click drag, middle-click, or `Alt + Left-click` drag to truck/pedestal.
 - **Camera Views**: Quick presets for `Active Camera`, `Front`, `Top`, `Right`, `Custom View 1`, and `Reset Cam`.
+- **Composition Resolution Dropdown**: Direct header dropdown to toggle resolutions (`720p`, `1080p` default, `1440p`, `4k`).
 
-### 4. Live Wiggle Expression Engine
+### 5. Live Wiggle Expression Engine
 - Native `wiggle(freq, amp)` expression support.
 - Runs on a real-time `requestAnimationFrame` loop at 60 fps.
 - Click the stopwatch on any property in the timeline to add, customize, or disable wiggle expressions on the fly.
 
-### 5. Shy Switch (UI Focus Mode)
+### 6. Shy Switch (UI Focus Mode)
 - **Global Shy Switch**: Located in the timeline switches header. **Active by default**.
 - **Hides Unrelated Properties & Layers**: When active, shies secondary/child layers and unedited boilerplate properties (such as default anchor points, unedited opacities, and unused transforms) to keep the timeline focused strictly on the properties and effects controlled by your `.jsx` UI panel.
 - **Reveal All**: Click the **`Shy (UI Focus)`** button in the header or the banner link to toggle Shy mode OFF and inspect all comp layers and properties in full detail.
 - **Layer Shy Switches**: Each layer row features its own Shy switch icon matching After Effects.
 
-### 6. Global Expression Switch & Sequential Evaluation Switch
+### 7. Global Expression Switch & Sequential Evaluation Switch
 - **Global Expressions Switch**: Located in the timeline switches header (`[=] Expressions: Shown/Hidden`). Click to hide/show expression formulas and badges.
 - **Sequential Evaluation Mode Switch**: A compact, single-button switch on each animatable property row designed with a **2:1 aspect ratio** ($28\times 14\text{ px}$) that cycles sequentially through evaluation states on click. The capital letter is positioned on the left side alongside a status toggle indicator on the right:
   - **Standard Properties (Position, Scale, Rotation, Dimensions, Sliders)**:
@@ -66,7 +82,7 @@ Supports the core AE vector shapes:
     - ⬛ **`[T]` Transparent (Dark Checkerboard)**: Sets opacity to 0% (100% transparent / hidden).
   - *Click to cycle sequentially forward. Right-click (`contextmenu`) to cycle in reverse.*
 
-### 7. Dual Classification Color Coding (Timeline vs .JSX UI)
+### 8. Dual Classification Color Coding (Timeline vs .JSX UI)
 - **In the AE Timeline**:
   - 🔵 **Shade of Blue** (`[ANIM]`): Properties animatable in the AE timeline (Position, Scale, Rotation, Opacity, Effects, Dimensions, Colors, Stroke Width).
   - 🔴 **Shade of Red** (`[STATIC]`): Properties defined once in setup that cannot be animated (Parent links, 3D switch, Layer Name, Shape Group hierarchy).
@@ -75,7 +91,7 @@ Supports the core AE vector shapes:
   - 🔴 **Red**: All parameters defined once in script setup (Cube Structure, 3D Topology, Build/Reset button).
   - A visual legend is displayed at the top of the ScriptUI window.
 
-### 8. Open & Test .JSX Files Directly
+### 9. Open & Test .JSX Files Directly
 - **File Dialog**: Click the **`📂 Upload .JSX`** button in the top bar to open any `.jsx` or `.js` file from your disk.
 - **Load from Web URL**: Click **`🌐 Load from URL`** to load any raw `.jsx` script directly from GitHub or any web host.
 - **Drag & Drop**: Drag `.jsx` files directly from your file manager into the code editor panel.
@@ -84,7 +100,7 @@ Supports the core AE vector shapes:
 - **Deep Linking & URL Routing**: The active script name is automatically synchronized with the URL (e.g., `?jsx=cylinder_maker.jsx&autobuild=true` or `?jsx=extruded_round_rectangle.jsx&autobuild=true`). Loading a link with a `?jsx=` parameter auto-detects and runs that tool immediately. Pressing the **Clear** button removes the URL parameter and resets the stage.
 - Comes with a sample test script: [`test_script.jsx`](file:///g:/My%20Drive/_openProjects/My_AE_assets/AE_JS_builder/test_script.jsx).
 
-### 9. ScriptUI Panel & Dialog Emulator
+### 10. ScriptUI Panel & Dialog Emulator
 - Emulates Adobe ExtendScript `Window`, `Panel`, `Group`, `Button`, `StaticText`, `EditText`, `Slider`, `Checkbox`, `RadioButton`, `DropDownList`, and `ProgressBar`.
 - Supports layout orientation (`row` / `column`), alignment, margins, spacing, and event callbacks (`onClick`, `onChange`, `onChanging`).
 - **Standardized ScriptUI Slider API**: Supports both native ExtendScript positional signature `container.add("slider", undefined, initial, min, max)` and object options signature `{ minvalue, maxvalue }` across AE CS6–2026+.
@@ -92,7 +108,7 @@ Supports the core AE vector shapes:
 - **Color Swatch + Hex Rule**: Standardized interactive rectangular sample swatches positioned immediately adjacent to hex text boxes across all JSX panels, providing 100% visual and interactive parity between Adobe After Effects ScriptUI and the Web Emulator.
 - Switch to the **ScriptUI Panel Preview** tab to interact directly with your UI controls and see them modify the composition live.
 
-### 10. Detected Production ScriptUI Tools (`jsx/` Folder)
+### 11. Detected Production ScriptUI Tools (`jsx/` Folder)
 
 The simulator automatically detects and loads standalone production-ready After Effects ScriptUI tools located in [`jsx/`](jsx/). Each tool is maintained in its own dedicated repository with complete documentation, installation guides, and full source code:
 
@@ -146,6 +162,7 @@ The simulator includes built-in sample scripts located in [`samples/`](samples/)
      - **System Fonts Typography Showcase**: Tests cross-platform system fonts (Segoe UI, Arial, Georgia, Times New Roman, Courier New, Trebuchet MS, Impact) displaying the classic *"The quick brown fox jumps over the lazy dog"* pangram along with numerics and glyphs for kerning, baseline, and metric validation.
      - **Geometric Primitives (Ellipses & Polygons)**: Regular circles, stretched ellipses, concentric rings, 3-sided triangles, 5-sided pentagons, 6-sided hexagons, 8-sided octagons, 5-point stars, and 8-point starbursts.
      - **Stroke Styles & Dash Patterns**: Hairline, medium, and heavy widths; Butt, Round, and Projecting/Square line caps; Miter, Round, and Bevel line joins; Solid, standard dashed, dotted pearls (round cap + zero dash), and alternating dual dash patterns.
+     - **Variable-Width Stroke Taper**: Needle-point double-ended flourishes, single-ended comet tails, and eased taper transitions.
      - **Fill Styles & Gradients**: Flat RGB solid colors, semi-transparent fills, multi-stop linear gradients (`ADBE Vector Graphic - G-Fill`), and radial gradients.
    - **Live Demo**: [https://work2survive.github.io/AE_JS_builder/?sample=ae_emulator_tester.jsx&autobuild=true](https://work2survive.github.io/AE_JS_builder/?sample=ae_emulator_tester.jsx&autobuild=true)
 
@@ -153,16 +170,20 @@ The simulator includes built-in sample scripts located in [`samples/`](samples/)
    - Parametric 3D circular word carousel spinning around a central master 3D controller null, featuring 6 to 12 configurable random or custom words, -12 to +12 continuous spin speed control, 3D tilt, and orientation modes (carousel, inward, billboard).
    - **Live Demo**: [https://work2survive.github.io/AE_JS_builder/?sample=text_roundabout.jsx&autobuild=true](https://work2survive.github.io/AE_JS_builder/?sample=text_roundabout.jsx&autobuild=true)
 
-2. **Test 1: 3D Cube (200x200px) with Wiggle** (`samples/test1_3d_cube_wiggle.jsx`):
+3. **Test 1: 3D Cube (200x200px) with Wiggle** (`samples/test1_3d_cube_wiggle.jsx`):
    - Baseline 6-face cube demonstration with active `wiggle()` expressions on position, rotation, and dimensions.
 
-3. **Test 2: ScriptUI Cube Builder Panel** (`samples/test2_scriptui_cube_builder.jsx`):
+4. **Test 2: ScriptUI Cube Builder Panel** (`samples/test2_scriptui_cube_builder.jsx`):
    - Baseline ScriptUI window demonstration showing button callbacks, edit texts, and layer hierarchy creation.
 
-4. **Test 3: Squares, Circles & Bézier Paths** (`samples/test3_shapes_and_bezier_paths.jsx`):
+5. **Test 3: Squares, Circles & Bézier Paths** (`samples/test3_shapes_and_bezier_paths.jsx`):
    - 2D vector primitives demonstration showing rounded rectangles, circle shapes, and 5-point Bézier star paths with curved control tangents.
 
-5. **Sample External Script** (`samples/test_script.jsx`):
+6. **Test 4: Stroke Taper Showcase** (`samples/test4_stroke_taper.jsx`):
+   - Variable-width vector strokes demonstrating double-ended calligraphic flourishes (needle points), comet/meteor streak trails (single-ended sharp taper to rounded head), and wave ribbons with partial width tapering and negative easing.
+   - **Live Demo**: [https://work2survive.github.io/AE_JS_builder/?sample=test4_stroke_taper.jsx&autobuild=true](https://work2survive.github.io/AE_JS_builder/?sample=test4_stroke_taper.jsx&autobuild=true)
+
+7. **Sample External Script** (`samples/test_script.jsx`):
    - Sample external script with 3D star and rotating ring.
 
 ---
@@ -192,6 +213,7 @@ The production tools built and tested inside this simulator are also available a
 - **[AE_Extruded_Round_corners](https://github.com/work2survive/AE_Extruded_Round_corners)**: Parametric 3D extruded rounded rectangle with faceted corner walls, tri-color palette, airtight inner caps, and master rigging (v1.3 / v2.0).
 - **[AE Message Bubble Generator](https://github.com/work2survive/AE_message_bubble)**: Authentic chat and text message bubble generator for iOS, Android RCS, WhatsApp, Instagram, Messenger, and Custom themes (v1.0).
 - **[AE WindBox](https://github.com/work2survive/AE_windBox)**: Procedural 3D wind volume particle system with dynamic 3D cube bounding box, 3-axis positional and rotational turbulence, and master controller rigging (v1.0).
+- **[AE Spiral Maker](https://github.com/work2survive/AE_spiral_maker)**: Procedural vector spiral generator featuring 5 mathematical spiral algorithms, native After Effects Stroke Taper integration for independent start and end stroke thicknesses, analytical cubic Bézier derivative tangents, and factory presets (v1.0).
 
 ---
 
