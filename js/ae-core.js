@@ -554,6 +554,7 @@
                 const effect = (name) => (layer ? layer.effect(name) : null);
                 const thisComp = rootComp;
                 const thisLayer = layer;
+                const parent = (layer && layer.parent) ? layer.parent : null;
                 const transform = layer ? layer.transform : null;
                 const comp = (name) => {
                     if (!name) return rootComp;
@@ -566,19 +567,19 @@
                 try {
                     const evalBody = 'return eval(' + JSON.stringify(expr) + ');';
                     const fn = new Function(
-                        'time', 'value', 'layer', 'thisLayer', 'thisComp', 'comp', 'transform', 'wiggle', 'effect',
+                        'time', 'value', 'layer', 'thisLayer', 'parent', 'thisComp', 'comp', 'transform', 'wiggle', 'effect',
                         'degreesToRadians', 'radiansToDegrees', 'createPath', 'seedRandom', 'random', 'Math',
                         `"use strict";\n${evalBody}`
                     );
-                    res = fn(evalTime, value, layer, thisLayer, thisComp, comp, transform, wiggle, effect, degreesToRadians, radiansToDegrees, createPath, seedRandom, random, Math);
+                    res = fn(evalTime, value, layer, thisLayer, parent, thisComp, comp, transform, wiggle, effect, degreesToRadians, radiansToDegrees, createPath, seedRandom, random, Math);
                 } catch (evalErr) {
                     try {
                         const fn = new Function(
-                            'time', 'value', 'layer', 'thisLayer', 'thisComp', 'comp', 'transform', 'wiggle', 'effect',
+                            'time', 'value', 'layer', 'thisLayer', 'parent', 'thisComp', 'comp', 'transform', 'wiggle', 'effect',
                             'degreesToRadians', 'radiansToDegrees', 'createPath', 'seedRandom', 'random', 'Math',
                             `"use strict";\n${expr}`
                         );
-                        res = fn(evalTime, value, layer, thisLayer, thisComp, comp, transform, wiggle, effect, degreesToRadians, radiansToDegrees, createPath, seedRandom, random, Math);
+                        res = fn(evalTime, value, layer, thisLayer, parent, thisComp, comp, transform, wiggle, effect, degreesToRadians, radiansToDegrees, createPath, seedRandom, random, Math);
                     } catch (fnErr) {
                         console.warn('[AE Expression Error]', fnErr);
                     }
@@ -587,11 +588,11 @@
                 if (res === undefined) {
                     try {
                         const fn = new Function(
-                            'time', 'value', 'layer', 'thisLayer', 'thisComp', 'comp', 'transform', 'wiggle', 'effect',
+                            'time', 'value', 'layer', 'thisLayer', 'parent', 'thisComp', 'comp', 'transform', 'wiggle', 'effect',
                             'degreesToRadians', 'radiansToDegrees', 'createPath', 'seedRandom', 'random', 'Math',
                             `"use strict";\n${expr}`
                         );
-                        res = fn(evalTime, value, layer, thisLayer, thisComp, comp, transform, wiggle, effect, degreesToRadians, radiansToDegrees, createPath, seedRandom, random, Math);
+                        res = fn(evalTime, value, layer, thisLayer, parent, thisComp, comp, transform, wiggle, effect, degreesToRadians, radiansToDegrees, createPath, seedRandom, random, Math);
                     } catch (e) {}
                 }
 
@@ -756,12 +757,17 @@
                 return this.properties[nameOrIndex - 1] || null; // 1-indexed in AE
             }
             const clean = String(nameOrIndex).toLowerCase();
-            const direct = this.properties.find(p =>
+            // 1. Exact match by name or matchName takes strict precedence
+            const exact = this.properties.find(p =>
                 p.name.toLowerCase() === clean ||
-                p.matchName.toLowerCase() === clean ||
+                p.matchName.toLowerCase() === clean
+            );
+            if (exact) return exact;
+            // 2. Fallback partial/substring match ONLY if no exact match exists
+            const partial = this.properties.find(p =>
                 p.name.toLowerCase().includes(clean)
             );
-            if (direct) return direct;
+            if (partial) return partial;
             if (this.taper && this.taper.properties) {
                 const sub = this.taper.property(nameOrIndex);
                 if (sub) return sub;
