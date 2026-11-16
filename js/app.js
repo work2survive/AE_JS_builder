@@ -1712,6 +1712,15 @@
             loadManifestInto(window.JSX_FOLDER_FILES, jsxFiles, 'jsx');
             loadManifestInto(window.SAMPLE_FOLDER_FILES, sampleFiles, 'samples');
 
+            // Also ingest any items from window.PRESETS if present
+            if (typeof PRESETS !== 'undefined' && PRESETS) {
+                for (const [key, item] of Object.entries(PRESETS)) {
+                    if (!sampleFiles.has(key) && !jsxFiles.has(key)) {
+                        sampleFiles.set(key, { filename: key, path: (item && item.path) || `samples/${key}`, code: (item && item.code) || null });
+                    }
+                }
+            }
+
             // Render options immediately without waiting for network
             renderPresetOptions();
 
