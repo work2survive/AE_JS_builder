@@ -1104,14 +1104,6 @@
                     }
                 };
 
-                        // Live-sync to cube & cylinder in precomp / targetComp
-                        if (layer && effectName) {
-                            syncCubeFromControls(layer);
-                            syncCylinderFromControls(layer);
-                        }
-                    }
-                };
-
                 const onUp = () => {
                     window.removeEventListener('mousemove', onMove);
                     window.removeEventListener('mouseup', onUp);
