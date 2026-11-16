@@ -2255,6 +2255,21 @@
                     '}'
                 ].join("\n");
 
+                var compSrcDur = 2.0;
+                var compSrcFps = 30;
+                if (particleType === 6 && chosenComp) {
+                    try {
+                        if (chosenComp.duration > 0) compSrcDur = chosenComp.duration;
+                        if (chosenComp.frameRate > 0) compSrcFps = chosenComp.frameRate;
+                    } catch (eCD) {}
+                } else if (particleType === 7 && templateLayers.length > 0) {
+                    try {
+                        var tSrc = templateLayers[0].source;
+                        if (tSrc && tSrc.duration > 0) compSrcDur = tSrc.duration;
+                        if (tSrc && tSrc.frameRate > 0) compSrcFps = tSrc.frameRate;
+                    } catch (eTL) {}
+                }
+
                 var timeRemapExpr = [
                     'var ctrl = thisComp.layer("' + ctrlName + '");',
                     'var pIndex = effect("WindBox Particle Index")(1).value;',
@@ -2262,9 +2277,9 @@
                     'try { seed = ctrl.effect("WindBox - Random Seed")(1).value; } catch(e) {}',
                     'var mode = 1;',
                     'try { mode = Math.round(ctrl.effect("WindBox - Comp Playback Mode (1=Pause, 2=Cycle, 3=Bounce, 4=RandomDir, 5=Frame1)")(1).value); } catch(e) {}',
-                    'var dur = 2.0;',
+                    'var dur = ' + compSrcDur + ';',
                     'try { if (source && source.duration > 0) dur = source.duration; } catch(e) {}',
-                    'var fps = 30;',
+                    'var fps = ' + compSrcFps + ';',
                     'try { if (source && source.frameRate > 0) fps = source.frameRate; } catch(e) {}',
                     'var totalFrames = Math.max(1, Math.round(dur * fps));',
                     'seedRandom(seed + pIndex * 9973 + 31, true);',
@@ -2367,12 +2382,24 @@
                         }
                     }
 
+                    // Extend particle layer span so it never cuts off
+                    try {
+                        pLayer.inPoint = 0;
+                        pLayer.outPoint = comp.duration;
+                    } catch (eOut) {}
+
                     allCreatedLayers.push(pLayer);
                 }
 
                 // 6. PRECOMPOSE ALL CREATED LAYERS INTO windowbox_+random hex
                 var indicesMap = {};
                 for (var li = 0; li < allCreatedLayers.length; li++) {
+                    try {
+                        if (allCreatedLayers[li]) {
+                            allCreatedLayers[li].inPoint = 0;
+                            allCreatedLayers[li].outPoint = comp.duration;
+                        }
+                    } catch (eSpan) {}
                     if (allCreatedLayers[li] && allCreatedLayers[li].index) {
                         indicesMap[allCreatedLayers[li].index] = true;
                     }
@@ -2386,6 +2413,22 @@
                 indices.sort(function (a, b) { return a - b; });
 
                 var preComp = parentComp.layers.precompose(indices, precompName, true);
+
+                // Ensure the precomp CompItem matches parentComp duration exactly
+                if (preComp) {
+                    try {
+                        preComp.duration = parentComp.duration;
+                    } catch (eDur) {}
+
+                    // Ensure all layers inside preComp span the entire preComp duration
+                    for (var innerIdx = 1; innerIdx <= preComp.layers.length; innerIdx++) {
+                        try {
+                            var inLayer = preComp.layer(innerIdx);
+                            inLayer.inPoint = 0;
+                            inLayer.outPoint = preComp.duration;
+                        } catch (eInnerDur) {}
+                    }
+                }
 
                 // Locate the newly created precomp layer in parentComp
                 var precompLayer = null;
@@ -2401,6 +2444,10 @@
                 }
 
                 if (precompLayer) {
+                    try {
+                        precompLayer.inPoint = 0;
+                        precompLayer.outPoint = parentComp.duration;
+                    } catch (ePreOut) {}
                     precompLayer.name = precompName;
                     precompLayer.threeDLayer = true;
                     if ("collapseTransformation" in precompLayer) {
