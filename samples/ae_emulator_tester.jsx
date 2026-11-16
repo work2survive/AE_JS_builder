@@ -12,8 +12,9 @@
 //   1. Full Composition Test Harness:
 //      - Position Calibration Grid (100px major, 50px minor, center origin crosshair).
 //      - System Fonts Showcase with the classic "The quick brown fox jumps over
-//        the lazy dog" pangram, numerics, and glyphs (Segoe UI, Arial, Georgia,
-//        Times New Roman, Courier New, Trebuchet MS, Impact).
+//        the lazy dog" pangram, numerics, and glyphs (Myriad Pro [Adobe CC default],
+//        Segoe UI [Windows default] / Helvetica Neue [Apple macOS default], Arial,
+//        Verdana, Georgia, Times New Roman, Courier New, Impact).
 //      - Geometric Primitives: Ellipses, circles, concentric rings, triangles,
 //        pentagons, hexagons, octagons, 5-point stars, and starbursts.
 //      - All AE Stroke Styles: Line Caps (Butt, Round, Square), Line Joins (Miter,
@@ -501,7 +502,7 @@
         }
     }
 
-    function setupTextDocument(textLayer, textStr, fontName, fontSize, fontColor, justification) {
+    function setupTextDocument(textLayer, textStr, fontName, fontSize, fontColor, justification, altFontName) {
         var cleanJust = justification || "left";
         var cleanColor = fontColor || [1, 1, 1];
         var cleanSize = fontSize || 20;
@@ -515,7 +516,15 @@
                     if (doc) {
                         doc.text = textStr;
                         doc.fontSize = cleanSize;
-                        doc.font = fontName;
+                        if (fontName) {
+                            try {
+                                doc.font = fontName;
+                            } catch (eF1) {
+                                if (altFontName) {
+                                    try { doc.font = altFontName; } catch (eF2) {}
+                                }
+                            }
+                        }
                         doc.fillColor = cleanColor;
                         doc.applyFill = true;
                         doc.applyStroke = false;
@@ -534,8 +543,8 @@
 
         // Direct emulator fallbacks
         textLayer.fontSize = cleanSize;
-        textLayer.fontFamily = fontName;
-        textLayer.font = fontName;
+        textLayer.fontFamily = fontName || "sans-serif";
+        textLayer.font = fontName || "sans-serif";
         textLayer.fontColor = cleanColor;
         textLayer.justification = cleanJust;
     }
@@ -745,24 +754,38 @@
             // MODULE 2: SYSTEM FONTS & TYPOGRAPHY ("LAZY FOX")
             // =================================================================
             if (doFonts) {
+                var isMac = false;
+                try {
+                    if (typeof $.os !== "undefined" && $.os.indexOf("Mac") !== -1) {
+                        isMac = true;
+                    } else if (typeof navigator !== "undefined" && navigator.platform && navigator.platform.indexOf("Mac") !== -1) {
+                        isMac = true;
+                    }
+                } catch(eOs) {}
+
+                var osSansName  = isMac ? "HelveticaNeue" : "SegoeUI";
+                var osSansAlt   = isMac ? "Helvetica Neue" : "Segoe UI";
+                var osSansLabel = isMac ? "Helvetica Neue (Apple macOS System Sans)" : "Segoe UI (Windows System Sans)";
+
                 var fontColX = Math.round(110 * sF);
-                var txtHead = comp.layers.addText("SYSTEM FONTS & TYPOGRAPHY HARNESS (POSITION & METRICS)");
+                var txtHead = comp.layers.addText("SYSTEM & ADOBE TYPOGRAPHY HARNESS (WIN, MAC & ADOBE DEFAULTS)");
                 txtHead.name = "TEST_02_Font_Section_Title";
                 txtHead.transform.position.setValue([fontColX, Math.round(95 * sF), 0]);
-                setupTextDocument(txtHead, "SYSTEM FONTS & TYPOGRAPHY HARNESS (POSITION & METRICS)", "Segoe UI", Math.round(14 * sF), [0.4, 0.8, 1.0], "left");
+                setupTextDocument(txtHead, "SYSTEM & ADOBE TYPOGRAPHY (WIN, MAC & AE DEFAULTS)", osSansAlt, Math.round(14 * sF), [0.4, 0.8, 1.0], "left", "Arial");
 
                 var fontsToTest = [
-                    { name: "Segoe UI",        label: "Segoe UI (Standard UI Sans)",      color: [1.0, 1.0, 1.0] },
-                    { name: "Arial",           label: "Arial (Universal Sans-Serif)",     color: [0.95, 0.95, 0.95] },
-                    { name: "Georgia",         label: "Georgia (Transitional Serif)",     color: [1.0, 0.88, 0.70] },
-                    { name: "Times New Roman", label: "Times New Roman (Classic Serif)",  color: [0.90, 0.80, 0.95] },
-                    { name: "Courier New",     label: "Courier New (Monospaced)",         color: [0.65, 0.95, 0.75] },
-                    { name: "Trebuchet MS",    label: "Trebuchet MS (Humanist Sans)",     color: [1.0, 0.75, 0.40] },
-                    { name: "Impact",          label: "Impact (Condensed Display)",       color: [1.0, 0.45, 0.45] }
+                    { name: "MyriadPro-Regular", alt: "Myriad Pro",        label: "Myriad Pro (Adobe CC Default Sans)",       color: [0.35, 0.85, 1.0] },
+                    { name: osSansName,          alt: osSansAlt,           label: osSansLabel,                               color: [1.0, 1.0, 1.0] },
+                    { name: "ArialMT",           alt: "Arial",             label: "Arial (Universal Core Sans-Serif)",       color: [0.95, 0.95, 0.95] },
+                    { name: "Verdana",           alt: "Verdana",           label: "Verdana (Universal Screen Sans)",         color: [1.0, 0.80, 0.40] },
+                    { name: "Georgia",           alt: "Georgia",           label: "Georgia (Universal Transitional Serif)",  color: [1.0, 0.88, 0.70] },
+                    { name: "TimesNewRomanPSMT", alt: "Times New Roman",   label: "Times New Roman (Classic Book Serif)",     color: [0.90, 0.80, 0.95] },
+                    { name: "CourierNewPSMT",    alt: "Courier New",       label: "Courier New (Universal Monospaced)",       color: [0.65, 0.95, 0.75] },
+                    { name: "Impact",            alt: "Impact",            label: "Impact (Universal Condensed Display)",     color: [1.0, 0.45, 0.45] }
                 ];
 
-                var startY = Math.round(145 * sF);
-                var rowSpacing = Math.round(90 * sF);
+                var startY = Math.round(135 * sF);
+                var rowSpacing = Math.round(82 * sF);
                 var pangramSentence = "The quick brown fox jumps over the lazy dog.";
                 var numberSymbols = "0123456789 - [!@#$%&*+-=]";
 
@@ -773,17 +796,17 @@
                     var lblLyr = comp.layers.addText(fInfo.label);
                     lblLyr.name = "TEST_03_Font_" + (fi + 1) + "_Label";
                     lblLyr.transform.position.setValue([fontColX, posY, 0]);
-                    setupTextDocument(lblLyr, "[" + (fi + 1) + "] " + fInfo.label, "Segoe UI", Math.round(11 * sF), [0.55, 0.65, 0.80], "left");
+                    setupTextDocument(lblLyr, "[" + (fi + 1) + "] " + fInfo.label, osSansAlt, Math.round(11 * sF), [0.55, 0.65, 0.80], "left", "Arial");
 
                     var panLyr = comp.layers.addText(pangramSentence);
                     panLyr.name = "TEST_03_Font_" + (fi + 1) + "_Pangram";
-                    panLyr.transform.position.setValue([fontColX, posY + Math.round(22 * sF), 0]);
-                    setupTextDocument(panLyr, pangramSentence, fInfo.name, scaledFontSize, fInfo.color, "left");
+                    panLyr.transform.position.setValue([fontColX, posY + Math.round(20 * sF), 0]);
+                    setupTextDocument(panLyr, pangramSentence, fInfo.name, scaledFontSize, fInfo.color, "left", fInfo.alt);
 
                     var numLyr = comp.layers.addText(numberSymbols);
                     numLyr.name = "TEST_03_Font_" + (fi + 1) + "_Numbers";
-                    numLyr.transform.position.setValue([fontColX, posY + Math.round(43 * sF), 0]);
-                    setupTextDocument(numLyr, numberSymbols, fInfo.name, Math.max(7, Math.round(scaledFontSize * 0.75)), [0.70, 0.75, 0.85], "left");
+                    numLyr.transform.position.setValue([fontColX, posY + Math.round(39 * sF), 0]);
+                    setupTextDocument(numLyr, numberSymbols, fInfo.name, Math.max(7, Math.round(scaledFontSize * 0.75)), [0.70, 0.75, 0.85], "left", fInfo.alt);
                 }
             }
             progBar.value = 65;

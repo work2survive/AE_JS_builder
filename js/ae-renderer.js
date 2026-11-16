@@ -862,8 +862,16 @@
                     textFont = `"${cleanFont}", 'Courier New', Consolas, monospace`;
                 } else if (fontLower.includes('times') || fontLower.includes('georgia') || fontLower.includes('serif')) {
                     textFont = `"${cleanFont}", Georgia, 'Times New Roman', serif`;
-                } else if (fontLower.includes('impact') || fontLower.includes('trebuchet')) {
-                    textFont = `"${cleanFont}", 'Trebuchet MS', Impact, sans-serif`;
+                } else if (fontLower.includes('impact')) {
+                    textFont = `"${cleanFont}", Impact, sans-serif`;
+                } else if (fontLower.includes('trebuchet')) {
+                    textFont = `"${cleanFont}", 'Trebuchet MS', sans-serif`;
+                } else if (fontLower.includes('verdana')) {
+                    textFont = `"${cleanFont}", Verdana, sans-serif`;
+                } else if (fontLower.includes('myriad')) {
+                    textFont = `"${cleanFont}", 'Myriad Pro', 'Segoe UI', -apple-system, Arial, sans-serif`;
+                } else if (fontLower.includes('helvetica')) {
+                    textFont = `"${cleanFont}", 'Helvetica Neue', Helvetica, Arial, sans-serif`;
                 } else {
                     textFont = `"${cleanFont}", 'Segoe UI', Arial, -apple-system, sans-serif`;
                 }
