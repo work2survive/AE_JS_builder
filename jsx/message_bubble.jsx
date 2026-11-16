@@ -959,7 +959,9 @@
         "    var padOffset = getVal('Inner Padding Offset', 0);",
         "    var padX = Math.max(Math.round(cornerRadius * 1.25), Math.round(textSize * 1.15)) + padOffset;",
         "    var padY = Math.max(10, Math.round(textSize * 0.60)) + padOffset;",
-        "    var minBubbleW = Math.round((padX * 2) + (textSize * 1.15));",
+        "    var minTextW = Math.round(textSize * 1.15);",
+        "    var minBubbleW = Math.round((padX * 2) + minTextW);",
+        "    var effMaxW = Math.max(minBubbleW, maxW);",
         "",
         "    var lineCount = 1;",
         "    var autoTextW = 0;",
@@ -981,11 +983,11 @@
         "    var w = 0;",
         "    if (rawBW > 0) {",
         "        w = rawBW;",
-        "        if (maxW > 0) w = Math.min(w, maxW);",
+        "        if (effMaxW > 0) w = Math.min(w, effMaxW);",
         "        w = Math.max(minBubbleW, w);",
         "    } else {",
         "        var autoCalcW = autoTextW + (padX * 2);",
-        "        if (maxW > 0) autoCalcW = Math.min(autoCalcW, maxW);",
+        "        if (effMaxW > 0) autoCalcW = Math.min(autoCalcW, effMaxW);",
         "        w = Math.max(minBubbleW, autoCalcW);",
         "    }",
         "",
@@ -1198,13 +1200,16 @@
         "",
         "    var rawBW = getVal('Bubble Width', 0);",
         "    var maxW = Math.max(40, getVal('Max Bubble Width', getVal('Screen Width', 380)));",
-        "    var curW = (rawBW > 0) ? Math.min(rawBW, maxW) : maxW;",
-        "",
         "    var textSize = getVal('Text Size', 20);",
         "    var cornerRadius = getVal('Corner Radius', 18);",
         "    var padOffset = getVal('Inner Padding Offset', 0);",
         "    var padX = Math.max(Math.round(cornerRadius * 1.25), Math.round(textSize * 1.15)) + padOffset;",
-        "    var textBoxW = Math.max(30, curW - (padX * 2));",
+        "    var minTextW = Math.round(textSize * 1.15);",
+        "    var minBubbleW = Math.round((padX * 2) + minTextW);",
+        "    var effMaxW = Math.max(minBubbleW, maxW);",
+        "    var curW = (rawBW > 0) ? Math.min(rawBW, effMaxW) : effMaxW;",
+        "    curW = Math.max(minBubbleW, curW);",
+        "    var textBoxW = Math.max(minTextW, curW - (padX * 2));",
         "",
         "    var fullStr = '';",
         "    try {",
@@ -1325,6 +1330,7 @@
         "                for (var s = 0; s <= stp; s++) {",
         "                    var testW = low + (high - low) * (s / stp);",
         "                    if (testW > textBoxW) testW = textBoxW;",
+        "                    if (testW < minTextW) testW = minTextW;",
         "                    var cand = gWrap(words, testW, textSize);",
         "                    if (cand.length === tN) {",
         "                        var fits = true, lens = [], sum = 0;",
@@ -1394,7 +1400,9 @@
         "    var cornerRadius = getVal('Corner Radius', 18);",
         "    var padOffset = getVal('Inner Padding Offset', 0);",
         "    var padX = Math.max(Math.round(cornerRadius * 1.25), Math.round(textSize * 1.15)) + padOffset;",
-        "    var minBubbleW = Math.round((padX * 2) + (textSize * 1.15));",
+        "    var minTextW = Math.round(textSize * 1.15);",
+        "    var minBubbleW = Math.round((padX * 2) + minTextW);",
+        "    var effMaxW = Math.max(minBubbleW, maxW);",
         "",
         "    var autoTextW = 0;",
         "    try {",
@@ -1414,11 +1422,11 @@
         "    var w = 0;",
         "    if (rawBW > 0) {",
         "        w = rawBW;",
-        "        if (maxW > 0) w = Math.min(w, maxW);",
+        "        if (effMaxW > 0) w = Math.min(w, effMaxW);",
         "        w = Math.max(minBubbleW, w);",
         "    } else {",
         "        var autoCalcW = autoTextW + (padX * 2);",
-        "        if (maxW > 0) autoCalcW = Math.min(autoCalcW, maxW);",
+        "        if (effMaxW > 0) autoCalcW = Math.min(autoCalcW, effMaxW);",
         "        w = Math.max(minBubbleW, autoCalcW);",
         "    }",
         "",
@@ -1480,7 +1488,9 @@
         "    var padOffset = getVal('Inner Padding Offset', 0);",
         "    var padX = Math.max(Math.round(cornerRadius * 1.25), Math.round(textSize * 1.15)) + padOffset;",
         "    var padY = Math.max(10, Math.round(textSize * 0.60)) + padOffset;",
-        "    var minBubbleW = Math.round((padX * 2) + (textSize * 1.15));",
+        "    var minTextW = Math.round(textSize * 1.15);",
+        "    var minBubbleW = Math.round((padX * 2) + minTextW);",
+        "    var effMaxW = Math.max(minBubbleW, maxW);",
         "    var lineCount = 1;",
         "    var autoTextW = 0;",
         "    try {",
@@ -1500,11 +1510,11 @@
         "    var w = 0;",
         "    if (rawBW > 0) {",
         "        w = rawBW;",
-        "        if (maxW > 0) w = Math.min(w, maxW);",
+        "        if (effMaxW > 0) w = Math.min(w, effMaxW);",
         "        w = Math.max(minBubbleW, w);",
         "    } else {",
         "        var autoCalcW = autoTextW + (padX * 2);",
-        "        if (maxW > 0) autoCalcW = Math.min(autoCalcW, maxW);",
+        "        if (effMaxW > 0) autoCalcW = Math.min(autoCalcW, effMaxW);",
         "        w = Math.max(minBubbleW, autoCalcW);",
         "    }",
         "    var leadingFactor = 1.0;",
@@ -1531,7 +1541,7 @@
         "    var bottomRowH = (showTime > 0 && canFitTime) ? (timeFontSize + 12) : 0;",
         "    var dynamicH = Math.max(Math.max(36, Math.round(cornerRadius * 1.6)), boxHeight + (padY * 2) + bottomRowH);",
         "    var h = dynamicH;",
-        "    var x = -maxW / 2;",
+        "    var x = -effMaxW / 2;",
         "    return createPath([[x, -h / 2], [x, h / 2]], [], [], false);",
         "})();"
     ].join("\n");
@@ -1558,7 +1568,9 @@
         "    var padOffset = getVal('Inner Padding Offset', 0);",
         "    var padX = Math.max(Math.round(cornerRadius * 1.25), Math.round(textSize * 1.15)) + padOffset;",
         "    var padY = Math.max(10, Math.round(textSize * 0.60)) + padOffset;",
-        "    var minBubbleW = Math.round((padX * 2) + (textSize * 1.15));",
+        "    var minTextW = Math.round(textSize * 1.15);",
+        "    var minBubbleW = Math.round((padX * 2) + minTextW);",
+        "    var effMaxW = Math.max(minBubbleW, maxW);",
         "    var lineCount = 1;",
         "    var autoTextW = 0;",
         "    try {",
@@ -1578,11 +1590,11 @@
         "    var w = 0;",
         "    if (rawBW > 0) {",
         "        w = rawBW;",
-        "        if (maxW > 0) w = Math.min(w, maxW);",
+        "        if (effMaxW > 0) w = Math.min(w, effMaxW);",
         "        w = Math.max(minBubbleW, w);",
         "    } else {",
         "        var autoCalcW = autoTextW + (padX * 2);",
-        "        if (maxW > 0) autoCalcW = Math.min(autoCalcW, maxW);",
+        "        if (effMaxW > 0) autoCalcW = Math.min(autoCalcW, effMaxW);",
         "        w = Math.max(minBubbleW, autoCalcW);",
         "    }",
         "    var leadingFactor = 1.0;",
@@ -1609,7 +1621,7 @@
         "    var bottomRowH = (showTime > 0 && canFitTime) ? (timeFontSize + 12) : 0;",
         "    var dynamicH = Math.max(Math.max(36, Math.round(cornerRadius * 1.6)), boxHeight + (padY * 2) + bottomRowH);",
         "    var h = dynamicH;",
-        "    var x = maxW / 2;",
+        "    var x = effMaxW / 2;",
         "    return createPath([[x, -h / 2], [x, h / 2]], [], [], false);",
         "})();"
     ].join("\n");
@@ -1637,7 +1649,9 @@
         "    var padOffset = getVal('Inner Padding Offset', 0);",
         "    var padX = Math.max(Math.round(cornerRadius * 1.25), Math.round(textSize * 1.15)) + padOffset;",
         "    var padY = Math.max(10, Math.round(textSize * 0.60)) + padOffset;",
-        "    var minBubbleW = Math.round((padX * 2) + (textSize * 1.15));",
+        "    var minTextW = Math.round(textSize * 1.15);",
+        "    var minBubbleW = Math.round((padX * 2) + minTextW);",
+        "    var effMaxW = Math.max(minBubbleW, maxW);",
         "",
         "    var lineCount = 1;",
         "    var autoTextW = 0;",
@@ -1659,11 +1673,11 @@
         "    var w = 0;",
         "    if (rawBW > 0) {",
         "        w = rawBW;",
-        "        if (maxW > 0) w = Math.min(w, maxW);",
+        "        if (effMaxW > 0) w = Math.min(w, effMaxW);",
         "        w = Math.max(minBubbleW, w);",
         "    } else {",
         "        var autoCalcW = autoTextW + (padX * 2);",
-        "        if (maxW > 0) autoCalcW = Math.min(autoCalcW, maxW);",
+        "        if (effMaxW > 0) autoCalcW = Math.min(autoCalcW, effMaxW);",
         "        w = Math.max(minBubbleW, autoCalcW);",
         "    }",
         "",
@@ -1721,7 +1735,9 @@
         "    var padOffset = getVal('Inner Padding Offset', 0);",
         "    var padX = Math.max(Math.round(cornerRadius * 1.25), Math.round(textSize * 1.15)) + padOffset;",
         "    var padY = Math.max(10, Math.round(textSize * 0.60)) + padOffset;",
-        "    var minBubbleW = Math.round((padX * 2) + (textSize * 1.15));",
+        "    var minTextW = Math.round(textSize * 1.15);",
+        "    var minBubbleW = Math.round((padX * 2) + minTextW);",
+        "    var effMaxW = Math.max(minBubbleW, maxW);",
         "",
         "    var lineCount = 1;",
         "    var autoTextW = 0;",
@@ -1743,11 +1759,11 @@
         "    var w = 0;",
         "    if (rawBW > 0) {",
         "        w = rawBW;",
-        "        if (maxW > 0) w = Math.min(w, maxW);",
+        "        if (effMaxW > 0) w = Math.min(w, effMaxW);",
         "        w = Math.max(minBubbleW, w);",
         "    } else {",
         "        var autoCalcW = autoTextW + (padX * 2);",
-        "        if (maxW > 0) autoCalcW = Math.min(autoCalcW, maxW);",
+        "        if (effMaxW > 0) autoCalcW = Math.min(autoCalcW, effMaxW);",
         "        w = Math.max(minBubbleW, autoCalcW);",
         "    }",
         "",
@@ -1775,7 +1791,7 @@
         "    var bottomRowH = (showTime > 0 && canFitTime) ? (timeFontSize + 12) : 0;",
         "    var dynamicH = Math.max(Math.max(36, Math.round(cornerRadius * 1.6)), boxHeight + (padY * 2) + bottomRowH);",
         "    var h = dynamicH;",
-        "    var px = isSent ? (maxW / 2) : -(maxW / 2);",
+        "    var px = isSent ? (effMaxW / 2) : -(effMaxW / 2);",
         "    var py = h / 2;",
         "    return [px, py, 0];",
         "})();"
@@ -1809,7 +1825,9 @@
         "    var padOffset = getVal('Inner Padding Offset', 0);",
         "    var padX = Math.max(Math.round(cornerRadius * 1.25), Math.round(textSize * 1.15)) + padOffset;",
         "    var padY = Math.max(10, Math.round(textSize * 0.60)) + padOffset;",
-        "    var minBubbleW = Math.round((padX * 2) + (textSize * 1.15));",
+        "    var minTextW = Math.round(textSize * 1.15);",
+        "    var minBubbleW = Math.round((padX * 2) + minTextW);",
+        "    var effMaxW = Math.max(minBubbleW, maxW);",
         "",
         "    var lineCount = 1;",
         "    var autoTextW = 0;",
@@ -1831,11 +1849,11 @@
         "    var w = 0;",
         "    if (rawBW > 0) {",
         "        w = rawBW;",
-        "        if (maxW > 0) w = Math.min(w, maxW);",
+        "        if (effMaxW > 0) w = Math.min(w, effMaxW);",
         "        w = Math.max(minBubbleW, w);",
         "    } else {",
         "        var autoCalcW = autoTextW + (padX * 2);",
-        "        if (maxW > 0) autoCalcW = Math.min(autoCalcW, maxW);",
+        "        if (effMaxW > 0) autoCalcW = Math.min(autoCalcW, effMaxW);",
         "        w = Math.max(minBubbleW, autoCalcW);",
         "    }",
         "",
@@ -1864,7 +1882,7 @@
         "    var dynamicH = Math.max(Math.max(36, Math.round(cornerRadius * 1.6)), boxHeight + (padY * 2) + bottomRowH);",
         "    var h = dynamicH;",
         "    var timeMargin = Math.max(8, Math.round(padY * 0.65));",
-        "    var bubbleRight = isSent ? (maxW / 2) : (-(maxW / 2) + w);",
+        "    var bubbleRight = isSent ? (effMaxW / 2) : (-(effMaxW / 2) + w);",
         "    var statusSpacing = statusW > 0 ? 6 : 0;",
         "    var posX = hasStatus ? (bubbleRight - padX - statusW - statusSpacing) : (bubbleRight - timeMargin);",
         "    var posY = (h / 2) - timeMargin;",
@@ -1899,7 +1917,9 @@
         "    var padOffset = getVal('Inner Padding Offset', 0);",
         "    var padX = Math.max(Math.round(cornerRadius * 1.25), Math.round(textSize * 1.15)) + padOffset;",
         "    var padY = Math.max(10, Math.round(textSize * 0.60)) + padOffset;",
-        "    var minBubbleW = Math.round((padX * 2) + (textSize * 1.15));",
+        "    var minTextW = Math.round(textSize * 1.15);",
+        "    var minBubbleW = Math.round((padX * 2) + minTextW);",
+        "    var effMaxW = Math.max(minBubbleW, maxW);",
         "",
         "    var lineCount = 1;",
         "    var autoTextW = 0;",
@@ -1921,11 +1941,11 @@
         "    var w = 0;",
         "    if (rawBW > 0) {",
         "        w = rawBW;",
-        "        if (maxW > 0) w = Math.min(w, maxW);",
+        "        if (effMaxW > 0) w = Math.min(w, effMaxW);",
         "        w = Math.max(minBubbleW, w);",
         "    } else {",
         "        var autoCalcW = autoTextW + (padX * 2);",
-        "        if (maxW > 0) autoCalcW = Math.min(autoCalcW, maxW);",
+        "        if (effMaxW > 0) autoCalcW = Math.min(autoCalcW, effMaxW);",
         "        w = Math.max(minBubbleW, autoCalcW);",
         "    }",
         "",
@@ -1954,7 +1974,7 @@
         "    var dynamicH = Math.max(Math.max(36, Math.round(cornerRadius * 1.6)), boxHeight + (padY * 2) + bottomRowH);",
         "    var h = dynamicH;",
         "    var timeMargin = Math.max(8, Math.round(padY * 0.65));",
-        "    var bubbleRight = isSent ? (maxW / 2) : (-(maxW / 2) + w);",
+        "    var bubbleRight = isSent ? (effMaxW / 2) : (-(effMaxW / 2) + w);",
         "    var posX = isRCS ? (bubbleRight - padX - (statusW / 2)) : (bubbleRight - padX);",
         "    var posY = isRCS ? ((h / 2) - timeMargin - Math.round(timeFontSize * 0.32)) : ((h / 2) - timeMargin);",
         "    return [posX, posY, (value.length > 2 ? value[2] : -0.5)];",
@@ -1991,7 +2011,9 @@
         "    var padOffset = getVal('Inner Padding Offset', 0);",
         "    var padX = Math.max(Math.round(cornerRadius * 1.25), Math.round(textSize * 1.15)) + padOffset;",
         "    var padY = Math.max(10, Math.round(textSize * 0.60)) + padOffset;",
-        "    var minBubbleW = Math.round((padX * 2) + (textSize * 1.15));",
+        "    var minTextW = Math.round(textSize * 1.15);",
+        "    var minBubbleW = Math.round((padX * 2) + minTextW);",
+        "    var effMaxW = Math.max(minBubbleW, maxW);",
         "",
         "    var lineCount = 1;",
         "    var autoTextW = 0;",
@@ -2012,11 +2034,11 @@
         "    var w = 0;",
         "    if (rawBW > 0) {",
         "        w = rawBW;",
-        "        if (maxW > 0) w = Math.min(w, maxW);",
+        "        if (effMaxW > 0) w = Math.min(w, effMaxW);",
         "        w = Math.max(minBubbleW, w);",
         "    } else {",
         "        var autoCalcW = autoTextW + (padX * 2);",
-        "        if (maxW > 0) autoCalcW = Math.min(autoCalcW, maxW);",
+        "        if (effMaxW > 0) autoCalcW = Math.min(autoCalcW, effMaxW);",
         "        w = Math.max(minBubbleW, autoCalcW);",
         "    }",
         "",
@@ -2045,7 +2067,7 @@
         "    var dynamicH = Math.max(Math.max(36, Math.round(cornerRadius * 1.6)), boxHeight + (padY * 2) + bottomRowH);",
         "    var h = dynamicH;",
         "    var capHeight = Math.round(textSize * 0.72);",
-        "    var bubbleLeft = isSent ? ((maxW / 2) - w) : -(maxW / 2);",
+        "    var bubbleLeft = isSent ? ((effMaxW / 2) - w) : -(effMaxW / 2);",
         "    var baseX = (w > 0) ? (bubbleLeft + padX) : value[0];",
         "    var baseY = (h > 0) ? (-(h / 2) + padY + capHeight) : value[1];",
         "",
@@ -2405,7 +2427,9 @@
         "    var cornerRadius = getVal('Corner Radius', 18);",
         "    var padOffset = getVal('Inner Padding Offset', 0);",
         "    var padX = Math.max(Math.round(cornerRadius * 1.25), Math.round(textSize * 1.15)) + padOffset;",
-        "    var minBubbleW = Math.round((padX * 2) + (textSize * 1.15));",
+        "    var minTextW = Math.round(textSize * 1.15);",
+        "    var minBubbleW = Math.round((padX * 2) + minTextW);",
+        "    var effMaxW = Math.max(minBubbleW, maxW);",
         "",
         "    var autoTextW = 0;",
         "    try {",
@@ -2425,11 +2449,11 @@
         "    var w = 0;",
         "    if (rawBW > 0) {",
         "        w = rawBW;",
-        "        if (maxW > 0) w = Math.min(w, maxW);",
+        "        if (effMaxW > 0) w = Math.min(w, effMaxW);",
         "        w = Math.max(minBubbleW, w);",
         "    } else {",
         "        var autoCalcW = autoTextW + (padX * 2);",
-        "        if (maxW > 0) autoCalcW = Math.min(autoCalcW, maxW);",
+        "        if (effMaxW > 0) autoCalcW = Math.min(autoCalcW, effMaxW);",
         "        w = Math.max(minBubbleW, autoCalcW);",
         "    }",
         "",
@@ -2492,7 +2516,9 @@
         "    var cornerRadius = getVal('Corner Radius', 18);",
         "    var padOffset = getVal('Inner Padding Offset', 0);",
         "    var padX = Math.max(Math.round(cornerRadius * 1.25), Math.round(textSize * 1.15)) + padOffset;",
-        "    var minBubbleW = Math.round((padX * 2) + (textSize * 1.15));",
+        "    var minTextW = Math.round(textSize * 1.15);",
+        "    var minBubbleW = Math.round((padX * 2) + minTextW);",
+        "    var effMaxW = Math.max(minBubbleW, maxW);",
         "",
         "    var autoTextW = 0;",
         "    try {",
@@ -2512,11 +2538,11 @@
         "    var w = 0;",
         "    if (rawBW > 0) {",
         "        w = rawBW;",
-        "        if (maxW > 0) w = Math.min(w, maxW);",
+        "        if (effMaxW > 0) w = Math.min(w, effMaxW);",
         "        w = Math.max(minBubbleW, w);",
         "    } else {",
         "        var autoCalcW = autoTextW + (padX * 2);",
-        "        if (maxW > 0) autoCalcW = Math.min(autoCalcW, maxW);",
+        "        if (effMaxW > 0) autoCalcW = Math.min(autoCalcW, effMaxW);",
         "        w = Math.max(minBubbleW, autoCalcW);",
         "    }",
         "",
@@ -3147,16 +3173,16 @@
     grpPad.alignChildren = ["left", "center"];
     var lblPad = grpPad.add("statictext", undefined, "Inner Padding (px):");
     lblPad.preferredSize = [135, -1];
-    var sldPad = grpPad.add("slider", undefined, 0, -15, 25);
+    var sldPad = grpPad.add("slider", undefined, 0, -20, 100);
     sldPad.alignment = ["fill", "center"];
     var txtPad = grpPad.add("edittext", undefined, "0");
     txtPad.characters = 3;
-    txtPad.helpTip = "Adjust bubble inner padding from -15px (compact) to +25px (spacious).";
+    txtPad.helpTip = "Adjust bubble inner padding from -20px (compact) to +100px (spacious).";
     sldPad.onChanging = function() {
         txtPad.text = String(Math.round(sldPad.value));
     };
     txtPad.onChange = function() {
-        var v = Math.max(-15, Math.min(25, parseFloat(txtPad.text) || 0));
+        var v = Math.max(-20, Math.min(100, parseFloat(txtPad.text) || 0));
         sldPad.value = v;
         txtPad.text = String(Math.round(v));
     };
@@ -4126,8 +4152,10 @@
         var statusSpacing = statusW > 0 ? 6 : 0;
         var timeRowW = isTimeEnabled ? (timeW + statusSpacing + statusW) : 0;
         var reqBubbleW = (typeof params.bubbleW === "number") ? Math.max(0, params.bubbleW) : 0;
-        var minBubbleW = Math.round((padX * 2) + (textSize * 1.15));
+        var minTextW = Math.round(textSize * 1.15);
+        var minBubbleW = Math.round((padX * 2) + minTextW);
         var minFitW = Math.round(padX * 2 + timeW + (hasStatus ? statusW + 6 : 0));
+        var effMaxW = Math.max(minBubbleW, maxBubbleW);
 
         var bubbleW = 0;
         var textBoxW = 0;
@@ -4138,28 +4166,29 @@
         var canFitInlineTime = false;
 
         if (reqBubbleW > 0) {
-            bubbleW = Math.min(reqBubbleW, maxBubbleW);
+            bubbleW = Math.min(reqBubbleW, effMaxW);
             bubbleW = Math.max(minBubbleW, bubbleW);
-            textBoxW = Math.max(30, bubbleW - (padX * 2));
+            textBoxW = Math.max(minTextW, bubbleW - (padX * 2));
             lines = wrapTextToLines(msgText, textBoxW, textSize, wrapMode);
             maxLineW = getLinesPixelBounds(lines, textSize);
             wrappedString = lines.join("\n");
             singleLine = (lines.length === 1);
             canFitInlineTime = singleLine && isTimeEnabled && (maxLineW + timeRowW + (padX * 2) + 16 <= bubbleW);
         } else {
-            textBoxW = Math.max(30, maxBubbleW - (padX * 2));
+            textBoxW = Math.max(minTextW, effMaxW - (padX * 2));
             lines = wrapTextToLines(msgText, textBoxW, textSize, wrapMode);
             maxLineW = getLinesPixelBounds(lines, textSize);
             var guard = 0;
-            while ((maxLineW + (padX * 2) > maxBubbleW) && (textBoxW > 30) && guard < 100) {
+            while ((maxLineW + (padX * 2) > effMaxW) && (textBoxW > minTextW) && guard < 100) {
                 textBoxW -= 10;
+                if (textBoxW < minTextW) textBoxW = minTextW;
                 lines = wrapTextToLines(msgText, textBoxW, textSize, wrapMode);
                 maxLineW = getLinesPixelBounds(lines, textSize);
                 guard++;
             }
             wrappedString = lines.join("\n");
             singleLine = (lines.length === 1);
-            canFitInlineTime = singleLine && isTimeEnabled && (maxLineW + timeRowW + (padX * 2) + 16 <= maxBubbleW);
+            canFitInlineTime = singleLine && isTimeEnabled && (maxLineW + timeRowW + (padX * 2) + 16 <= effMaxW);
             if (canFitInlineTime) {
                 bubbleW = maxLineW + timeRowW + (padX * 2) + 16;
             } else if (singleLine && !isTimeEnabled) {
@@ -4168,7 +4197,7 @@
                 var contentW = isTimeEnabled ? Math.max(maxLineW, timeRowW) : maxLineW;
                 bubbleW = contentW + (padX * 2);
             }
-            bubbleW = Math.min(bubbleW, maxBubbleW);
+            bubbleW = Math.min(bubbleW, effMaxW);
             bubbleW = Math.max(minBubbleW, bubbleW);
         }
 
@@ -4464,8 +4493,9 @@
             // 3. Message Text Layer (proper cap-height alignment prevents clipping top border)
             var textLayer = null;
             var capHeight = Math.round(textSize * 0.72);
-            var bubbleLeft = isSent ? ((maxBubbleW / 2) - bubbleW) : -(maxBubbleW / 2);
-            var bubbleRight = isSent ? (maxBubbleW / 2) : (-(maxBubbleW / 2) + bubbleW);
+            var effMaxW = Math.max(layout.minBubbleW, maxBubbleW);
+            var bubbleLeft = isSent ? ((effMaxW / 2) - bubbleW) : -(effMaxW / 2);
+            var bubbleRight = isSent ? (effMaxW / 2) : (-(effMaxW / 2) + bubbleW);
             var textTopY = -(bubbleH / 2) + padY + capHeight;
             var textLeftX = bubbleLeft + padX;
             if (typeof comp.layers.addText === "function") {
@@ -5469,8 +5499,9 @@
                 // Update Message Text layer
                 var textLayer = getLayer(preCompItem, "Message_Text");
                 var capHeight = Math.round(textSize * 0.72);
-                var bubbleLeft = isSent ? ((maxBubbleW / 2) - bubbleW) : -(maxBubbleW / 2);
-                var bubbleRight = isSent ? (maxBubbleW / 2) : (-(maxBubbleW / 2) + bubbleW);
+                var effMaxW = Math.max(layout.minBubbleW, maxBubbleW);
+                var bubbleLeft = isSent ? ((effMaxW / 2) - bubbleW) : -(effMaxW / 2);
+                var bubbleRight = isSent ? (effMaxW / 2) : (-(effMaxW / 2) + bubbleW);
                 var textTopY = -(bubbleH / 2) + padY + capHeight;
                 var textLeftX = bubbleLeft + padX;
                 if (textLayer) {
