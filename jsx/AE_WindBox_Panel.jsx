@@ -1,6 +1,6 @@
 // Co-authored & architected with Google DeepMind Antigravity.
 // =============================================================================
-// ADOBE AFTER EFFECTS EXTENDSCRIPT & SCRIPTUI PANEL: AE WINDBOX v1.1
+// ADOBE AFTER EFFECTS EXTENDSCRIPT & SCRIPTUI PANEL: AE WINDBOX v1.2
 // =============================================================================
 //
 // PURPOSE:
@@ -461,7 +461,7 @@
             dirY: 0.3,
             dirZ: 0.2,
             alignToWind: true,
-            numParticles: 50,
+            numParticles: 24,
             fadeInDist: 180,
             fadeOutDist: 180,
             cameraFade: true,
@@ -543,7 +543,7 @@
             dirY: -0.2,
             dirZ: 0.4,
             alignToWind: false,
-            numParticles: 70,
+            numParticles: 30,
             fadeInDist: 150,
             fadeOutDist: 150,
             cameraFade: true,
@@ -625,7 +625,7 @@
             dirY: 0.0,
             dirZ: 0.0,
             alignToWind: false,
-            numParticles: 60,
+            numParticles: 25,
             fadeInDist: 120,
             fadeOutDist: 120,
             cameraFade: true,
@@ -666,7 +666,7 @@
             dirY: 0.2,
             dirZ: 0.1,
             alignToWind: true,
-            numParticles: 60,
+            numParticles: 25,
             fadeInDist: 120,
             fadeOutDist: 120,
             cameraFade: true,
@@ -955,11 +955,11 @@
     // ==========================================
     function buildWindBoxUI(thisObj) {
         var isPanel = (thisObj instanceof Panel);
-        var win = isPanel ? thisObj : new Window("palette", "AE WindBox v1.1", undefined, {
+        var win = isPanel ? thisObj : new Window("palette", "AE WindBox v1.2", undefined, {
             resizeable: true
         });
         if (!(thisObj instanceof Panel)) {
-            win.text = "AE WindBox v1.1";
+            win.text = "AE WindBox v1.2";
         }
 
         win.orientation = "column";
@@ -977,7 +977,7 @@
         pnlHeader.spacing = 3;
         pnlHeader.margins = [10, 8, 10, 8];
 
-        var lblDesc = pnlHeader.add("statictext", undefined, "v1.1 - Procedural 3D Wind Volume Particle System with Virtual Guide Cube.");
+        var lblDesc = pnlHeader.add("statictext", undefined, "v1.2 - Procedural 3D Wind Volume Particle System with Virtual Guide Cube & Precomp Rig.");
 
         // ---------- SYSTEM NAME & PRESETS ----------
         var headerGroup = win.add("group");
@@ -1006,7 +1006,7 @@
         btnHelp.maximumSize = [24, 22];
         btnHelp.onClick = function () {
             alert(
-                "AE WindBox + 3D Cube Maker (v1.1)\n" +
+                "AE WindBox + 3D Cube Maker (v1.2)\n" +
                 "=================================\n" +
                 "1. Virtual 3D Cube (Guide Layer):\n" +
                 "   Defines the 3D wind boundary. Marked as Guide Layer by default so it stays\n" +
@@ -1108,15 +1108,22 @@
         chkAlignWind.value = true;
         chkAlignWind.helpTip = "Automatically rotates particles towards the wind direction vector with aerodynamic tumble";
 
-        // Particle Count Panel
-        var pnlCount = tabFlow.add("panel", undefined, "Particles Count - Animatable");
-        pnlCount.orientation = "row";
-        pnlCount.alignChildren = ["left", "center"];
-        pnlCount.spacing = 6;
+        // Particle Count Panel (Capped at 30 max for AE expression performance)
+        var pnlCount = tabFlow.add("panel", undefined, "Particles Count (Max 30) - Animatable");
+        pnlCount.orientation = "column";
+        pnlCount.alignChildren = ["left", "top"];
+        pnlCount.spacing = 4;
 
-        pnlCount.add("statictext", undefined, "Number of Particles:");
-        var editCount = pnlCount.add("edittext", undefined, "50");
+        var grpCountRow = pnlCount.add("group");
+        grpCountRow.orientation = "row";
+        grpCountRow.alignChildren = ["left", "center"];
+        grpCountRow.spacing = 6;
+        grpCountRow.add("statictext", undefined, "Number of Particles (Max 30):");
+        var editCount = grpCountRow.add("edittext", undefined, "20");
         editCount.characters = 5;
+        editCount.helpTip = "Number of active particles (capped at 30 max). Each particle is a separate expression-driven 3D layer; keeping count limited is essential for viewport performance. For large particle volumes (hundreds/thousands), use a dedicated plugin like Maxon Trapcode Particular.";
+
+        var lblCountWarn = pnlCount.add("statictext", undefined, "Limited to 30 max for performance. For large amounts, use Trapcode Particular.");
 
         // Boundary & Camera Fade Panel
         var pnlFade = tabFlow.add("panel", undefined, "Particle Fade (Boundary & Camera) - Animatable");
@@ -1443,7 +1450,7 @@
             if (preset.dirY !== undefined) editDirY.text = String(preset.dirY);
             if (preset.dirZ !== undefined) editDirZ.text = String(preset.dirZ);
             if (preset.alignToWind !== undefined) chkAlignWind.value = Boolean(preset.alignToWind);
-            if (preset.numParticles !== undefined) editCount.text = String(preset.numParticles);
+            if (preset.numParticles !== undefined) editCount.text = String(Math.min(30, Math.max(1, preset.numParticles)));
             if (preset.fadeInDist !== undefined) editFadeInDist.text = String(preset.fadeInDist);
             if (preset.fadeOutDist !== undefined) editFadeOutDist.text = String(preset.fadeOutDist);
             if (preset.cameraFade !== undefined) chkCameraFade.value = Boolean(preset.cameraFade);
@@ -1587,14 +1594,20 @@
         // CREATE WINDBOX + 3D CUBE LOGIC
         // ==========================================
         btnCreate.onClick = function () {
-            var comp = app.project ? app.project.activeItem : null;
-            if (!comp || !(comp instanceof CompItem)) {
+            var parentComp = app.project ? app.project.activeItem : null;
+            if (!parentComp || !(parentComp instanceof CompItem)) {
                 alert("Please select or open an active Composition first.", "AE WindBox");
                 return;
             }
 
-            var sysName = txtSysName.text.replace(/^\s+|\s+$/g, "");
-            if (sysName.length === 0) sysName = "WindBox";
+            var comp = parentComp;
+
+            // Generate random hex number for precomp: windbox_+random hex
+            var randHex = Math.floor(0x1000 + Math.random() * 0xEFFF).toString(16);
+            var precompName = "windbox_" + randHex;
+            txtSysName.text = precompName;
+
+            var sysName = precompName;
 
             var masterSeed = Math.floor(getNum(editMasterSeed, 12345));
             var sizeX = Math.max(10, getNum(editSizeX, 1400));
@@ -1605,7 +1618,7 @@
             var dirY = getNum(editDirY, 0.3);
             var dirZ = getNum(editDirZ, 0.2);
             var alignToWind = chkAlignWind.value;
-            var numParticles = Math.max(1, Math.round(getNum(editCount, 50)));
+            var numParticles = Math.max(1, Math.min(30, Math.round(getNum(editCount, 20))));
             var fadeInDist = Math.max(0, getNum(editFadeInDist, 150));
             var fadeOutDist = Math.max(0, getNum(editFadeOutDist, 150));
             var isCamFade = chkCameraFade.value;
@@ -1668,6 +1681,8 @@
             }
 
             try {
+                var allCreatedLayers = [];
+
                 // 1. Create WindBox Master Controller Null
                 var ctrlName = sysName + "_Controller";
                 var ctrlLayer = comp.layers.addNull();
@@ -1679,57 +1694,61 @@
                 ctrlLayer.colorLabel = "#ff3b30"; // Red label in emulator
                 setTransformVal(ctrlLayer, "Position", [comp.width / 2, comp.height / 2, 0]);
                 setTransformVal(ctrlLayer, "Anchor Point", [0, 0, 0]);
+                allCreatedLayers.push(ctrlLayer);
 
-                // 2. Add Expression Controls to Controller
-                // Master Random Seed
-                addSlider(ctrlLayer, "WindBox - Random Seed", masterSeed);
+                // Define all master controls
+                var effectDefs = [
+                    { type: "slider",   name: "WindBox - Random Seed",           val: masterSeed },
+                    { type: "slider",   name: "WindBox - Size X",                 val: sizeX },
+                    { type: "slider",   name: "WindBox - Size Y",                 val: sizeY },
+                    { type: "slider",   name: "WindBox - Size Z",                 val: sizeZ },
+                    { type: "slider",   name: "WindBox - Wind Speed",             val: windSpd },
+                    { type: "slider",   name: "WindBox - Number of Particles",    val: numParticles },
+                    { type: "slider",   name: "WindBox - Direction X",            val: dirX },
+                    { type: "slider",   name: "WindBox - Direction Y",            val: dirY },
+                    { type: "slider",   name: "WindBox - Direction Z",            val: dirZ },
+                    { type: "checkbox", name: "WindBox - Align to Wind",          val: alignToWind ? 1 : 0 },
+                    { type: "slider",   name: "WindBox - Particle Type",          val: particleType },
+                    { type: "slider",   name: "WindBox - Fade In Distance",       val: fadeInDist },
+                    { type: "slider",   name: "WindBox - Fade Out Distance",      val: fadeOutDist },
+                    { type: "checkbox", name: "WindBox - Fade Near Camera",       val: isCamFade ? 1 : 0 },
+                    { type: "slider",   name: "WindBox - Camera Fade Dist",       val: camFadeDist },
+                    { type: "slider",   name: "WindBox - Size Random (%)",        val: partSizeRand },
+                    { type: "checkbox", name: "WindBox - Random Flip Horizontal", val: isFlipH ? 1 : 0 },
+                    { type: "checkbox", name: "WindBox - Random Flip Vertical",   val: isFlipV ? 1 : 0 },
+                    { type: "slider",   name: "WindBox - Scale Wiggle Freq",      val: scaleWigFreq },
+                    { type: "slider",   name: "WindBox - Scale Wiggle Amp (%)",   val: scaleWigAmp },
+                    { type: "checkbox", name: "WindBox - Cube Guide Layer",       val: isCubeGuide ? 1 : 0 },
+                    { type: "color",    name: "WindBox - Cube Fill Color",        val: cubeFillColor },
+                    { type: "slider",   name: "WindBox - Cube Fill Opacity",      val: cubeSidesOp },
+                    { type: "color",    name: "WindBox - Cube Stroke Color",      val: cubeStrokeColor },
+                    { type: "slider",   name: "WindBox - Cube Stroke Width",      val: cubeStrokeWidth },
+                    { type: "slider",   name: "WindBox - Cube Stroke Opacity",    val: cubeStrokeOp },
+                    { type: "slider",   name: "WindBox - Pos Wiggle Freq",        val: posFreq },
+                    { type: "slider",   name: "WindBox - Pos Wiggle Amp X",       val: posAmpX },
+                    { type: "slider",   name: "WindBox - Pos Wiggle Amp Y",       val: posAmpY },
+                    { type: "slider",   name: "WindBox - Pos Wiggle Amp Z",       val: posAmpZ },
+                    { type: "slider",   name: "WindBox - Rot X Wiggle Freq",      val: rotXFreq },
+                    { type: "slider",   name: "WindBox - Rot X Wiggle Amp",       val: rotXAmp },
+                    { type: "slider",   name: "WindBox - Rot Y Wiggle Freq",      val: rotYFreq },
+                    { type: "slider",   name: "WindBox - Rot Y Wiggle Amp",       val: rotYAmp },
+                    { type: "slider",   name: "WindBox - Rot Z Wiggle Freq",      val: rotZFreq },
+                    { type: "slider",   name: "WindBox - Rot Z Wiggle Amp",       val: rotZAmp }
+                ];
 
-                // Size controls
-                addSlider(ctrlLayer, "WindBox - Size X", sizeX);
-                addSlider(ctrlLayer, "WindBox - Size Y", sizeY);
-                addSlider(ctrlLayer, "WindBox - Size Z", sizeZ);
-
-                // Wind & Dynamic Controls
-                addSlider(ctrlLayer, "WindBox - Wind Speed", windSpd);
-                addSlider(ctrlLayer, "WindBox - Number of Particles", numParticles);
-                addSlider(ctrlLayer, "WindBox - Direction X", dirX);
-                addSlider(ctrlLayer, "WindBox - Direction Y", dirY);
-                addSlider(ctrlLayer, "WindBox - Direction Z", dirZ);
-                addCheckbox(ctrlLayer, "WindBox - Align to Wind", alignToWind ? 1 : 0);
-                addSlider(ctrlLayer, "WindBox - Particle Type", particleType);
-
-                // Boundary & Camera Fade Controls
-                addSlider(ctrlLayer, "WindBox - Fade In Distance", fadeInDist);
-                addSlider(ctrlLayer, "WindBox - Fade Out Distance", fadeOutDist);
-                addCheckbox(ctrlLayer, "WindBox - Fade Near Camera", isCamFade ? 1 : 0);
-                addSlider(ctrlLayer, "WindBox - Camera Fade Dist", camFadeDist);
-
-                // Particle Size Randomness, Flip & Size Wiggle Controls
-                addSlider(ctrlLayer, "WindBox - Size Random (%)", partSizeRand);
-                addCheckbox(ctrlLayer, "WindBox - Random Flip Horizontal", isFlipH ? 1 : 0);
-                addCheckbox(ctrlLayer, "WindBox - Random Flip Vertical", isFlipV ? 1 : 0);
-                addSlider(ctrlLayer, "WindBox - Scale Wiggle Freq", scaleWigFreq);
-                addSlider(ctrlLayer, "WindBox - Scale Wiggle Amp (%)", scaleWigAmp);
-
-                // Cube appearance & Guide layer controls
-                addCheckbox(ctrlLayer, "WindBox - Cube Guide Layer", isCubeGuide ? 1 : 0);
-                addColor(ctrlLayer, "WindBox - Cube Fill Color", cubeFillColor);
-                addSlider(ctrlLayer, "WindBox - Cube Fill Opacity", cubeSidesOp);
-                addColor(ctrlLayer, "WindBox - Cube Stroke Color", cubeStrokeColor);
-                addSlider(ctrlLayer, "WindBox - Cube Stroke Width", cubeStrokeWidth);
-                addSlider(ctrlLayer, "WindBox - Cube Stroke Opacity", cubeStrokeOp);
-
-                // Turbulence Wiggle controls
-                addSlider(ctrlLayer, "WindBox - Pos Wiggle Freq", posFreq);
-                addSlider(ctrlLayer, "WindBox - Pos Wiggle Amp X", posAmpX);
-                addSlider(ctrlLayer, "WindBox - Pos Wiggle Amp Y", posAmpY);
-                addSlider(ctrlLayer, "WindBox - Pos Wiggle Amp Z", posAmpZ);
-                addSlider(ctrlLayer, "WindBox - Rot X Wiggle Freq", rotXFreq);
-                addSlider(ctrlLayer, "WindBox - Rot X Wiggle Amp", rotXAmp);
-                addSlider(ctrlLayer, "WindBox - Rot Y Wiggle Freq", rotYFreq);
-                addSlider(ctrlLayer, "WindBox - Rot Y Wiggle Amp", rotYAmp);
-                addSlider(ctrlLayer, "WindBox - Rot Z Wiggle Freq", rotZFreq);
-                addSlider(ctrlLayer, "WindBox - Rot Z Wiggle Amp", rotZAmp);
+                // 2. Add Expression Controls to Controller linked to parent comp layer
+                for (var ed = 0; ed < effectDefs.length; ed++) {
+                    var def = effectDefs[ed];
+                    var fx;
+                    if (def.type === "color") {
+                        fx = addColor(ctrlLayer, def.name, def.val);
+                    } else if (def.type === "checkbox") {
+                        fx = addCheckbox(ctrlLayer, def.name, def.val);
+                    } else {
+                        fx = addSlider(ctrlLayer, def.name, def.val);
+                    }
+                    fx.property(1).expression = 'try { comp("' + parentComp.name + '").layer("' + precompName + '").effect("' + def.name + '")(1).value; } catch (err) { value; }';
+                }
 
                 // 3. VIRTUAL 3D CUBE BOUNDING BOX (Guide Layer)
                 if (shouldBuildCube) {
@@ -1826,6 +1845,8 @@
                         if (pProp && faceExprs[cfg.name]) {
                             pProp.expression = faceExprs[cfg.name].pos;
                         }
+
+                        allCreatedLayers.push(faceLayer);
                     }
                 }
 
@@ -2020,6 +2041,10 @@
                     '            if (thisComp.activeCamera) {',
                     '                camPos = thisComp.activeCamera.toWorld([0, 0, 0]);',
                     '                camForward = thisComp.activeCamera.toWorldVec([0, 0, 1]);',
+                    '            } else if (comp("' + parentComp.name + '").activeCamera) {',
+                    '                var pCam = comp("' + parentComp.name + '").activeCamera;',
+                    '                camPos = pCam.toWorld([0, 0, 0]);',
+                    '                camForward = pCam.toWorldVec([0, 0, 1]);',
                     '            }',
                     '        } catch(e) {}',
                     '        var myPos = toWorld(anchorPoint);',
@@ -2107,15 +2132,71 @@
 
                     var scaleProp = xform.property("ADBE Scale") || xform.scale;
                     if (scaleProp) scaleProp.expression = scaleExpr;
+
+                    allCreatedLayers.push(pLayer);
                 }
 
-                // Select the Controller layer so user can immediately animate it
-                if (comp.selectedLayers) {
-                    for (var sel = 0; sel < comp.selectedLayers.length; sel++) {
-                        comp.selectedLayers[sel].selected = false;
+                // 6. PRECOMPOSE ALL CREATED LAYERS INTO windowbox_+random hex
+                var indicesMap = {};
+                for (var li = 0; li < allCreatedLayers.length; li++) {
+                    if (allCreatedLayers[li] && allCreatedLayers[li].index) {
+                        indicesMap[allCreatedLayers[li].index] = true;
                     }
                 }
-                ctrlLayer.selected = true;
+                var indices = [];
+                for (var kIdx in indicesMap) {
+                    if (indicesMap.hasOwnProperty(kIdx)) {
+                        indices.push(parseInt(kIdx, 10));
+                    }
+                }
+                indices.sort(function (a, b) { return a - b; });
+
+                var preComp = parentComp.layers.precompose(indices, precompName, true);
+
+                // Locate the newly created precomp layer in parentComp
+                var precompLayer = null;
+                for (var pli = 1; pli <= parentComp.layers.length; pli++) {
+                    var testL = parentComp.layer(pli);
+                    if (testL && testL.source === preComp) {
+                        precompLayer = testL;
+                        break;
+                    }
+                }
+                if (!precompLayer) {
+                    precompLayer = parentComp.layer(precompName);
+                }
+
+                if (precompLayer) {
+                    precompLayer.name = precompName;
+                    precompLayer.threeDLayer = true;
+                    if ("collapseTransformation" in precompLayer) {
+                        precompLayer.collapseTransformation = true; // Continuous 3D rasterization in AE
+                    }
+                    precompLayer.label = 1; // Red label (Master Controller)
+                    precompLayer.colorLabel = "#ff3b30";
+                    setTransformVal(precompLayer, "Anchor Point", [preComp.width / 2, preComp.height / 2, 0]);
+                    setTransformVal(precompLayer, "Position", [parentComp.width / 2, parentComp.height / 2, 0]);
+
+                    // Add user-facing master effect controls on the parent comp precomp layer
+                    for (var me = 0; me < effectDefs.length; me++) {
+                        var mDef = effectDefs[me];
+                        if (mDef.type === "color") {
+                            addColor(precompLayer, mDef.name, mDef.val);
+                        } else if (mDef.type === "checkbox") {
+                            addCheckbox(precompLayer, mDef.name, mDef.val);
+                        } else {
+                            addSlider(precompLayer, mDef.name, mDef.val);
+                        }
+                    }
+
+                    // Select the precomp layer in parentComp so user can immediately animate it
+                    if (parentComp.selectedLayers) {
+                        for (var sel = 0; sel < parentComp.selectedLayers.length; sel++) {
+                            parentComp.selectedLayers[sel].selected = false;
+                        }
+                    }
+                    precompLayer.selected = true;
+                }
 
             } catch (err) {
                 alert("Error building WindBox:\n" + err.toString(), "AE WindBox Error");
