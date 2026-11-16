@@ -9,8 +9,8 @@
 //   platforms (Android RCS, iOS Messages, WhatsApp, Instagram Direct, Facebook Messenger, and Custom themes).
 //
 // FEATURES & WORKFLOW:
-//   1. Message Text Input (Up to 250 characters, supports emojis).
-//   2. Live Character Counter (with automatic 250-character limit enforcement).
+//   1. Message Text Input (Up to 500 characters, supports emojis).
+//   2. Live Character Counter (with automatic 500-character limit enforcement).
 //   3. Messaging Platform Preset Styles:
 //      - Stored in a separate JSON file: "message bubble presets/presets.json".
 //      - If not existing, automatically created on launch with platform presets.
@@ -165,8 +165,8 @@
     if (typeof JSON === "undefined") {
         JSON = JSONPolyfill;
     }
-    var SCRIPT_VERSION = "v1.6";
-    var MAX_CHARS = 250;
+    var SCRIPT_VERSION = "v1.7";
+    var MAX_CHARS = 500;
     // -------------------------------------------------------------------------
     // -------------------------------------------------------------------------
     // ExtendScript Layer.effect DOM Compatibility Helper
@@ -2073,7 +2073,7 @@
     tabMessage.alignChildren = ["fill", "top"];
     tabMessage.spacing = 8;
     tabMessage.margins = 8;
-    // --- Panel: Message Content (Max 250 characters, Emoji support) ---
+    // --- Panel: Message Content (Max 500 characters, Emoji support) ---
     var pnlMessage = tabMessage.add("panel", undefined, "Message Content (Emojis Supported)");
     pnlMessage.orientation = "column";
     pnlMessage.alignChildren = ["fill", "top"];
@@ -2081,7 +2081,7 @@
     pnlMessage.margins = 10;
     var txtMessage = pnlMessage.add("edittext", undefined, "Hey! Are we still meeting for lunch today? 😊🍕", { multiline: true });
     txtMessage.preferredSize = [-1, 52];
-    txtMessage.helpTip = "Type your message text here (Max 250 characters). Emojis are supported.";
+    txtMessage.helpTip = "Type your message text here (Max 500 characters). Emojis are supported.";
     // Text Wrap & Character Counter Row
     var grpWrapAndCount = pnlMessage.add("group");
     grpWrapAndCount.orientation = "row";
@@ -2091,10 +2091,10 @@
     grpTextWrap.alignChildren = ["left", "center"];
     var lblTextWrap = grpTextWrap.add("statictext", undefined, "Text Wrap:");
     lblTextWrap.preferredSize = [68, -1];
-    var dropTextWrap = grpTextWrap.add("dropdownlist", undefined, ["none", "pretty", "balance"]);
+    var dropTextWrap = grpTextWrap.add("dropdownlist", undefined, ["auto", "pretty", "balance"]);
     dropTextWrap.selection = 1; // Default: "pretty"
     dropTextWrap.preferredSize = [95, 24];
-    dropTextWrap.helpTip = "Text wrap mode:\n• none: No auto-wrapping (only manual line breaks)\n• pretty: Greedy wrapping with orphan prevention (equivalent to CSS text-wrap: pretty)\n• balance: Balances line lengths evenly across lines (equivalent to CSS text-wrap: balance)";
+    dropTextWrap.helpTip = "Text wrap mode:\n• auto: Basic standard word wrapping (standard AE / CSS word boundary wrap)\n• pretty: Smart wrapping with orphan prevention (default, equivalent to CSS text-wrap: pretty)\n• balance: Balances line lengths evenly across lines (equivalent to CSS text-wrap: balance)";
     var lblCharCount = grpWrapAndCount.add("statictext", undefined, "0 / " + MAX_CHARS + " chars");
     lblCharCount.alignment = ["right", "center"];
     function updateCharCount() {
@@ -2585,7 +2585,7 @@
     pnlHelpGuide.alignChildren = ["fill", "top"];
     pnlHelpGuide.spacing = 4;
     pnlHelpGuide.margins = [10, 8, 10, 8];
-    pnlHelpGuide.add("statictext", undefined, "1. Message: Type text (up to 250 chars). Emojis are fully supported.");
+    pnlHelpGuide.add("statictext", undefined, "1. Message: Type text (up to 500 chars). Emojis are fully supported.");
     pnlHelpGuide.add("statictext", undefined, "2. Platform: Pick preset (iOS, RCS, WhatsApp, etc.), direction & theme.");
     pnlHelpGuide.add("statictext", undefined, "3. Generate: Click 'Create Message Bubble' to build expression-rigged layers.");
     pnlHelpGuide.add("statictext", undefined, "4. Live Update: Select an existing bubble precomp & click 'Update Message Bubble'.");
@@ -3172,19 +3172,20 @@
                 allLines.push("");
                 continue;
             }
-            if (wrapMode === "none") {
-                allLines.push(para);
-                continue;
-            }
             var rawWords = para.split(/\s+/);
             var words = [];
             for (var rw = 0; rw < rawWords.length; rw++) {
                 if (rawWords[rw].length > 0) words.push(rawWords[rw]);
             }
             if (words.length === 0) continue;
-            if (wrapMode === "pretty") {
+
+            if (wrapMode === "auto") {
+                // Basic standard greedy word-wrapping (standard AE / CSS word boundary wrap)
+                var autoLines = greedyWrap(words, maxPixelWidth, fontSize);
+                for (var ai = 0; ai < autoLines.length; ai++) allLines.push(autoLines[ai]);
+            } else if (wrapMode === "pretty") {
+                // Smart wrapping with orphan prevention (CSS text-wrap: pretty)
                 var pLines = greedyWrap(words, maxPixelWidth, fontSize);
-                // Orphan prevention: if the last line has only 1 word and penultimate line has >= 2 words
                 if (pLines.length >= 2) {
                     var lastWords = pLines[pLines.length - 1].split(/\s+/);
                     var penultWords = pLines[pLines.length - 2].split(/\s+/);
@@ -3200,33 +3201,41 @@
                 }
                 for (var li = 0; li < pLines.length; li++) allLines.push(pLines[li]);
             } else if (wrapMode === "balance") {
+                // Balanced line wrapping: balances line lengths while strictly guaranteeing none exceeds maxPixelWidth
                 var baseLines = greedyWrap(words, maxPixelWidth, fontSize);
                 var targetN = baseLines.length;
                 if (targetN <= 1) {
                     for (var bi = 0; bi < baseLines.length; bi++) allLines.push(baseLines[bi]);
                     continue;
                 }
+                var totalW = 0;
                 var maxSingleWordW = 0;
                 for (var wi = 0; wi < words.length; wi++) {
                     var ww = measureTypographyWidth(words[wi], fontSize);
+                    totalW += ww + (fontSize * 0.32);
                     if (ww > maxSingleWordW) maxSingleWordW = ww;
                 }
-                var low = maxSingleWordW;
+                var idealW = Math.max(maxSingleWordW, totalW / targetN);
+                var low = idealW * 0.85;
                 var high = maxPixelWidth;
                 var bestLines = baseLines;
                 var bestVar = 1e9;
-                var steps = 24;
+                var steps = 30;
                 for (var s = 0; s <= steps; s++) {
                     var testW = low + (high - low) * (s / steps);
+                    if (testW > maxPixelWidth) testW = maxPixelWidth;
                     var cand = greedyWrap(words, testW, fontSize);
                     if (cand.length === targetN) {
-                        var sum = 0;
+                        var fits = true;
                         var lens = [];
+                        var sum = 0;
                         for (var ci = 0; ci < cand.length; ci++) {
                             var lw = measureTypographyWidth(cand[ci], fontSize);
+                            if (lw > maxPixelWidth) { fits = false; break; }
                             lens.push(lw);
                             sum += lw;
                         }
+                        if (!fits) continue;
                         var avg = sum / cand.length;
                         var v = 0;
                         for (var vi = 0; vi < lens.length; vi++) {
@@ -3247,14 +3256,14 @@
         }
         return allLines.length > 0 ? allLines : [""];
     }
-    // Measure maximum line pixel width
+    // Measure maximum line pixel width with 4% typographic margin for advance and kerning variance
     function getLinesPixelBounds(lines, fontSize) {
         var maxW = 0;
         for (var i = 0; i < lines.length; i++) {
             var w = measureTypographyWidth(lines[i], fontSize);
             if (w > maxW) maxW = w;
         }
-        return Math.max(30, maxW);
+        return Math.max(30, Math.round(maxW * 1.04));
     }
     // -------------------------------------------------------------------------
     // Compute Bubble Layout Dimensions (Responsive single/multi-line & padding)
@@ -3374,7 +3383,7 @@
             var leadingPercent = parseFloat(txtLeading.text) || 100;
             var leadingFactor = leadingPercent / 100;
             var selWrapIdx = (typeof dropTextWrap !== "undefined" && dropTextWrap && dropTextWrap.selection) ? dropTextWrap.selection.index : 1;
-            var wrapModes = ["none", "pretty", "balance"];
+            var wrapModes = ["auto", "pretty", "balance"];
             var wrapMode = wrapModes[selWrapIdx] || "pretty";
             var selAnimIdx = dropAnim.selection ? dropAnim.selection.index : 0;
             var animDecay = (typeof sldDecay !== "undefined" && sldDecay) ? Math.max(0, Math.round(sldDecay.value)) : 30;
@@ -4296,7 +4305,7 @@
             var leadingPercent = parseFloat(txtLeading.text) || 100;
             var leadingFactor = leadingPercent / 100;
             var selWrapIdx = (typeof dropTextWrap !== "undefined" && dropTextWrap && dropTextWrap.selection) ? dropTextWrap.selection.index : 1;
-            var wrapModes = ["none", "pretty", "balance"];
+            var wrapModes = ["auto", "pretty", "balance"];
             var wrapMode = wrapModes[selWrapIdx] || "pretty";
             var selAnimIdx = dropAnim.selection ? dropAnim.selection.index : 0;
             var animDecay = (typeof sldDecay !== "undefined" && sldDecay) ? Math.max(0, Math.round(sldDecay.value)) : 30;
