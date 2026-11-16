@@ -430,6 +430,7 @@
         var subComp = nodeRoot.add("node", "Comp: AE_Emulator_Tester_Comp (1920x1080)");
         if (subComp && typeof subComp.add === "function") {
             subComp.add("item", "Layer: TEST_00_Grid_Background");
+            subComp.add("item", "Layer: TEST_00_Comp_Resolution_Badge");
             subComp.add("item", "Layer: TEST_01_Calibration_Grid");
             subComp.add("item", "Layer: TEST_02_Font_Section_Title");
             subComp.add("item", "Layer: TEST_05_Geometric_Shapes");
@@ -715,6 +716,28 @@
                     bStroke.property("Stroke Width").setValue(Math.max(1, Math.round(2 * sF)));
                     bStroke.property("Opacity").setValue(60);
                 }
+
+                // Composition Resolution Header (at the top of the grid)
+                var resTag = compW + " × " + compH;
+                if (compW === 3840 && compH === 2160) {
+                    resTag += " (4K UHD)";
+                } else if (compW === 1920 && compH === 1080) {
+                    resTag += " (Full HD 1080p)";
+                } else if (compW === 1280 && compH === 720) {
+                    resTag += " (HD 720p)";
+                } else if (compW === 2560 && compH === 1440) {
+                    resTag += " (QHD 1440p)";
+                } else if (compW === 1080 && compH === 1080) {
+                    resTag += " (Square 1:1)";
+                } else if (compW === 1080 && compH === 1920) {
+                    resTag += " (Vertical 9:16)";
+                }
+
+                var resTitleText = "COMP RESOLUTION: " + resTag;
+                var resBadgeLayer = comp.layers.addText(resTitleText);
+                resBadgeLayer.name = "TEST_00_Comp_Resolution_Badge";
+                resBadgeLayer.transform.position.setValue([centerX, Math.round(48 * sF), 0]);
+                setupTextDocument(resBadgeLayer, resTitleText, "Segoe UI", Math.round(14 * sF), [0.35, 0.80, 1.0], "center");
             }
             progBar.value = 45;
 
