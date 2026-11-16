@@ -4684,6 +4684,36 @@
 
             var cornerRadius = platformCfg.radius || 18;
             var tailType = platformCfg.tailType || "modern";
+            var padX = Math.max(Math.round(cornerRadius * 0.85), Math.round(textSize * 0.90)) + padOffset;
+            var padY = Math.max(10, Math.round(textSize * 0.60)) + padOffset;
+
+            var selStatusIdx = dropStatus.selection ? dropStatus.selection.index : 0;
+            var isAutoStatus = (selStatusIdx === 0);
+            var selStatusStyleIdx = (typeof dropStatusStyle !== "undefined" && dropStatusStyle && dropStatusStyle.selection)
+                ? dropStatusStyle.selection.index
+                : (platformCfg.statusStyle === "rcs" || platformName === "Android RCS" ? 0 : 1);
+            var isRCSStyle = (selStatusStyleIdx === 0);
+
+            var deliveredTime = 0.8;
+            var readDuration = calculateReadDuration(msgText);
+            var readTime = Math.round((deliveredTime + readDuration) * 10) / 10;
+
+            var isDarkBubble = (bubbleColor[0] * 0.299 + bubbleColor[1] * 0.587 + bubbleColor[2] * 0.114) < 0.55;
+            var rcsReadCircleCol = isDarkBubble ? [1.0, 1.0, 1.0] : [0.18, 0.19, 0.21];
+            var rcsReadCheckCol = isDarkBubble ? bubbleColor : [1.0, 1.0, 1.0];
+            var standardReadColor = isDark ? [0.33, 0.74, 0.92] : [0.20, 0.72, 0.95];
+            var readColor = isRCSStyle ? rcsReadCircleCol : standardReadColor;
+            var statusColor = timeColor;
+
+            var statusString = "";
+            if (isSent && selStatusIdx !== 4) {
+                if (selStatusIdx === 0 || selStatusIdx === 1 || selStatusIdx === 2) {
+                    statusString = "✓✓";
+                } else if (selStatusIdx === 3) {
+                    statusString = "✓";
+                }
+            }
+
             var isTimeEnabled = (typeof chkShowTime !== "undefined" && chkShowTime) ? chkShowTime.value : true;
             var timeString = (typeof txtTime !== "undefined" && txtTime && txtTime.text) ? trimStr(txtTime.text) : (currentRandomTime || "11:44 PM");
             if (!timeString) timeString = "11:44 PM";
@@ -4821,9 +4851,13 @@
                     var originX = isSent ? (bubbleW / 2) : -(bubbleW / 2);
                     var originY = (bubbleH / 2);
                     var bAnchor = bubbleLayer.transform.anchorPoint || (bubbleLayer.property && bubbleLayer.property("ADBE Transform Group") && bubbleLayer.property("ADBE Transform Group").property("ADBE Anchor Point"));
-                    if (bAnchor) bAnchor.setValue([originX, originY, 0]);
+                    if (bAnchor) {
+                        bAnchor.setValue([originX, originY, 0]);
+                        if (!bAnchor.expression) bAnchor.expression = BUBBLE_TRANSFORM_EXPR;
+                    }
                     if (bubbleLayer.transform && bubbleLayer.transform.position) {
                         bubbleLayer.transform.position.setValue([originX, originY, 0]);
+                        if (!bubbleLayer.transform.position.expression) bubbleLayer.transform.position.expression = BUBBLE_TRANSFORM_EXPR;
                     }
 
                     // Update base shape outline
@@ -4928,6 +4962,7 @@
                     timeLayer.fontFamily = selectedFont.css;
                     if (timeLayer.transform && timeLayer.transform.position) {
                         timeLayer.transform.position.setValue([timeX, timeY, -0.5]);
+                        if (!timeLayer.transform.position.expression) timeLayer.transform.position.expression = TIMECODE_POS_EXPR;
                     }
                     timeLayer.emojiFontFamily = getActiveEmojiFontFamily();
                     formatTextLayer(timeLayer, timeString, timeFontSize, timeColor, justRight, null, getActiveFontCandidates(), getActiveEmojiCandidates());
@@ -4945,6 +4980,7 @@
                     statusLayerText.fontFamily = selectedFont.css;
                     if (statusLayerText.transform && statusLayerText.transform.position) {
                         statusLayerText.transform.position.setValue([statusX, timeY, -0.5]);
+                        if (!statusLayerText.transform.position.expression) statusLayerText.transform.position.expression = STATUS_POS_EXPR;
                     }
                     statusLayerText.emojiFontFamily = getActiveEmojiFontFamily();
                     formatTextLayer(statusLayerText, statusString || "✓✓", timeFontSize, statusColor, justRight, null, getActiveFontCandidates(), getActiveEmojiCandidates());
@@ -4956,6 +4992,7 @@
                     statusLayerRCS.enabled = hasStatus;
                     if (statusLayerRCS.transform && statusLayerRCS.transform.position) {
                         statusLayerRCS.transform.position.setValue([statusCenterX, statusCenterY, -0.5]);
+                        if (!statusLayerRCS.transform.position.expression) statusLayerRCS.transform.position.expression = STATUS_POS_EXPR;
                     }
                 }
 

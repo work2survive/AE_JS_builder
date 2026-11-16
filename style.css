@@ -485,6 +485,7 @@ body.body-viewport-panning {
 
 .ae-timeline-panel-title {
     display: inline-block;
+    padding: 0 2px; /* Matches .ae-viewport-panel-title so both titles align horizontally */
 }
 
 .ae-cam-info {
@@ -1071,9 +1072,10 @@ body.body-viewport-panning {
 }
 
 .ae-col-layer-name {
+    /* No left padding: header padding (10px) + title padding (2px) = 12px, same as the Viewport title. */
     width: 250px;
-    padding-left: 20px;
     flex-shrink: 0;
+    box-sizing: border-box;
 }
 
 .ae-col-switches {
