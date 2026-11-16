@@ -170,6 +170,18 @@
                 case 'dropdownlist':
                     child = new DropDownList(childText, this, childProps);
                     break;
+                case 'listbox':
+                    child = new ListBox(childText, this, childProps);
+                    break;
+                case 'scrollbar':
+                    child = new Scrollbar(childText, this, childProps);
+                    break;
+                case 'iconbutton':
+                    child = new IconButton(childText, this, childProps);
+                    break;
+                case 'treeview':
+                    child = new TreeView(childText, this, childProps);
+                    break;
                 case 'progressbar':
                     child = new ProgressBar(childText, this, childProps);
                     break;
@@ -966,6 +978,242 @@
         }
     }
 
+    class ListBox extends UIElement {
+        constructor(text, container, properties) {
+            super('listbox', text, container, properties);
+            this.items = [];
+            this._selection = null;
+            this.multiselect = !!(properties && properties.multiselect);
+            if (Array.isArray(text)) {
+                text.forEach(t => this.add('item', String(t)));
+            }
+        }
+
+        get selection() {
+            return this._selection;
+        }
+
+        set selection(val) {
+            if (typeof val === 'number') {
+                this._selection = this.items[val] || null;
+            } else if (Array.isArray(val)) {
+                this._selection = val.map(v => (typeof v === 'number' ? this.items[v] : v)).filter(Boolean);
+            } else {
+                this._selection = val;
+            }
+            if (this.domElement) {
+                if (Array.isArray(this._selection)) {
+                    const selIndices = new Set(this._selection.map(s => s.index));
+                    Array.from(this.domElement.options).forEach(opt => {
+                        opt.selected = selIndices.has(Number(opt.value));
+                    });
+                } else if (this._selection) {
+                    this.domElement.selectedIndex = this._selection.index !== undefined ? this._selection.index : -1;
+                } else {
+                    this.domElement.selectedIndex = -1;
+                }
+            }
+        }
+
+        add(type, text) {
+            if (type === 'item') {
+                const item = { text: String(text || ''), index: this.items.length };
+                this.items.push(item);
+                if (this.domElement) {
+                    const opt = document.createElement('option');
+                    opt.value = item.index;
+                    opt.textContent = item.text;
+                    this.domElement.appendChild(opt);
+                }
+                if (this.items.length === 1 && !this._selection && !this.multiselect) {
+                    this._selection = item;
+                }
+                return item;
+            }
+        }
+
+        removeAll() {
+            this.items = [];
+            this._selection = null;
+            if (this.domElement) this.domElement.innerHTML = '';
+        }
+
+        renderDOM() {
+            const select = document.createElement('select');
+            select.className = 'scriptui-listbox';
+            if (this.multiselect) select.multiple = true;
+            select.size = Math.max(3, Math.min(6, this.items.length || 3));
+            this.applyCommonStyles(select);
+            this.items.forEach((item, idx) => {
+                const opt = document.createElement('option');
+                opt.value = idx;
+                opt.textContent = item.text;
+                if (!this.multiselect && this._selection === item) opt.selected = true;
+                select.appendChild(opt);
+            });
+
+            select.onchange = () => {
+                if (this.multiselect) {
+                    this._selection = Array.from(select.selectedOptions).map(opt => this.items[Number(opt.value)]);
+                } else {
+                    this._selection = this.items[select.selectedIndex] || null;
+                }
+                if (this.onChange) this.onChange();
+            };
+
+            this.domElement = select;
+            return select;
+        }
+    }
+
+    class Scrollbar extends UIElement {
+        constructor(text, container, properties) {
+            super('scrollbar', text, container, properties);
+            this.minvalue = 0;
+            this.maxvalue = 100;
+            this.stepdelta = 1;
+            this.jumpdelta = 10;
+            this._value = 0;
+            if (properties) {
+                if (properties.minvalue !== undefined) this.minvalue = properties.minvalue;
+                if (properties.maxvalue !== undefined) this.maxvalue = properties.maxvalue;
+            }
+        }
+
+        get value() {
+            return this._value;
+        }
+
+        set value(val) {
+            this._value = Math.max(this.minvalue, Math.min(this.maxvalue, Number(val) || 0));
+            if (this.domElement) this.domElement.value = this._value;
+        }
+
+        renderDOM() {
+            const input = document.createElement('input');
+            input.type = 'range';
+            input.className = 'scriptui-scrollbar';
+            input.min = this.minvalue;
+            input.max = this.maxvalue;
+            input.step = this.stepdelta;
+            input.value = this._value;
+            this.applyCommonStyles(input);
+
+            input.oninput = () => {
+                this._value = Number(input.value);
+                if (this.onChanging) this.onChanging();
+            };
+            input.onchange = () => {
+                this._value = Number(input.value);
+                if (this.onChange) this.onChange();
+            };
+
+            this.domElement = input;
+            return input;
+        }
+    }
+
+    class IconButton extends Button {
+        constructor(text, container, properties) {
+            super(text, container, properties);
+            this.type = 'iconbutton';
+            this.image = properties && properties.image ? properties.image : null;
+        }
+
+        renderDOM() {
+            const btn = super.renderDOM();
+            btn.classList.add('scriptui-iconbutton');
+            return btn;
+        }
+    }
+
+    class TreeView extends UIElement {
+        constructor(text, container, properties) {
+            super('treeview', text, container, properties);
+            this.items = [];
+            this._selection = null;
+        }
+
+        get selection() {
+            return this._selection;
+        }
+
+        set selection(val) {
+            this._selection = val;
+            if (this.onChange) this.onChange();
+        }
+
+        add(type, text) {
+            const node = {
+                type: type,
+                text: String(text || ''),
+                items: [],
+                expanded: true,
+                add(subType, subText) {
+                    const sub = {
+                        type: subType,
+                        text: String(subText || ''),
+                        items: []
+                    };
+                    this.items.push(sub);
+                    return sub;
+                }
+            };
+            this.items.push(node);
+            return node;
+        }
+
+        renderDOM() {
+            const container = document.createElement('div');
+            container.className = 'scriptui-treeview';
+            container.style.border = '1px solid #333';
+            container.style.borderRadius = '3px';
+            container.style.padding = '4px';
+            container.style.maxHeight = '120px';
+            container.style.overflowY = 'auto';
+            container.style.background = '#181818';
+            container.style.color = '#ccc';
+            container.style.fontSize = '11px';
+
+            const renderNodes = (list, parentEl, depth) => {
+                list.forEach(item => {
+                    const row = document.createElement('div');
+                    row.style.padding = '2px 4px 2px ' + (depth * 14 + 4) + 'px';
+                    row.style.cursor = 'pointer';
+                    row.style.display = 'flex';
+                    row.style.alignItems = 'center';
+                    row.style.gap = '4px';
+
+                    const icon = document.createElement('span');
+                    icon.textContent = item.type === 'node' ? '📁' : '📄';
+                    row.appendChild(icon);
+
+                    const label = document.createElement('span');
+                    label.textContent = item.text;
+                    row.appendChild(label);
+
+                    row.onclick = (e) => {
+                        e.stopPropagation();
+                        this._selection = item;
+                        Array.from(container.querySelectorAll('.scriptui-tree-row')).forEach(r => r.style.background = 'transparent');
+                        row.style.background = 'rgba(77, 136, 255, 0.35)';
+                        if (this.onChange) this.onChange();
+                    };
+                    row.className = 'scriptui-tree-row';
+                    parentEl.appendChild(row);
+
+                    if (item.items && item.items.length > 0) {
+                        renderNodes(item.items, parentEl, depth + 1);
+                    }
+                });
+            };
+
+            renderNodes(this.items, container, 0);
+            this.domElement = container;
+            return container;
+        }
+    }
+
     // -------------------------------------------------------------
     // Window: Floating / Dockable Panel
     // -------------------------------------------------------------
@@ -1063,5 +1311,9 @@
     global.Group = Group;
     global.TabbedPanel = TabbedPanel;
     global.Tab = Tab;
+    global.ListBox = ListBox;
+    global.Scrollbar = Scrollbar;
+    global.IconButton = IconButton;
+    global.TreeView = TreeView;
 
 })(typeof window !== 'undefined' ? window : global);

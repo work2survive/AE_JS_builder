@@ -353,7 +353,175 @@
         // SVG Vector Rendering for AE Shape Layers
         // -------------------------------------------------------------
         renderShapeContents(contentsGroup, time) {
+            let svgDefs = '';
             let svgChildren = '';
+            let gradCounter = 0;
+
+            const parseColorAndOpacity = (col, off) => {
+                if (Array.isArray(col)) {
+                    const maxVal = Math.max(col[0] || 0, col[1] || 0, col[2] || 0);
+                    const scale = (maxVal <= 1.0) ? 255 : 1.0;
+                    const r = Math.round((col[0] || 0) * scale);
+                    const g = Math.round((col[1] || 0) * scale);
+                    const b = Math.round((col[2] || 0) * scale);
+                    const a = (col[3] !== undefined) ? ((col[3] > 1.0) ? col[3] / 255 : col[3]) : 1;
+                    return { offset: off, color: `rgb(${r}, ${g}, ${b})`, opacity: a };
+                }
+                return { offset: off, color: String(col), opacity: 1 };
+            };
+
+            const parseGradientStops = (colorsVal) => {
+                if (!colorsVal) {
+                    return [
+                        { offset: '0%', color: 'rgb(255, 0, 0)', opacity: 1 },
+                        { offset: '100%', color: 'rgb(0, 0, 255)', opacity: 1 }
+                    ];
+                }
+                if (Array.isArray(colorsVal) && colorsVal.length > 0) {
+                    if (Array.isArray(colorsVal[0]) && colorsVal[0].length === 2 && typeof colorsVal[0][0] === 'number') {
+                        return colorsVal.map(stop => {
+                            const off = Math.round(stop[0] * 100) + '%';
+                            return parseColorAndOpacity(stop[1], off);
+                        });
+                    }
+                    if (Array.isArray(colorsVal[0]) && (colorsVal[0].length === 3 || colorsVal[0].length === 4)) {
+                        const step = colorsVal.length > 1 ? 1 / (colorsVal.length - 1) : 1;
+                        return colorsVal.map((col, idx) => {
+                            const off = Math.round(idx * step * 100) + '%';
+                            return parseColorAndOpacity(col, off);
+                        });
+                    }
+                    if (typeof colorsVal[0] === 'object' && 'color' in colorsVal[0]) {
+                        return colorsVal.map(s => {
+                            const off = (typeof s.offset === 'number' ? Math.round(s.offset * 100) + '%' : s.offset) || '0%';
+                            return parseColorAndOpacity(s.color, off);
+                        });
+                    }
+                    if (typeof colorsVal[0] === 'string') {
+                        const step = colorsVal.length > 1 ? 1 / (colorsVal.length - 1) : 1;
+                        return colorsVal.map((hex, idx) => {
+                            const off = Math.round(idx * step * 100) + '%';
+                            return { offset: off, color: hex, opacity: 1 };
+                        });
+                    }
+                }
+                return [
+                    { offset: '0%', color: 'rgb(255, 0, 0)', opacity: 1 },
+                    { offset: '100%', color: 'rgb(0, 0, 255)', opacity: 1 }
+                ];
+            };
+
+            const buildGradientDef = (gradProp) => {
+                const gradType = gradProp.type ? (gradProp.type.getValueAtTime(time) || 1) : 1;
+                const startPt = gradProp.startPoint ? (gradProp.startPoint.getValueAtTime(time) || [-50, 0]) : [-50, 0];
+                const endPt = gradProp.endPoint ? (gradProp.endPoint.getValueAtTime(time) || [50, 0]) : [50, 0];
+                const rawColors = gradProp.colors ? gradProp.colors.getValueAtTime(time) : null;
+                const rawOp = gradProp.opacity ? gradProp.opacity.getValueAtTime(time) : 100;
+                const gradOp = (rawOp !== undefined && rawOp !== null && !isNaN(rawOp)) ? Math.max(0, Math.min(1, rawOp / 100)) : 1;
+                const stops = parseGradientStops(rawColors);
+
+                gradCounter++;
+                const gradId = 'ae_grad_' + Math.random().toString(36).substr(2, 8) + '_' + gradCounter;
+                const stopsHtml = stops.map(s => `<stop offset="${s.offset}" stop-color="${s.color}" stop-opacity="${s.opacity * gradOp}" />`).join('');
+
+                if (gradType === 2) {
+                    const cx = startPt[0], cy = startPt[1];
+                    const dx = endPt[0] - startPt[0], dy = endPt[1] - startPt[1];
+                    const r = Math.max(1, Math.sqrt(dx * dx + dy * dy));
+                    svgDefs += `<radialGradient id="${gradId}" cx="${cx}" cy="${cy}" r="${r}" fx="${cx}" fy="${cy}" gradientUnits="userSpaceOnUse">${stopsHtml}</radialGradient>`;
+                } else {
+                    const x1 = startPt[0], y1 = startPt[1];
+                    const x2 = endPt[0], y2 = endPt[1];
+                    svgDefs += `<linearGradient id="${gradId}" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" gradientUnits="userSpaceOnUse">${stopsHtml}</linearGradient>`;
+                }
+
+                return `url(#${gradId})`;
+            };
+
+            const extractStrokeInfo = (prop) => {
+                const rawSw = prop.strokeWidth ? prop.strokeWidth.getValueAtTime(time) : 2;
+                const sw = (rawSw !== undefined && rawSw !== null && !isNaN(rawSw)) ? Math.max(0, Number(rawSw)) : 0;
+                const rawOp = prop.opacity ? prop.opacity.getValueAtTime(time) : 100;
+                let op = (rawOp !== undefined && rawOp !== null && !isNaN(rawOp)) ? Math.max(0, Math.min(1, rawOp / 100)) : 1;
+
+                let strokeColor = 'none';
+                if ((typeof VectorGraphicGradientStroke !== 'undefined' && prop instanceof VectorGraphicGradientStroke) || prop.matchName === 'ADBE Vector Graphic - G-Stroke') {
+                    strokeColor = buildGradientDef(prop);
+                } else {
+                    const col = prop.color ? prop.color.getValueAtTime(time) : [1, 1, 1];
+                    if (col && col.length >= 4 && col[3] !== undefined) {
+                        const colAlpha = (col[3] > 1.0) ? (col[3] / 255) : col[3];
+                        op *= Math.max(0, Math.min(1, colAlpha));
+                    }
+                    if (col) {
+                        const maxVal = Math.max(col[0] || 0, col[1] || 0, col[2] || 0);
+                        const scale = (maxVal <= 1.0) ? 255 : 1.0;
+                        const r = Math.round((col[0] || 0) * scale);
+                        const g = Math.round((col[1] || 0) * scale);
+                        const b = Math.round((col[2] || 0) * scale);
+                        strokeColor = `rgba(${r}, ${g}, ${b}, ${op})`;
+                    }
+                }
+
+                const capVal = prop.lineCap ? (prop.lineCap.getValueAtTime(time) || 1) : 1;
+                const cap = (capVal === 2 || capVal === 'round') ? 'round' : ((capVal === 3 || capVal === 'projecting' || capVal === 'square') ? 'square' : 'butt');
+
+                const joinVal = prop.lineJoin ? (prop.lineJoin.getValueAtTime(time) || 1) : 1;
+                const join = (joinVal === 2 || joinVal === 'round') ? 'round' : ((joinVal === 3 || joinVal === 'bevel') ? 'bevel' : 'miter');
+
+                const miter = prop.miterLimit ? (prop.miterLimit.getValueAtTime(time) || 4) : 4;
+
+                let dashStr = '';
+                let dashOffset = 0;
+                const dashesProp = prop.dashes || (prop.property && (prop.property('Dashes') || prop.property('ADBE Vector Stroke Dashes')));
+                if (dashesProp && dashesProp.properties && dashesProp.properties.length > 0) {
+                    const dashParts = [];
+                    for (const dp of dashesProp.properties) {
+                        const mName = dp.matchName || dp.name || '';
+                        const val = dp.getValueAtTime ? dp.getValueAtTime(time) : dp.value;
+                        if (mName.includes('Offset')) {
+                            dashOffset = Number(val) || 0;
+                        } else if (val !== undefined && val !== null && !isNaN(val)) {
+                            dashParts.push(Math.max(0, Number(val)));
+                        }
+                    }
+                    if (dashParts.length > 0) dashStr = dashParts.join(' ');
+                } else if (prop.dashArray && Array.isArray(prop.dashArray)) {
+                    dashStr = prop.dashArray.join(' ');
+                }
+
+                if (sw > 0.0001 && op > 0.0001 && strokeColor !== 'none') {
+                    return {
+                        color: strokeColor,
+                        width: sw,
+                        opacity: op,
+                        cap: cap,
+                        join: join,
+                        miter: miter,
+                        dash: dashStr,
+                        dashOffset: dashOffset
+                    };
+                }
+                return null;
+            };
+
+            const formatStrokeAttrs = (localStroke) => {
+                if (!localStroke || localStroke.width <= 0 || localStroke.opacity <= 0) {
+                    return 'stroke="none"';
+                }
+                let s = `stroke="${localStroke.color}" stroke-width="${localStroke.width}"`;
+                if (localStroke.cap && localStroke.cap !== 'butt') s += ` stroke-linecap="${localStroke.cap}"`;
+                if (localStroke.join && localStroke.join !== 'miter') s += ` stroke-linejoin="${localStroke.join}"`;
+                if (localStroke.miter && localStroke.miter !== 4) s += ` stroke-miterlimit="${localStroke.miter}"`;
+                if (localStroke.dash) s += ` stroke-dasharray="${localStroke.dash}"`;
+                if (localStroke.dashOffset) s += ` stroke-dashoffset="${localStroke.dashOffset}"`;
+                return s;
+            };
+
+            const formatFillAttr = (localFill) => {
+                if (!localFill) return 'fill="none"';
+                return `fill="${localFill.color}"`;
+            };
 
             const traverseGroup = (group, parentFill = null, parentStroke = null) => {
                 let localFill = parentFill;
@@ -361,7 +529,10 @@
 
                 // Collect fills and strokes in this group first
                 for (const prop of group.properties) {
-                    if (prop instanceof VectorGraphicFill) {
+                    if ((typeof VectorGraphicGradientFill !== 'undefined' && prop instanceof VectorGraphicGradientFill) || prop.matchName === 'ADBE Vector Graphic - G-Fill') {
+                        const gradUrl = buildGradientDef(prop);
+                        localFill = { color: gradUrl, opacity: 1, isGradient: true };
+                    } else if (prop instanceof VectorGraphicFill) {
                         const col = prop.color.getValueAtTime(time);
                         const rawOp = prop.opacity.getValueAtTime(time);
                         let op = (rawOp !== undefined && rawOp !== null && !isNaN(rawOp)) ? Math.max(0, Math.min(1, rawOp / 100)) : 1;
@@ -379,26 +550,10 @@
                         } else {
                             localFill = null;
                         }
+                    } else if ((typeof VectorGraphicGradientStroke !== 'undefined' && prop instanceof VectorGraphicGradientStroke) || prop.matchName === 'ADBE Vector Graphic - G-Stroke') {
+                        localStroke = extractStrokeInfo(prop);
                     } else if (prop instanceof VectorGraphicStroke) {
-                        const col = prop.color.getValueAtTime(time);
-                        const rawOp = prop.opacity.getValueAtTime(time);
-                        let op = (rawOp !== undefined && rawOp !== null && !isNaN(rawOp)) ? Math.max(0, Math.min(1, rawOp / 100)) : 1;
-                        if (col && col.length >= 4 && col[3] !== undefined) {
-                            const colAlpha = (col[3] > 1.0) ? (col[3] / 255) : col[3];
-                            op *= Math.max(0, Math.min(1, colAlpha));
-                        }
-                        const rawSw = prop.strokeWidth.getValueAtTime(time);
-                        const sw = (rawSw !== undefined && rawSw !== null && !isNaN(rawSw)) ? Math.max(0, Number(rawSw)) : 0;
-                        if (sw > 0.0001 && op > 0.0001 && col) {
-                            const maxVal = Math.max(col[0] || 0, col[1] || 0, col[2] || 0);
-                            const scale = (maxVal <= 1.0) ? 255 : 1.0;
-                            const r = Math.round((col[0] || 0) * scale);
-                            const g = Math.round((col[1] || 0) * scale);
-                            const b = Math.round((col[2] || 0) * scale);
-                            localStroke = { color: `rgba(${r}, ${g}, ${b}, ${op})`, width: sw, opacity: op };
-                        } else {
-                            localStroke = null;
-                        }
+                        localStroke = extractStrokeInfo(prop);
                     }
                 }
 
@@ -412,10 +567,8 @@
                         const x = pos[0] - w / 2;
                         const y = pos[1] - h / 2;
 
-                        const fillAttr = localFill ? `fill="${localFill.color}"` : 'fill="none"';
-                        const strokeAttr = (localStroke && localStroke.width > 0 && localStroke.opacity > 0)
-                            ? `stroke="${localStroke.color}" stroke-width="${localStroke.width}"`
-                            : 'stroke="none"';
+                        const fillAttr = formatFillAttr(localFill);
+                        const strokeAttr = formatStrokeAttrs(localStroke);
 
                         svgChildren += `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${round}" ry="${round}" ${fillAttr} ${strokeAttr} />`;
                     } else if (prop instanceof VectorShapeEllipse) {
@@ -424,21 +577,50 @@
                         const rx = (size[0] || 100) / 2;
                         const ry = (size[1] || 100) / 2;
 
-                        const fillAttr = localFill ? `fill="${localFill.color}"` : 'fill="none"';
-                        const strokeAttr = (localStroke && localStroke.width > 0 && localStroke.opacity > 0)
-                            ? `stroke="${localStroke.color}" stroke-width="${localStroke.width}"`
-                            : 'stroke="none"';
+                        const fillAttr = formatFillAttr(localFill);
+                        const strokeAttr = formatStrokeAttrs(localStroke);
 
                         svgChildren += `<ellipse cx="${pos[0]}" cy="${pos[1]}" rx="${rx}" ry="${ry}" ${fillAttr} ${strokeAttr} />`;
+                    } else if ((typeof VectorShapeStar !== 'undefined' && prop instanceof VectorShapeStar) || prop.matchName === 'ADBE Vector Shape - Star') {
+                        const starType = prop.type ? (prop.type.getValueAtTime(time) || 1) : 1;
+                        const pts = Math.max(3, Math.round(prop.points ? (prop.points.getValueAtTime(time) || 5) : 5));
+                        const pos = prop.position ? (prop.position.getValueAtTime(time) || [0, 0]) : [0, 0];
+                        const rot = prop.rotation ? (prop.rotation.getValueAtTime(time) || 0) : 0;
+                        const rOut = prop.outerRadius ? (prop.outerRadius.getValueAtTime(time) || 50) : 50;
+                        const rIn = prop.innerRadius ? (prop.innerRadius.getValueAtTime(time) || 25) : 25;
+                        const rotRad = (rot - 90) * (Math.PI / 180);
+
+                        let d = '';
+                        if (starType === 2) {
+                            for (let i = 0; i < pts; i++) {
+                                const a = rotRad + (i * 2 * Math.PI) / pts;
+                                const px = Math.round((pos[0] + rOut * Math.cos(a)) * 100) / 100;
+                                const py = Math.round((pos[1] + rOut * Math.sin(a)) * 100) / 100;
+                                d += (i === 0 ? `M ${px},${py} ` : `L ${px},${py} `);
+                            }
+                            d += 'Z';
+                        } else {
+                            const totalPts = pts * 2;
+                            for (let i = 0; i < totalPts; i++) {
+                                const a = rotRad + (i * Math.PI) / pts;
+                                const r = (i % 2 === 0) ? rOut : rIn;
+                                const px = Math.round((pos[0] + r * Math.cos(a)) * 100) / 100;
+                                const py = Math.round((pos[1] + r * Math.sin(a)) * 100) / 100;
+                                d += (i === 0 ? `M ${px},${py} ` : `L ${px},${py} `);
+                            }
+                            d += 'Z';
+                        }
+
+                        const fillAttr = formatFillAttr(localFill);
+                        const strokeAttr = formatStrokeAttrs(localStroke);
+                        svgChildren += `<path d="${d}" ${fillAttr} ${strokeAttr} />`;
                     } else if (prop instanceof VectorShapePath) {
                         const shapeData = prop.path.getValueAtTime(time);
                         if (shapeData && shapeData.vertices && shapeData.vertices.length > 0) {
                             const d = this.generateSVGPathData(shapeData);
-                            const fillAttr = localFill ? `fill="${localFill.color}"` : 'fill="none"';
-                            const strokeAttr = (localStroke && localStroke.width > 0 && localStroke.opacity > 0)
-                                ? `stroke="${localStroke.color}" stroke-width="${localStroke.width}"`
-                                : 'stroke="none"';
-                            svgChildren += `<path d="${d}" ${fillAttr} ${strokeAttr} stroke-linecap="round" stroke-linejoin="round" />`;
+                            const fillAttr = formatFillAttr(localFill);
+                            const strokeAttr = formatStrokeAttrs(localStroke);
+                            svgChildren += `<path d="${d}" ${fillAttr} ${strokeAttr} />`;
                         }
                     } else if (prop instanceof VectorGroup) {
                         // Recursively process nested group with local transform and opacity
@@ -481,7 +663,7 @@
                 traverseGroup(contentsGroup);
             }
 
-            return svgChildren;
+            return (svgDefs ? `<defs>${svgDefs}</defs>` : '') + svgChildren;
         }
 
         generateSVGPathData(shape) {
@@ -572,7 +754,29 @@
             // Clean separation: textFont for words/symbols, emojiFont specifically for emojis
             const defaultEmojiStack = "'Noto Color Emoji', 'Segoe UI Emoji', 'Apple Color Emoji', sans-serif";
             const emojiFont = layer.emojiFontFamily || defaultEmojiStack;
-            const textFont = layer.fontFamily || "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
+
+            let requestedFont = layer.fontFamily || layer.font;
+            if (!requestedFont && layer.sourceText) {
+                const stVal = layer.sourceText.getValueAtTime(time);
+                if (stVal && typeof stVal === 'object' && stVal.font) requestedFont = stVal.font;
+                if (!requestedFont && layer.sourceText._baseValue && typeof layer.sourceText._baseValue === 'object') {
+                    requestedFont = layer.sourceText._baseValue.font;
+                }
+            }
+            let textFont = "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
+            if (requestedFont) {
+                const cleanFont = String(requestedFont).replace(/['"]/g, '').trim();
+                const fontLower = cleanFont.toLowerCase();
+                if (fontLower.includes('courier') || fontLower.includes('consolas') || fontLower.includes('monospace')) {
+                    textFont = `"${cleanFont}", 'Courier New', Consolas, monospace`;
+                } else if (fontLower.includes('times') || fontLower.includes('georgia') || fontLower.includes('serif')) {
+                    textFont = `"${cleanFont}", Georgia, 'Times New Roman', serif`;
+                } else if (fontLower.includes('impact') || fontLower.includes('trebuchet')) {
+                    textFont = `"${cleanFont}", 'Trebuchet MS', Impact, sans-serif`;
+                } else {
+                    textFont = `"${cleanFont}", 'Segoe UI', Arial, -apple-system, sans-serif`;
+                }
+            }
 
             // Regular expression matching Unicode emoji sequences, pictographs, variation selectors & ZWJ
             const emojiRegex = /(\p{Extended_Pictographic}(?:[\uFE00-\uFE0F]|[\u{1F3FB}-\u{1F3FF}]|\u200D\p{Extended_Pictographic})*|[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]+)/gu;

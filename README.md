@@ -135,7 +135,16 @@ The simulator automatically detects and loads standalone production-ready After 
 
 The simulator includes built-in sample scripts located in [`samples/`](samples/) demonstrating ScriptUI, kinetic typography, expressions, and 3D primitives:
 
-1. **Text Roundabout** (`samples/text_roundabout.jsx` - v1.0):
+1. **AE / Emulator Tester** (`samples/ae_emulator_tester.jsx` - v1.0):
+   - Comprehensive calibration test harness verifying parity between After Effects desktop and the Web Simulator:
+     - **Grid Background & Coordinate Calibration**: 100px major & 50px minor grid lines, comp origin center crosshairs (`[960, 540]`), and 100x100px corner alignment bounding boxes to detect position/scale mismatches.
+     - **System Fonts Typography Showcase**: Tests cross-platform system fonts (Segoe UI, Arial, Georgia, Times New Roman, Courier New, Trebuchet MS, Impact) displaying the classic *"The quick brown fox jumps over the lazy dog"* pangram along with numerics and glyphs for kerning, baseline, and metric validation.
+     - **Geometric Primitives (Ellipses & Polygons)**: Regular circles, stretched ellipses, concentric rings, 3-sided triangles, 5-sided pentagons, 6-sided hexagons, 8-sided octagons, 5-point stars, and 8-point starbursts.
+     - **Stroke Styles & Dash Patterns**: Hairline, medium, and heavy widths; Butt, Round, and Projecting/Square line caps; Miter, Round, and Bevel line joins; Solid, standard dashed, dotted pearls (round cap + zero dash), and alternating dual dash patterns.
+     - **Fill Styles & Gradients**: Flat RGB solid colors, semi-transparent fills, multi-stop linear gradients (`ADBE Vector Graphic - G-Fill`), and radial gradients.
+   - **Live Demo**: [https://work2survive.github.io/AE_JS_builder/?sample=ae_emulator_tester.jsx&autobuild=true](https://work2survive.github.io/AE_JS_builder/?sample=ae_emulator_tester.jsx&autobuild=true)
+
+2. **Text Roundabout** (`samples/text_roundabout.jsx` - v1.0):
    - Parametric 3D circular word carousel spinning around a central master 3D controller null, featuring 6 to 12 configurable random or custom words, -12 to +12 continuous spin speed control, 3D tilt, and orientation modes (carousel, inward, billboard).
    - **Live Demo**: [https://work2survive.github.io/AE_JS_builder/?sample=text_roundabout.jsx&autobuild=true](https://work2survive.github.io/AE_JS_builder/?sample=text_roundabout.jsx&autobuild=true)
 

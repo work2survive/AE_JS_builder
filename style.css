@@ -1028,6 +1028,77 @@ body.body-viewport-panning {
     border-color: #1473e6;
 }
 
+/* ListBox */
+.scriptui-listbox {
+    background: #181818;
+    color: #e0e0e0;
+    border: 1px solid #383838;
+    border-radius: 3px;
+    padding: 3px;
+    font-size: 11px;
+    font-family: var(--font-ui, system-ui, -apple-system, sans-serif);
+    outline: none;
+    box-sizing: border-box;
+    width: 100%;
+}
+.scriptui-listbox option {
+    padding: 3px 6px;
+    border-radius: 2px;
+}
+.scriptui-listbox option:checked {
+    background: #1473e6 linear-gradient(0deg, #1473e6 0%, #1473e6 100%);
+    color: #ffffff;
+}
+
+/* Scrollbar */
+.scriptui-scrollbar {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 10px;
+    background: #181818;
+    border: 1px solid #333333;
+    border-radius: 3px;
+    outline: none;
+    cursor: pointer;
+}
+.scriptui-scrollbar::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 24px;
+    height: 8px;
+    background: #4a4a4a;
+    border: 1px solid #606060;
+    border-radius: 2px;
+}
+
+/* Progressbar */
+.scriptui-progressbar {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 12px;
+    border-radius: 3px;
+    overflow: hidden;
+    background: #181818;
+    border: 1px solid #333333;
+}
+.scriptui-progressbar::-webkit-progress-bar {
+    background: #181818;
+}
+.scriptui-progressbar::-webkit-progress-value {
+    background: #1473e6;
+    border-radius: 2px;
+}
+
+/* IconButton */
+.scriptui-button.scriptui-iconbutton {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+}
+
 /* Subtle ScriptUI Footer Links */
 .scriptui-statictext.scriptui-link {
     color: #888888 !important;

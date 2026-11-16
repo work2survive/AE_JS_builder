@@ -637,6 +637,13 @@
                 case 'Circle':
                     prop = new VectorShapeEllipse();
                     break;
+                case 'ADBE Vector Shape - Star':
+                case 'ADBE Vector Shape - Polystar':
+                case 'Polystar':
+                case 'Star':
+                case 'Polygon':
+                    prop = new VectorShapeStar();
+                    break;
                 case 'ADBE Vector Shape - Group':
                 case 'ADBE Vector Shape - Path':
                 case 'Path':
@@ -646,9 +653,39 @@
                 case 'Fill':
                     prop = new VectorGraphicFill();
                     break;
+                case 'ADBE Vector Graphic - G-Fill':
+                case 'Gradient Fill':
+                case 'G-Fill':
+                    prop = new VectorGraphicGradientFill();
+                    break;
                 case 'ADBE Vector Graphic - Stroke':
                 case 'Stroke':
                     prop = new VectorGraphicStroke();
+                    break;
+                case 'ADBE Vector Graphic - G-Stroke':
+                case 'Gradient Stroke':
+                case 'G-Stroke':
+                    prop = new VectorGraphicGradientStroke();
+                    break;
+                case 'ADBE Vector Stroke Dash 1':
+                case 'ADBE Vector Stroke Dash 2':
+                case 'ADBE Vector Stroke Dash 3':
+                case 'Dash':
+                case 'Dash 1':
+                case 'Dash 2':
+                    prop = new Property(nameOrMatchName, 'ADBE Vector Stroke Dash', 10, 'number');
+                    break;
+                case 'ADBE Vector Stroke Gap 1':
+                case 'ADBE Vector Stroke Gap 2':
+                case 'ADBE Vector Stroke Gap 3':
+                case 'Gap':
+                case 'Gap 1':
+                case 'Gap 2':
+                    prop = new Property(nameOrMatchName, 'ADBE Vector Stroke Gap', 10, 'number');
+                    break;
+                case 'ADBE Vector Stroke Offset':
+                case 'Offset':
+                    prop = new Property('Offset', 'ADBE Vector Stroke Offset', 0, 'number');
                     break;
                 case 'ADBE Checkbox Control':
                 case 'Checkbox Control':
@@ -766,6 +803,25 @@
         }
     }
 
+    class VectorShapeStar extends PropertyGroup {
+        constructor() {
+            super('Polystar Path 1', 'ADBE Vector Shape - Star');
+            this.type           = new Property('Type', 'ADBE Vector Star Type', 1, 'number'); // 1: Star, 2: Polygon
+            this.points         = new Property('Points', 'ADBE Vector Star Points', 5, 'number');
+            this.position       = new Property('Position', 'ADBE Vector Star Position', [0, 0], '2d');
+            this.rotation       = new Property('Rotation', 'ADBE Vector Star Rotation', 0, 'number');
+            this.outerRadius    = new Property('Outer Radius', 'ADBE Vector Star Outer Radius', 50, 'number');
+            this.outerRoundness = new Property('Outer Roundness', 'ADBE Vector Star Outer Roundness', 0, 'number');
+            this.innerRadius    = new Property('Inner Radius', 'ADBE Vector Star Inner Radius', 25, 'number');
+            this.innerRoundness = new Property('Inner Roundness', 'ADBE Vector Star Inner Roundness', 0, 'number');
+
+            [this.type, this.points, this.position, this.rotation, this.outerRadius, this.outerRoundness, this.innerRadius, this.innerRoundness].forEach(p => {
+                p.parentProperty = this;
+                this.properties.push(p);
+            });
+        }
+    }
+
     // Bezier Shape Path Object
     class Shape {
         constructor() {
@@ -809,14 +865,57 @@
         }
     }
 
+    class VectorGraphicGradientFill extends PropertyGroup {
+        constructor() {
+            super('Gradient Fill 1', 'ADBE Vector Graphic - G-Fill');
+            this.type       = new Property('Type', 'ADBE Vector Grad Type', 1, 'number'); // 1: Linear, 2: Radial
+            this.startPoint = new Property('Start Point', 'ADBE Vector Grad Start Pt', [-50, 0], '2d');
+            this.endPoint   = new Property('End Point', 'ADBE Vector Grad End Pt', [50, 0], '2d');
+            this.colors     = new Property('Colors', 'ADBE Vector Grad Colors', [[0, [1, 0, 0]], [1, [0, 0, 1]]], 'gradient');
+            this.opacity    = new Property('Opacity', 'ADBE Vector Grad Opacity', 100, 'number');
+
+            [this.type, this.startPoint, this.endPoint, this.colors, this.opacity].forEach(p => {
+                p.parentProperty = this;
+                this.properties.push(p);
+            });
+        }
+    }
+
     class VectorGraphicStroke extends PropertyGroup {
         constructor() {
             super('Stroke 1', 'ADBE Vector Graphic - Stroke');
             this.color       = new Property('Color', 'ADBE Vector Stroke Color', [1, 1, 1], 'color');
             this.strokeWidth = new Property('Stroke Width', 'ADBE Vector Stroke Width', 2, 'number');
             this.opacity     = new Property('Opacity', 'ADBE Vector Stroke Opacity', 100, 'number');
+            this.lineCap     = new Property('Line Cap', 'ADBE Vector Stroke Line Cap', 1, 'number'); // 1: Butt, 2: Round, 3: Projecting
+            this.lineJoin    = new Property('Line Join', 'ADBE Vector Stroke Line Join', 1, 'number'); // 1: Miter, 2: Round, 3: Bevel
+            this.miterLimit  = new Property('Miter Limit', 'ADBE Vector Stroke Miter Limit', 4, 'number');
+            this.dashes      = new PropertyGroup('Dashes', 'ADBE Vector Stroke Dashes');
+            this.dashes.parentProperty = this;
 
-            [this.color, this.strokeWidth, this.opacity].forEach(p => {
+            [this.color, this.strokeWidth, this.opacity, this.lineCap, this.lineJoin, this.miterLimit, this.dashes].forEach(p => {
+                p.parentProperty = this;
+                this.properties.push(p);
+            });
+        }
+    }
+
+    class VectorGraphicGradientStroke extends PropertyGroup {
+        constructor() {
+            super('Gradient Stroke 1', 'ADBE Vector Graphic - G-Stroke');
+            this.type        = new Property('Type', 'ADBE Vector Grad Type', 1, 'number'); // 1: Linear, 2: Radial
+            this.startPoint  = new Property('Start Point', 'ADBE Vector Grad Start Pt', [-50, 0], '2d');
+            this.endPoint    = new Property('End Point', 'ADBE Vector Grad End Pt', [50, 0], '2d');
+            this.colors      = new Property('Colors', 'ADBE Vector Grad Colors', [[0, [1, 1, 1]], [1, [0.2, 0.5, 1]]], 'gradient');
+            this.opacity     = new Property('Opacity', 'ADBE Vector Grad Opacity', 100, 'number');
+            this.strokeWidth = new Property('Stroke Width', 'ADBE Vector Stroke Width', 2, 'number');
+            this.lineCap     = new Property('Line Cap', 'ADBE Vector Stroke Line Cap', 1, 'number');
+            this.lineJoin    = new Property('Line Join', 'ADBE Vector Stroke Line Join', 1, 'number');
+            this.miterLimit  = new Property('Miter Limit', 'ADBE Vector Stroke Miter Limit', 4, 'number');
+            this.dashes      = new PropertyGroup('Dashes', 'ADBE Vector Stroke Dashes');
+            this.dashes.parentProperty = this;
+
+            [this.type, this.startPoint, this.endPoint, this.colors, this.opacity, this.strokeWidth, this.lineCap, this.lineJoin, this.miterLimit, this.dashes].forEach(p => {
                 p.parentProperty = this;
                 this.properties.push(p);
             });
@@ -1216,6 +1315,37 @@
         }
     }
 
+    const ParagraphJustification = {
+        LEFT_JUSTIFY: 0,
+        RIGHT_JUSTIFY: 1,
+        CENTER_JUSTIFY: 2
+    };
+
+    class TextDocument {
+        constructor(text = '', fontSize = 24, font = 'system-ui, -apple-system, sans-serif', color = [1, 1, 1], justification = 'left') {
+            this.text = String(text || '');
+            this.fontSize = fontSize;
+            this.font = font;
+            this.fillColor = color;
+            this.applyFill = true;
+            this.applyStroke = false;
+            this.strokeColor = [1, 1, 1];
+            this.strokeWidth = 1;
+            this.justification = (justification === 2 || justification === 'center') ? ParagraphJustification.CENTER_JUSTIFY
+                : ((justification === 1 || justification === 'right') ? ParagraphJustification.RIGHT_JUSTIFY : ParagraphJustification.LEFT_JUSTIFY);
+            this.tracking = 0;
+            this.leading = 0;
+        }
+
+        toString() {
+            return String(this.text || '');
+        }
+
+        valueOf() {
+            return String(this.text || '');
+        }
+    }
+
     class TextLayer extends Layer {
         constructor(name = 'Text Layer', containingComp = null, initialText = '') {
             super(name, containingComp);
@@ -1226,9 +1356,50 @@
             this.text.parentProperty = this;
 
             const textStr = (typeof initialText === 'string') ? initialText : (initialText?.toString() || '');
-            this.sourceText = new Property('Source Text', 'ADBE Text Document', textStr, 'string');
+            const textDoc = new TextDocument(textStr, 24, 'system-ui, -apple-system, sans-serif', [1, 1, 1], 'left');
+            this.sourceText = new Property('Source Text', 'ADBE Text Document', textDoc, 'string');
             this.sourceText.parentProperty = this.text;
             this.text.properties.push(this.sourceText);
+
+            // Hook setValue to sync layer properties when TextDocument or string is assigned
+            const origSetValue = this.sourceText.setValue.bind(this.sourceText);
+            this.sourceText.setValue = (val) => {
+                if (val && typeof val === 'object') {
+                    if (val.text !== undefined) {
+                        textDoc.text = String(val.text);
+                    }
+                    if (val.fontSize !== undefined) {
+                        textDoc.fontSize = val.fontSize;
+                        this.fontSize = val.fontSize;
+                    }
+                    if (val.font !== undefined) {
+                        textDoc.font = val.font;
+                        this.fontFamily = val.font;
+                    }
+                    if (val.fillColor !== undefined) {
+                        textDoc.fillColor = val.fillColor;
+                        this.fontColor = val.fillColor;
+                    }
+                    if (val.justification !== undefined) {
+                        textDoc.justification = val.justification;
+                        if (val.justification === 2 || val.justification === ParagraphJustification.CENTER_JUSTIFY || val.justification === 'center') {
+                            this.justification = 'center';
+                        } else if (val.justification === 1 || val.justification === ParagraphJustification.RIGHT_JUSTIFY || val.justification === 'right') {
+                            this.justification = 'right';
+                        } else {
+                            this.justification = 'left';
+                        }
+                    }
+                    this.sourceText._baseValue = textDoc;
+                    origSetValue(textDoc);
+                } else {
+                    textDoc.text = String(val !== undefined && val !== null ? val : '');
+                    this.sourceText._baseValue = textDoc;
+                    origSetValue(textDoc);
+                }
+                const comp = this.containingComp || app?.project?.activeItem;
+                if (comp && comp._onChanged) comp._onChanged();
+            };
 
             this.properties.unshift(this.text);
             this.fontSize = 24;
@@ -1236,6 +1407,17 @@
             this.fontFamily = 'system-ui, -apple-system, sans-serif';
             this.emojiFontFamily = "'Noto Color Emoji', 'Segoe UI Emoji', 'Apple Color Emoji', sans-serif";
             this.justification = 'left'; // 'left' | 'center' | 'right'
+        }
+
+        get font() {
+            return this.fontFamily;
+        }
+
+        set font(val) {
+            this.fontFamily = val;
+            if (this.sourceText && this.sourceText._baseValue && typeof this.sourceText._baseValue === 'object') {
+                this.sourceText._baseValue.font = val;
+            }
         }
 
         property(nameOrIndex) {
@@ -1247,9 +1429,11 @@
         sourceRectAtTime(time, includeExtents) {
             let str = '';
             if (this.sourceText) {
-                str = String(this.sourceText.getValueAtTime(time || 0) || '');
+                const val = this.sourceText.getValueAtTime(time || 0);
+                str = (val && typeof val === 'object' && val.text !== undefined) ? String(val.text) : String(val || '');
                 if (!str && this.sourceText._baseValue) {
-                    str = String(this.sourceText._baseValue);
+                    const bv = this.sourceText._baseValue;
+                    str = (bv && typeof bv === 'object' && bv.text !== undefined) ? String(bv.text) : String(bv);
                 }
             }
             if (!str && this.text && typeof this.text === 'string') {
@@ -1597,9 +1781,14 @@
     global.VectorGroup = VectorGroup;
     global.VectorShapeRect = VectorShapeRect;
     global.VectorShapeEllipse = VectorShapeEllipse;
+    global.VectorShapeStar = VectorShapeStar;
     global.VectorShapePath = VectorShapePath;
     global.VectorGraphicFill = VectorGraphicFill;
+    global.VectorGraphicGradientFill = VectorGraphicGradientFill;
     global.VectorGraphicStroke = VectorGraphicStroke;
+    global.VectorGraphicGradientStroke = VectorGraphicGradientStroke;
+    global.TextDocument = TextDocument;
+    global.ParagraphJustification = ParagraphJustification;
     global.EffectGroup = EffectGroup;
     global.EffectCheckboxControl = EffectCheckboxControl;
     global.EffectSliderControl = EffectSliderControl;
