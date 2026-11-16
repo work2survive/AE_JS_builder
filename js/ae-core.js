@@ -1473,6 +1473,7 @@
             this.sourceText = new Property('Source Text', 'ADBE Text Document', textDoc, 'string');
             this.sourceText.parentProperty = this.text;
             this.text.properties.push(this.sourceText);
+            this.text.sourceText = this.sourceText;
 
             // Hook setValue to sync layer properties when TextDocument or string is assigned
             const origSetValue = this.sourceText.setValue.bind(this.sourceText);
