@@ -39,10 +39,8 @@
 //   - Adobe After Effects CS6, CC 2014 - 2026+ (ExtendScript engine).
 //   - Works both as a dockable panel (ScriptUI Panels) and as a floating palette.
 // =============================================================================
-
 (function(thisObj) {
     "use strict";
-
     // -------------------------------------------------------------------------
     // ExtendScript ES3 Polyfills & String Helpers (Compatibility with CC 2014-2026)
     // -------------------------------------------------------------------------
@@ -67,17 +65,14 @@
     if (typeof String.prototype.trimRight !== "function") {
         String.prototype.trimRight = String.prototype.trimEnd;
     }
-
     function trimStr(str) {
         if (str === null || typeof str === "undefined") return "";
         return String(str).replace(/^\s+|\s+$/g, "");
     }
-
     function trimLeftStr(str) {
         if (str === null || typeof str === "undefined") return "";
         return String(str).replace(/^\s+/, "");
     }
-
     // -------------------------------------------------------------------------
     // ExtendScript ES3 JSON Polyfill (Crockford json2 compliant)
     // -------------------------------------------------------------------------
@@ -170,12 +165,9 @@
     if (typeof JSON === "undefined") {
         JSON = JSONPolyfill;
     }
-
-    var SCRIPT_VERSION = "v1.5";
+    var SCRIPT_VERSION = "v1.6";
     var MAX_CHARS = 250;
-
     // -------------------------------------------------------------------------
-
     // -------------------------------------------------------------------------
     // ExtendScript Layer.effect DOM Compatibility Helper
     // -------------------------------------------------------------------------
@@ -197,7 +189,6 @@
             return null;
         };
     }
-
 
     // -------------------------------------------------------------------------
     // Safe Text Layer Extraction Helper (Prevents [object PropertyGroup] bug)
@@ -223,7 +214,6 @@
         } catch(e4) {}
         return null;
     }
-
     function getTextLayerString(lyr) {
         if (!lyr) return "";
         try {
@@ -236,7 +226,6 @@
         } catch(e) {}
         return "";
     }
-
     // 1. ScriptUI Window / Dockable Panel Initialization
     // -------------------------------------------------------------------------
     var win = (thisObj instanceof Panel)
@@ -245,12 +234,10 @@
     if (!(thisObj instanceof Panel)) {
         win.text = "Message Bubble Generator " + SCRIPT_VERSION;
     }
-
     win.orientation = "column";
     win.alignChildren = ["fill", "top"];
     win.spacing = 8;
     win.margins = 12;
-
     // -------------------------------------------------------------------------
     // 2. Color Palettes by Platform, Direction & Theme (Defaults)
     // -------------------------------------------------------------------------
@@ -285,7 +272,7 @@
             fontIndex: 0,
             fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display', 'Helvetica Neue', Arial, sans-serif",
             fonts: ["SF Pro Text", "SF Pro Display", "-apple-system", "BlinkMacSystemFont", "Helvetica Neue", "Arial", "sans-serif"],
-            aeFontCandidates: ["SFProText-Regular", "SFProDisplay-Regular", "HelveticaNeue", "ArialMT", "Arial"],
+            aeFontCandidates: ["SFProText-Regular", "SFProDisplay-Regular", "HelveticaNeue", "SegoeUI", "SegoeUI-Regular", "ArialMT", "Arial"],
             emojiFont: "Apple Color Emoji (Apple)",
             emojiFontFamily: "'Apple Color Emoji', 'Noto Color Emoji', 'Segoe UI Emoji', sans-serif",
             emojiAeCandidates: ["AppleColorEmoji", "NotoColorEmoji", "NotoColorEmoji-Regular", "SegoeUIEmoji"],
@@ -307,7 +294,7 @@
             fontIndex: 3,
             fontFamily: "'Helvetica Neue', Helvetica, Arial, sans-serif",
             fonts: ["Helvetica Neue", "Helvetica", "Arial", "sans-serif"],
-            aeFontCandidates: ["HelveticaNeue", "Helvetica", "ArialMT", "Arial"],
+            aeFontCandidates: ["HelveticaNeue", "Helvetica", "SegoeUI", "SegoeUI-Regular", "ArialMT", "Arial"],
             emojiFont: "Apple Color Emoji (Apple)",
             emojiFontFamily: "'Apple Color Emoji', 'Noto Color Emoji', 'Segoe UI Emoji', sans-serif",
             emojiAeCandidates: ["AppleColorEmoji", "NotoColorEmoji", "SegoeUIEmoji"],
@@ -329,7 +316,7 @@
             fontIndex: 0,
             fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Instagram Sans', 'Helvetica Neue', Arial, sans-serif",
             fonts: ["SF Pro Text", "Instagram Sans", "Helvetica Neue", "Arial", "sans-serif"],
-            aeFontCandidates: ["SFProText-Regular", "HelveticaNeue", "ArialMT", "Arial"],
+            aeFontCandidates: ["SFProText-Regular", "HelveticaNeue", "SegoeUI", "SegoeUI-Regular", "ArialMT", "Arial"],
             emojiFont: "Apple Color Emoji (Apple)",
             emojiFontFamily: "'Apple Color Emoji', 'Noto Color Emoji', 'Segoe UI Emoji', sans-serif",
             emojiAeCandidates: ["AppleColorEmoji", "NotoColorEmoji", "SegoeUIEmoji"],
@@ -351,7 +338,7 @@
             fontIndex: 2,
             fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, Arial, sans-serif",
             fonts: ["Segoe UI", "Tahoma", "Geneva", "Arial", "sans-serif"],
-            aeFontCandidates: ["SegoeUI", "Tahoma", "ArialMT", "Arial"],
+            aeFontCandidates: ["SegoeUI", "SegoeUI-Regular", "Tahoma", "ArialMT", "Arial"],
             emojiFont: "Segoe UI Emoji (Windows)",
             emojiFontFamily: "'Segoe UI Emoji', 'Noto Color Emoji', 'Apple Color Emoji', sans-serif",
             emojiAeCandidates: ["SegoeUIEmoji", "NotoColorEmoji", "AppleColorEmoji"],
@@ -432,7 +419,6 @@
             }
         }
     };
-
     // -------------------------------------------------------------------------
     // External Preset File & Folder Management (Auto-Creation with Permission Fallback)
     // -------------------------------------------------------------------------
@@ -441,7 +427,6 @@
     var currentPresetsFolder = null;
     var currentPresetsFile = null;
     var warnedSecurityPref = false;
-
     function checkScriptSecurityPreference() {
         if (warnedSecurityPref) return;
         warnedSecurityPref = true;
@@ -457,13 +442,10 @@
             }
         } catch(ePref) {}
     }
-
     function getPresetsFolder() {
         if (typeof Folder === "undefined") return null;
-
         var candidates = [];
         var scriptParent = null;
-
         try {
             if (typeof $.fileName !== "undefined" && $.fileName) {
                 var sFile = new File($.fileName);
@@ -478,7 +460,6 @@
                 }
             }
         } catch(e1) {}
-
         // User AppData folder (Guaranteed writable without Administrator privileges)
         var userAppDataFolder = null;
         try {
@@ -487,7 +468,6 @@
                 candidates.push(userAppDataFolder);
             }
         } catch(e2) {}
-
         // User Documents folder
         var userDocsFolder = null;
         try {
@@ -496,14 +476,12 @@
                 candidates.push(userDocsFolder);
             }
         } catch(e3) {}
-
         // Current working directory
         try {
             if (Folder.current) {
                 candidates.push(new Folder(Folder.current.fsName + "/" + PRESETS_FOLDER_NAME));
             }
         } catch(e4) {}
-
         // 1. If any candidate folder exists and contains presets.json, use it
         for (var i = 0; i < candidates.length; i++) {
             var cand = candidates[i];
@@ -515,14 +493,12 @@
                 }
             }
         }
-
         // 2. If any candidate folder already exists (even if empty), use it
         for (var j = 0; j < candidates.length; j++) {
             if (candidates[j] && candidates[j].exists) {
                 return candidates[j];
             }
         }
-
         // 3. Attempt creation: First next to script file
         if (scriptParent && scriptParent.exists) {
             try {
@@ -532,7 +508,6 @@
                 }
             } catch(eLoc) {}
         }
-
         // 4. Fallback creation: User AppData folder (handles Program Files installs where write is blocked)
         if (userAppDataFolder) {
             try {
@@ -541,7 +516,6 @@
                 }
             } catch(eUsr) {}
         }
-
         // 5. Fallback creation: Documents folder
         if (userDocsFolder) {
             try {
@@ -550,18 +524,14 @@
                 }
             } catch(eDoc) {}
         }
-
         return candidates.length > 0 ? candidates[0] : null;
     }
-
     function ensurePresetsFile(folder) {
         if (!folder || typeof File === "undefined") return null;
         var pFile = new File(folder.fsName + "/" + PRESETS_FILE_NAME);
         if (pFile.exists) return pFile;
-
         var altFile = new File(folder.fsName + "/message_bubble_presets.json");
         if (altFile.exists) return altFile;
-
         try {
             if (!folder.exists) {
                 if (!folder.create()) {
@@ -586,13 +556,11 @@
         }
         return pFile;
     }
-
     function loadPresetsFromFile() {
         currentPresetsFolder = getPresetsFolder();
         if (!currentPresetsFolder) return 0;
         currentPresetsFile = ensurePresetsFile(currentPresetsFolder);
         if (!currentPresetsFile || !currentPresetsFile.exists) return 0;
-
         try {
             currentPresetsFile.encoding = "UTF-8";
             if (currentPresetsFile.open("r")) {
@@ -623,7 +591,6 @@
         } catch(eLoad) {}
         return 0;
     }
-
     // Active platforms map (loaded from JSON, with default fallback)
     var PLATFORMS = {};
     for (var kDef in DEFAULT_PLATFORMS) {
@@ -632,7 +599,6 @@
         }
     }
     loadPresetsFromFile();
-
     var platformKeys = [];
     function updatePlatformKeys() {
         platformKeys = [];
@@ -643,7 +609,6 @@
         }
     }
     updatePlatformKeys();
-
     // -------------------------------------------------------------------------
     // Common Messaging App Fonts & System Typography
     // -------------------------------------------------------------------------
@@ -652,7 +617,7 @@
             name: "SF Pro (Apple / iOS)",
             css: "-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display', 'Helvetica Neue', Arial, 'Noto Color Emoji', 'Apple Color Emoji', 'Segoe UI Emoji', sans-serif",
             ae: "SFProText-Regular",
-            aeFallbacks: ["SFProText-Regular", "SFProDisplay-Regular", "HelveticaNeue", "ArialMT", "Arial"]
+            aeFallbacks: ["SFProText-Regular", "SFProDisplay-Regular", "HelveticaNeue", "SegoeUI", "SegoeUI-Regular", "ArialMT", "Arial"]
         },
         {
             name: "Roboto (Google / Android)",
@@ -670,7 +635,7 @@
             name: "Helvetica Neue",
             css: "'Helvetica Neue', Helvetica, Arial, 'Noto Color Emoji', 'Apple Color Emoji', 'Segoe UI Emoji', sans-serif",
             ae: "HelveticaNeue",
-            aeFallbacks: ["HelveticaNeue", "Helvetica", "ArialMT", "Arial"]
+            aeFallbacks: ["HelveticaNeue", "Helvetica", "SegoeUI", "SegoeUI-Regular", "ArialMT", "Arial"]
         },
         {
             name: "Arial",
@@ -703,7 +668,6 @@
             aeFallbacks: ["NotoColorEmoji", "NotoColorEmoji-Regular", "AppleColorEmoji", "SegoeUIEmoji", "SegoeUISymbol"]
         }
     ];
-
     // Helper: Hex color to AE 0.0-1.0 float array
     function hexToRgb(hex) {
         if (!hex) return [1, 1, 1];
@@ -719,7 +683,6 @@
             (num & 255) / 255
         ];
     }
-
     // Helper: AE float color array to hex string
     function rgbToHex(rgb) {
         if (!rgb || !rgb.length) return "#FFFFFF";
@@ -731,7 +694,6 @@
         if (b.length < 2) b = "0" + b;
         return ("#" + r + g + b).toUpperCase();
     }
-
     function getLayer(comp, nameOrIndex) {
         if (!comp) return null;
         if (typeof comp.layer === "function") {
@@ -752,7 +714,6 @@
         }
         return null;
     }
-
     // Helper: Generate a realistic random timestamp (e.g. "10:42 AM" or "18:25")
     function generateRandomTime() {
         var hour = Math.floor(1 + Math.random() * 12);
@@ -761,7 +722,6 @@
         var ampm = Math.random() > 0.4 ? "PM" : "AM";
         return hour + ":" + minStr + " " + ampm;
     }
-
     // -------------------------------------------------------------------------
     // Core Geometry Engine: Custom Rounded Rectangle & Tail Pointer
     // -------------------------------------------------------------------------
@@ -773,23 +733,19 @@
         rTR = Math.max(0, rTR);
         rBR = Math.max(0, rBR);
         rBL = Math.max(0, rBL);
-
         var topSum    = rTL + rTR;
         var bottomSum = rBL + rBR;
         var leftSum   = rTL + rBL;
         var rightSum  = rTR + rBR;
-
         var f = 1.0;
         if (topSum > w && topSum > 0)       f = Math.min(f, w / topSum);
         if (bottomSum > w && bottomSum > 0) f = Math.min(f, w / bottomSum);
         if (leftSum > h && leftSum > 0)     f = Math.min(f, h / leftSum);
         if (rightSum > h && rightSum > 0)   f = Math.min(f, h / rightSum);
-
         rTL *= f;
         rTR *= f;
         rBR *= f;
         rBL *= f;
-
         var K = 0.5522847498307936;
         var halfW = w / 2;
         var halfH = h / 2;
@@ -797,7 +753,6 @@
         var xMax =  halfW;
         var yMin = -halfH;
         var yMax =  halfH;
-
         if (!hasTail || tailType === "none") {
             // Pure rounded rectangle (Instagram / Messenger / Tail OFF)
             return {
@@ -825,7 +780,6 @@
                 ]
             };
         }
-
         if (tailType === "modern" || tailType === "rcs") {
             // Android RCS Material You: asymmetrical pill with 4px corner on tail side
             var effRBR = isSent ? 4 : rBR;
@@ -855,7 +809,6 @@
                 ]
             };
         }
-
         // iOS / Classic WhatsApp curved pointer integrated seamlessly into perimeter (Single Continuous Bézier Shape)
         if (isSent) {
             // Sent tail on bottom-right
@@ -917,7 +870,6 @@
             };
         }
     }
-
     function computeTailData(w, h, isSent) {
         var halfW = w / 2;
         var halfH = h / 2;
@@ -979,7 +931,6 @@
             };
         }
     }
-
     var PATH_EXPR = [
         "// Integrated Single-Path Message Bubble Perimeter (Zero Gaps / Flawless Solid Fill)",
         "(function() {",
@@ -1106,7 +1057,6 @@
         "    }",
         "})();"
     ].join("\n");
-
     // -------------------------------------------------------------------------
     // Entrance Animations: Bubble Grow (5 frames) + Typewriter Reveal (5 frames)
     // -------------------------------------------------------------------------
@@ -1150,7 +1100,6 @@
         "    return [value[0] * (s / 100), value[1] * (s / 100)];",
         "})();"
     ].join("\n");
-
     var BUBBLE_OPACITY_EXPR = [
         "// Clean Entrance Opacity",
         "(function() {",
@@ -1163,7 +1112,6 @@
         "    return value;",
         "})();"
     ].join("\n");
-
     var TYPEWRITER_EXPR = [
         "// Typewriter Effect starting after Bubble Grow",
         "(function() {",
@@ -1210,7 +1158,6 @@
         "    return fullStr.substring(0, charCount);",
         "})();"
     ].join("\n");
-
     var TIMECODE_ENTRANCE_EXPR = [
         "// Entrance Fade In after Typewriter completion",
         "(function() {",
@@ -1249,7 +1196,6 @@
         "    return value * ((f - startF) / 2.0);",
         "})();"
     ].join("\n");
-
     // Dynamic Bubble Anchor Point & Position Expression
     var BUBBLE_TRANSFORM_EXPR = [
         "// Dynamic Bubble Transform Alignment",
@@ -1275,7 +1221,6 @@
         "    return [ox, oy, 0];",
         "})();"
     ].join("\n");
-
     // Dynamic Timestamp Position Expression (Equal Right/Bottom Margins when no status icon)
     var TIMECODE_POS_EXPR = [
         "// Dynamic Timestamp Position Tracking",
@@ -1297,8 +1242,9 @@
         "    var h = Math.max(20, getVal('Bubble Height', 0));",
         "    if (w <= 0 || h <= 0) return value;",
         "    var textSize = getVal('Text Size', 20);",
+        "    var cornerRadius = getVal('Corner Radius', 18);",
         "    var padOffset = getVal('Inner Padding Offset', 0);",
-        "    var padX = Math.max(15, Math.round(textSize * 0.90)) + padOffset;",
+        "    var padX = Math.max(Math.round(cornerRadius * 1.25), Math.round(textSize * 1.15)) + padOffset;",
         "    var padY = Math.max(10, Math.round(textSize * 0.60)) + padOffset;",
         "    var timeMargin = Math.max(8, Math.round(padY * 0.65));",
         "    var timeFontSize = Math.max(10, Math.round(textSize * 0.58));",
@@ -1313,7 +1259,6 @@
         "    return [posX, posY, (value.length > 2 ? value[2] : -0.5)];",
         "})();"
     ].join("\n");
-
     // Dynamic Status Icon Position Expression
     var STATUS_POS_EXPR = [
         "// Dynamic Status Icon Position Tracking",
@@ -1335,8 +1280,9 @@
         "    var h = Math.max(20, getVal('Bubble Height', 0));",
         "    if (w <= 0 || h <= 0) return value;",
         "    var textSize = getVal('Text Size', 20);",
+        "    var cornerRadius = getVal('Corner Radius', 18);",
         "    var padOffset = getVal('Inner Padding Offset', 0);",
-        "    var padX = Math.max(15, Math.round(textSize * 0.90)) + padOffset;",
+        "    var padX = Math.max(Math.round(cornerRadius * 1.25), Math.round(textSize * 1.15)) + padOffset;",
         "    var padY = Math.max(10, Math.round(textSize * 0.60)) + padOffset;",
         "    var timeMargin = Math.max(8, Math.round(padY * 0.65));",
         "    var timeFontSize = Math.max(10, Math.round(textSize * 0.58));",
@@ -1348,7 +1294,6 @@
         "    return [posX, posY, (value.length > 2 ? value[2] : -0.5)];",
         "})();"
     ].join("\n");
-
     // -------------------------------------------------------------------------
     // iOS 18 Animated Text Effects - Dynamic Expressions Engine
     // -------------------------------------------------------------------------
@@ -1377,7 +1322,8 @@
         "    var h = Math.max(20, getVal('Bubble Height', 0));",
         "    var padOffset = getVal('Inner Padding Offset', 0);",
         "    var textSize = getVal('Text Size', 20);",
-        "    var padX = Math.max(15, Math.round(textSize * 0.90)) + padOffset;",
+        "    var cornerRadius = getVal('Corner Radius', 18);",
+        "    var padX = Math.max(Math.round(cornerRadius * 1.25), Math.round(textSize * 1.15)) + padOffset;",
         "    var padY = Math.max(10, Math.round(textSize * 0.60)) + padOffset;",
         "    var capHeight = Math.round(textSize * 0.72);",
         "    var baseX = (w > 0) ? (-(w / 2) + padX) : value[0];",
@@ -1426,14 +1372,12 @@
         "    return [baseX + dx, baseY + dy, (value.length > 2 ? value[2] : -0.5)];",
         "})();"
     ].join("\n");
-
     var SCALE_ANIM_EXPR = [
         "// Animated Text Effect - Scale Expression",
         "(function() {",
         "    return value;",
         "})();"
     ].join("\n");
-
     var ROT_ANIM_EXPR = [
         "// Animated Text Effect - Rotation Expression",
         "(function() {",
@@ -1495,7 +1439,6 @@
         "    return value + rot;",
         "})();"
     ].join("\n");
-
     var OPACITY_ANIM_EXPR = [
         "// Animated Text Effect - Opacity Expression",
         "(function() {",
@@ -1558,7 +1501,6 @@
         "    return value;",
         "})();"
     ].join("\n");
-
     // -------------------------------------------------------------------------
     // Automatic Read & Delivery Timing Calculation & Expressions
     // -------------------------------------------------------------------------
@@ -1568,18 +1510,15 @@
         if (!trimmed) return 1.5;
         var words = trimmed.split(/\s+/).length;
         var chars = trimmed.length;
-
         // Base reaction / glance delay before recipient begins reading
         var reactionDelay = 0.8;
         // Average human reading speed: ~220 words per minute (approx 0.28s per word)
         var wordTime = words * 0.28;
         // Density bonus for emojis / punctuation / character density
         var densityBonus = Math.max(0, (chars - (words * 4))) * 0.025;
-
         var total = reactionDelay + wordTime + densityBonus;
         return Math.max(1.5, Math.min(12.0, Math.round(total * 10) / 10));
     }
-
     var STATUS_TEXT_EXPR = [
         "// Animated Status Icon (Sent -> Delivered -> Read)",
         "(function() {",
@@ -1627,7 +1566,6 @@
         "    }",
         "})();"
     ].join("\n");
-
     var STATUS_COLOR_EXPR = [
         "// Animated Status Icon Color (Neutral Gray -> Read Receipt Blue/Cyan)",
         "(function() {",
@@ -1677,7 +1615,6 @@
         "    }",
         "})();"
     ].join("\n");
-
     var STATUS_SCALE_EXPR = [
         "// Status Icon Micro-interaction Pop on Read",
         "(function() {",
@@ -1719,7 +1656,6 @@
         "    return value;",
         "})();"
     ].join("\n");
-
     // -------------------------------------------------------------------------
     // Android RCS Status Icon Expressions (Circle Outline / Solid Filled Checks)
     // -------------------------------------------------------------------------
@@ -1763,7 +1699,6 @@
         "    return Math.min(100, (dt / fadeDur) * 100);",
         "})();"
     ].join("\n");
-
     var STATUS_RCS_OPACITY_EXPR = [
         "// RCS Circled Checks Layer Opacity (checks style and entrance)",
         "(function() {",
@@ -1804,7 +1739,6 @@
         "    return Math.min(100, (dt / fadeDur) * 100);",
         "})();"
     ].join("\n");
-
     var RCS_CIRCLE1_POS_EXPR = [
         "// Circle 1 Position: centered at [3.0, 0] for Sent (single circle), [-3.0, 0] for Delivered / Read",
         "(function() {",
@@ -1841,7 +1775,6 @@
         "    return isSingle ? [3.0, 0] : [-3.0, 0];",
         "})();"
     ].join("\n");
-
     var RCS_CIRCLE2_OPACITY_EXPR = [
         "// Circle 2 Opacity: hidden for Sent or None, visible for Delivered / Read",
         "(function() {",
@@ -1876,7 +1809,6 @@
         "    return (time >= deliveredTime) ? 100 : 0;",
         "})();"
     ].join("\n");
-
     var RCS_CIRCLE_FILL_OPACITY_EXPR = [
         "// Circle Fill Opacity: 0 for Sent & Delivered (outline only), 100 for Read (solid filled)",
         "(function() {",
@@ -1912,7 +1844,6 @@
         "    return (time >= readTime) ? 100 : 0;",
         "})();"
     ].join("\n");
-
     var RCS_CIRCLE_STROKE_OPACITY_EXPR = [
         "// Circle Stroke Opacity: 100 for Sent & Delivered (outline), 0 for Read (filled)",
         "(function() {",
@@ -1948,7 +1879,6 @@
         "    return (time >= readTime) ? 0 : 100;",
         "})();"
     ].join("\n");
-
     var RCS_CHECK_COLOR_EXPR = [
         "// Checkmark Stroke Color: Neutral color for Sent & Delivered, Inverted Contrast for Read",
         "(function() {",
@@ -1986,7 +1916,6 @@
         "    return (time >= readTime) ? readCheckCol : neutralCol;",
         "})();"
     ].join("\n");
-
     var RCS_CIRCLE_FILL_COLOR_EXPR = [
         "// Circle Fill Color (Read accent / Charcoal / Solid)",
         "(function() {",
@@ -2006,7 +1935,6 @@
         "    return getVal('Status Read Color', [0.20, 0.72, 0.95]);",
         "})();"
     ].join("\n");
-
     var RCS_CIRCLE_STROKE_COLOR_EXPR = [
         "// Circle Stroke Color (Neutral Outline)",
         "(function() {",
@@ -2026,11 +1954,9 @@
         "    return getVal('Status Neutral Color', [0.55, 0.55, 0.55]);",
         "})();"
     ].join("\n");
-
     var currentRandomTime = generateRandomTime();
     var dropStatusStyle = null, dropStatus = null, grpStatusInfo = null, lblStatusInfo = null;
     var lastSentStatusIdx = 0; // Memory for sent status when toggling direction
-
     // -------------------------------------------------------------------------
     // 3. UI Header: Title & Description
     // -------------------------------------------------------------------------
@@ -2039,9 +1965,7 @@
     pnlHeader.alignChildren = ["fill", "top"];
     pnlHeader.spacing = 3;
     pnlHeader.margins = [10, 8, 10, 8];
-
     pnlHeader.add("statictext", undefined, "Chat bubble generator for iOS, Android RCS, WhatsApp, Instagram & Messenger.");
-
     // -------------------------------------------------------------------------
     // 4. Color Picker Helper Function
     // -------------------------------------------------------------------------
@@ -2050,21 +1974,17 @@
         grp.orientation = "row";
         grp.spacing = 8;
         grp.alignChildren = ["left", "center"];
-
         if (labelText) {
             var lbl = grp.add("statictext", undefined, labelText);
             lbl.preferredSize = [labelWidth || 95, -1];
         }
-
         var btnSwatch = grp.add("button", undefined, "");
         btnSwatch.preferredSize = [36, 22];
         btnSwatch.helpTip = "Click to pick color (Native / Windows Color Picker)";
-
         var txtHex = grp.add("edittext", undefined, defaultHex);
         txtHex.preferredSize = [75, 22];
         txtHex.characters = 7;
         txtHex.helpTip = "Direct hex color input (e.g. #2288EE)";
-
         var picker = {
             group: grp,
             button: btnSwatch,
@@ -2073,7 +1993,6 @@
             value: defaultHex,
             onChange: null
         };
-
         btnSwatch.onDraw = function() {
             try {
                 var g = this.graphics;
@@ -2086,31 +2005,26 @@
                 g.strokePath(pen);
             } catch(e) {}
         };
-
         function setColor(newHex, triggerChange) {
             if (!newHex) return;
             if (newHex.indexOf("#") !== 0) newHex = "#" + newHex;
             picker._color = newHex;
             picker.value = newHex;
             txtHex.text = newHex.toUpperCase();
-
             try {
                 if (btnSwatch.notify) {
                     btnSwatch.notify("onDraw");
                 }
             } catch(e) {}
-
             if (btnSwatch.domElement) {
                 btnSwatch.domElement.style.backgroundColor = newHex;
                 btnSwatch.domElement.style.border = "1px solid #777";
                 btnSwatch.domElement.style.borderRadius = "3px";
             }
-
             if (triggerChange && typeof picker.onChange === "function") {
                 picker.onChange(newHex);
             }
         }
-
         btnSwatch.onClick = function() {
             var curHex = picker._color || "#2288EE";
             if (typeof window !== "undefined" && typeof window.openWindowsColorPicker === "function") {
@@ -2119,7 +2033,6 @@
                 });
                 return;
             }
-
             var hexNum = parseInt(curHex.replace("#", ""), 16);
             var result = -1;
             if (typeof $.colorPicker === "function") {
@@ -2133,7 +2046,6 @@
                 setColor("#" + hexStr, true);
             }
         };
-
         txtHex.onChange = function() {
             var val = txtHex.text.replace(/^\s+|\s+$/g, "");
             if (val.indexOf("#") !== 0) val = "#" + val;
@@ -2143,19 +2055,16 @@
                 txtHex.text = picker._color.toUpperCase();
             }
         };
-
         setColor(defaultHex, false);
         picker.setColor = setColor;
         return picker;
     }
-
     // -------------------------------------------------------------------------
     // 5. Tabbed Panel Navigation: Message, Appearance, Animation & Help
     // -------------------------------------------------------------------------
     var tpanel = win.add("tabbedpanel", undefined);
     tpanel.alignChildren = ["fill", "top"];
     tpanel.alignment = ["fill", "top"];
-
     // =========================================================================
     // TAB 1: MESSAGE (Message Content, Platform & Appearance, Timestamp)
     // =========================================================================
@@ -2164,23 +2073,19 @@
     tabMessage.alignChildren = ["fill", "top"];
     tabMessage.spacing = 8;
     tabMessage.margins = 8;
-
     // --- Panel: Message Content (Max 250 characters, Emoji support) ---
     var pnlMessage = tabMessage.add("panel", undefined, "Message Content (Emojis Supported)");
     pnlMessage.orientation = "column";
     pnlMessage.alignChildren = ["fill", "top"];
     pnlMessage.spacing = 6;
     pnlMessage.margins = 10;
-
     var txtMessage = pnlMessage.add("edittext", undefined, "Hey! Are we still meeting for lunch today? 😊🍕", { multiline: true });
     txtMessage.preferredSize = [-1, 52];
     txtMessage.helpTip = "Type your message text here (Max 250 characters). Emojis are supported.";
-
     // Text Wrap & Character Counter Row
     var grpWrapAndCount = pnlMessage.add("group");
     grpWrapAndCount.orientation = "row";
     grpWrapAndCount.alignChildren = ["fill", "center"];
-
     var grpTextWrap = grpWrapAndCount.add("group");
     grpTextWrap.orientation = "row";
     grpTextWrap.alignChildren = ["left", "center"];
@@ -2190,10 +2095,8 @@
     dropTextWrap.selection = 1; // Default: "pretty"
     dropTextWrap.preferredSize = [95, 24];
     dropTextWrap.helpTip = "Text wrap mode:\n• none: No auto-wrapping (only manual line breaks)\n• pretty: Greedy wrapping with orphan prevention (equivalent to CSS text-wrap: pretty)\n• balance: Balances line lengths evenly across lines (equivalent to CSS text-wrap: balance)";
-
     var lblCharCount = grpWrapAndCount.add("statictext", undefined, "0 / " + MAX_CHARS + " chars");
     lblCharCount.alignment = ["right", "center"];
-
     function updateCharCount() {
         var current = txtMessage.text || "";
         if (current.length > MAX_CHARS) {
@@ -2206,39 +2109,32 @@
             lblStatusInfo.text = "⏱ Auto Read: ~" + (0.8 + dur).toFixed(1) + "s (based on text length)";
         }
     }
-
     txtMessage.onChanging = function() {
         updateCharCount();
     };
     txtMessage.onChange = function() {
         updateCharCount();
     };
-
     // --- Panel: Platform & Appearance ---
     var pnlStyle = tabMessage.add("panel", undefined, "Platform & Appearance");
     pnlStyle.orientation = "column";
     pnlStyle.alignChildren = ["fill", "top"];
     pnlStyle.spacing = 8;
     pnlStyle.margins = 10;
-
     // Platform Pull Down (Dropdown) & Preset Actions
     var grpPlatform = pnlStyle.add("group");
     grpPlatform.orientation = "row";
     grpPlatform.alignChildren = ["left", "center"];
     var lblPlatform = grpPlatform.add("statictext", undefined, "Style Preset:");
     lblPlatform.preferredSize = [115, -1];
-
     var dropPlatform = grpPlatform.add("dropdownlist", undefined, []);
     dropPlatform.preferredSize = [155, 26];
-
     var btnReloadPresets = grpPlatform.add("button", undefined, "↻");
     btnReloadPresets.preferredSize = [26, 26];
     btnReloadPresets.helpTip = "Reload presets from JSON file in 'message bubble presets' folder.";
-
     var btnOpenPresets = grpPlatform.add("button", undefined, "📂");
     btnOpenPresets.preferredSize = [26, 26];
     btnOpenPresets.helpTip = "Open 'message bubble presets' folder in File Explorer / Finder.";
-
     function populatePlatformDropdown(selectedKey) {
         updatePlatformKeys();
         if (typeof dropPlatform.removeAll === "function") {
@@ -2263,9 +2159,7 @@
             dropPlatform.selection = selectIndex;
         }
     }
-
     populatePlatformDropdown("iOS Message");
-
     btnReloadPresets.onClick = function() {
         var curKey = (dropPlatform.selection && platformKeys[dropPlatform.selection.index])
             ? platformKeys[dropPlatform.selection.index]
@@ -2279,7 +2173,6 @@
             alert("Presets reloaded from defaults.");
         }
     };
-
     btnOpenPresets.onClick = function() {
         if (!currentPresetsFolder) currentPresetsFolder = getPresetsFolder();
         if (currentPresetsFolder && currentPresetsFolder.exists) {
@@ -2288,60 +2181,49 @@
             alert("Presets folder:\n" + (currentPresetsFolder ? currentPresetsFolder.fsName : PRESETS_FOLDER_NAME));
         }
     };
-
     // Direction Switch: Received (Left) vs Sent (Right)
     var grpDirection = pnlStyle.add("group");
     grpDirection.orientation = "row";
     grpDirection.alignChildren = ["left", "center"];
     var lblDirection = grpDirection.add("statictext", undefined, "Message Type:");
     lblDirection.preferredSize = [115, -1];
-
     var radSent = grpDirection.add("radiobutton", undefined, "Sent (Right)");
     var radReceived = grpDirection.add("radiobutton", undefined, "Received (Left)");
     radSent.value = true; // Default: Sent
-
     // Theme Switch: Light vs Dark Theme
     var grpTheme = pnlStyle.add("group");
     grpTheme.orientation = "row";
     grpTheme.alignChildren = ["left", "center"];
     var lblTheme = grpTheme.add("statictext", undefined, "Color Theme:");
     lblTheme.preferredSize = [115, -1];
-
     var radLight = grpTheme.add("radiobutton", undefined, "Light Theme");
     var radDark = grpTheme.add("radiobutton", undefined, "Dark Theme");
     radLight.value = true; // Default: Light Theme
-
     // Tail / Pointer Switch
     var grpTail = pnlStyle.add("group");
     grpTail.orientation = "row";
     grpTail.alignChildren = ["left", "center"];
     var lblTail = grpTail.add("statictext", undefined, "Bubble Tail:");
     lblTail.preferredSize = [115, -1];
-
     var chkTail = grpTail.add("checkbox", undefined, "Show Tail / Pointer");
     chkTail.value = true; // Default: Show Tail
     chkTail.helpTip = "Toggle the chat pointer / tail at the bottom corner of the message bubble.";
-
     // --- Panel: Timestamp ---
     var pnlTime = tabMessage.add("panel", undefined, "Timestamp");
     pnlTime.orientation = "row";
     pnlTime.alignChildren = ["left", "center"];
     pnlTime.spacing = 10;
     pnlTime.margins = [10, 8, 10, 8];
-
     var chkShowTime = pnlTime.add("checkbox", undefined, "Use Timestamp");
     chkShowTime.value = true;
     chkShowTime.helpTip = "Toggle message timestamp on/off (animatable boolean on master controller).";
-
     var lblTimePrompt = pnlTime.add("statictext", undefined, "Time:");
     var txtTime = pnlTime.add("edittext", undefined, currentRandomTime || "11:44 PM");
     txtTime.preferredSize = [100, 24];
     txtTime.helpTip = "Type the message timestamp (e.g. 11:44 PM, 9:41 AM, 14:30).";
-
     chkShowTime.onClick = function() {
         txtTime.enabled = this.value;
     };
-
     // =========================================================================
     // TAB 2: APPEARANCE (Layout & Typography, Colors & Appearance, Status Icon)
     // =========================================================================
@@ -2350,21 +2232,18 @@
     tabAppearance.alignChildren = ["fill", "top"];
     tabAppearance.spacing = 8;
     tabAppearance.margins = 8;
-
     // --- Panel: Layout & Typography ---
     var pnlDim = tabAppearance.add("panel", undefined, "Layout & Typography");
     pnlDim.orientation = "column";
     pnlDim.alignChildren = ["fill", "top"];
     pnlDim.spacing = 8;
     pnlDim.margins = 10;
-
     // Font Family Row
     var grpFont = pnlDim.add("group");
     grpFont.orientation = "row";
     grpFont.alignChildren = ["left", "center"];
     var lblFont = grpFont.add("statictext", undefined, "Font Family:");
     lblFont.preferredSize = [115, -1];
-
     var fontOptions = [];
     for (var fo = 0; fo < FONTS.length; fo++) {
         fontOptions.push(FONTS[fo].name);
@@ -2373,14 +2252,12 @@
     dropFont.selection = 0; // Default: SF Pro
     dropFont.preferredSize = [185, 26];
     dropFont.helpTip = "Select font family for message text. Emojis use the Emoji Font selected below.";
-
     // Emoji Font Row (Allows per-preset preference & custom overrides)
     var grpEmojiFont = pnlDim.add("group");
     grpEmojiFont.orientation = "row";
     grpEmojiFont.alignChildren = ["left", "center"];
     var lblEmojiFont = grpEmojiFont.add("statictext", undefined, "Emoji Font:");
     lblEmojiFont.preferredSize = [115, -1];
-
     var emojiFontChoices = [
         "Auto (Preset Default)",
         "Noto Color Emoji (Google)",
@@ -2392,7 +2269,6 @@
     dropEmojiFont.selection = 0; // Default: Auto (Preset Default)
     dropEmojiFont.preferredSize = [185, 26];
     dropEmojiFont.helpTip = "Select font specifically used for emojis. Normal text retains the Font Family selected above.";
-
     // Max Bubble Width Row (Directly governs maximum bubble width)
     var grpWidth = pnlDim.add("group");
     grpWidth.orientation = "row";
@@ -2404,7 +2280,6 @@
     var txtWidth = grpWidth.add("edittext", undefined, "380");
     txtWidth.characters = 5;
     txtWidth.helpTip = "Maximum bubble width in pixels. Text wraps so the bubble does not exceed this width.";
-
     sldWidth.onChanging = function() {
         txtWidth.text = String(Math.round(sldWidth.value));
     };
@@ -2413,7 +2288,6 @@
         sldWidth.value = v;
         txtWidth.text = String(Math.round(v));
     };
-
     // Text Size Row
     var grpSize = pnlDim.add("group");
     grpSize.orientation = "row";
@@ -2424,7 +2298,6 @@
     sldSize.alignment = ["fill", "center"];
     var txtSize = grpSize.add("edittext", undefined, "20");
     txtSize.characters = 3;
-
     sldSize.onChanging = function() {
         txtSize.text = String(Math.round(sldSize.value));
     };
@@ -2433,7 +2306,6 @@
         sldSize.value = v;
         txtSize.text = String(Math.round(v));
     };
-
     // Inner Padding Row (-15px to +25px)
     var grpPad = pnlDim.add("group");
     grpPad.orientation = "row";
@@ -2445,7 +2317,6 @@
     var txtPad = grpPad.add("edittext", undefined, "0");
     txtPad.characters = 3;
     txtPad.helpTip = "Adjust bubble inner padding from -15px (compact) to +25px (spacious).";
-
     sldPad.onChanging = function() {
         txtPad.text = String(Math.round(sldPad.value));
     };
@@ -2454,7 +2325,6 @@
         sldPad.value = v;
         txtPad.text = String(Math.round(v));
     };
-
     // Leading / Line Height Row (70% to 160%)
     var grpLeading = pnlDim.add("group");
     grpLeading.orientation = "row";
@@ -2466,7 +2336,6 @@
     var txtLeading = grpLeading.add("edittext", undefined, "100");
     txtLeading.characters = 4;
     txtLeading.helpTip = "Text line height / leading in percentage from 70% (compact) to 160% (relaxed).";
-
     sldLeading.onChanging = function() {
         txtLeading.text = String(Math.round(sldLeading.value));
     };
@@ -2475,31 +2344,26 @@
         sldLeading.value = v;
         txtLeading.text = String(Math.round(v));
     };
-
     // --- Panel: Colors & Appearance ---
     var pnlColors = tabAppearance.add("panel", undefined, "Colors & Appearance");
     pnlColors.orientation = "column";
     pnlColors.alignChildren = ["fill", "top"];
     pnlColors.spacing = 8;
     pnlColors.margins = 10;
-
     var cpBubble = createColorPicker(pnlColors, "#007AFF", "Bubble Color:", 115);
     var cpText = createColorPicker(pnlColors, "#FFFFFF", "Text Color:", 115);
-
     // --- Panel: Status & Delivery Receipts ---
     var pnlStatus = tabAppearance.add("panel", undefined, "Status & Delivery Receipts");
     pnlStatus.orientation = "column";
     pnlStatus.alignChildren = ["fill", "top"];
     pnlStatus.spacing = 6;
     pnlStatus.margins = [10, 8, 10, 8];
-
     // Status Icon Style (RCS Circled Checks vs Standard Checks)
     var grpStatusStyle = pnlStatus.add("group");
     grpStatusStyle.orientation = "row";
     grpStatusStyle.alignChildren = ["left", "center"];
     var lblStatusStyle = grpStatusStyle.add("statictext", undefined, "Icon Style:");
     lblStatusStyle.preferredSize = [115, -1];
-
     dropStatusStyle = grpStatusStyle.add("dropdownlist", undefined, [
         "RCS Circled Checks (○✓)",
         "Standard Checks (✓✓)"
@@ -2507,14 +2371,12 @@
     dropStatusStyle.selection = 0; // Default: RCS Circled Checks
     dropStatusStyle.preferredSize = [185, 26];
     dropStatusStyle.helpTip = "Choose between Google Messages / Android RCS circled checkmarks (outline/filled) or standard checks.";
-
     // Status Icon (Sent / Received / Read / Auto Timing)
     var grpStatus = pnlStatus.add("group");
     grpStatus.orientation = "row";
     grpStatus.alignChildren = ["left", "center"];
     var lblStatus = grpStatus.add("statictext", undefined, "Status Icon:");
     lblStatus.preferredSize = [115, -1];
-
     dropStatus = grpStatus.add("dropdownlist", undefined, [
         "Auto (Timing Simulation)",
         "Read",
@@ -2525,7 +2387,6 @@
     dropStatus.selection = 0; // Default: Auto (Timing Simulation)
     dropStatus.preferredSize = [185, 26];
     dropStatus.helpTip = "Auto: simulates sent -> delivered -> read timing based on text reading speed. Or choose static status.";
-
     grpStatusInfo = pnlStatus.add("group");
     grpStatusInfo.orientation = "row";
     grpStatusInfo.alignChildren = ["left", "center"];
@@ -2533,7 +2394,6 @@
     lblStatusInfoPad.preferredSize = [115, -1];
     lblStatusInfo = grpStatusInfo.add("statictext", undefined, "⏱ Auto Read: ~4.2s (based on text length)");
     lblStatusInfo.helpTip = "Calculated reading duration based on character and word count.";
-
     dropStatus.onChange = function() {
         var isAuto = (dropStatus.selection && dropStatus.selection.index === 0);
         grpStatusInfo.visible = isAuto;
@@ -2541,9 +2401,7 @@
             lastSentStatusIdx = dropStatus.selection.index;
         }
     };
-
     updateCharCount(); // Initialize auto-read timing text
-
     // =========================================================================
     // TAB 3: ANIMATION (Text Effects & Animation)
     // =========================================================================
@@ -2552,18 +2410,15 @@
     tabAnimation.alignChildren = ["fill", "top"];
     tabAnimation.spacing = 8;
     tabAnimation.margins = 8;
-
     // --- Panel 1: Entrance ---
     var pnlEntrance = tabAnimation.add("panel", undefined, "Entrance");
     pnlEntrance.orientation = "column";
     pnlEntrance.alignChildren = ["fill", "top"];
     pnlEntrance.spacing = 6;
     pnlEntrance.margins = [10, 8, 10, 8];
-
     var chkEntrance = pnlEntrance.add("checkbox", undefined, "Entrance Animation (Grow + Typewriter)");
     chkEntrance.value = false; // Default: Disabled until size works fine
     chkEntrance.helpTip = "Animate the bubble growing from tail corner, followed by a typewriter text reveal.";
-
     // Bubble Grow Duration Row (0 to 30 frames)
     var grpGrow = pnlEntrance.add("group");
     grpGrow.orientation = "row";
@@ -2575,7 +2430,6 @@
     var txtGrow = grpGrow.add("edittext", undefined, "5");
     txtGrow.characters = 3;
     txtGrow.helpTip = "Duration of the bubble growth animation in frames (0 to 30).";
-
     sldGrow.onChanging = function() {
         txtGrow.text = String(Math.round(sldGrow.value));
     };
@@ -2587,7 +2441,6 @@
         sldGrow.value = v;
         txtGrow.text = String(Math.round(v));
     };
-
     // Typewriter Duration Row (0 to 30 frames)
     var grpType = pnlEntrance.add("group");
     grpType.orientation = "row";
@@ -2599,7 +2452,6 @@
     var txtType = grpType.add("edittext", undefined, "5");
     txtType.characters = 3;
     txtType.helpTip = "Duration of the typewriter text reveal in frames (0 to 30).";
-
     sldType.onChanging = function() {
         txtType.text = String(Math.round(sldType.value));
     };
@@ -2611,7 +2463,6 @@
         sldType.value = v;
         txtType.text = String(Math.round(v));
     };
-
     chkEntrance.onClick = function() {
         var en = chkEntrance.value;
         sldGrow.enabled = en;
@@ -2624,21 +2475,18 @@
     txtGrow.enabled = false;
     sldType.enabled = false;
     txtType.enabled = false;
-
     // --- Panel 2: iOS Text Animation ---
     var pnlAnim = tabAnimation.add("panel", undefined, "iOS Text Animation");
     pnlAnim.orientation = "column";
     pnlAnim.alignChildren = ["fill", "top"];
     pnlAnim.spacing = 6;
     pnlAnim.margins = [10, 8, 10, 8];
-
     // Effect Preset Dropdown Row
     var grpAnimDrop = pnlAnim.add("group");
     grpAnimDrop.orientation = "row";
     grpAnimDrop.alignChildren = ["left", "center"];
     var lblAnim = grpAnimDrop.add("statictext", undefined, "Animated Effect:");
     lblAnim.preferredSize = [135, -1];
-
     var animOptions = [
         "None (Static)",
         "Nod (Vertical Bobbing)",
@@ -2649,7 +2497,6 @@
     dropAnim.selection = 0; // Default: None
     dropAnim.preferredSize = [185, 26];
     dropAnim.helpTip = "Select animated text effect (Nod, Shake, or Blink).";
-
     // Decay Row (in frames, slider)
     var grpDecay = pnlAnim.add("group");
     grpDecay.orientation = "row";
@@ -2661,7 +2508,6 @@
     var txtDecay = grpDecay.add("edittext", undefined, "30");
     txtDecay.characters = 4;
     txtDecay.helpTip = "Duration over which the animation effect dampens/decays to stop in frames (0 = continuous loop).";
-
     sldDecay.onChanging = function() {
         txtDecay.text = String(Math.round(sldDecay.value));
     };
@@ -2670,7 +2516,6 @@
         sldDecay.value = v;
         txtDecay.text = String(Math.round(v));
     };
-
     // Animation Speed Row (50% to 200%)
     var grpSpeed = pnlAnim.add("group");
     grpSpeed.orientation = "row";
@@ -2682,7 +2527,6 @@
     var txtSpeed = grpSpeed.add("edittext", undefined, "100");
     txtSpeed.characters = 4;
     txtSpeed.helpTip = "Animation speed / frequency multiplier from 50% (slow) to 200% (fast).";
-
     sldSpeed.onChanging = function() {
         txtSpeed.text = String(Math.round(sldSpeed.value));
     };
@@ -2691,7 +2535,6 @@
         sldSpeed.value = v;
         txtSpeed.text = String(Math.round(v));
     };
-
     // Animation Intensity Row (20% to 200%)
     var grpAmp = pnlAnim.add("group");
     grpAmp.orientation = "row";
@@ -2703,7 +2546,6 @@
     var txtAmp = grpAmp.add("edittext", undefined, "100");
     txtAmp.characters = 4;
     txtAmp.helpTip = "Animation displacement and vibration amplitude.";
-
     sldAmp.onChanging = function() {
         txtAmp.text = String(Math.round(sldAmp.value));
     };
@@ -2712,7 +2554,6 @@
         sldAmp.value = v;
         txtAmp.text = String(Math.round(v));
     };
-
     // Shared cross-platform URL opener helper
     function openURL(url) {
         if (!url) return;
@@ -2730,7 +2571,6 @@
             }
         } catch(eSys) {}
     }
-
     // =========================================================================
     // TAB 4: HELP (Instructions, Font Links, JSON Presets & Links)
     // =========================================================================
@@ -2739,119 +2579,98 @@
     tabHelp.alignChildren = ["fill", "top"];
     tabHelp.spacing = 8;
     tabHelp.margins = 8;
-
     // --- Panel: Quick Instructions ---
     var pnlHelpGuide = tabHelp.add("panel", undefined, "Quick Instructions & Workflow");
     pnlHelpGuide.orientation = "column";
     pnlHelpGuide.alignChildren = ["fill", "top"];
     pnlHelpGuide.spacing = 4;
     pnlHelpGuide.margins = [10, 8, 10, 8];
-
     pnlHelpGuide.add("statictext", undefined, "1. Message: Type text (up to 250 chars). Emojis are fully supported.");
     pnlHelpGuide.add("statictext", undefined, "2. Platform: Pick preset (iOS, RCS, WhatsApp, etc.), direction & theme.");
     pnlHelpGuide.add("statictext", undefined, "3. Generate: Click 'Create Message Bubble' to build expression-rigged layers.");
     pnlHelpGuide.add("statictext", undefined, "4. Live Update: Select an existing bubble precomp & click 'Update Message Bubble'.");
     pnlHelpGuide.add("statictext", undefined, "5. Animation: Adjust bubble grow, typewriter and iOS 18 text effects in Animation tab.");
-
     // --- Panel: Typography & Emojis ---
     var pnlHelpFonts = tabHelp.add("panel", undefined, "Typography & Needed Fonts");
     pnlHelpFonts.orientation = "column";
     pnlHelpFonts.alignChildren = ["fill", "top"];
     pnlHelpFonts.spacing = 6;
     pnlHelpFonts.margins = [10, 8, 10, 8];
-
     var lblEmojiDesc = pnlHelpFonts.add("statictext", undefined, "Emojis prioritize Google's Noto Color Emoji, falling back to Segoe UI Emoji (Windows) or Apple Color Emoji (macOS) if not installed.", { multiline: true });
     lblEmojiDesc.preferredSize = [-1, 28];
-
     var lblAeEmojiNote = pnlHelpFonts.add("statictext", undefined, "💡 Adobe After Effects Emoji Note: AE's text engine natively supports OpenType-SVG color fonts (e.g. Segoe UI Emoji, Apple Color Emoji, or OpenType-SVG builds of Noto). Google's standard web TTF uses COLRv1 which AE renders as sharp vector monochrome outlines.", { multiline: true });
     lblAeEmojiNote.preferredSize = [-1, 46];
-
     var grpFontBtns1 = pnlHelpFonts.add("group");
     grpFontBtns1.orientation = "row";
     grpFontBtns1.spacing = 4;
     grpFontBtns1.alignChildren = ["fill", "center"];
-
     var btnNotoFont = grpFontBtns1.add("button", undefined, "🎨 Noto Color Emoji (Google)");
     btnNotoFont.preferredSize = [170, 24];
     btnNotoFont.helpTip = "Download Google Noto Color Emoji font (https://fonts.google.com/noto/specimen/Noto+Color+Emoji)";
     btnNotoFont.onClick = function() {
         openURL("https://fonts.google.com/noto/specimen/Noto+Color+Emoji");
     };
-
     var btnRobotoFont = grpFontBtns1.add("button", undefined, "Roboto (Android RCS)");
     btnRobotoFont.preferredSize = [135, 24];
     btnRobotoFont.helpTip = "Download Roboto font (https://fonts.google.com/specimen/Roboto)";
     btnRobotoFont.onClick = function() {
         openURL("https://fonts.google.com/specimen/Roboto");
     };
-
     var grpFontBtns2 = pnlHelpFonts.add("group");
     grpFontBtns2.orientation = "row";
     grpFontBtns2.spacing = 4;
     grpFontBtns2.alignChildren = ["fill", "center"];
-
     var btnInterFont = grpFontBtns2.add("button", undefined, "Inter (Discord)");
     btnInterFont.preferredSize = [100, 24];
     btnInterFont.helpTip = "Download Inter font (https://fonts.google.com/specimen/Inter)";
     btnInterFont.onClick = function() {
         openURL("https://fonts.google.com/specimen/Inter");
     };
-
     var btnOpenSansFont = grpFontBtns2.add("button", undefined, "Open Sans (Telegram)");
     btnOpenSansFont.preferredSize = [130, 24];
     btnOpenSansFont.helpTip = "Download Open Sans font (https://fonts.google.com/specimen/Open+Sans)";
     btnOpenSansFont.onClick = function() {
         openURL("https://fonts.google.com/specimen/Open+Sans");
     };
-
     var btnAppleFont = grpFontBtns2.add("button", undefined, "SF Pro (Apple / iOS)");
     btnAppleFont.preferredSize = [120, 24];
     btnAppleFont.helpTip = "Apple Developer Fonts (https://developer.apple.com/fonts/)";
     btnAppleFont.onClick = function() {
         openURL("https://developer.apple.com/fonts/");
     };
-
     // --- Panel: JSON Presets Management ---
     var pnlHelpPresets = tabHelp.add("panel", undefined, "Custom JSON Presets & Folder");
     pnlHelpPresets.orientation = "column";
     pnlHelpPresets.alignChildren = ["fill", "top"];
     pnlHelpPresets.spacing = 4;
     pnlHelpPresets.margins = [10, 8, 10, 8];
-
     pnlHelpPresets.add("statictext", undefined, "• Presets are stored in 'message bubble presets/presets.json' on disk.");
     pnlHelpPresets.add("statictext", undefined, "• Edit colors, tail types (modern/ios/classic/none), radii, fonts and delivery styles.");
     pnlHelpPresets.add("statictext", undefined, "• Click '↻' in the Message tab to instantly reload presets without restarting AE.");
     pnlHelpPresets.add("statictext", undefined, "• Click '📂' in the Message tab to open the presets folder in Explorer / Finder.");
-
     // --- Panel: Repository & Emulator Links ---
     var pnlHelpLinks = tabHelp.add("panel", undefined, "Repository & Live Web Simulator");
     pnlHelpLinks.orientation = "column";
     pnlHelpLinks.alignChildren = ["fill", "top"];
     pnlHelpLinks.spacing = 6;
     pnlHelpLinks.margins = [10, 8, 10, 8];
-
     var grpLinkBtns = pnlHelpLinks.add("group");
     grpLinkBtns.orientation = "row";
     grpLinkBtns.spacing = 6;
     grpLinkBtns.alignChildren = ["fill", "center"];
-
     var btnRepoHelp = grpLinkBtns.add("button", undefined, "⭐ GitHub Repository");
     btnRepoHelp.preferredSize = [145, 26];
     btnRepoHelp.helpTip = "https://github.com/work2survive/AE_message_bubble";
     btnRepoHelp.onClick = function() {
         openURL("https://github.com/work2survive/AE_message_bubble");
     };
-
     var btnEmulatorHelp = grpLinkBtns.add("button", undefined, "🌐 Live Web Simulator");
     btnEmulatorHelp.preferredSize = [145, 26];
     btnEmulatorHelp.helpTip = "https://work2survive.github.io/AE_JS_builder/?jsx=message_bubble.jsx&autobuild=true";
     btnEmulatorHelp.onClick = function() {
         openURL("https://work2survive.github.io/AE_JS_builder/?jsx=message_bubble.jsx&autobuild=true");
     };
-
     tpanel.selection = tabMessage; // Default to Message tab
-
-
 
     // -------------------------------------------------------------------------
     // Font Resolution & Multi-Tier Fallback System (CSS-like font-family stack)
@@ -2877,7 +2696,6 @@
                 }
             }
         } catch(eFonts) {}
-
         // On Windows, Apple proprietary fonts (SF Pro, Apple Color Emoji) are NOT present unless custom-installed
         var isWin = (typeof $ !== "undefined" && $.os && $.os.indexOf("Windows") !== -1);
         if (isWin) {
@@ -2888,12 +2706,10 @@
         }
         return true;
     }
-
     function getActiveFontCandidates() {
         var candidates = [];
         var fIdx = (dropFont && dropFont.selection) ? dropFont.selection.index : 0;
         var curFont = FONTS[fIdx] || FONTS[0];
-
         // If user specifically picked Noto Color Emoji, prioritize it
         if (curFont && curFont.name && curFont.name.indexOf("Noto Color Emoji") !== -1) {
             candidates.push("NotoColorEmoji");
@@ -2901,7 +2717,6 @@
             candidates.push("AppleColorEmoji");
             candidates.push("SegoeUIEmoji");
         }
-
         var selIdx = (dropPlatform && dropPlatform.selection) ? dropPlatform.selection.index : 0;
         var pKey = platformKeys[selIdx] || "iOS Message";
         var pCfg = PLATFORMS[pKey] || DEFAULT_PLATFORMS[pKey];
@@ -2917,17 +2732,13 @@
         } else if (curFont && curFont.ae) {
             candidates.push(curFont.ae);
         }
-
         return candidates;
     }
-
     function getActiveEmojiCandidates() {
         var selIdx = (typeof dropPlatform !== "undefined" && dropPlatform && dropPlatform.selection) ? dropPlatform.selection.index : 0;
         var platformName = platformKeys[selIdx] || "iOS Message";
         var platformCfg = PLATFORMS[platformName] || DEFAULT_PLATFORMS[platformName] || DEFAULT_PLATFORMS["iOS Message"];
-
         var emojiSel = (typeof dropEmojiFont !== "undefined" && dropEmojiFont && dropEmojiFont.selection) ? dropEmojiFont.selection.index : 0;
-
         var candidates = [];
         if (emojiSel === 1) { // Noto Color Emoji
             candidates = ["NotoColorEmoji", "NotoColorEmoji-Regular", "SegoeUIEmoji", "AppleColorEmoji"];
@@ -2947,14 +2758,11 @@
         }
         return candidates;
     }
-
     function getActiveEmojiFontFamily() {
         var selIdx = (typeof dropPlatform !== "undefined" && dropPlatform && dropPlatform.selection) ? dropPlatform.selection.index : 0;
         var platformName = platformKeys[selIdx] || "iOS Message";
         var platformCfg = PLATFORMS[platformName] || DEFAULT_PLATFORMS[platformName] || DEFAULT_PLATFORMS["iOS Message"];
-
         var emojiSel = (typeof dropEmojiFont !== "undefined" && dropEmojiFont && dropEmojiFont.selection) ? dropEmojiFont.selection.index : 0;
-
         if (emojiSel === 1) {
             return "'Noto Color Emoji', 'Segoe UI Emoji', 'Apple Color Emoji', sans-serif";
         } else if (emojiSel === 2) {
@@ -2966,7 +2774,6 @@
         }
         return (platformCfg && platformCfg.emojiFontFamily) ? platformCfg.emojiFontFamily : "'Noto Color Emoji', 'Segoe UI Emoji', 'Apple Color Emoji', sans-serif";
     }
-
     function findEmojiSpans(str) {
         var spans = [];
         if (!str || typeof str !== "string") return spans;
@@ -2976,7 +2783,6 @@
             var code = str.charCodeAt(i);
             var isEmoji = false;
             var charLen = 1;
-
             if (code >= 0xD800 && code <= 0xDBFF) {
                 if (i + 1 < len) {
                     var low = str.charCodeAt(i + 1);
@@ -2996,7 +2802,6 @@
                     isEmoji = true;
                 }
             }
-
             if (isEmoji) {
                 var start = i;
                 var count = charLen;
@@ -3033,7 +2838,6 @@
         }
         return spans;
     }
-
     function applyEmojiFontToRanges(textProp, textStr, emojiCandidates, fontSize) {
         if (!textProp || !textStr || !emojiCandidates || emojiCandidates.length === 0) return;
         var chosenEmojiFont = null;
@@ -3048,7 +2852,6 @@
         if (!chosenEmojiFont) {
             chosenEmojiFont = isWin ? "SegoeUIEmoji" : "AppleColorEmoji";
         }
-
         try {
             if (typeof textProp.characterRange === "function") {
                 var spans = findEmojiSpans(textStr);
@@ -3066,7 +2869,6 @@
             }
         } catch(eAll) {}
     }
-
     function applyFontWithFallback(textProp, candidateList) {
         if (!textProp) return false;
         var candidates = [];
@@ -3083,7 +2885,6 @@
         var systemFallbacks = isWin
             ? ["SegoeUI", "ArialMT", "Arial", "Tahoma"]
             : ["SFProText-Regular", "HelveticaNeue", "Helvetica", "ArialMT", "Arial"];
-
         for (var s = 0; s < systemFallbacks.length; s++) {
             var found = false;
             for (var k = 0; k < candidates.length; k++) {
@@ -3091,7 +2892,6 @@
             }
             if (!found) candidates.push(systemFallbacks[s]);
         }
-
         var chosenFont = null;
         for (var i = 0; i < candidates.length; i++) {
             var fontName = candidates[i];
@@ -3104,7 +2904,6 @@
         if (!chosenFont) {
             chosenFont = isWin ? "SegoeUI" : "ArialMT";
         }
-
         try {
             var doc = textProp.value;
             doc.font = chosenFont;
@@ -3134,7 +2933,6 @@
         }
         return false;
     }
-
     function formatTextLayer(lyr, textStr, fontSize, fontColor, justification, lineLeading, candidates, emojiCandidates) {
         if (!lyr) return;
         try {
@@ -3166,26 +2964,21 @@
             }
         } catch(eFmt) {}
     }
-
     function syncColorsFromPlatform() {
         var selIdx = dropPlatform.selection ? dropPlatform.selection.index : 0;
         var platformName = platformKeys[selIdx] || "iOS Message";
         if (platformName === "Custom") return;
-
         var isSent = radSent.value;
         var isDark = radDark.value;
         var themeKey = isDark ? "dark" : "light";
         var dirKey = isSent ? "sent" : "received";
         var platformCfg = PLATFORMS[platformName] || DEFAULT_PLATFORMS[platformName];
         if (!platformCfg) return;
-
         var colorSet = (platformCfg[themeKey] && platformCfg[themeKey][dirKey]) ? platformCfg[themeKey][dirKey] : null;
-
         if (colorSet) {
             if (colorSet.bubble) cpBubble.setColor(colorSet.bubble, false);
             if (colorSet.text) cpText.setColor(colorSet.text, false);
         }
-
         if (typeof dropFont !== "undefined" && dropFont) {
             var targetFontIdx = -1;
             if (typeof platformCfg.fontIndex === "number" && platformCfg.fontIndex >= 0 && platformCfg.fontIndex < FONTS.length) {
@@ -3221,11 +3014,9 @@
                 }
             }
         }
-
         if (typeof dropEmojiFont !== "undefined" && dropEmojiFont) {
             dropEmojiFont.selection = 0; // Auto (Preset Default)
         }
-
         if (typeof dropStatusStyle !== "undefined" && dropStatusStyle) {
             if (typeof platformCfg.statusStyleIndex === "number") {
                 dropStatusStyle.selection = platformCfg.statusStyleIndex;
@@ -3236,7 +3027,6 @@
             }
         }
     }
-
     dropPlatform.onChange = function() {
         syncColorsFromPlatform();
     };
@@ -3260,7 +3050,6 @@
     radDark.onClick = function() {
         syncColorsFromPlatform();
     };
-
     function selectCustomPlatformStyle() {
         for (var i = 0; i < platformKeys.length; i++) {
             if (platformKeys[i] === "Custom") {
@@ -3275,7 +3064,6 @@
     cpText.onChange = function() {
         selectCustomPlatformStyle();
     };
-
     // -------------------------------------------------------------------------
     // 9. Word-Wrapping & Unified Typography Measurement Engine
     // -------------------------------------------------------------------------
@@ -3330,7 +3118,6 @@
         }
         return w;
     }
-
     function greedyWrap(words, maxPixelWidth, fontSize) {
         var lines = [];
         var cur = "";
@@ -3373,34 +3160,28 @@
         }
         return lines;
     }
-
     function wrapTextToLines(rawText, maxPixelWidth, fontSize, wrapMode) {
         if (!rawText) return [""];
         wrapMode = wrapMode || "pretty";
-
         var normalized = rawText.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
         var paragraphs = normalized.split("\n");
         var allLines = [];
-
         for (var p = 0; p < paragraphs.length; p++) {
             var para = paragraphs[p];
             if (!trimStr(para)) {
                 allLines.push("");
                 continue;
             }
-
             if (wrapMode === "none") {
                 allLines.push(para);
                 continue;
             }
-
             var rawWords = para.split(/\s+/);
             var words = [];
             for (var rw = 0; rw < rawWords.length; rw++) {
                 if (rawWords[rw].length > 0) words.push(rawWords[rw]);
             }
             if (words.length === 0) continue;
-
             if (wrapMode === "pretty") {
                 var pLines = greedyWrap(words, maxPixelWidth, fontSize);
                 // Orphan prevention: if the last line has only 1 word and penultimate line has >= 2 words
@@ -3464,10 +3245,8 @@
                 for (var di = 0; di < defLines.length; di++) allLines.push(defLines[di]);
             }
         }
-
         return allLines.length > 0 ? allLines : [""];
     }
-
     // Measure maximum line pixel width
     function getLinesPixelBounds(lines, fontSize) {
         var maxW = 0;
@@ -3477,7 +3256,6 @@
         }
         return Math.max(30, maxW);
     }
-
     // -------------------------------------------------------------------------
     // Compute Bubble Layout Dimensions (Responsive single/multi-line & padding)
     // -------------------------------------------------------------------------
@@ -3495,7 +3273,6 @@
         var selStatusIdx = params.selStatusIdx;
         var isRCSStyle = params.isRCSStyle;
         var cornerRadius = params.cornerRadius || 18;
-
         var timeFontSize = Math.max(10, Math.round(textSize * 0.58));
         var timeW = isTimeEnabled ? Math.round(measureTypographyWidth(timeString, timeFontSize)) : 0;
         var hasStatus = (isSent && selStatusIdx !== 4 && isTimeEnabled);
@@ -3504,14 +3281,11 @@
             : 0;
         var statusSpacing = statusW > 0 ? 6 : 0;
         var timeRowW = isTimeEnabled ? (timeW + statusSpacing + statusW) : 0;
-
         // 1. Initial text box width: maxBubbleW minus horizontal padding
         var textBoxW = Math.max(30, maxBubbleW - (padX * 2));
-
         // 2. Wrap text
         var lines = wrapTextToLines(msgText, textBoxW, textSize, wrapMode);
         var maxLineW = getLinesPixelBounds(lines, textSize);
-
         // 3. Overflow protection: reduce text box size by 10 pixels until the bubble fits within maxBubbleW
         var guard = 0;
         while ((maxLineW + (padX * 2) > maxBubbleW) && (textBoxW > 30) && guard < 100) {
@@ -3520,14 +3294,11 @@
             maxLineW = getLinesPixelBounds(lines, textSize);
             guard++;
         }
-
         var wrappedString = lines.join("\n");
         var singleLine = (lines.length === 1);
-
         // 4. Width logic:
         // Single line: check if inline timestamp + status fit inside maxBubbleW
         var canFitInlineTime = singleLine && isTimeEnabled && (maxLineW + timeRowW + (padX * 2) + 16 <= maxBubbleW);
-
         var bubbleW = 0;
         if (canFitInlineTime) {
             bubbleW = maxLineW + timeRowW + (padX * 2) + 16;
@@ -3539,20 +3310,16 @@
             bubbleW = contentW + (padX * 2);
         }
         bubbleW = Math.min(bubbleW, maxBubbleW);
-
         // 5. Height logic:
         // Text block height from line count and leading
         var lineH = Math.max(Math.round(textSize * 1.15), Math.round(textSize * 1.35 * leadingFactor));
         var boxHeight = singleLine ? Math.round(textSize * 1.10) : Math.round((lines.length - 1) * lineH + (textSize * 1.10));
-
         // If timestamp or delivery receipt is on its own row, allocate comfortable vertical room
         var bottomRowH = (!canFitInlineTime && isTimeEnabled) ? (timeFontSize + 12) : 0;
         var bubbleH = boxHeight + (padY * 2) + bottomRowH;
         var minBubbleH = Math.max(36, Math.round(cornerRadius * 1.6));
         bubbleH = Math.max(minBubbleH, bubbleH);
-
         var timeMargin = Math.max(8, Math.round(padY * 0.65));
-
         return {
             lines: lines,
             wrappedString: wrappedString,
@@ -3573,7 +3340,6 @@
             hasStatus: hasStatus
         };
     }
-
     // -------------------------------------------------------------------------
     // 10. Core Generation Engine: Build Message Bubble in Active Comp
     // -------------------------------------------------------------------------
@@ -3583,57 +3349,45 @@
             alert("Please open or select an active composition first.");
             return;
         }
-
         if (app.beginUndoGroup) {
             app.beginUndoGroup("Create Message Bubble");
         }
-
         try {
             var msgText = txtMessage.text || "Hello! 👋";
             if (msgText.length > MAX_CHARS) {
                 msgText = msgText.substring(0, MAX_CHARS);
             }
-
             var selStyleIdx = dropPlatform.selection ? dropPlatform.selection.index : 0;
             var platformName = platformKeys[selStyleIdx] || "iOS Message";
             var platformCfg = PLATFORMS[platformName] || DEFAULT_PLATFORMS[platformName] || DEFAULT_PLATFORMS["iOS Message"];
-
             var isSent = radSent.value;
             var isDark = radDark.value;
             var themeKey = isDark ? "dark" : "light";
             var dirKey = isSent ? "sent" : "received";
             var colorSet = platformCfg[themeKey][dirKey];
-
             var bubbleColor = hexToRgb(cpBubble.value);
             var textColor = hexToRgb(cpText.value);
             var timeColor = hexToRgb(colorSet ? colorSet.time : "#888888");
-
             var maxBubbleW = Math.max(80, parseFloat(txtWidth.text) || 380);
             var textSize = parseFloat(txtSize.text) || 20;
-
             var padOffset = parseFloat(txtPad.text) || 0;
             var leadingPercent = parseFloat(txtLeading.text) || 100;
             var leadingFactor = leadingPercent / 100;
-
             var selWrapIdx = (typeof dropTextWrap !== "undefined" && dropTextWrap && dropTextWrap.selection) ? dropTextWrap.selection.index : 1;
             var wrapModes = ["none", "pretty", "balance"];
             var wrapMode = wrapModes[selWrapIdx] || "pretty";
-
             var selAnimIdx = dropAnim.selection ? dropAnim.selection.index : 0;
             var animDecay = (typeof sldDecay !== "undefined" && sldDecay) ? Math.max(0, Math.round(sldDecay.value)) : 30;
             var animSpeed = parseFloat(txtSpeed.text) || 100;
             var animAmp = parseFloat(txtAmp.text) || 100;
             var growFVal = (typeof sldGrow !== "undefined" && sldGrow) ? Math.max(0, Math.min(60, Math.round(sldGrow.value))) : 5;
             var typeFVal = (typeof sldType !== "undefined" && sldType) ? Math.max(0, Math.min(60, Math.round(sldType.value))) : 5;
-
             var fontIdx = dropFont.selection ? dropFont.selection.index : 0;
             var selectedFont = FONTS[fontIdx] || FONTS[0];
-
             var cornerRadius = platformCfg.radius || 18;
             var tailType = platformCfg.tailType || "modern";
-            var padX = Math.max(Math.round(cornerRadius * 0.85), Math.round(textSize * 0.90)) + padOffset;
+            var padX = Math.max(Math.round(cornerRadius * 1.25), Math.round(textSize * 1.15)) + padOffset;
             var padY = Math.max(10, Math.round(textSize * 0.60)) + padOffset;
-
             // Status Icon & Timestamp formatting (Auto, Read, Delivered, Sent, None)
             var selStatusIdx = dropStatus.selection ? dropStatus.selection.index : 0;
             var isAutoStatus = (selStatusIdx === 0);
@@ -3641,11 +3395,9 @@
                 ? dropStatusStyle.selection.index
                 : (platformName === "Android RCS" ? 0 : 1);
             var isRCSStyle = (selStatusStyleIdx === 0);
-
             var deliveredTime = 0.8;
             var readDuration = calculateReadDuration(msgText);
             var readTime = Math.round((deliveredTime + readDuration) * 10) / 10;
-
             // Determine Read Receipt Colors (RCS filled circles vs standard checkmarks)
             var isDarkBubble = (bubbleColor[0] * 0.299 + bubbleColor[1] * 0.587 + bubbleColor[2] * 0.114) < 0.55;
             var rcsReadCircleCol = isDarkBubble ? [1.0, 1.0, 1.0] : [0.18, 0.19, 0.21];
@@ -3653,7 +3405,6 @@
             var standardReadColor = isDark ? [0.33, 0.74, 0.92] : [0.20, 0.72, 0.95];
             var readColor = isRCSStyle ? rcsReadCircleCol : standardReadColor;
             var statusColor = timeColor;
-
             var statusString = "";
             if (isSent && selStatusIdx !== 4) {
                 if (selStatusIdx === 0 || selStatusIdx === 1 || selStatusIdx === 2) {
@@ -3662,11 +3413,9 @@
                     statusString = "✓";
                 }
             }
-
             var isTimeEnabled = (typeof chkShowTime !== "undefined" && chkShowTime) ? chkShowTime.value : true;
             var timeString = (typeof txtTime !== "undefined" && txtTime && txtTime.text) ? trimStr(txtTime.text) : (currentRandomTime || "11:44 PM");
             if (!timeString) timeString = "11:44 PM";
-
             // Sizing and text wrapping layout calculation
             var layout = computeBubbleLayout({
                 msgText: msgText,
@@ -3683,7 +3432,6 @@
                 isRCSStyle: isRCSStyle,
                 cornerRadius: cornerRadius
             });
-
             var lines = layout.lines;
             var wrappedString = layout.wrappedString;
             var bubbleW = layout.bubbleW;
@@ -3698,17 +3446,14 @@
             var timeRowW = layout.timeRowW;
             var timeMargin = layout.timeMargin;
             var hasStatus = layout.hasStatus;
-
             var hasTail = chkTail.value;
             var cornerRadius = platformCfg.radius || 18;
             var tailType = platformCfg.tailType || "modern";
-
             // Corner radii based on direction and tail setting (Custom Rounded Rect engine)
             var rTL = cornerRadius;
             var rTR = cornerRadius;
             var rBR = cornerRadius;
             var rBL = cornerRadius;
-
             if (hasTail) {
                 if (isSent) {
                     rBR = 4; // Tucked corner for sent tail
@@ -3716,9 +3461,7 @@
                     rBL = 4; // Tucked corner for received tail
                 }
             }
-
             var compCenter = [comp.width / 2, comp.height / 2, 0];
-
             // Horizontal alignment within composition:
             // Sent: Right-column; Received: Left-column
             var colHalfW = Math.min(comp.width * 0.44, Math.max(maxBubbleW * 0.6, 220));
@@ -3726,7 +3469,6 @@
                 ? (compCenter[0] + colHalfW - (bubbleW / 2))
                 : (compCenter[0] - colHalfW + (bubbleW / 2));
             var posY = compCenter[1];
-
             // 1. Master Controller Layer
             var master = comp.layers.addShape ? comp.layers.addShape() : comp.layers.addNull();
             master.name = "Bubble_Master_Controller";
@@ -3734,97 +3476,70 @@
             master.colorLabel = "#ff3b30";
             master.notShyable = true;
             master.transform.position.setValue([posX, posY, 0]);
-
             // Add Effect Controls to Master Controller
             var parade = master.property("ADBE Effect Parade") || master.property("Effects");
             if (parade && parade.addProperty) {
                 var effMaxW = parade.addProperty("ADBE Slider Control");
                 if (effMaxW) { effMaxW.name = "Max Bubble Width"; effMaxW.property(1).setValue(maxBubbleW); }
-
                 var effW = parade.addProperty("ADBE Slider Control");
                 if (effW) { effW.name = "Screen Width"; effW.property(1).setValue(maxBubbleW); }
-
                 var effSize = parade.addProperty("ADBE Slider Control");
                 if (effSize) { effSize.name = "Text Size"; effSize.property(1).setValue(textSize); }
-
                 var effBW = parade.addProperty("ADBE Slider Control");
                 if (effBW) { effBW.name = "Bubble Width"; effBW.property(1).setValue(bubbleW); }
-
                 var effBH = parade.addProperty("ADBE Slider Control");
                 if (effBH) { effBH.name = "Bubble Height"; effBH.property(1).setValue(bubbleH); }
-
                 var effWrap = parade.addProperty("ADBE Slider Control");
                 if (effWrap) { effWrap.name = "Text Wrap Mode"; effWrap.property(1).setValue(selWrapIdx); }
-
                 var effTail = parade.addProperty("ADBE Checkbox Control");
                 if (effTail) { effTail.name = "Show Tail"; effTail.property(1).setValue(hasTail ? 1 : 0); }
-
                 var effShowTime = parade.addProperty("ADBE Checkbox Control");
                 if (effShowTime) { effShowTime.name = "Show Timestamp"; effShowTime.property(1).setValue(isTimeEnabled ? 1 : 0); }
-
                 var effStatus = parade.addProperty("ADBE Slider Control");
                 if (effStatus) { effStatus.name = "Status Icon Mode"; effStatus.property(1).setValue(selStatusIdx); }
-
                 var effStatusStyle = parade.addProperty("ADBE Slider Control");
                 if (effStatusStyle) { effStatusStyle.name = "Status Icon Style"; effStatusStyle.property(1).setValue(selStatusStyleIdx); }
-
                 var effDelivered = parade.addProperty("ADBE Slider Control");
                 if (effDelivered) { effDelivered.name = "Delivered Time (s)"; effDelivered.property(1).setValue(deliveredTime); }
-
                 var effRead = parade.addProperty("ADBE Slider Control");
                 if (effRead) { effRead.name = "Read Time (s)"; effRead.property(1).setValue(readTime); }
-
                 var effStatNeut = parade.addProperty("ADBE Color Control");
                 if (effStatNeut) { effStatNeut.name = "Status Neutral Color"; effStatNeut.property(1).setValue(timeColor); }
-
                 var effStatRead = parade.addProperty("ADBE Color Control");
                 if (effStatRead) { effStatRead.name = "Status Read Color"; effStatRead.property(1).setValue(readColor); }
-
                 var effStatReadCheck = parade.addProperty("ADBE Color Control");
                 if (effStatReadCheck) { effStatReadCheck.name = "Status Read Check Color"; effStatReadCheck.property(1).setValue(rcsReadCheckCol); }
-
                 var effPad = parade.addProperty("ADBE Slider Control");
                 if (effPad) { effPad.name = "Inner Padding Offset"; effPad.property(1).setValue(padOffset); }
-
                 var effLead = parade.addProperty("ADBE Slider Control");
                 if (effLead) { effLead.name = "Leading Percent"; effLead.property(1).setValue(leadingPercent); }
-
                 var effAnim = parade.addProperty("ADBE Slider Control");
                 if (effAnim) { effAnim.name = "Animation Effect Type"; effAnim.property(1).setValue(selAnimIdx); }
-
                 var effDecay = parade.addProperty("ADBE Slider Control");
                 if (effDecay) { effDecay.name = "Animation Decay (frames)"; effDecay.property(1).setValue(animDecay); }
-
                 var effSpeed = parade.addProperty("ADBE Slider Control");
                 if (effSpeed) { effSpeed.name = "Animation Speed"; effSpeed.property(1).setValue(animSpeed); }
-
                 var effAmp = parade.addProperty("ADBE Slider Control");
                 if (effAmp) { effAmp.name = "Animation Intensity"; effAmp.property(1).setValue(animAmp); }
-
                 var effEnt = parade.addProperty("ADBE Checkbox Control");
                 if (effEnt) { effEnt.name = "Animate Entrance"; effEnt.property(1).setValue(chkEntrance.value ? 1 : 0); }
-
                 var effGrowF = parade.addProperty("ADBE Slider Control");
                 if (effGrowF) {
                     effGrowF.name = "Bubble Grow Duration (frames)";
                     effGrowF.property(1).setValue(growFVal);
                 }
-
                 var effTypeF = parade.addProperty("ADBE Slider Control");
                 if (effTypeF) {
                     effTypeF.name = "Typewriter Duration (frames)";
                     effTypeF.property(1).setValue(typeFVal);
                 }
-
                 var effCol = parade.addProperty("ADBE Color Control");
                 if (effCol) { effCol.name = "Bubble Color"; effCol.property(1).setValue(bubbleColor); }
             }
-
             // 2. Bubble Vector Shape Layer (driven by Custom Rounded Rect engine)
             var bubbleLayer = comp.layers.addShape();
             bubbleLayer.name = isSent ? "Bubble_Sent" : "Bubble_Received";
             bubbleLayer.parent = master;
-
             // Anchor point placed at tail corner so bubble grows outward from tail
             // Sent: grows from Right to Left; Received: grows from Left to Right
             var originX = isSent ? (bubbleW / 2) : -(bubbleW / 2);
@@ -3836,40 +3551,29 @@
             }
             bubbleLayer.transform.position.setValue([originX, originY, 0]);
             bubbleLayer.transform.position.expression = BUBBLE_TRANSFORM_EXPR;
-
             if (bubbleLayer.transform.scale) bubbleLayer.transform.scale.expression = BUBBLE_GROW_EXPR;
             if (bubbleLayer.transform.opacity) bubbleLayer.transform.opacity.expression = BUBBLE_OPACITY_EXPR;
-
             // Add Effect Controls to Bubble Shape Layer (matching custom_rounded_rect)
             var bParade = bubbleLayer.property("ADBE Effect Parade") || bubbleLayer.property("Effects");
             if (bParade && bParade.addProperty) {
                 var bEffW = bParade.addProperty("ADBE Slider Control");
                 if (bEffW) { bEffW.name = "Width"; bEffW.property(1).setValue(bubbleW); }
-
                 var bEffH = bParade.addProperty("ADBE Slider Control");
                 if (bEffH) { bEffH.name = "Height"; bEffH.property(1).setValue(bubbleH); }
-
                 var bEffTL = bParade.addProperty("ADBE Slider Control");
                 if (bEffTL) { bEffTL.name = "Radius Top-Left"; bEffTL.property(1).setValue(rTL); }
-
                 var bEffTR = bParade.addProperty("ADBE Slider Control");
                 if (bEffTR) { bEffTR.name = "Radius Top-Right"; bEffTR.property(1).setValue(rTR); }
-
                 var bEffBR = bParade.addProperty("ADBE Slider Control");
                 if (bEffBR) { bEffBR.name = "Radius Bottom-Right"; bEffBR.property(1).setValue(rBR); }
-
                 var bEffBL = bParade.addProperty("ADBE Slider Control");
                 if (bEffBL) { bEffBL.name = "Radius Bottom-Left"; bEffBL.property(1).setValue(rBL); }
-
                 var bEffOv = bParade.addProperty("ADBE Checkbox Control");
                 if (bEffOv) { bEffOv.name = "Prevent Overlap"; bEffOv.property(1).setValue(1); }
-
                 var bEffTail = bParade.addProperty("ADBE Checkbox Control");
                 if (bEffTail) { bEffTail.name = "Show Tail"; bEffTail.property(1).setValue(hasTail ? 1 : 0); }
             }
-
             var contents = bubbleLayer.property("ADBE Root Vectors Group") || bubbleLayer.property("Contents");
-
             // [A] Base outline group using custom_rounded_rect
             var grpBase = contents.addProperty("ADBE Vector Group");
             grpBase.name = "Bubble Base Outline";
@@ -3890,17 +3594,14 @@
                     }
                 } catch(eS) {}
             }
-
             // [C] Shared Fill Graphic for unified bubble silhouette
             var fill = contents.addProperty("ADBE Vector Graphic - Fill");
             fill.property("Color").setValue(bubbleColor);
-
             // 3. Message Text Layer (proper cap-height alignment prevents clipping top border)
             var textLayer = null;
             var capHeight = Math.round(textSize * 0.72);
             var textTopY = -(bubbleH / 2) + padY + capHeight;
             var textLeftX = -(bubbleW / 2) + padX;
-
             if (typeof comp.layers.addText === "function") {
                 textLayer = comp.layers.addText(wrappedString);
             } else {
@@ -3914,23 +3615,19 @@
             textLayer.leading = lineH;
             textLayer.leadingPercent = leadingPercent;
             textLayer.justification = "left";
-
             var anchorProp = textLayer.transform.anchorPoint || (textLayer.property && textLayer.property("ADBE Transform Group") && textLayer.property("ADBE Transform Group").property("ADBE Anchor Point"));
             if (anchorProp) {
                 anchorProp.setValue([0, 0, 0]);
             }
             textLayer.transform.position.setValue([textLeftX, textTopY, -0.5]);
-
             // Attach dynamic expressions for iOS 18 animated effects
             if (textLayer.transform.position) textLayer.transform.position.expression = POS_ANIM_EXPR;
             if (textLayer.transform.scale) textLayer.transform.scale.expression = SCALE_ANIM_EXPR;
             var rotProp = textLayer.transform.rotation || textLayer.transform.zRotation || (textLayer.property && textLayer.property("ADBE Transform Group") && textLayer.property("ADBE Transform Group").property("ADBE Rotate Z"));
             if (rotProp) rotProp.expression = ROT_ANIM_EXPR;
             if (textLayer.transform.opacity) textLayer.transform.opacity.expression = OPACITY_ANIM_EXPR;
-
             var justLeft = (typeof ParagraphJustification !== "undefined" && ParagraphJustification && ParagraphJustification.LEFT_JUSTIFY) ? ParagraphJustification.LEFT_JUSTIFY : null;
             var justRight = (typeof ParagraphJustification !== "undefined" && ParagraphJustification && ParagraphJustification.RIGHT_JUSTIFY) ? ParagraphJustification.RIGHT_JUSTIFY : null;
-
             textLayer.emojiFontFamily = getActiveEmojiFontFamily();
             formatTextLayer(textLayer, wrappedString, textSize, textColor, justLeft, lineH, getActiveFontCandidates(), getActiveEmojiCandidates());
             if (textLayer.property && textLayer.property("Source Text")) {
@@ -3938,7 +3635,6 @@
             } else if (textLayer.sourceText) {
                 textLayer.sourceText.expression = TYPEWRITER_EXPR;
             }
-
             // 4. Timestamp & Status Row (allocated space for sent/delivered/read status icon)
             var timeRowRightX = 0;
             var timeX = 0;
@@ -3946,7 +3642,6 @@
             var statusX = 0;
             var statusCenterX = 0;
             var statusCenterY = 0;
-
             if (hasStatus) {
                 // With delivery status: checkmark sits at standard right padding
                 timeRowRightX = (bubbleW / 2) - padX;
@@ -3959,7 +3654,6 @@
                 timeRowRightX = (bubbleW / 2) - timeMargin;
                 timeX = timeRowRightX;
             }
-
             var timeLayer = null;
             if (typeof comp.layers.addText === "function") {
                 timeLayer = comp.layers.addText(timeString);
@@ -3977,14 +3671,11 @@
             if (timeLayer.transform && timeLayer.transform.position) {
                 timeLayer.transform.position.expression = TIMECODE_POS_EXPR;
             }
-
             timeLayer.emojiFontFamily = getActiveEmojiFontFamily();
             formatTextLayer(timeLayer, timeString, timeFontSize, timeColor, justRight, null, getActiveFontCandidates(), getActiveEmojiCandidates());
-
             if (timeLayer.transform && timeLayer.transform.opacity) {
                 timeLayer.transform.opacity.expression = TIMECODE_ENTRANCE_EXPR;
             }
-
             // 5. Dedicated Status / Read Icon Layers (Supports both RCS Circled Checks & Standard Checks)
             var hasStatus = (isSent && selStatusIdx !== 4);
             if (hasStatus) {
@@ -4005,7 +3696,6 @@
                 if (statusLayerText.transform && statusLayerText.transform.position) {
                     statusLayerText.transform.position.expression = STATUS_POS_EXPR;
                 }
-
                 statusLayerText.emojiFontFamily = getActiveEmojiFontFamily();
                 formatTextLayer(statusLayerText, statusString || "✓✓", timeFontSize, statusColor, justRight, null, getActiveFontCandidates(), getActiveEmojiCandidates());
                 if (statusLayerText.transform && statusLayerText.transform.opacity) {
@@ -4040,7 +3730,6 @@
                 if (statusLayerText.transform && statusLayerText.transform.scale) {
                     statusLayerText.transform.scale.expression = STATUS_SCALE_EXPR;
                 }
-
                 // [B] RCS Circled Checks Shape Layer (Google Messages / Android RCS style)
                 var statusLayerRCS = null;
                 if (typeof comp.layers.addShape === "function") {
@@ -4060,14 +3749,12 @@
                 if (statusLayerRCS.transform && statusLayerRCS.transform.scale) {
                     statusLayerRCS.transform.scale.expression = STATUS_SCALE_EXPR;
                 }
-
                 var rcsContents = statusLayerRCS.property("ADBE Root Vectors Group") || statusLayerRCS.property("Contents");
                 if (rcsContents && rcsContents.addProperty) {
                     var circleSize = Math.max(10, Math.round(timeFontSize * 0.95));
                     var circleRadius = circleSize / 2;
                     var circleOffset = Math.round(circleSize * 0.44);
                     var checkScale = circleRadius / 6.5;
-
                     // Circle 1 Group
                     var grpC1 = rcsContents.addProperty("ADBE Vector Group");
                     grpC1.name = "Circle 1 Group";
@@ -4077,7 +3764,6 @@
                         var c1Pos = c1Transform.property("ADBE Vector Position") || c1Transform.property("Position");
                         if (c1Pos) c1Pos.expression = RCS_CIRCLE1_POS_EXPR;
                     }
-
                     // Circle 1 Shape (Ellipse + Fill + Stroke)
                     var grpC1Shape = c1Contents.addProperty("ADBE Vector Group");
                     grpC1Shape.name = "Circle 1 Shape";
@@ -4103,7 +3789,6 @@
                         var s1Op = s1.property("ADBE Vector Stroke Opacity") || s1.property("Opacity");
                         if (s1Op) s1Op.expression = RCS_CIRCLE_STROKE_OPACITY_EXPR;
                     }
-
                     // Checkmark 1 (Path + Stroke)
                     var grpChk1 = c1Contents.addProperty("ADBE Vector Group");
                     grpChk1.name = "Checkmark 1";
@@ -4131,7 +3816,6 @@
                         var sChk1W = sChk1.property("ADBE Vector Stroke Width") || sChk1.property("Stroke Width");
                         if (sChk1W) sChk1W.setValue(1.5);
                     }
-
                     // Circle 2 Group
                     var grpC2 = rcsContents.addProperty("ADBE Vector Group");
                     grpC2.name = "Circle 2 Group";
@@ -4143,7 +3827,6 @@
                         var c2Op = c2Transform.property("ADBE Vector Group Opacity") || c2Transform.property("Opacity");
                         if (c2Op) c2Op.expression = RCS_CIRCLE2_OPACITY_EXPR;
                     }
-
                     // Circle 2 Shape (Ellipse + Fill + Stroke)
                     var grpC2Shape = c2Contents.addProperty("ADBE Vector Group");
                     grpC2Shape.name = "Circle 2 Shape";
@@ -4169,7 +3852,6 @@
                         var s2Op = s2.property("ADBE Vector Stroke Opacity") || s2.property("Opacity");
                         if (s2Op) s2Op.expression = RCS_CIRCLE_STROKE_OPACITY_EXPR;
                     }
-
                     // Checkmark 2 (Path + Stroke)
                     var grpChk2 = c2Contents.addProperty("ADBE Vector Group");
                     grpChk2.name = "Checkmark 2";
@@ -4199,19 +3881,15 @@
                     }
                 }
             }
-
             // 6. Precompose all created layers into "message_" + random hex number
             var randHex = Math.floor(Math.random() * 65536).toString(16).toLowerCase();
             while (randHex.length < 4) randHex = "0" + randHex;
             var precompName = "message_" + randHex;
-
             var createdLayers = [master, bubbleLayer, textLayer, timeLayer];
             if (hasStatus && statusLayerText) createdLayers.push(statusLayerText);
             if (hasStatus && statusLayerRCS) createdLayers.push(statusLayerRCS);
-
             var preCompItem = null;
             var precompLayer = null;
-
             if (comp.layers && typeof comp.layers.precompose === "function") {
                 try {
                     var indicesMap = {};
@@ -4227,9 +3905,7 @@
                         }
                     }
                     indices.sort(function(a, b) { return a - b; });
-
                     preCompItem = comp.layers.precompose(indices, precompName, true);
-
                     // Find the precomp representation layer in parent comp
                     for (var pli = 1; pli <= comp.layers.length; pli++) {
                         var testL = comp.layer(pli);
@@ -4243,7 +3919,6 @@
                     }
                 } catch(ePrecomp) {}
             }
-
             if (precompLayer) {
                 precompLayer.name = precompName;
                 precompLayer.label = 1; // Red / Accent
@@ -4252,7 +3927,6 @@
                 if ("collapseTransformation" in precompLayer) {
                     precompLayer.collapseTransformation = true; // Continuous rasterization preserves vector sharpness
                 }
-
                 // 7. Add all animable Effect Controls to the precomp's parent layer
                 function addParentEffect(type, name, val) {
                     var p = precompLayer.property("ADBE Effect Parade") || precompLayer.property("Effects");
@@ -4267,7 +3941,6 @@
                     }
                     return eff;
                 }
-
                 addParentEffect("ADBE Color Control", "Bubble Color", bubbleColor);
                 addParentEffect("ADBE Checkbox Control", "Animate Entrance", chkEntrance.value ? 1 : 0);
                 addParentEffect("ADBE Slider Control", "Bubble Grow Duration (frames)", growFVal);
@@ -4293,13 +3966,10 @@
                 addParentEffect("ADBE Checkbox Control", "Show Timestamp", isTimeEnabled ? 1 : 0);
                 addParentEffect("ADBE Slider Control", "Screen Width", maxBubbleW);
                 addParentEffect("ADBE Slider Control", "Text Size", textSize);
-
                 precompLayer.selected = true;
-
                 // 8. Safely Link Master Controller inside the precomp to parent precomp layer
                 var safeParentCompName = comp.name.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
                 var safePrecompName = precompName.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
-
                 // Retrieve live layers inside precomp (original layer handles in parent comp are now invalid after precompose)
                 var masterInPre = null;
                 var bubbleInPre = null;
@@ -4307,7 +3977,6 @@
                     masterInPre = getLayer(preCompItem, "Bubble_Master_Controller") || (preCompItem.layers.length > 0 ? preCompItem.layer(1) : null);
                     bubbleInPre = getLayer(preCompItem, "Bubble_Sent") || getLayer(preCompItem, "Bubble_Received");
                 }
-
                 function linkPreMaster(effectName, isColor) {
                     if (!masterInPre) return;
                     try {
@@ -4326,7 +3995,6 @@
                         eff.property(1).expression = expr;
                     } catch(eLnk) {}
                 }
-
                 linkPreMaster("Bubble Color", true);
                 linkPreMaster("Animate Entrance", false);
                 linkPreMaster("Bubble Grow Duration (frames)", false);
@@ -4352,7 +4020,6 @@
                 linkPreMaster("Show Timestamp", false);
                 linkPreMaster("Screen Width", false);
                 linkPreMaster("Text Size", false);
-
                 if (bubbleInPre) {
                     try {
                         var cnt = bubbleInPre.property("ADBE Root Vectors Group") || bubbleInPre.property("Contents");
@@ -4371,7 +4038,6 @@
             } else {
                 master.selected = true;
             }
-
         } catch (err) {
             alert("Could not generate Message Bubble:\n" + err.toString());
         } finally {
@@ -4380,7 +4046,6 @@
             }
         }
     }
-
     // -------------------------------------------------------------------------
     // Selection Detection & Live Update Engine (Precomp Tracking)
     // -------------------------------------------------------------------------
@@ -4404,18 +4069,15 @@
         } catch(eEff2) {}
         return false;
     }
-
     function isMessageBubbleComp(compItem) {
         if (!compItem || !(compItem instanceof CompItem)) return false;
         if (compItem.name && /^message_[0-9a-fA-F]+/i.test(compItem.name)) return true;
         if (getLayer(compItem, "Bubble_Master_Controller")) return true;
         return false;
     }
-
     function getSelectedMessageBubblePrecomp() {
         var comp = app.project ? app.project.activeItem : null;
         if (!comp || !(comp instanceof CompItem)) return null;
-
         var sel = comp.selectedLayers;
         if (sel && sel.length > 0) {
             for (var i = 0; i < sel.length; i++) {
@@ -4430,7 +4092,6 @@
                 }
             }
         }
-
         if (isMessageBubbleComp(comp)) {
             return {
                 parentComp: null,
@@ -4438,17 +4099,13 @@
                 preCompItem: comp
             };
         }
-
         return null;
     }
-
     var lastTargetLayer = null;
-
     function loadSettingsFromPrecomp(target) {
         if (!target) return;
         var pLayer = target.precompLayer;
         var pComp = target.preCompItem;
-
         if (pComp) {
             var txtL = getLayer(pComp, "Message_Text");
             if (txtL) {
@@ -4466,7 +4123,6 @@
                 }
             }
         }
-
         var effSource = pLayer || (pComp ? getLayer(pComp, "Bubble_Master_Controller") : null);
         if (effSource && effSource.effect) {
             try {
@@ -4476,7 +4132,6 @@
                     if (valCol) cpBubble.setColor(rgbToHex(valCol), false);
                 }
             } catch(eC) {}
-
             try {
                 var eW = effSource.effect("Max Bubble Width") || effSource.effect("Screen Width");
                 if (eW && eW.property(1)) {
@@ -4485,7 +4140,6 @@
                     if (sldWidth) sldWidth.value = valW;
                 }
             } catch(eW2) {}
-
             try {
                 var eWrap = effSource.effect("Text Wrap Mode");
                 if (eWrap && eWrap.property(1) && dropTextWrap) {
@@ -4495,27 +4149,22 @@
                     }
                 }
             } catch(eWrap2) {}
-
             try {
                 var eS = effSource.effect("Text Size");
                 if (eS && eS.property(1)) txtSize.text = String(Math.round(eS.property(1).value));
             } catch(eS2) {}
-
             try {
                 var ePad = effSource.effect("Inner Padding Offset");
                 if (ePad && ePad.property(1)) txtPad.text = String(Math.round(ePad.property(1).value));
             } catch(ePad2) {}
-
             try {
                 var eLead = effSource.effect("Leading Percent");
                 if (eLead && eLead.property(1)) txtLeading.text = String(Math.round(eLead.property(1).value));
             } catch(eLead2) {}
-
             try {
                 var eTail = effSource.effect("Show Tail");
                 if (eTail && eTail.property(1)) chkTail.value = (eTail.property(1).value >= 1);
             } catch(eTail2) {}
-
             try {
                 var eTime = effSource.effect("Show Timestamp");
                 if (eTime && eTime.property(1)) {
@@ -4523,12 +4172,10 @@
                     if (txtTime) txtTime.enabled = chkShowTime.value;
                 }
             } catch(eTime2) {}
-
             try {
                 var eEnt = effSource.effect("Animate Entrance");
                 if (eEnt && eEnt.property(1)) chkEntrance.value = (eEnt.property(1).value >= 1);
             } catch(eEnt2) {}
-
             try {
                 var eGrow = effSource.effect("Bubble Grow Duration (frames)");
                 if (eGrow && eGrow.property(1) && typeof sldGrow !== "undefined" && sldGrow) {
@@ -4537,7 +4184,6 @@
                     if (txtGrow) txtGrow.text = String(gVal);
                 }
             } catch(eG2) {}
-
             try {
                 var eType = effSource.effect("Typewriter Duration (frames)");
                 if (eType && eType.property(1) && typeof sldType !== "undefined" && sldType) {
@@ -4546,7 +4192,6 @@
                     if (txtType) txtType.text = String(tVal);
                 }
             } catch(eT2) {}
-
             try {
                 var eAnim = effSource.effect("Animation Effect Type");
                 if (eAnim && eAnim.property(1) && dropAnim) {
@@ -4556,7 +4201,6 @@
                     }
                 }
             } catch(eA2) {}
-
             try {
                 var eDecay = effSource.effect("Animation Decay (frames)");
                 if (eDecay && eDecay.property(1) && typeof sldDecay !== "undefined" && sldDecay) {
@@ -4565,17 +4209,14 @@
                     if (txtDecay) txtDecay.text = String(dVal);
                 }
             } catch(eD2) {}
-
             try {
                 var eSpeed = effSource.effect("Animation Speed");
                 if (eSpeed && eSpeed.property(1)) txtSpeed.text = String(Math.round(eSpeed.property(1).value));
             } catch(eSp2) {}
-
             try {
                 var eAmp = effSource.effect("Animation Intensity");
                 if (eAmp && eAmp.property(1)) txtAmp.text = String(Math.round(eAmp.property(1).value));
             } catch(eAmp2) {}
-
             try {
                 var eStat = effSource.effect("Status Icon Mode");
                 if (eStat && eStat.property(1) && dropStatus) {
@@ -4583,7 +4224,6 @@
                     if (sVal >= 0 && sVal < 5) dropStatus.selection = sVal;
                 }
             } catch(eSt2) {}
-
             try {
                 var eStatStyle = effSource.effect("Status Icon Style");
                 if (eStatStyle && eStatStyle.property(1) && dropStatusStyle) {
@@ -4592,7 +4232,6 @@
                 }
             } catch(eSs2) {}
         }
-
         if (pComp) {
             if (getLayer(pComp, "Bubble_Sent")) {
                 radSent.value = true;
@@ -4603,7 +4242,6 @@
             }
         }
     }
-
     function checkSelectionState() {
         try {
             var target = getSelectedMessageBubblePrecomp();
@@ -4613,7 +4251,6 @@
                 if (btnBuild.text !== updateText) {
                     btnBuild.text = updateText;
                 }
-
                 var currentKey = target.precompLayer || target.preCompItem;
                 if (currentKey && currentKey !== lastTargetLayer) {
                     lastTargetLayer = currentKey;
@@ -4627,84 +4264,67 @@
             }
         } catch(e) {}
     }
-
     function updateExistingMessageBubble(activeTarget) {
         var parentComp = activeTarget.parentComp || (app.project ? app.project.activeItem : null);
         var precompLayer = activeTarget.precompLayer;
         var preCompItem = activeTarget.preCompItem;
-
         if (!preCompItem && precompLayer && precompLayer.source instanceof CompItem) {
             preCompItem = precompLayer.source;
         }
-
         if (app.beginUndoGroup) {
             app.beginUndoGroup("Update Message Bubble");
         }
-
         try {
             var msgText = txtMessage.text || "Hello! 👋";
             if (msgText.length > MAX_CHARS) {
                 msgText = msgText.substring(0, MAX_CHARS);
             }
-
             var selStyleIdx = dropPlatform.selection ? dropPlatform.selection.index : 0;
             var platformName = platformKeys[selStyleIdx] || "iOS Message";
             var platformCfg = PLATFORMS[platformName] || DEFAULT_PLATFORMS[platformName] || DEFAULT_PLATFORMS["iOS Message"];
-
             var isSent = radSent.value;
             var isDark = radDark.value;
             var themeKey = isDark ? "dark" : "light";
             var dirKey = isSent ? "sent" : "received";
             var colorSet = platformCfg[themeKey][dirKey];
-
             var bubbleColor = hexToRgb(cpBubble.value);
             var textColor = hexToRgb(cpText.value);
             var timeColor = hexToRgb(colorSet ? colorSet.time : "#888888");
-
             var maxBubbleW = Math.max(80, parseFloat(txtWidth.text) || 380);
             var textSize = parseFloat(txtSize.text) || 20;
-
             var padOffset = parseFloat(txtPad.text) || 0;
             var leadingPercent = parseFloat(txtLeading.text) || 100;
             var leadingFactor = leadingPercent / 100;
-
             var selWrapIdx = (typeof dropTextWrap !== "undefined" && dropTextWrap && dropTextWrap.selection) ? dropTextWrap.selection.index : 1;
             var wrapModes = ["none", "pretty", "balance"];
             var wrapMode = wrapModes[selWrapIdx] || "pretty";
-
             var selAnimIdx = dropAnim.selection ? dropAnim.selection.index : 0;
             var animDecay = (typeof sldDecay !== "undefined" && sldDecay) ? Math.max(0, Math.round(sldDecay.value)) : 30;
             var animSpeed = parseFloat(txtSpeed.text) || 100;
             var animAmp = parseFloat(txtAmp.text) || 100;
             var growFVal = (typeof sldGrow !== "undefined" && sldGrow) ? Math.max(0, Math.min(60, Math.round(sldGrow.value))) : 5;
             var typeFVal = (typeof sldType !== "undefined" && sldType) ? Math.max(0, Math.min(60, Math.round(sldType.value))) : 5;
-
             var fontIdx = dropFont.selection ? dropFont.selection.index : 0;
             var selectedFont = FONTS[fontIdx] || FONTS[0];
-
             var cornerRadius = platformCfg.radius || 18;
             var tailType = platformCfg.tailType || "modern";
-            var padX = Math.max(Math.round(cornerRadius * 0.85), Math.round(textSize * 0.90)) + padOffset;
+            var padX = Math.max(Math.round(cornerRadius * 1.25), Math.round(textSize * 1.15)) + padOffset;
             var padY = Math.max(10, Math.round(textSize * 0.60)) + padOffset;
-
             var selStatusIdx = dropStatus.selection ? dropStatus.selection.index : 0;
             var isAutoStatus = (selStatusIdx === 0);
             var selStatusStyleIdx = (typeof dropStatusStyle !== "undefined" && dropStatusStyle && dropStatusStyle.selection)
                 ? dropStatusStyle.selection.index
                 : (platformCfg.statusStyle === "rcs" || platformName === "Android RCS" ? 0 : 1);
             var isRCSStyle = (selStatusStyleIdx === 0);
-
             var deliveredTime = 0.8;
             var readDuration = calculateReadDuration(msgText);
             var readTime = Math.round((deliveredTime + readDuration) * 10) / 10;
-
             var isDarkBubble = (bubbleColor[0] * 0.299 + bubbleColor[1] * 0.587 + bubbleColor[2] * 0.114) < 0.55;
             var rcsReadCircleCol = isDarkBubble ? [1.0, 1.0, 1.0] : [0.18, 0.19, 0.21];
             var rcsReadCheckCol = isDarkBubble ? bubbleColor : [1.0, 1.0, 1.0];
             var standardReadColor = isDark ? [0.33, 0.74, 0.92] : [0.20, 0.72, 0.95];
             var readColor = isRCSStyle ? rcsReadCircleCol : standardReadColor;
             var statusColor = timeColor;
-
             var statusString = "";
             if (isSent && selStatusIdx !== 4) {
                 if (selStatusIdx === 0 || selStatusIdx === 1 || selStatusIdx === 2) {
@@ -4713,11 +4333,9 @@
                     statusString = "✓";
                 }
             }
-
             var isTimeEnabled = (typeof chkShowTime !== "undefined" && chkShowTime) ? chkShowTime.value : true;
             var timeString = (typeof txtTime !== "undefined" && txtTime && txtTime.text) ? trimStr(txtTime.text) : (currentRandomTime || "11:44 PM");
             if (!timeString) timeString = "11:44 PM";
-
             // Sizing and text wrapping layout calculation
             var layout = computeBubbleLayout({
                 msgText: msgText,
@@ -4734,7 +4352,6 @@
                 isRCSStyle: isRCSStyle,
                 cornerRadius: cornerRadius
             });
-
             var lines = layout.lines;
             var wrappedString = layout.wrappedString;
             var bubbleW = layout.bubbleW;
@@ -4749,16 +4366,13 @@
             var timeRowW = layout.timeRowW;
             var timeMargin = layout.timeMargin;
             var hasStatus = layout.hasStatus;
-
             var hasTail = chkTail.value;
             var cornerRadius = platformCfg.radius || 18;
             var tailType = platformCfg.tailType || "modern";
-
             var rTL = cornerRadius;
             var rTR = cornerRadius;
             var rBR = cornerRadius;
             var rBL = cornerRadius;
-
             if (hasTail) {
                 if (isSent) {
                     rBR = 4;
@@ -4766,7 +4380,6 @@
                     rBL = 4;
                 }
             }
-
             function setLayerEffVal(targetLayer, name, val) {
                 if (!targetLayer) return;
                 try {
@@ -4783,7 +4396,6 @@
                     }
                 } catch(eEff) {}
             }
-
             function updateAllMasterEffects(targetLayer) {
                 if (!targetLayer) return;
                 setLayerEffVal(targetLayer, "Bubble Color", bubbleColor);
@@ -4812,12 +4424,10 @@
                 setLayerEffVal(targetLayer, "Show Timestamp", isTimeEnabled ? 1 : 0);
                 setLayerEffVal(targetLayer, "Text Size", textSize);
             }
-
             // 1. Update Master Effects on precompLayer (in parent comp)
             if (precompLayer) {
                 updateAllMasterEffects(precompLayer);
             }
-
             // 2. Update layers inside precomp
             if (preCompItem) {
                 var compCenter = [preCompItem.width / 2, preCompItem.height / 2, 0];
@@ -4826,7 +4436,6 @@
                     ? (compCenter[0] + colHalfW - (bubbleW / 2))
                     : (compCenter[0] - colHalfW + (bubbleW / 2));
                 var posY = compCenter[1];
-
                 // Master controller inside precomp
                 var master = getLayer(preCompItem, "Bubble_Master_Controller");
                 if (master) {
@@ -4835,7 +4444,6 @@
                         master.transform.position.setValue([posX, posY, 0]);
                     }
                 }
-
                 // Bubble Shape layer
                 var bubbleLayer = getLayer(preCompItem, "Bubble_Sent") || getLayer(preCompItem, "Bubble_Received");
                 if (bubbleLayer) {
@@ -4847,7 +4455,6 @@
                     setLayerEffVal(bubbleLayer, "Radius Bottom-Right", rBR);
                     setLayerEffVal(bubbleLayer, "Radius Bottom-Left", rBL);
                     setLayerEffVal(bubbleLayer, "Show Tail", hasTail ? 1 : 0);
-
                     var originX = isSent ? (bubbleW / 2) : -(bubbleW / 2);
                     var originY = (bubbleH / 2);
                     var bAnchor = bubbleLayer.transform.anchorPoint || (bubbleLayer.property && bubbleLayer.property("ADBE Transform Group") && bubbleLayer.property("ADBE Transform Group").property("ADBE Anchor Point"));
@@ -4859,7 +4466,6 @@
                         bubbleLayer.transform.position.setValue([originX, originY, 0]);
                         if (!bubbleLayer.transform.position.expression) bubbleLayer.transform.position.expression = BUBBLE_TRANSFORM_EXPR;
                     }
-
                     // Update base shape outline
                     var baseShapeData = computeShapeData(bubbleW, bubbleH, rTL, rTR, rBR, rBL, hasTail, isSent, tailType);
                     var pathProp = null;
@@ -4880,7 +4486,6 @@
                             pathProp.setValue(sObj);
                         } catch(eSObj) {}
                     }
-
                     // Update tail pointer shape
                     if (hasTail) {
                         var tailShapeData = computeTailData(bubbleW, bubbleH, isSent);
@@ -4903,14 +4508,12 @@
                             } catch(eSTail) {}
                         }
                     }
-
                     // Update fill color
                     try {
                         var fillProp = bubbleLayer.property("Contents").property("ADBE Vector Graphic - Fill").property("Color");
                         if (fillProp) fillProp.setValue(bubbleColor);
                     } catch(eF) {}
                 }
-
                 // Update Message Text layer
                 var textLayer = getLayer(preCompItem, "Message_Text");
                 var capHeight = Math.round(textSize * 0.72);
@@ -4927,14 +4530,12 @@
                     }
                     var justLeft = (typeof ParagraphJustification !== "undefined" && ParagraphJustification && ParagraphJustification.LEFT_JUSTIFY) ? ParagraphJustification.LEFT_JUSTIFY : null;
                     var justRight = (typeof ParagraphJustification !== "undefined" && ParagraphJustification && ParagraphJustification.RIGHT_JUSTIFY) ? ParagraphJustification.RIGHT_JUSTIFY : null;
-
                     textLayer.emojiFontFamily = getActiveEmojiFontFamily();
                     formatTextLayer(textLayer, wrappedString, textSize, textColor, justLeft, lineH, getActiveFontCandidates(), getActiveEmojiCandidates());
                     if (textLayer.text !== undefined) {
                         textLayer.text = wrappedString;
                     }
                 }
-
                 // Update Timestamp Text layer
                 var timeRowRightX = 0;
                 var timeX = 0;
@@ -4942,7 +4543,6 @@
                 var statusX = 0;
                 var statusCenterX = 0;
                 var statusCenterY = 0;
-
                 if (hasStatus) {
                     timeRowRightX = (bubbleW / 2) - padX;
                     statusX = timeRowRightX;
@@ -4953,7 +4553,6 @@
                     timeRowRightX = (bubbleW / 2) - timeMargin;
                     timeX = timeRowRightX;
                 }
-
                 var timeLayer = getLayer(preCompItem, "Timestamp_Text");
                 if (timeLayer) {
                     timeLayer.enabled = isTimeEnabled;
@@ -4970,7 +4569,6 @@
                         timeLayer.text = timeString;
                     }
                 }
-
                 // Update Status text layer
                 var statusLayerText = getLayer(preCompItem, "Status_Icon_Text");
                 if (statusLayerText) {
@@ -4985,7 +4583,6 @@
                     statusLayerText.emojiFontFamily = getActiveEmojiFontFamily();
                     formatTextLayer(statusLayerText, statusString || "✓✓", timeFontSize, statusColor, justRight, null, getActiveFontCandidates(), getActiveEmojiCandidates());
                 }
-
                 // Update Status RCS layer
                 var statusLayerRCS = getLayer(preCompItem, "Status_Icon_RCS");
                 if (statusLayerRCS) {
@@ -4995,20 +4592,16 @@
                         if (!statusLayerRCS.transform.position.expression) statusLayerRCS.transform.position.expression = STATUS_POS_EXPR;
                     }
                 }
-
                 if (typeof preCompItem._onChanged === "function") {
                     preCompItem._onChanged();
                 }
             }
-
             if (parentComp && typeof parentComp._notify === "function") {
                 parentComp._notify();
             }
-
             if (precompLayer) {
                 precompLayer.selected = true;
             }
-
         } catch(err) {
             alert("Could not update Message Bubble:\n" + err.toString());
         } finally {
@@ -5017,7 +4610,6 @@
             }
         }
     }
-
     // -------------------------------------------------------------------------
     // 11. Build Action Buttons
     // -------------------------------------------------------------------------
@@ -5033,7 +4625,6 @@
             buildMessageBubble();
         }
     };
-
     // --- Bottom Subtle Repository Link ---
     var grpRepoLink = win.add("group");
     grpRepoLink.orientation = "row";
@@ -5045,7 +4636,6 @@
     lblRepoLink.onClick = function() {
         openURL("https://github.com/work2survive/AE_message_bubble");
     };
-
     // Initialize layout & live selection state
     if (txtMessage.text === "[object PropertyGroup]" || txtMessage.text.indexOf("PropertyGroup") !== -1) {
         txtMessage.text = "Hey! Are we still meeting for lunch today? ☺️ 🍕";
@@ -5053,7 +4643,6 @@
     updateCharCount();
     syncColorsFromPlatform();
     checkSelectionState();
-
     // Safe selection detection: event-driven in AE, timer-driven in Emulator
     win.checkSelectionState = checkSelectionState;
     win.onActivate = function() {
@@ -5065,33 +4654,27 @@
             win.addEventListener("focus", function() { checkSelectionState(); });
         }
     } catch(eEvt) {}
-
     try {
         if (btnBuild.addEventListener) {
             btnBuild.addEventListener("mouseover", function() { checkSelectionState(); });
         }
     } catch(eBtnEvt) {}
-
     var pollTimerId = null;
     // Browser emulator only: safe standard DOM timer (never executes app.scheduleTask in AE)
     if (typeof window !== "undefined" && typeof window.setInterval === "function") {
         pollTimerId = window.setInterval(checkSelectionState, 350);
     }
-
     win.onClose = function() {
         if (pollTimerId !== null && typeof window !== "undefined" && typeof window.clearInterval === "function") {
             try { window.clearInterval(pollTimerId); } catch(eC1) {}
         }
     };
-
     win.layout.layout(true);
     win.onResizing = win.onResize = function() {
         this.layout.resize();
     };
-
     if (win !== null && win instanceof Window) {
         win.center();
         win.show();
     }
-
 })(this);
