@@ -67,12 +67,12 @@
 
         var grpStart = grpAngles.add("group");
         grpStart.add("statictext", undefined, "Start angle (B):");
-        var txtStart = grpStart.add("edittext", undefined, "0");
+        var txtStart = grpStart.add("edittext", undefined, "30");
         txtStart.characters = 7;
 
         var grpEnd = grpAngles.add("group");
         grpEnd.add("statictext", undefined, "End angle (C):");
-        var txtEnd = grpEnd.add("edittext", undefined, "90");
+        var txtEnd = grpEnd.add("edittext", undefined, "320");
         txtEnd.characters = 7;
 
         // ---------- Corner rounding ----------
@@ -89,7 +89,7 @@
 
         var grpCA = grpCorners.add("group");
         grpCA.add("statictext", undefined, "Radius A (centre):");
-        var txtCornerA = grpCA.add("edittext", undefined, "5");
+        var txtCornerA = grpCA.add("edittext", undefined, "30");
         txtCornerA.characters = 7;
 
         var grpCB = grpCorners.add("group");
@@ -237,10 +237,10 @@
                 addSlider("Radius X", numberFromField(txtRadX, 200));
                 addSlider("Radius Y", numberFromField(txtRadY, 200));
                 addCheckbox("Use Ellipse", chkEllipse.value);
-                addSlider("Start Angle", numberFromField(txtStart, 0));
-                addSlider("End Angle", numberFromField(txtEnd, 90));
+                addSlider("Start Angle", numberFromField(txtStart, 30));
+                addSlider("End Angle", numberFromField(txtEnd, 320));
                 addCheckbox("Round Corners", chkRound.value);
-                addSlider("Corner Radius A", numberFromField(txtCornerA, 5));
+                addSlider("Corner Radius A", numberFromField(txtCornerA, 30));
                 addSlider("Corner Radius B", numberFromField(txtCornerB, 10));
                 addSlider("Corner Radius C", numberFromField(txtCornerC, 15));
 

@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "description": "After Effects WindBox - Presets configuration. Edit freely or add your own custom presets, then click the reload button (\ud83d\udd04) in the panel.",
-  "version": "1.2.1",
+  "version": "1.2.2",
   "presets": [
     {
       "name": "Falling Leaves (Organic Flutter & Tumble)",

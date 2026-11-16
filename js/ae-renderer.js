@@ -581,6 +581,38 @@
                     dashStr = prop.dashArray.join(' ');
                 }
 
+                let taperInfo = null;
+                const taperProp = prop.taper || (prop.property && (prop.property('Taper') || prop.property('ADBE Vector Taper')));
+                if (taperProp) {
+                    const getTaperVal = (pName, mName, defVal) => {
+                        let sub = taperProp[pName] || (taperProp.property && (taperProp.property(pName) || taperProp.property(mName)));
+                        if (sub) {
+                            const v = (sub.getValueAtTime && typeof sub.getValueAtTime === 'function') ? sub.getValueAtTime(time) : sub.value;
+                            if (v !== undefined && v !== null && !isNaN(v)) return Number(v);
+                        }
+                        return defVal;
+                    };
+                    const startLength = Math.max(0, getTaperVal('startLength', 'ADBE Vector Taper Start Length', 0));
+                    const endLength = Math.max(0, getTaperVal('endLength', 'ADBE Vector Taper End Length', 0));
+                    const startWidth = Math.max(0, getTaperVal('startWidth', 'ADBE Vector Taper Start Width', 0));
+                    const endWidth = Math.max(0, getTaperVal('endWidth', 'ADBE Vector Taper End Width', 0));
+                    const startEase = Math.max(-100, Math.min(100, getTaperVal('startEase', 'ADBE Vector Taper Start Ease', 0)));
+                    const endEase = Math.max(-100, Math.min(100, getTaperVal('endEase', 'ADBE Vector Taper End Ease', 0)));
+                    const lengthUnits = Math.round(getTaperVal('lengthUnits', 'ADBE Vector Taper Length Units', 1));
+
+                    if (startLength > 0.001 || endLength > 0.001) {
+                        taperInfo = {
+                            startLength,
+                            endLength,
+                            startWidth,
+                            endWidth,
+                            startEase,
+                            endEase,
+                            lengthUnits
+                        };
+                    }
+                }
+
                 if (sw > 0.0001 && op > 0.0001 && strokeColor !== 'none') {
                     return {
                         color: strokeColor,
@@ -590,7 +622,8 @@
                         join: join,
                         miter: miter,
                         dash: dashStr,
-                        dashOffset: dashOffset
+                        dashOffset: dashOffset,
+                        taper: taperInfo
                     };
                 }
                 return null;
@@ -659,9 +692,19 @@
                         const y = pos[1] - h / 2;
 
                         const fillAttr = formatFillAttr(localFill);
-                        const strokeAttr = formatStrokeAttrs(localStroke);
-
-                        svgChildren += `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${round}" ry="${round}" ${fillAttr} ${strokeAttr} />`;
+                        if (localStroke && localStroke.taper) {
+                            if (localFill) {
+                                svgChildren += `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${round}" ry="${round}" ${fillAttr} stroke="none" />`;
+                            }
+                            const shapeData = this.rectToShapeData(pos, size, round);
+                            const taperedD = this.generateTaperedPathData(shapeData, localStroke);
+                            if (taperedD) {
+                                svgChildren += `<path d="${taperedD}" fill="${localStroke.color}" stroke="none" />`;
+                            }
+                        } else {
+                            const strokeAttr = formatStrokeAttrs(localStroke);
+                            svgChildren += `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${round}" ry="${round}" ${fillAttr} ${strokeAttr} />`;
+                        }
                     } else if (prop instanceof VectorShapeEllipse) {
                         const size = prop.size.getValueAtTime(time) || [100, 100];
                         const pos = prop.position.getValueAtTime(time) || [0, 0];
@@ -669,9 +712,19 @@
                         const ry = (size[1] || 100) / 2;
 
                         const fillAttr = formatFillAttr(localFill);
-                        const strokeAttr = formatStrokeAttrs(localStroke);
-
-                        svgChildren += `<ellipse cx="${pos[0]}" cy="${pos[1]}" rx="${rx}" ry="${ry}" ${fillAttr} ${strokeAttr} />`;
+                        if (localStroke && localStroke.taper) {
+                            if (localFill) {
+                                svgChildren += `<ellipse cx="${pos[0]}" cy="${pos[1]}" rx="${rx}" ry="${ry}" ${fillAttr} stroke="none" />`;
+                            }
+                            const shapeData = this.ellipseToShapeData(pos, size);
+                            const taperedD = this.generateTaperedPathData(shapeData, localStroke);
+                            if (taperedD) {
+                                svgChildren += `<path d="${taperedD}" fill="${localStroke.color}" stroke="none" />`;
+                            }
+                        } else {
+                            const strokeAttr = formatStrokeAttrs(localStroke);
+                            svgChildren += `<ellipse cx="${pos[0]}" cy="${pos[1]}" rx="${rx}" ry="${ry}" ${fillAttr} ${strokeAttr} />`;
+                        }
                     } else if ((typeof VectorShapeStar !== 'undefined' && prop instanceof VectorShapeStar) || prop.matchName === 'ADBE Vector Shape - Star') {
                         const starType = prop.type ? (prop.type.getValueAtTime(time) || 1) : 1;
                         const pts = Math.max(3, Math.round(prop.points ? (prop.points.getValueAtTime(time) || 5) : 5));
@@ -703,15 +756,36 @@
                         }
 
                         const fillAttr = formatFillAttr(localFill);
-                        const strokeAttr = formatStrokeAttrs(localStroke);
-                        svgChildren += `<path d="${d}" ${fillAttr} ${strokeAttr} />`;
+                        if (localStroke && localStroke.taper) {
+                            if (localFill) {
+                                svgChildren += `<path d="${d}" ${fillAttr} stroke="none" />`;
+                            }
+                            const shapeData = this.starToShapeData(starType, pts, pos, rot, rOut, rIn);
+                            const taperedD = this.generateTaperedPathData(shapeData, localStroke);
+                            if (taperedD) {
+                                svgChildren += `<path d="${taperedD}" fill="${localStroke.color}" stroke="none" />`;
+                            }
+                        } else {
+                            const strokeAttr = formatStrokeAttrs(localStroke);
+                            svgChildren += `<path d="${d}" ${fillAttr} ${strokeAttr} />`;
+                        }
                     } else if (prop instanceof VectorShapePath) {
                         const shapeData = prop.path.getValueAtTime(time);
                         if (shapeData && shapeData.vertices && shapeData.vertices.length > 0) {
                             const d = this.generateSVGPathData(shapeData);
                             const fillAttr = formatFillAttr(localFill);
-                            const strokeAttr = formatStrokeAttrs(localStroke);
-                            svgChildren += `<path d="${d}" ${fillAttr} ${strokeAttr} />`;
+                            if (localStroke && localStroke.taper) {
+                                if (localFill) {
+                                    svgChildren += `<path d="${d}" ${fillAttr} stroke="none" />`;
+                                }
+                                const taperedD = this.generateTaperedPathData(shapeData, localStroke);
+                                if (taperedD) {
+                                    svgChildren += `<path d="${taperedD}" fill="${localStroke.color}" stroke="none" />`;
+                                }
+                            } else {
+                                const strokeAttr = formatStrokeAttrs(localStroke);
+                                svgChildren += `<path d="${d}" ${fillAttr} ${strokeAttr} />`;
+                            }
                         }
                     } else if (prop instanceof VectorGroup) {
                         // Recursively process nested group with local transform and opacity
@@ -795,6 +869,325 @@
             }
 
             return d;
+        }
+
+        rectToShapeData(pos, size, roundness) {
+            const w = size[0] || 100, h = size[1] || 100;
+            const hw = w / 2, hh = h / 2;
+            const cx = pos[0] || 0, cy = pos[1] || 0;
+            const round = Math.max(0, Math.min(roundness || 0, hw, hh));
+            if (round <= 0.001) {
+                return {
+                    vertices: [
+                        [cx - hw, cy - hh],
+                        [cx + hw, cy - hh],
+                        [cx + hw, cy + hh],
+                        [cx - hw, cy + hh]
+                    ],
+                    inTangents: [[0, 0], [0, 0], [0, 0], [0, 0]],
+                    outTangents: [[0, 0], [0, 0], [0, 0], [0, 0]],
+                    closed: true
+                };
+            }
+            const k = 0.5522847498 * round;
+            return {
+                vertices: [
+                    [cx - hw + round, cy - hh],
+                    [cx + hw - round, cy - hh],
+                    [cx + hw, cy - hh + round],
+                    [cx + hw, cy + hh - round],
+                    [cx + hw - round, cy + hh],
+                    [cx - hw + round, cy + hh],
+                    [cx - hw, cy + hh - round],
+                    [cx - hw, cy - hh + round]
+                ],
+                inTangents: [
+                    [-k, 0], [0, 0], [0, -k], [0, 0],
+                    [k, 0], [0, 0], [0, k], [0, 0]
+                ],
+                outTangents: [
+                    [0, 0], [k, 0], [0, 0], [0, k],
+                    [0, 0], [-k, 0], [0, 0], [-k, 0]
+                ],
+                closed: true
+            };
+        }
+
+        ellipseToShapeData(pos, size) {
+            const rx = (size[0] || 100) / 2;
+            const ry = (size[1] || 100) / 2;
+            const cx = pos[0] || 0, cy = pos[1] || 0;
+            const kx = 0.5522847498 * rx;
+            const ky = 0.5522847498 * ry;
+            return {
+                vertices: [
+                    [cx, cy - ry],
+                    [cx + rx, cy],
+                    [cx, cy + ry],
+                    [cx - rx, cy]
+                ],
+                inTangents: [
+                    [-kx, 0], [0, -ky], [kx, 0], [0, ky]
+                ],
+                outTangents: [
+                    [kx, 0], [0, ky], [-kx, 0], [0, -ky]
+                ],
+                closed: true
+            };
+        }
+
+        starToShapeData(starType, pts, pos, rot, rOut, rIn) {
+            const rotRad = ((rot || 0) - 90) * (Math.PI / 180);
+            const vertices = [];
+            const cx = pos[0] || 0, cy = pos[1] || 0;
+            if (starType === 2) {
+                for (let i = 0; i < pts; i++) {
+                    const a = rotRad + (i * 2 * Math.PI) / pts;
+                    vertices.push([cx + rOut * Math.cos(a), cy + rOut * Math.sin(a)]);
+                }
+            } else {
+                const totalPts = pts * 2;
+                for (let i = 0; i < totalPts; i++) {
+                    const a = rotRad + (i * Math.PI) / pts;
+                    const r = (i % 2 === 0) ? rOut : rIn;
+                    vertices.push([cx + r * Math.cos(a), cy + r * Math.sin(a)]);
+                }
+            }
+            return {
+                vertices: vertices,
+                inTangents: vertices.map(() => [0, 0]),
+                outTangents: vertices.map(() => [0, 0]),
+                closed: true
+            };
+        }
+
+        generateTaperedPathData(shape, strokeInfo) {
+            const v = shape.vertices;
+            if (!v || v.length < 2) return '';
+            const inT = shape.inTangents || [];
+            const outT = shape.outTangents || [];
+            const isClosed = Boolean(shape.closed);
+            const numSegments = isClosed ? v.length : (v.length - 1);
+
+            const samples = [];
+            const tangents = [];
+            const normals = [];
+            const distances = [0];
+            let totalLen = 0;
+
+            for (let s = 0; s < numSegments; s++) {
+                const p0 = v[s];
+                const o0 = outT[s] || [0, 0];
+                const nextIdx = (s + 1) % v.length;
+                const p3 = v[nextIdx];
+                const i1 = inT[nextIdx] || [0, 0];
+
+                const isCurved = (Math.abs(o0[0]) > 1e-4 || Math.abs(o0[1]) > 1e-4 || Math.abs(i1[0]) > 1e-4 || Math.abs(i1[1]) > 1e-4);
+                const steps = isCurved ? 24 : 10;
+                const startStep = (s === 0) ? 0 : 1;
+
+                const cp1 = [p0[0] + o0[0], p0[1] + o0[1]];
+                const cp2 = [p3[0] + i1[0], p3[1] + i1[1]];
+
+                for (let k = startStep; k <= steps; k++) {
+                    const t = k / steps;
+                    let pt, dpt;
+                    if (isCurved) {
+                        const omt = 1 - t;
+                        const omt2 = omt * omt;
+                        const omt3 = omt2 * omt;
+                        const t2 = t * t;
+                        const t3 = t2 * t;
+
+                        pt = [
+                            omt3 * p0[0] + 3 * omt2 * t * cp1[0] + 3 * omt * t2 * cp2[0] + t3 * p3[0],
+                            omt3 * p0[1] + 3 * omt2 * t * cp1[1] + 3 * omt * t2 * cp2[1] + t3 * p3[1]
+                        ];
+                        dpt = [
+                            3 * omt2 * (cp1[0] - p0[0]) + 6 * omt * t * (cp2[0] - cp1[0]) + 3 * t2 * (p3[0] - cp2[0]),
+                            3 * omt2 * (cp1[1] - p0[1]) + 6 * omt * t * (cp2[1] - cp1[1]) + 3 * t2 * (p3[1] - cp2[1])
+                        ];
+                    } else {
+                        pt = [p0[0] + t * (p3[0] - p0[0]), p0[1] + t * (p3[1] - p0[1])];
+                        dpt = [p3[0] - p0[0], p3[1] - p0[1]];
+                    }
+
+                    const dLen = Math.hypot(dpt[0], dpt[1]);
+                    const tx = (dLen > 1e-6) ? (dpt[0] / dLen) : 1;
+                    const ty = (dLen > 1e-6) ? (dpt[1] / dLen) : 0;
+                    const nx = -ty;
+                    const ny = tx;
+
+                    if (samples.length > 0) {
+                        const prevPt = samples[samples.length - 1];
+                        const stepDist = Math.hypot(pt[0] - prevPt[0], pt[1] - prevPt[1]);
+                        totalLen += stepDist;
+                        distances.push(totalLen);
+                    }
+
+                    samples.push(pt);
+                    tangents.push([tx, ty]);
+                    normals.push([nx, ny]);
+                }
+            }
+
+            if (totalLen < 1e-4 || samples.length < 2) return '';
+
+            const baseW = strokeInfo.width || 1;
+            const taper = strokeInfo.taper || {};
+            const u_s = taper.startLength || 0;
+            const u_e = taper.endLength || 0;
+            const startW = (taper.startWidth !== undefined ? taper.startWidth : 0) / 100 * baseW;
+            const endW = (taper.endWidth !== undefined ? taper.endWidth : 0) / 100 * baseW;
+            const ease_s = (taper.startEase || 0) / 100;
+            const ease_e = (taper.endEase || 0) / 100;
+            const units = taper.lengthUnits || 1;
+
+            let lenStart = (units === 2) ? u_s : (u_s / 100) * totalLen;
+            let lenEnd = (units === 2) ? u_e : (u_e / 100) * totalLen;
+
+            if (lenStart + lenEnd > totalLen && (lenStart + lenEnd) > 0) {
+                const sc = totalLen / (lenStart + lenEnd);
+                lenStart *= sc;
+                lenEnd *= sc;
+            }
+
+            const calcEase = (tVal, easeVal) => {
+                if (Math.abs(easeVal) < 1e-4) return tVal;
+                if (easeVal > 0) {
+                    return Math.pow(tVal, 1 + 2 * easeVal);
+                } else {
+                    return 1 - Math.pow(1 - tVal, 1 - 2 * easeVal);
+                }
+            };
+
+            const calcWidthAtDist = (d) => {
+                let w = baseW;
+                if (lenStart > 1e-4 && d < lenStart) {
+                    const u = Math.max(0, Math.min(1, d / lenStart));
+                    w = startW + (baseW - startW) * calcEase(u, ease_s);
+                }
+                if (lenEnd > 1e-4 && d > (totalLen - lenEnd)) {
+                    const u = Math.max(0, Math.min(1, (totalLen - d) / lenEnd));
+                    const wEnd = endW + (baseW - endW) * calcEase(u, ease_e);
+                    if (d < lenStart) {
+                        w = Math.min(w, wEnd);
+                    } else {
+                        w = wEnd;
+                    }
+                }
+                return Math.max(0, w);
+            };
+
+            const N = samples.length;
+            const leftPts = [];
+            const rightPts = [];
+
+            for (let i = 0; i < N; i++) {
+                const pt = samples[i];
+                const norm = normals[i];
+                const d = distances[i];
+                const hw = calcWidthAtDist(d) * 0.5;
+                leftPts.push([pt[0] + hw * norm[0], pt[1] + hw * norm[1]]);
+                rightPts.push([pt[0] - hw * norm[0], pt[1] - hw * norm[1]]);
+            }
+
+            const roundCapPoints = (center, pFrom, pTo, outwardsDir) => {
+                const r = Math.hypot(pFrom[0] - center[0], pFrom[1] - center[1]);
+                if (r < 0.05) return [];
+                const aFrom = Math.atan2(pFrom[1] - center[1], pFrom[0] - center[0]);
+                const aTo = Math.atan2(pTo[1] - center[1], pTo[0] - center[0]);
+                let da = (aTo - aFrom) % (2 * Math.PI);
+                if (da < 0) da += 2 * Math.PI;
+                const aOut = Math.atan2(outwardsDir[1], outwardsDir[0]);
+                let diffOut = (aOut - aFrom) % (2 * Math.PI);
+                if (diffOut < 0) diffOut += 2 * Math.PI;
+                if (diffOut > da) {
+                    da = da - 2 * Math.PI;
+                }
+                const capPts = [];
+                const capSteps = 6;
+                for (let s = 1; s <= capSteps; s++) {
+                    const ang = aFrom + da * (s / capSteps);
+                    capPts.push([center[0] + r * Math.cos(ang), center[1] + r * Math.sin(ang)]);
+                }
+                return capPts;
+            };
+
+            const capType = strokeInfo.cap || 'butt';
+            const dParts = [];
+            const wStart = calcWidthAtDist(0);
+            const wEnd = calcWidthAtDist(totalLen);
+
+            if (isClosed) {
+                dParts.push(`M ${Math.round(leftPts[0][0]*100)/100},${Math.round(leftPts[0][1]*100)/100}`);
+                for (let i = 1; i < N; i++) {
+                    dParts.push(`L ${Math.round(leftPts[i][0]*100)/100},${Math.round(leftPts[i][1]*100)/100}`);
+                }
+                for (let i = N - 1; i >= 0; i--) {
+                    dParts.push(`L ${Math.round(rightPts[i][0]*100)/100},${Math.round(rightPts[i][1]*100)/100}`);
+                }
+                dParts.push('Z');
+            } else {
+                // Open path
+                // Start cap: from rightPts[0] to leftPts[0]
+                if (wStart <= 0.05) {
+                    dParts.push(`M ${Math.round(samples[0][0]*100)/100},${Math.round(samples[0][1]*100)/100}`);
+                } else if (capType === 'round') {
+                    dParts.push(`M ${Math.round(rightPts[0][0]*100)/100},${Math.round(rightPts[0][1]*100)/100}`);
+                    const capStartPts = roundCapPoints(samples[0], rightPts[0], leftPts[0], [-tangents[0][0], -tangents[0][1]]);
+                    for (const pt of capStartPts) {
+                        dParts.push(`L ${Math.round(pt[0]*100)/100},${Math.round(pt[1]*100)/100}`);
+                    }
+                } else if (capType === 'square') {
+                    const hw0 = wStart * 0.5;
+                    const p1 = [rightPts[0][0] - hw0 * tangents[0][0], rightPts[0][1] - hw0 * tangents[0][1]];
+                    const p2 = [leftPts[0][0] - hw0 * tangents[0][0], leftPts[0][1] - hw0 * tangents[0][1]];
+                    dParts.push(`M ${Math.round(rightPts[0][0]*100)/100},${Math.round(rightPts[0][1]*100)/100}`);
+                    dParts.push(`L ${Math.round(p1[0]*100)/100},${Math.round(p1[1]*100)/100}`);
+                    dParts.push(`L ${Math.round(p2[0]*100)/100},${Math.round(p2[1]*100)/100}`);
+                    dParts.push(`L ${Math.round(leftPts[0][0]*100)/100},${Math.round(leftPts[0][1]*100)/100}`);
+                } else {
+                    // Butt
+                    dParts.push(`M ${Math.round(rightPts[0][0]*100)/100},${Math.round(rightPts[0][1]*100)/100}`);
+                    dParts.push(`L ${Math.round(leftPts[0][0]*100)/100},${Math.round(leftPts[0][1]*100)/100}`);
+                }
+
+                // Forward along left boundary
+                const startIdx = (wStart <= 0.05) ? 1 : 0;
+                for (let i = startIdx; i < N; i++) {
+                    dParts.push(`L ${Math.round(leftPts[i][0]*100)/100},${Math.round(leftPts[i][1]*100)/100}`);
+                }
+
+                // End cap: from leftPts[N-1] to rightPts[N-1]
+                if (wEnd <= 0.05) {
+                    dParts.push(`L ${Math.round(samples[N-1][0]*100)/100},${Math.round(samples[N-1][1]*100)/100}`);
+                } else if (capType === 'round') {
+                    const capEndPts = roundCapPoints(samples[N-1], leftPts[N-1], rightPts[N-1], tangents[N-1]);
+                    for (const pt of capEndPts) {
+                        dParts.push(`L ${Math.round(pt[0]*100)/100},${Math.round(pt[1]*100)/100}`);
+                    }
+                } else if (capType === 'square') {
+                    const hwEnd = wEnd * 0.5;
+                    const p1 = [leftPts[N-1][0] + hwEnd * tangents[N-1][0], leftPts[N-1][1] + hwEnd * tangents[N-1][1]];
+                    const p2 = [rightPts[N-1][0] + hwEnd * tangents[N-1][0], rightPts[N-1][1] + hwEnd * tangents[N-1][1]];
+                    dParts.push(`L ${Math.round(p1[0]*100)/100},${Math.round(p1[0]*100)/100}`);
+                    dParts.push(`L ${Math.round(p2[0]*100)/100},${Math.round(p2[1]*100)/100}`);
+                    dParts.push(`L ${Math.round(rightPts[N-1][0]*100)/100},${Math.round(rightPts[N-1][0]*100)/100}`);
+                } else {
+                    // Butt
+                    dParts.push(`L ${Math.round(rightPts[N-1][0]*100)/100},${Math.round(rightPts[N-1][0]*100)/100}`);
+                }
+
+                // Backward along right boundary
+                const endIdx = (wEnd <= 0.05) ? (N - 2) : (N - 1);
+                for (let i = endIdx; i >= 0; i--) {
+                    dParts.push(`L ${Math.round(rightPts[i][0]*100)/100},${Math.round(rightPts[i][1]*100)/100}`);
+                }
+                dParts.push('Z');
+            }
+
+            return dParts.join(' ');
         }
 
         renderTextContent(layer, time) {

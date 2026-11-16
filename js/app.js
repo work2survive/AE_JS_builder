@@ -462,6 +462,45 @@
         attachScrubbableEvents();
     }
 
+    function renderTaperGroup(taperGroup, layerIdx) {
+        if (!taperGroup) return '';
+        const renderTaperRow = (p, label, unit = '%') => {
+            if (!p) return '';
+            const val = (p.value !== undefined) ? p.value : 0;
+            return `
+                <div class="ae-prop-row ae-prop-animatable" style="padding-left: 14px;">
+                    ${render4WaySwitch(p)}
+                    <span class="ae-badge-type animatable" title="Animatable in AE timeline">[ANIM]</span>
+                    <span class="ae-prop-stopwatch">&#9201;</span>
+                    ${renderPropExprToggle(p)}
+                    <span class="ae-prop-name">${escapeHtml(label)}</span>
+                    <div class="ae-prop-val-container">
+                        <span class="ae-scrub-val" data-prop-id="${p.id}" data-val="${val}" data-unit="${unit}">${val} ${unit}</span>
+                        ${renderPropExprBadge(p)}
+                    </div>
+                </div>
+            `;
+        };
+
+        return `
+            <div class="ae-prop-group" style="padding-left: 8px;">
+                <div class="ae-prop-group-header">
+                    <span class="ae-twirl" data-action="toggle-group">&#9656;</span>
+                    <span class="ae-prop-group-title">Taper</span>
+                    <span class="ae-badge-type animatable" style="margin-left:6px;" title="Stroke Taper Controls">[TAPER]</span>
+                </div>
+                <div class="ae-prop-items" style="display:none;">
+                    ${renderTaperRow(taperGroup.startLength, 'Start Length', '%')}
+                    ${renderTaperRow(taperGroup.endLength, 'End Length', '%')}
+                    ${renderTaperRow(taperGroup.startWidth, 'Start Width', '%')}
+                    ${renderTaperRow(taperGroup.endWidth, 'End Width', '%')}
+                    ${renderTaperRow(taperGroup.startEase, 'Start Ease', '%')}
+                    ${renderTaperRow(taperGroup.endEase, 'End Ease', '%')}
+                </div>
+            </div>
+        `;
+    }
+
     function renderVectorContents(contentsGroup, layerIdx = 0) {
         if (!contentsGroup || !contentsGroup.properties) return '';
         let html = '';
@@ -571,10 +610,27 @@
                         ${renderPropExprToggle(item.strokeWidth)}
                         <span class="ae-prop-name">Stroke Width</span>
                         <div class="ae-prop-val-container">
-                            <span class="ae-scrub-val" data-layer-idx="${layerIdx}" data-prop="stroke-width" data-val="${w}">${w} px</span>
+                            <span class="ae-scrub-val" data-prop-id="${item.strokeWidth.id}" data-val="${w}" data-unit="px">${w} px</span>
                             ${renderPropExprBadge(item.strokeWidth)}
                         </div>
                     </div>
+                    ${item.taper ? renderTaperGroup(item.taper, layerIdx) : ''}
+                `;
+            } else if ((typeof VectorGraphicGradientStroke !== 'undefined' && item instanceof VectorGraphicGradientStroke) || item.matchName === 'ADBE Vector Graphic - G-Stroke') {
+                const w = item.strokeWidth.value || 1;
+                html += `
+                    <div class="ae-prop-row ae-prop-animatable">
+                        ${render4WaySwitch(item.strokeWidth)}
+                        <span class="ae-badge-type animatable" title="Animatable in AE timeline">[ANIM]</span>
+                        <span class="ae-prop-stopwatch">&#9201;</span>
+                        ${renderPropExprToggle(item.strokeWidth)}
+                        <span class="ae-prop-name">Stroke Width</span>
+                        <div class="ae-prop-val-container">
+                            <span class="ae-scrub-val" data-prop-id="${item.strokeWidth.id}" data-val="${w}" data-unit="px">${w} px</span>
+                            ${renderPropExprBadge(item.strokeWidth)}
+                        </div>
+                    </div>
+                    ${item.taper ? renderTaperGroup(item.taper, layerIdx) : ''}
                 `;
             }
         });
@@ -1001,22 +1057,30 @@
                 startVal = parseFloat(el.textContent) || 0;
                 channel = parseInt(el.dataset.channel || 0);
 
-                const row = el.closest('.ae-layer-row');
-                const layerIdx = parseInt(row.dataset.layerIndex);
-                const layer = app.project.activeItem.layers[layerIdx];
-                const effectName = el.dataset.effectName;
-                const propName = el.dataset.prop;
-                if (layer && effectName && propName) {
-                    activeProp = layer.effects.property(effectName)?.property(propName);
-                } else if (layer && propName) {
-                    activeProp = layer.transform.property(propName);
+                const propId = el.dataset.propId;
+                let layer = null;
+                let effectName = null;
+                if (propId && typeof Property !== 'undefined' && Property.getById) {
+                    activeProp = Property.getById(propId);
+                } else {
+                    const row = el.closest('.ae-layer-row');
+                    const layerIdx = parseInt(row?.dataset.layerIndex);
+                    layer = app.project.activeItem.layers[layerIdx];
+                    effectName = el.dataset.effectName;
+                    const propName = el.dataset.prop;
+                    if (layer && effectName && propName) {
+                        activeProp = layer.effects.property(effectName)?.property(propName);
+                    } else if (layer && propName) {
+                        activeProp = layer.transform.property(propName);
+                    }
                 }
 
                 const onMove = (moveEvent) => {
                     const dx = moveEvent.clientX - startX;
                     const step = moveEvent.shiftKey ? 10 : (moveEvent.altKey ? 0.1 : 1);
                     const newVal = Math.round((startVal + dx * step) * 10) / 10;
-                    el.textContent = (el.textContent.includes('px') ? `${newVal} px` : newVal);
+                    const unit = el.dataset.unit || (el.textContent.includes('px') ? 'px' : (el.textContent.includes('%') ? '%' : ''));
+                    el.textContent = unit ? `${newVal} ${unit}` : newVal;
 
                     if (activeProp) {
                         let cur = activeProp.value;
@@ -1027,6 +1091,18 @@
                         } else {
                             activeProp.setValue(newVal);
                         }
+
+                        // Trigger active composition rerender
+                        const comp = app?.project?.activeItem;
+                        if (comp && comp._onChanged) comp._onChanged();
+
+                        // Live-sync to cube & cylinder in precomp / targetComp
+                        if (layer && effectName) {
+                            syncCubeFromControls(layer);
+                            syncCylinderFromControls(layer);
+                        }
+                    }
+                };
 
                         // Live-sync to cube & cylinder in precomp / targetComp
                         if (layer && effectName) {

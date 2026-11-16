@@ -1160,6 +1160,57 @@
                         ];
                     }
                 }
+
+                // Tapered Strokes (ADBE Vector Taper)
+                var taperTopY = dashTopY + (4 * Math.round(42 * sF)) + Math.round(10 * sF);
+                var tLblHead = comp.layers.addText("Tapered Strokes (ADBE Vector Taper)");
+                tLblHead.name = "TEST_11_Taper_Section_Title";
+                tLblHead.transform.position.setValue([strokeColX, taperTopY - Math.round(8 * sF), 0]);
+                setupTextDocument(tLblHead, "TAPERED STROKES (VARIABLE WIDTH)", "Segoe UI", Math.round(14 * sF), [0.23, 0.83, 0.70], "left");
+
+                var taperCurves = [
+                    { name: "Flourish (Double Sharp: 45% S/E)", startL: 45, endL: 45, startW: 0, endW: 0, col: [0.23, 0.83, 0.70], w: Math.round(16 * sF) },
+                    { name: "Comet Tail (Single Sharp: 85% S)", startL: 85, endL: 0, startW: 0, endW: 100, col: [1.0, 0.45, 0.20], w: Math.round(18 * sF) }
+                ];
+
+                for (var tIdx = 0; tIdx < taperCurves.length; tIdx++) {
+                    var tInfo = taperCurves[tIdx];
+                    var tY = taperTopY + Math.round(28 * sF) + (tIdx * Math.round(42 * sF));
+
+                    var tRowLbl = comp.layers.addText(tInfo.name);
+                    tRowLbl.name = "TEST_11_Taper_" + (tIdx + 1) + "_Label";
+                    tRowLbl.transform.position.setValue([strokeColX, tY - Math.round(6 * sF), 0]);
+                    setupTextDocument(tRowLbl, tInfo.name, "Segoe UI", Math.round(10 * sF), [0.70, 0.75, 0.85], "left");
+
+                    var tGroup = strkContents.addProperty("ADBE Vector Group");
+                    tGroup.name = "Taper_Curve_" + (tIdx + 1);
+
+                    var tShape = new Shape();
+                    var xStart = strokeColX + Math.round(220 * sF);
+                    var xEnd = strokeColX + Math.round(660 * sF);
+                    tShape.vertices = [[xStart, tY], [xEnd, tY]];
+                    tShape.inTangents = [[0, 0], [0, 0]];
+                    tShape.outTangents = [[0, 0], [0, 0]];
+                    tShape.closed = false;
+                    addVectorPath(tGroup, tShape);
+
+                    var tStroke = tGroup.property("Contents").addProperty("ADBE Vector Graphic - Stroke");
+                    tStroke.property("Color").setValue(tInfo.col);
+                    tStroke.property("Stroke Width").setValue(tInfo.w);
+                    tStroke.property("Line Cap").setValue(2); // Round Cap
+
+                    var tProp = tStroke.property("ADBE Vector Taper") || tStroke.property("Taper");
+                    if (tProp) {
+                        try {
+                            tProp.property("Start Length").setValue(tInfo.startL);
+                            tProp.property("End Length").setValue(tInfo.endL);
+                            tProp.property("Start Width").setValue(tInfo.startW);
+                            tProp.property("End Width").setValue(tInfo.endW);
+                            tProp.property("Start Ease").setValue(20);
+                            tProp.property("End Ease").setValue(20);
+                        } catch(eTap) {}
+                    }
+                }
             }
 
             progBar.value = 100;

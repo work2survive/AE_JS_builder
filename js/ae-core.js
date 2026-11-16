@@ -667,6 +667,25 @@
                 case 'G-Stroke':
                     prop = new VectorGraphicGradientStroke();
                     break;
+                case 'ADBE Vector Taper':
+                case 'Taper':
+                    if (this.taper) {
+                        return this.taper;
+                    }
+                    const taperGroup = new PropertyGroup('Taper', 'ADBE Vector Taper');
+                    taperGroup.startLength = new Property('Start Length', 'ADBE Vector Taper Start Length', 0, 'number');
+                    taperGroup.endLength = new Property('End Length', 'ADBE Vector Taper End Length', 0, 'number');
+                    taperGroup.startWidth = new Property('Start Width', 'ADBE Vector Taper Start Width', 0, 'number');
+                    taperGroup.endWidth = new Property('End Width', 'ADBE Vector Taper End Width', 0, 'number');
+                    taperGroup.startEase = new Property('Start Ease', 'ADBE Vector Taper Start Ease', 0, 'number');
+                    taperGroup.endEase = new Property('End Ease', 'ADBE Vector Taper End Ease', 0, 'number');
+                    taperGroup.lengthUnits = new Property('Length Units', 'ADBE Vector Taper Length Units', 1, 'number');
+                    [taperGroup.startLength, taperGroup.endLength, taperGroup.startWidth, taperGroup.endWidth, taperGroup.startEase, taperGroup.endEase, taperGroup.lengthUnits].forEach(tp => {
+                        tp.parentProperty = taperGroup;
+                        taperGroup.properties.push(tp);
+                    });
+                    prop = taperGroup;
+                    break;
                 case 'ADBE Vector Stroke Dash 1':
                 case 'ADBE Vector Stroke Dash 2':
                 case 'ADBE Vector Stroke Dash 3':
@@ -737,11 +756,17 @@
                 return this.properties[nameOrIndex - 1] || null; // 1-indexed in AE
             }
             const clean = String(nameOrIndex).toLowerCase();
-            return this.properties.find(p =>
+            const direct = this.properties.find(p =>
                 p.name.toLowerCase() === clean ||
                 p.matchName.toLowerCase() === clean ||
                 p.name.toLowerCase().includes(clean)
-            ) || null;
+            );
+            if (direct) return direct;
+            if (this.taper && this.taper.properties) {
+                const sub = this.taper.property(nameOrIndex);
+                if (sub) return sub;
+            }
+            return null;
         }
 
         get numProperties() {
@@ -940,7 +965,21 @@
             this.dashes      = new PropertyGroup('Dashes', 'ADBE Vector Stroke Dashes');
             this.dashes.parentProperty = this;
 
-            [this.type, this.startPoint, this.endPoint, this.colors, this.opacity, this.strokeWidth, this.lineCap, this.lineJoin, this.miterLimit, this.dashes].forEach(p => {
+            this.taper       = new PropertyGroup('Taper', 'ADBE Vector Taper');
+            this.taper.parentProperty = this;
+            this.taper.startLength = new Property('Start Length', 'ADBE Vector Taper Start Length', 0, 'number');
+            this.taper.endLength = new Property('End Length', 'ADBE Vector Taper End Length', 0, 'number');
+            this.taper.startWidth = new Property('Start Width', 'ADBE Vector Taper Start Width', 0, 'number');
+            this.taper.endWidth = new Property('End Width', 'ADBE Vector Taper End Width', 0, 'number');
+            this.taper.startEase = new Property('Start Ease', 'ADBE Vector Taper Start Ease', 0, 'number');
+            this.taper.endEase = new Property('End Ease', 'ADBE Vector Taper End Ease', 0, 'number');
+            this.taper.lengthUnits = new Property('Length Units', 'ADBE Vector Taper Length Units', 1, 'number');
+            [this.taper.startLength, this.taper.endLength, this.taper.startWidth, this.taper.endWidth, this.taper.startEase, this.taper.endEase, this.taper.lengthUnits].forEach(tp => {
+                tp.parentProperty = this.taper;
+                this.taper.properties.push(tp);
+            });
+
+            [this.type, this.startPoint, this.endPoint, this.colors, this.opacity, this.strokeWidth, this.lineCap, this.lineJoin, this.miterLimit, this.dashes, this.taper].forEach(p => {
                 p.parentProperty = this;
                 this.properties.push(p);
             });
