@@ -131,6 +131,11 @@ The simulator automatically detects and loads standalone production-ready After 
    - **Repository**: [work2survive/AE_windBox](https://github.com/work2survive/AE_windBox)
    - **Live Demo**: [https://work2survive.github.io/AE_JS_builder/?jsx=AE_WindBox_Panel.jsx&autobuild=true](https://work2survive.github.io/AE_JS_builder/?jsx=AE_WindBox_Panel.jsx&autobuild=true)
 
+8. **[AE Spiral Maker](https://github.com/work2survive/AE_spiral_maker)** (`jsx/AE_Spiral_Maker.jsx` - v1.0):
+   - Procedural vector spiral generator inspired by `tiny-online.tools/svg-tools/svg-spiral-generator`, featuring 5 mathematical spiral algorithms (Archimedean, Logarithmic, Golden Spiral, Fermat, Hyperbolic), native After Effects Stroke Taper integration for independent start and end stroke thicknesses, analytical cubic Bézier derivative tangents, and 8 factory presets.
+   - **Repository**: [work2survive/AE_spiral_maker](https://github.com/work2survive/AE_spiral_maker)
+   - **Live Demo**: [https://work2survive.github.io/AE_JS_builder/?jsx=AE_Spiral_Maker.jsx&autobuild=true](https://work2survive.github.io/AE_JS_builder/?jsx=AE_Spiral_Maker.jsx&autobuild=true)
+
 #### Built-in Samples (`samples/` Folder)
 
 The simulator includes built-in sample scripts located in [`samples/`](samples/) demonstrating ScriptUI, kinetic typography, expressions, and 3D primitives:
