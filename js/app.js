@@ -8,22 +8,13 @@
     'use strict';
 
     // -------------------------------------------------------------
-    // Daily Version Management (v1.1.x)
+    // Version Management (v1.1.1)
     // -------------------------------------------------------------
     function computeDailyVersion() {
-        const launchYear = 2026;
-        const launchMonth = 10; // 0-indexed (10 = November)
-        const launchDate = 5;
-
-        const now = new Date();
-        const startUtc = Date.UTC(launchYear, launchMonth, launchDate);
-        const currentUtc = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate());
-        const dayDifference = Math.max(0, Math.floor((currentUtc - startUtc) / (1000 * 60 * 60 * 24)));
-
-        return `1.1.${dayDifference}`;
+        return '1.1.1';
     }
 
-    const APP_VERSION = computeDailyVersion();
+    const APP_VERSION = '1.1.1';
     global.EMULATOR_VERSION = APP_VERSION;
 
     let renderer = null;

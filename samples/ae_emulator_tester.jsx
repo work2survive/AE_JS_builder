@@ -48,7 +48,7 @@
     "use strict";
 
     var SCRIPT_TITLE = "AE / Emulator Tester";
-    var SCRIPT_VERSION = "v1.0";
+    var SCRIPT_VERSION = "v1.1.1";
 
     // -------------------------------------------------------------------------
     // 1. ScriptUI Window / Panel Initialization

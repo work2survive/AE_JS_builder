@@ -1212,16 +1212,6 @@
         editFadeOutFrames.characters = 5;
         editFadeOutFrames.helpTip = "Duration in timeline frames over which particles fade smoothly to 0% opacity as they leave the boundaries";
 
-        function updateFadeModeUI() {
-            var mode = dropFadeMode.selection ? dropFadeMode.selection.index : 0;
-            // mode 0: None, mode 1: Distance, mode 2: Frames
-            grpBoundFade.enabled = (mode === 1);
-            grpFramesFade.enabled = (mode === 2);
-            grpCamFade.enabled = (mode === 0);
-        }
-        dropFadeMode.onChange = updateFadeModeUI;
-        updateFadeModeUI();
-
         var grpCamFade = pnlFade.add("group");
         grpCamFade.orientation = "row";
         grpCamFade.alignChildren = ["left", "center"];
@@ -1234,6 +1224,16 @@
         var editCamFadeDist = grpCamFade.add("edittext", undefined, "250");
         editCamFadeDist.characters = 5;
         editCamFadeDist.helpTip = "Distance in pixels in front of the camera lens under which particles fade smoothly to 0 opacity";
+
+        function updateFadeModeUI() {
+            var mode = dropFadeMode.selection ? dropFadeMode.selection.index : 0;
+            // mode 0: None, mode 1: Distance, mode 2: Frames
+            grpBoundFade.enabled = (mode === 1);
+            grpFramesFade.enabled = (mode === 2);
+            grpCamFade.enabled = (mode === 0);
+        }
+        dropFadeMode.onChange = updateFadeModeUI;
+        updateFadeModeUI();
 
         // ==========================================
         // TAB 2: VIRTUAL CUBE (GUIDE LAYER)
@@ -2169,8 +2169,7 @@
                     '    }',
                     '    value * boundFactor * camFactor;',
                     '}'
-                ].join("
-");
+                ].join("\n");
 
                 var scaleExpr = [
                     'var ctrl = thisComp.layer("' + ctrlName + '");',
