@@ -535,6 +535,21 @@
         return pathGroup;
     }
 
+    function setGradientColors(gradProp, colorStops) {
+        if (!gradProp) return;
+        try {
+            var cProp = gradProp.property("ADBE Vector Grad Colors") || gradProp.property("Colors");
+            if (cProp) {
+                // In native AE ExtendScript, ADBE Vector Grad Colors has PropertyValueType.NO_VALUE and throws.
+                // In our web emulator runtime, it is a custom gradient property that accepts the color stops array.
+                if (typeof PropertyValueType !== "undefined" && cProp.propertyValueType === PropertyValueType.NO_VALUE) {
+                    return;
+                }
+                cProp.setValue(colorStops);
+            }
+        } catch (eGrad) {}
+    }
+
     function runHarnessBuild() {
         var comp = ensureActiveComp();
         if (!comp) {
@@ -742,14 +757,19 @@
                 ell1.property("Position").setValue([1110, 175]);
 
                 if (doGradients) {
-                    var gFill1 = grpCircle.property("Contents").addProperty("ADBE Vector Graphic - G-Fill");
-                    gFill1.property("Type").setValue(2);
-                    gFill1.property("Start Point").setValue([1100, 165]);
-                    gFill1.property("End Point").setValue([1145, 210]);
-                    gFill1.property("Colors").setValue([
-                        [0.0, [1.0, 0.85, 0.1]],
-                        [1.0, [0.95, 0.25, 0.1]]
-                    ]);
+                    try {
+                        var gFill1 = grpCircle.property("Contents").addProperty("ADBE Vector Graphic - G-Fill");
+                        gFill1.property("Type").setValue(2);
+                        gFill1.property("Start Point").setValue([1100, 165]);
+                        gFill1.property("End Point").setValue([1145, 210]);
+                        setGradientColors(gFill1, [
+                            [0.0, [1.0, 0.85, 0.1]],
+                            [1.0, [0.95, 0.25, 0.1]]
+                        ]);
+                    } catch(eGF1) {
+                        var fFill1 = grpCircle.property("Contents").addProperty("ADBE Vector Graphic - Fill");
+                        fFill1.property("Color").setValue([1.0, 0.7, 0.1]);
+                    }
                 } else {
                     var fFill1 = grpCircle.property("Contents").addProperty("ADBE Vector Graphic - Fill");
                     fFill1.property("Color").setValue([1.0, 0.7, 0.1]);
@@ -766,14 +786,19 @@
                 ell2.property("Position").setValue([1245, 175]);
 
                 if (doGradients) {
-                    var gFill2 = grpOval.property("Contents").addProperty("ADBE Vector Graphic - G-Fill");
-                    gFill2.property("Type").setValue(1);
-                    gFill2.property("Start Point").setValue([1195, 175]);
-                    gFill2.property("End Point").setValue([1295, 175]);
-                    gFill2.property("Colors").setValue([
-                        [0.0, [0.0, 0.85, 1.0]],
-                        [1.0, [0.85, 0.1, 0.95]]
-                    ]);
+                    try {
+                        var gFill2 = grpOval.property("Contents").addProperty("ADBE Vector Graphic - G-Fill");
+                        gFill2.property("Type").setValue(1);
+                        gFill2.property("Start Point").setValue([1195, 175]);
+                        gFill2.property("End Point").setValue([1295, 175]);
+                        setGradientColors(gFill2, [
+                            [0.0, [0.0, 0.85, 1.0]],
+                            [1.0, [0.85, 0.1, 0.95]]
+                        ]);
+                    } catch(eGF2) {
+                        var fFill2 = grpOval.property("Contents").addProperty("ADBE Vector Graphic - Fill");
+                        fFill2.property("Color").setValue([0.2, 0.7, 0.9]);
+                    }
                 } else {
                     var fFill2 = grpOval.property("Contents").addProperty("ADBE Vector Graphic - Fill");
                     fFill2.property("Color").setValue([0.2, 0.7, 0.9]);
@@ -826,15 +851,21 @@
                 fFillHex.property("Opacity").setValue(85);
 
                 if (doGradients) {
-                    var gStrkHex = grpHex.property("Contents").addProperty("ADBE Vector Graphic - G-Stroke");
-                    gStrkHex.property("Type").setValue(1);
-                    gStrkHex.property("Start Point").setValue([1610, 175]);
-                    gStrkHex.property("End Point").setValue([1690, 175]);
-                    gStrkHex.property("Colors").setValue([
-                        [0.0, [0.0, 1.0, 0.85]],
-                        [1.0, [1.0, 0.9, 0.1]]
-                    ]);
-                    gStrkHex.property("Stroke Width").setValue(baseStrokeWidth + 1.5);
+                    try {
+                        var gStrkHex = grpHex.property("Contents").addProperty("ADBE Vector Graphic - G-Stroke");
+                        gStrkHex.property("Type").setValue(1);
+                        gStrkHex.property("Start Point").setValue([1610, 175]);
+                        gStrkHex.property("End Point").setValue([1690, 175]);
+                        setGradientColors(gStrkHex, [
+                            [0.0, [0.0, 1.0, 0.85]],
+                            [1.0, [1.0, 0.9, 0.1]]
+                        ]);
+                        gStrkHex.property("Stroke Width").setValue(baseStrokeWidth + 1.5);
+                    } catch(eGS) {
+                        var sStrkHex = grpHex.property("Contents").addProperty("ADBE Vector Graphic - Stroke");
+                        sStrkHex.property("Color").setValue([0.0, 1.0, 0.85]);
+                        sStrkHex.property("Stroke Width").setValue(baseStrokeWidth);
+                    }
                 } else {
                     var sStrkHex = grpHex.property("Contents").addProperty("ADBE Vector Graphic - Stroke");
                     sStrkHex.property("Color").setValue([0.0, 1.0, 0.85]);
