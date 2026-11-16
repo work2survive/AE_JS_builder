@@ -1359,7 +1359,10 @@
                         const subCss = Mat4.toCSS(subMat);
                         let subOpacity = (typeof subLayer.getWorldOpacity === 'function') ? subLayer.getWorldOpacity(time) : 1.0;
                         if (isStaticPreview && subOpacity === 0) {
-                            subOpacity = 1.0;
+                            const endOpacity = (typeof subLayer.getWorldOpacity === 'function') ? subLayer.getWorldOpacity(subLayer.comp ? subLayer.comp.duration : 1.0) : 0;
+                            if (endOpacity > 0) {
+                                subOpacity = endOpacity;
+                            }
                         }
 
                         let subContent = '';

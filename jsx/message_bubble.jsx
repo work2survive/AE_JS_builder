@@ -165,7 +165,7 @@
     if (typeof JSON === "undefined") {
         JSON = JSONPolyfill;
     }
-    var SCRIPT_VERSION = "v1.9";
+    var SCRIPT_VERSION = "v2.0";
     var MAX_CHARS = 500;
     // -------------------------------------------------------------------------
     // -------------------------------------------------------------------------
@@ -952,29 +952,65 @@
         "        return fallback;",
         "    }",
         "",
-        "    var w = Math.max(20, getVal('Bubble Width', getVal('Width', 300)));",
-        "    var maxW = getVal('Max Bubble Width', getVal('Screen Width', 0));",
-        "    if (maxW > 0) w = Math.min(w, maxW);",
-        "",
+        "    var rawBW = getVal('Bubble Width', 0);",
+        "    var maxW = Math.max(40, getVal('Max Bubble Width', getVal('Screen Width', 380)));",
         "    var textSize = getVal('Text Size', 20);",
         "    var cornerRadius = getVal('Corner Radius', 18);",
         "    var padOffset = getVal('Inner Padding Offset', 0);",
+        "    var padX = Math.max(Math.round(cornerRadius * 1.25), Math.round(textSize * 1.15)) + padOffset;",
         "    var padY = Math.max(10, Math.round(textSize * 0.60)) + padOffset;",
-        "    var leadingFactor = 1.0;",
-        "    try { leadingFactor = Math.max(0.5, Math.min(3.0, (getVal('Leading Percent', 100) || 100) / 100.0)); } catch(eLF) {}",
-        "    var lineH = Math.max(Math.round(textSize * 1.15), Math.round(textSize * 1.35 * leadingFactor));",
+        "    var minBubbleW = Math.round((padX * 2) + (textSize * 1.15));",
+        "",
         "    var lineCount = 1;",
+        "    var autoTextW = 0;",
         "    try {",
         "        var txtL = thisComp.layer('Message_Text');",
         "        var st = txtL.text ? txtL.text.sourceText : (txtL.sourceText || null);",
         "        var stVal = (st && typeof st.value !== 'undefined') ? st.value : (st !== undefined ? st : '');",
         "        var stStr = (stVal && typeof stVal.text === 'string') ? stVal.text : String(stVal || '');",
-        "        if (stStr) lineCount = Math.max(1, stStr.split('\\n').length);",
+        "        if (stStr) {",
+        "            var lns = stStr.split('\\n');",
+        "            lineCount = Math.max(1, lns.length);",
+        "            for (var li = 0; li < lns.length; li++) {",
+        "                var lw = lns[li].length * textSize * 0.52;",
+        "                if (lw > autoTextW) autoTextW = lw;",
+        "            }",
+        "        }",
         "    } catch(eLC) {}",
+        "",
+        "    var w = 0;",
+        "    if (rawBW > 0) {",
+        "        w = rawBW;",
+        "        if (maxW > 0) w = Math.min(w, maxW);",
+        "        w = Math.max(minBubbleW, w);",
+        "    } else {",
+        "        var autoCalcW = autoTextW + (padX * 2);",
+        "        if (maxW > 0) autoCalcW = Math.min(autoCalcW, maxW);",
+        "        w = Math.max(minBubbleW, autoCalcW);",
+        "    }",
+        "",
+        "    var leadingFactor = 1.0;",
+        "    try { leadingFactor = Math.max(0.5, Math.min(3.0, (getVal('Leading Percent', 100) || 100) / 100.0)); } catch(eLF) {}",
+        "    var lineH = Math.max(Math.round(textSize * 1.15), Math.round(textSize * 1.35 * leadingFactor));",
         "    var boxHeight = (lineCount <= 1) ? Math.round(textSize * 1.10) : Math.round((lineCount - 1) * lineH + (textSize * 1.10));",
-        "    var showTime = getVal('Show Timestamp', 1);",
+        "",
         "    var timeFontSize = Math.max(10, Math.round(textSize * 0.58));",
-        "    var bottomRowH = (showTime > 0) ? (timeFontSize + 12) : 0;",
+        "    var timeW = 50;",
+        "    try {",
+        "        var tL = thisComp.layer('Timestamp_Text');",
+        "        var tSt = tL.text ? tL.text.sourceText : (tL.sourceText || null);",
+        "        var tVal = (tSt && typeof tSt.value !== 'undefined') ? tSt.value : (tSt !== undefined ? tSt : '');",
+        "        var tStr = (tVal && typeof tVal.text === 'string') ? tVal.text : String(tVal || '');",
+        "        if (tStr) timeW = tStr.length * timeFontSize * 0.55;",
+        "    } catch(eTW) {}",
+        "    var statusMode = Math.round(getVal('Status Icon Mode', 4));",
+        "    var isSent = (thisLayer.name.indexOf('Sent') !== -1) ? 1 : (thisLayer.name.indexOf('Received') !== -1 ? 0 : 1);",
+        "    var hasStatus = (isSent && statusMode !== 4);",
+        "    var statusW = hasStatus ? Math.round(timeFontSize * 1.55) : 0;",
+        "    var minFitW = Math.round(padX * 2 + timeW + (hasStatus ? statusW + 6 : 0));",
+        "    var showTime = getVal('Show Timestamp', 1);",
+        "    var canFitTime = (w >= minFitW);",
+        "    var bottomRowH = (showTime > 0 && canFitTime) ? (timeFontSize + 12) : 0;",
         "    var dynamicH = Math.max(Math.max(36, Math.round(cornerRadius * 1.6)), boxHeight + (padY * 2) + bottomRowH);",
         "    var h = dynamicH;",
         "    var rTL = Math.max(0, getVal('Radius Top-Left', 18));",
@@ -1160,9 +1196,9 @@
         "        return fallback;",
         "    }",
         "",
-        "    var curW = Math.max(20, getVal('Bubble Width', getVal('Width', 300)));",
-        "    var maxW = getVal('Max Bubble Width', getVal('Screen Width', 0));",
-        "    if (maxW > 0) curW = Math.min(curW, maxW);",
+        "    var rawBW = getVal('Bubble Width', 0);",
+        "    var maxW = Math.max(40, getVal('Max Bubble Width', getVal('Screen Width', 380)));",
+        "    var curW = (rawBW > 0) ? Math.min(rawBW, maxW) : maxW;",
         "",
         "    var textSize = getVal('Text Size', 20);",
         "    var cornerRadius = getVal('Corner Radius', 18);",
@@ -1352,6 +1388,56 @@
         "    var showTime = getVal('Show Timestamp', 1);",
         "    if (showTime <= 0) return 0;",
         "",
+        "    var rawBW = getVal('Bubble Width', 0);",
+        "    var maxW = Math.max(40, getVal('Max Bubble Width', getVal('Screen Width', 380)));",
+        "    var textSize = getVal('Text Size', 20);",
+        "    var cornerRadius = getVal('Corner Radius', 18);",
+        "    var padOffset = getVal('Inner Padding Offset', 0);",
+        "    var padX = Math.max(Math.round(cornerRadius * 1.25), Math.round(textSize * 1.15)) + padOffset;",
+        "    var minBubbleW = Math.round((padX * 2) + (textSize * 1.15));",
+        "",
+        "    var autoTextW = 0;",
+        "    try {",
+        "        var txtL = thisComp.layer('Message_Text');",
+        "        var st = txtL.text ? txtL.text.sourceText : (txtL.sourceText || null);",
+        "        var stVal = (st && typeof st.value !== 'undefined') ? st.value : (st !== undefined ? st : '');",
+        "        var stStr = (stVal && typeof stVal.text === 'string') ? stVal.text : String(stVal || '');",
+        "        if (stStr) {",
+        "            var lns = stStr.split('\\n');",
+        "            for (var li = 0; li < lns.length; li++) {",
+        "                var lw = lns[li].length * textSize * 0.52;",
+        "                if (lw > autoTextW) autoTextW = lw;",
+        "            }",
+        "        }",
+        "    } catch(eLC) {}",
+        "",
+        "    var w = 0;",
+        "    if (rawBW > 0) {",
+        "        w = rawBW;",
+        "        if (maxW > 0) w = Math.min(w, maxW);",
+        "        w = Math.max(minBubbleW, w);",
+        "    } else {",
+        "        var autoCalcW = autoTextW + (padX * 2);",
+        "        if (maxW > 0) autoCalcW = Math.min(autoCalcW, maxW);",
+        "        w = Math.max(minBubbleW, autoCalcW);",
+        "    }",
+        "",
+        "    var timeFontSize = Math.max(10, Math.round(textSize * 0.58));",
+        "    var timeW = 50;",
+        "    try {",
+        "        var tSt = thisLayer.text ? thisLayer.text.sourceText : (thisLayer.sourceText || null);",
+        "        var tVal = (tSt && typeof tSt.value !== 'undefined') ? tSt.value : (tSt !== undefined ? tSt : '');",
+        "        var tStr = (tVal && typeof tVal.text === 'string') ? tVal.text : String(tVal || '');",
+        "        if (tStr) timeW = tStr.length * timeFontSize * 0.55;",
+        "    } catch(eTW) {}",
+        "    var statusMode = Math.round(getVal('Status Icon Mode', 4));",
+        "    var isSent = 1;",
+        "    try { if (thisComp.layer('Bubble_Received')) isSent = 0; } catch(eS) {}",
+        "    var hasStatus = (isSent && statusMode !== 4);",
+        "    var statusW = hasStatus ? Math.round(timeFontSize * 1.55) : 0;",
+        "    var minFitW = Math.round(padX * 2 + timeW + (hasStatus ? statusW + 6 : 0));",
+        "    if (w < minFitW) return 0;",
+        "",
         "    var animOn = getVal('Animate Entrance', 1);",
         "    if (animOn <= 0) return value;",
         "",
@@ -1370,9 +1456,9 @@
         "    return value * ((f - startF) / 2.0);",
         "})();"
     ].join("\n");
-    // Dynamic Bubble Anchor Point & Position Expression
-    var BUBBLE_TRANSFORM_EXPR = [
-        "// Dynamic Bubble Transform Alignment",
+    // Dynamic Left & Right Max-Width Guide Lines
+    var GUIDE_LEFT_PATH_EXPR = [
+        "// Dynamic Left Max-Width Guide Line",
         "(function() {",
         "    function getVal(name, fallback) {",
         "        try {",
@@ -1385,35 +1471,224 @@
         "            var p2 = thisComp.layer('Bubble_Master_Controller').effect(name)(1);",
         "            return (p2 && typeof p2.value !== 'undefined') ? p2.value : (p2 !== undefined ? p2 : fallback);",
         "        } catch(e2) {}",
-        "        try {",
-        "            var p3 = effect(name)(1);",
-        "            return (p3 && typeof p3.value !== 'undefined') ? p3.value : (p3 !== undefined ? p3 : fallback);",
-        "        } catch(e3) {}",
         "        return fallback;",
         "    }",
-        "    var w = Math.max(20, getVal('Bubble Width', getVal('Width', 300)));",
-        "    var maxW = getVal('Max Bubble Width', getVal('Screen Width', 0));",
-        "    if (maxW > 0) w = Math.min(w, maxW);",
-        "",
+        "    var rawBW = getVal('Bubble Width', 0);",
+        "    var maxW = Math.max(40, getVal('Max Bubble Width', getVal('Screen Width', 380)));",
         "    var textSize = getVal('Text Size', 20);",
         "    var cornerRadius = getVal('Corner Radius', 18);",
         "    var padOffset = getVal('Inner Padding Offset', 0);",
+        "    var padX = Math.max(Math.round(cornerRadius * 1.25), Math.round(textSize * 1.15)) + padOffset;",
         "    var padY = Math.max(10, Math.round(textSize * 0.60)) + padOffset;",
-        "    var leadingFactor = 1.0;",
-        "    try { leadingFactor = Math.max(0.5, Math.min(3.0, (getVal('Leading Percent', 100) || 100) / 100.0)); } catch(eLF) {}",
-        "    var lineH = Math.max(Math.round(textSize * 1.15), Math.round(textSize * 1.35 * leadingFactor));",
+        "    var minBubbleW = Math.round((padX * 2) + (textSize * 1.15));",
         "    var lineCount = 1;",
+        "    var autoTextW = 0;",
         "    try {",
         "        var txtL = thisComp.layer('Message_Text');",
         "        var st = txtL.text ? txtL.text.sourceText : (txtL.sourceText || null);",
         "        var stVal = (st && typeof st.value !== 'undefined') ? st.value : (st !== undefined ? st : '');",
         "        var stStr = (stVal && typeof stVal.text === 'string') ? stVal.text : String(stVal || '');",
-        "        if (stStr) lineCount = Math.max(1, stStr.split('\\n').length);",
+        "        if (stStr) {",
+        "            var lns = stStr.split('\\n');",
+        "            lineCount = Math.max(1, lns.length);",
+        "            for (var li = 0; li < lns.length; li++) {",
+        "                var lw = lns[li].length * textSize * 0.52;",
+        "                if (lw > autoTextW) autoTextW = lw;",
+        "            }",
+        "        }",
         "    } catch(eLC) {}",
+        "    var w = 0;",
+        "    if (rawBW > 0) {",
+        "        w = rawBW;",
+        "        if (maxW > 0) w = Math.min(w, maxW);",
+        "        w = Math.max(minBubbleW, w);",
+        "    } else {",
+        "        var autoCalcW = autoTextW + (padX * 2);",
+        "        if (maxW > 0) autoCalcW = Math.min(autoCalcW, maxW);",
+        "        w = Math.max(minBubbleW, autoCalcW);",
+        "    }",
+        "    var leadingFactor = 1.0;",
+        "    try { leadingFactor = Math.max(0.5, Math.min(3.0, (getVal('Leading Percent', 100) || 100) / 100.0)); } catch(eLF) {}",
+        "    var lineH = Math.max(Math.round(textSize * 1.15), Math.round(textSize * 1.35 * leadingFactor));",
         "    var boxHeight = (lineCount <= 1) ? Math.round(textSize * 1.10) : Math.round((lineCount - 1) * lineH + (textSize * 1.10));",
-        "    var showTime = getVal('Show Timestamp', 1);",
         "    var timeFontSize = Math.max(10, Math.round(textSize * 0.58));",
-        "    var bottomRowH = (showTime > 0) ? (timeFontSize + 12) : 0;",
+        "    var timeW = 50;",
+        "    try {",
+        "        var tL = thisComp.layer('Timestamp_Text');",
+        "        var tSt = tL.text ? tL.text.sourceText : (tL.sourceText || null);",
+        "        var tVal = (tSt && typeof tSt.value !== 'undefined') ? tSt.value : (tSt !== undefined ? tSt : '');",
+        "        var tStr = (tVal && typeof tVal.text === 'string') ? tVal.text : String(tVal || '');",
+        "        if (tStr) timeW = tStr.length * timeFontSize * 0.55;",
+        "    } catch(eTW) {}",
+        "    var statusMode = Math.round(getVal('Status Icon Mode', 4));",
+        "    var isSent = 1;",
+        "    try { if (thisComp.layer('Bubble_Received')) isSent = 0; } catch(eS) {}",
+        "    var hasStatus = (isSent && statusMode !== 4);",
+        "    var statusW = hasStatus ? Math.round(timeFontSize * 1.55) : 0;",
+        "    var minFitW = Math.round(padX * 2 + timeW + (hasStatus ? statusW + 6 : 0));",
+        "    var showTime = getVal('Show Timestamp', 1);",
+        "    var canFitTime = (w >= minFitW);",
+        "    var bottomRowH = (showTime > 0 && canFitTime) ? (timeFontSize + 12) : 0;",
+        "    var dynamicH = Math.max(Math.max(36, Math.round(cornerRadius * 1.6)), boxHeight + (padY * 2) + bottomRowH);",
+        "    var h = dynamicH;",
+        "    var x = -maxW / 2;",
+        "    return createPath([[x, -h / 2], [x, h / 2]], [], [], false);",
+        "})();"
+    ].join("\n");
+    var GUIDE_RIGHT_PATH_EXPR = [
+        "// Dynamic Right Max-Width Guide Line",
+        "(function() {",
+        "    function getVal(name, fallback) {",
+        "        try {",
+        "            if (thisLayer && thisLayer.hasParent) {",
+        "                var p = thisLayer.parent.effect(name)(1);",
+        "                return (p && typeof p.value !== 'undefined') ? p.value : (p !== undefined ? p : fallback);",
+        "            }",
+        "        } catch(e) {}",
+        "        try {",
+        "            var p2 = thisComp.layer('Bubble_Master_Controller').effect(name)(1);",
+        "            return (p2 && typeof p2.value !== 'undefined') ? p2.value : (p2 !== undefined ? p2 : fallback);",
+        "        } catch(e2) {}",
+        "        return fallback;",
+        "    }",
+        "    var rawBW = getVal('Bubble Width', 0);",
+        "    var maxW = Math.max(40, getVal('Max Bubble Width', getVal('Screen Width', 380)));",
+        "    var textSize = getVal('Text Size', 20);",
+        "    var cornerRadius = getVal('Corner Radius', 18);",
+        "    var padOffset = getVal('Inner Padding Offset', 0);",
+        "    var padX = Math.max(Math.round(cornerRadius * 1.25), Math.round(textSize * 1.15)) + padOffset;",
+        "    var padY = Math.max(10, Math.round(textSize * 0.60)) + padOffset;",
+        "    var minBubbleW = Math.round((padX * 2) + (textSize * 1.15));",
+        "    var lineCount = 1;",
+        "    var autoTextW = 0;",
+        "    try {",
+        "        var txtL = thisComp.layer('Message_Text');",
+        "        var st = txtL.text ? txtL.text.sourceText : (txtL.sourceText || null);",
+        "        var stVal = (st && typeof st.value !== 'undefined') ? st.value : (st !== undefined ? st : '');",
+        "        var stStr = (stVal && typeof stVal.text === 'string') ? stVal.text : String(stVal || '');",
+        "        if (stStr) {",
+        "            var lns = stStr.split('\\n');",
+        "            lineCount = Math.max(1, lns.length);",
+        "            for (var li = 0; li < lns.length; li++) {",
+        "                var lw = lns[li].length * textSize * 0.52;",
+        "                if (lw > autoTextW) autoTextW = lw;",
+        "            }",
+        "        }",
+        "    } catch(eLC) {}",
+        "    var w = 0;",
+        "    if (rawBW > 0) {",
+        "        w = rawBW;",
+        "        if (maxW > 0) w = Math.min(w, maxW);",
+        "        w = Math.max(minBubbleW, w);",
+        "    } else {",
+        "        var autoCalcW = autoTextW + (padX * 2);",
+        "        if (maxW > 0) autoCalcW = Math.min(autoCalcW, maxW);",
+        "        w = Math.max(minBubbleW, autoCalcW);",
+        "    }",
+        "    var leadingFactor = 1.0;",
+        "    try { leadingFactor = Math.max(0.5, Math.min(3.0, (getVal('Leading Percent', 100) || 100) / 100.0)); } catch(eLF) {}",
+        "    var lineH = Math.max(Math.round(textSize * 1.15), Math.round(textSize * 1.35 * leadingFactor));",
+        "    var boxHeight = (lineCount <= 1) ? Math.round(textSize * 1.10) : Math.round((lineCount - 1) * lineH + (textSize * 1.10));",
+        "    var timeFontSize = Math.max(10, Math.round(textSize * 0.58));",
+        "    var timeW = 50;",
+        "    try {",
+        "        var tL = thisComp.layer('Timestamp_Text');",
+        "        var tSt = tL.text ? tL.text.sourceText : (tL.sourceText || null);",
+        "        var tVal = (tSt && typeof tSt.value !== 'undefined') ? tSt.value : (tSt !== undefined ? tSt : '');",
+        "        var tStr = (tVal && typeof tVal.text === 'string') ? tVal.text : String(tVal || '');",
+        "        if (tStr) timeW = tStr.length * timeFontSize * 0.55;",
+        "    } catch(eTW) {}",
+        "    var statusMode = Math.round(getVal('Status Icon Mode', 4));",
+        "    var isSent = 1;",
+        "    try { if (thisComp.layer('Bubble_Received')) isSent = 0; } catch(eS) {}",
+        "    var hasStatus = (isSent && statusMode !== 4);",
+        "    var statusW = hasStatus ? Math.round(timeFontSize * 1.55) : 0;",
+        "    var minFitW = Math.round(padX * 2 + timeW + (hasStatus ? statusW + 6 : 0));",
+        "    var showTime = getVal('Show Timestamp', 1);",
+        "    var canFitTime = (w >= minFitW);",
+        "    var bottomRowH = (showTime > 0 && canFitTime) ? (timeFontSize + 12) : 0;",
+        "    var dynamicH = Math.max(Math.max(36, Math.round(cornerRadius * 1.6)), boxHeight + (padY * 2) + bottomRowH);",
+        "    var h = dynamicH;",
+        "    var x = maxW / 2;",
+        "    return createPath([[x, -h / 2], [x, h / 2]], [], [], false);",
+        "})();"
+    ].join("\n");
+    // Dynamic Bubble Anchor Point Expression
+    var BUBBLE_ANCHOR_EXPR = [
+        "// Dynamic Bubble Anchor Point Alignment",
+        "(function() {",
+        "    function getVal(name, fallback) {",
+        "        try {",
+        "            if (thisLayer && thisLayer.hasParent) {",
+        "                var p = thisLayer.parent.effect(name)(1);",
+        "                return (p && typeof p.value !== 'undefined') ? p.value : (p !== undefined ? p : fallback);",
+        "            }",
+        "        } catch(e) {}",
+        "        try {",
+        "            var p2 = thisComp.layer('Bubble_Master_Controller').effect(name)(1);",
+        "            return (p2 && typeof p2.value !== 'undefined') ? p2.value : (p2 !== undefined ? p2 : fallback);",
+        "        } catch(e2) {}",
+        "        return fallback;",
+        "    }",
+        "    var rawBW = getVal('Bubble Width', 0);",
+        "    var maxW = Math.max(40, getVal('Max Bubble Width', getVal('Screen Width', 380)));",
+        "    var textSize = getVal('Text Size', 20);",
+        "    var cornerRadius = getVal('Corner Radius', 18);",
+        "    var padOffset = getVal('Inner Padding Offset', 0);",
+        "    var padX = Math.max(Math.round(cornerRadius * 1.25), Math.round(textSize * 1.15)) + padOffset;",
+        "    var padY = Math.max(10, Math.round(textSize * 0.60)) + padOffset;",
+        "    var minBubbleW = Math.round((padX * 2) + (textSize * 1.15));",
+        "",
+        "    var lineCount = 1;",
+        "    var autoTextW = 0;",
+        "    try {",
+        "        var txtL = thisComp.layer('Message_Text');",
+        "        var st = txtL.text ? txtL.text.sourceText : (txtL.sourceText || null);",
+        "        var stVal = (st && typeof st.value !== 'undefined') ? st.value : (st !== undefined ? st : '');",
+        "        var stStr = (stVal && typeof stVal.text === 'string') ? stVal.text : String(stVal || '');",
+        "        if (stStr) {",
+        "            var lns = stStr.split('\\n');",
+        "            lineCount = Math.max(1, lns.length);",
+        "            for (var li = 0; li < lns.length; li++) {",
+        "                var lw = lns[li].length * textSize * 0.52;",
+        "                if (lw > autoTextW) autoTextW = lw;",
+        "            }",
+        "        }",
+        "    } catch(eLC) {}",
+        "",
+        "    var w = 0;",
+        "    if (rawBW > 0) {",
+        "        w = rawBW;",
+        "        if (maxW > 0) w = Math.min(w, maxW);",
+        "        w = Math.max(minBubbleW, w);",
+        "    } else {",
+        "        var autoCalcW = autoTextW + (padX * 2);",
+        "        if (maxW > 0) autoCalcW = Math.min(autoCalcW, maxW);",
+        "        w = Math.max(minBubbleW, autoCalcW);",
+        "    }",
+        "",
+        "    var leadingFactor = 1.0;",
+        "    try { leadingFactor = Math.max(0.5, Math.min(3.0, (getVal('Leading Percent', 100) || 100) / 100.0)); } catch(eLF) {}",
+        "    var lineH = Math.max(Math.round(textSize * 1.15), Math.round(textSize * 1.35 * leadingFactor));",
+        "    var boxHeight = (lineCount <= 1) ? Math.round(textSize * 1.10) : Math.round((lineCount - 1) * lineH + (textSize * 1.10));",
+        "",
+        "    var timeFontSize = Math.max(10, Math.round(textSize * 0.58));",
+        "    var timeW = 50;",
+        "    try {",
+        "        var tL = thisComp.layer('Timestamp_Text');",
+        "        var tSt = tL.text ? tL.text.sourceText : (tL.sourceText || null);",
+        "        var tVal = (tSt && typeof tSt.value !== 'undefined') ? tSt.value : (tSt !== undefined ? tSt : '');",
+        "        var tStr = (tVal && typeof tVal.text === 'string') ? tVal.text : String(tVal || '');",
+        "        if (tStr) timeW = tStr.length * timeFontSize * 0.55;",
+        "    } catch(eTW) {}",
+        "    var statusMode = Math.round(getVal('Status Icon Mode', 4));",
+        "    var isSent = (thisLayer.name.indexOf('Sent') !== -1) ? 1 : (thisLayer.name.indexOf('Received') !== -1 ? 0 : 1);",
+        "    var hasStatus = (isSent && statusMode !== 4);",
+        "    var statusW = hasStatus ? Math.round(timeFontSize * 1.55) : 0;",
+        "    var minFitW = Math.round(padX * 2 + timeW + (hasStatus ? statusW + 6 : 0));",
+        "    var showTime = getVal('Show Timestamp', 1);",
+        "    var canFitTime = (w >= minFitW);",
+        "    var bottomRowH = (showTime > 0 && canFitTime) ? (timeFontSize + 12) : 0;",
         "    var dynamicH = Math.max(Math.max(36, Math.round(cornerRadius * 1.6)), boxHeight + (padY * 2) + bottomRowH);",
         "    var h = dynamicH;",
         "    var isSent = (thisLayer.name.indexOf('Sent') !== -1) ? 1 : 0;",
@@ -1422,6 +1697,90 @@
         "    return [ox, oy, 0];",
         "})();"
     ].join("\n");
+    // Dynamic Bubble Position Expression
+    var BUBBLE_POS_EXPR = [
+        "// Dynamic Bubble Position Alignment relative to Max Width Guides",
+        "(function() {",
+        "    function getVal(name, fallback) {",
+        "        try {",
+        "            if (thisLayer && thisLayer.hasParent) {",
+        "                var p = thisLayer.parent.effect(name)(1);",
+        "                return (p && typeof p.value !== 'undefined') ? p.value : (p !== undefined ? p : fallback);",
+        "            }",
+        "        } catch(e) {}",
+        "        try {",
+        "            var p2 = thisComp.layer('Bubble_Master_Controller').effect(name)(1);",
+        "            return (p2 && typeof p2.value !== 'undefined') ? p2.value : (p2 !== undefined ? p2 : fallback);",
+        "        } catch(e2) {}",
+        "        return fallback;",
+        "    }",
+        "    var rawBW = getVal('Bubble Width', 0);",
+        "    var maxW = Math.max(40, getVal('Max Bubble Width', getVal('Screen Width', 380)));",
+        "    var textSize = getVal('Text Size', 20);",
+        "    var cornerRadius = getVal('Corner Radius', 18);",
+        "    var padOffset = getVal('Inner Padding Offset', 0);",
+        "    var padX = Math.max(Math.round(cornerRadius * 1.25), Math.round(textSize * 1.15)) + padOffset;",
+        "    var padY = Math.max(10, Math.round(textSize * 0.60)) + padOffset;",
+        "    var minBubbleW = Math.round((padX * 2) + (textSize * 1.15));",
+        "",
+        "    var lineCount = 1;",
+        "    var autoTextW = 0;",
+        "    try {",
+        "        var txtL = thisComp.layer('Message_Text');",
+        "        var st = txtL.text ? txtL.text.sourceText : (txtL.sourceText || null);",
+        "        var stVal = (st && typeof st.value !== 'undefined') ? st.value : (st !== undefined ? st : '');",
+        "        var stStr = (stVal && typeof stVal.text === 'string') ? stVal.text : String(stVal || '');",
+        "        if (stStr) {",
+        "            var lns = stStr.split('\\n');",
+        "            lineCount = Math.max(1, lns.length);",
+        "            for (var li = 0; li < lns.length; li++) {",
+        "                var lw = lns[li].length * textSize * 0.52;",
+        "                if (lw > autoTextW) autoTextW = lw;",
+        "            }",
+        "        }",
+        "    } catch(eLC) {}",
+        "",
+        "    var w = 0;",
+        "    if (rawBW > 0) {",
+        "        w = rawBW;",
+        "        if (maxW > 0) w = Math.min(w, maxW);",
+        "        w = Math.max(minBubbleW, w);",
+        "    } else {",
+        "        var autoCalcW = autoTextW + (padX * 2);",
+        "        if (maxW > 0) autoCalcW = Math.min(autoCalcW, maxW);",
+        "        w = Math.max(minBubbleW, autoCalcW);",
+        "    }",
+        "",
+        "    var leadingFactor = 1.0;",
+        "    try { leadingFactor = Math.max(0.5, Math.min(3.0, (getVal('Leading Percent', 100) || 100) / 100.0)); } catch(eLF) {}",
+        "    var lineH = Math.max(Math.round(textSize * 1.15), Math.round(textSize * 1.35 * leadingFactor));",
+        "    var boxHeight = (lineCount <= 1) ? Math.round(textSize * 1.10) : Math.round((lineCount - 1) * lineH + (textSize * 1.10));",
+        "",
+        "    var timeFontSize = Math.max(10, Math.round(textSize * 0.58));",
+        "    var timeW = 50;",
+        "    try {",
+        "        var tL = thisComp.layer('Timestamp_Text');",
+        "        var tSt = tL.text ? tL.text.sourceText : (tL.sourceText || null);",
+        "        var tVal = (tSt && typeof tSt.value !== 'undefined') ? tSt.value : (tSt !== undefined ? tSt : '');",
+        "        var tStr = (tVal && typeof tVal.text === 'string') ? tVal.text : String(tVal || '');",
+        "        if (tStr) timeW = tStr.length * timeFontSize * 0.55;",
+        "    } catch(eTW) {}",
+        "    var statusMode = Math.round(getVal('Status Icon Mode', 4));",
+        "    var isSent = (thisLayer.name.indexOf('Sent') !== -1) ? 1 : 0;",
+        "    var hasStatus = (isSent && statusMode !== 4);",
+        "    var statusW = hasStatus ? Math.round(timeFontSize * 1.55) : 0;",
+        "    var minFitW = Math.round(padX * 2 + timeW + (hasStatus ? statusW + 6 : 0));",
+        "    var showTime = getVal('Show Timestamp', 1);",
+        "    var canFitTime = (w >= minFitW);",
+        "    var bottomRowH = (showTime > 0 && canFitTime) ? (timeFontSize + 12) : 0;",
+        "    var dynamicH = Math.max(Math.max(36, Math.round(cornerRadius * 1.6)), boxHeight + (padY * 2) + bottomRowH);",
+        "    var h = dynamicH;",
+        "    var px = isSent ? (maxW / 2) : -(maxW / 2);",
+        "    var py = h / 2;",
+        "    return [px, py, 0];",
+        "})();"
+    ].join("\n");
+    var BUBBLE_TRANSFORM_EXPR = BUBBLE_POS_EXPR;
     // Dynamic Timestamp Position Expression (Equal Right/Bottom Margins when no status icon)
     var TIMECODE_POS_EXPR = [
         "// Dynamic Timestamp Position Tracking",
@@ -1443,41 +1802,71 @@
         "        } catch(e3) {}",
         "        return fallback;",
         "    }",
-        "    var w = Math.max(20, getVal('Bubble Width', getVal('Width', 0)));",
-        "    var maxW = getVal('Max Bubble Width', getVal('Screen Width', 0));",
-        "    if (maxW > 0) w = Math.min(w, maxW);",
-        "",
+        "    var rawBW = getVal('Bubble Width', 0);",
+        "    var maxW = Math.max(40, getVal('Max Bubble Width', getVal('Screen Width', 380)));",
         "    var textSize = getVal('Text Size', 20);",
         "    var cornerRadius = getVal('Corner Radius', 18);",
         "    var padOffset = getVal('Inner Padding Offset', 0);",
         "    var padX = Math.max(Math.round(cornerRadius * 1.25), Math.round(textSize * 1.15)) + padOffset;",
         "    var padY = Math.max(10, Math.round(textSize * 0.60)) + padOffset;",
-        "    var leadingFactor = 1.0;",
-        "    try { leadingFactor = Math.max(0.5, Math.min(3.0, (getVal('Leading Percent', 100) || 100) / 100.0)); } catch(eLF) {}",
-        "    var lineH = Math.max(Math.round(textSize * 1.15), Math.round(textSize * 1.35 * leadingFactor));",
+        "    var minBubbleW = Math.round((padX * 2) + (textSize * 1.15));",
+        "",
         "    var lineCount = 1;",
+        "    var autoTextW = 0;",
         "    try {",
         "        var txtL = thisComp.layer('Message_Text');",
         "        var st = txtL.text ? txtL.text.sourceText : (txtL.sourceText || null);",
         "        var stVal = (st && typeof st.value !== 'undefined') ? st.value : (st !== undefined ? st : '');",
         "        var stStr = (stVal && typeof stVal.text === 'string') ? stVal.text : String(stVal || '');",
-        "        if (stStr) lineCount = Math.max(1, stStr.split('\\n').length);",
+        "        if (stStr) {",
+        "            var lns = stStr.split('\\n');",
+        "            lineCount = Math.max(1, lns.length);",
+        "            for (var li = 0; li < lns.length; li++) {",
+        "                var lw = lns[li].length * textSize * 0.52;",
+        "                if (lw > autoTextW) autoTextW = lw;",
+        "            }",
+        "        }",
         "    } catch(eLC) {}",
+        "",
+        "    var w = 0;",
+        "    if (rawBW > 0) {",
+        "        w = rawBW;",
+        "        if (maxW > 0) w = Math.min(w, maxW);",
+        "        w = Math.max(minBubbleW, w);",
+        "    } else {",
+        "        var autoCalcW = autoTextW + (padX * 2);",
+        "        if (maxW > 0) autoCalcW = Math.min(autoCalcW, maxW);",
+        "        w = Math.max(minBubbleW, autoCalcW);",
+        "    }",
+        "",
+        "    var leadingFactor = 1.0;",
+        "    try { leadingFactor = Math.max(0.5, Math.min(3.0, (getVal('Leading Percent', 100) || 100) / 100.0)); } catch(eLF) {}",
+        "    var lineH = Math.max(Math.round(textSize * 1.15), Math.round(textSize * 1.35 * leadingFactor));",
         "    var boxHeight = (lineCount <= 1) ? Math.round(textSize * 1.10) : Math.round((lineCount - 1) * lineH + (textSize * 1.10));",
         "    var showTime = getVal('Show Timestamp', 1);",
         "    var timeFontSize = Math.max(10, Math.round(textSize * 0.58));",
-        "    var bottomRowH = (showTime > 0) ? (timeFontSize + 12) : 0;",
-        "    var dynamicH = Math.max(Math.max(36, Math.round(cornerRadius * 1.6)), boxHeight + (padY * 2) + bottomRowH);",
-        "    var h = dynamicH;",
-        "    if (w <= 0 || h <= 0) return value;",
-        "    var timeMargin = Math.max(8, Math.round(padY * 0.65));",
+        "    var timeW = 50;",
+        "    try {",
+        "        var tSt = thisLayer.text ? thisLayer.text.sourceText : (thisLayer.sourceText || null);",
+        "        var tVal = (tSt && typeof tSt.value !== 'undefined') ? tSt.value : (tSt !== undefined ? tSt : '');",
+        "        var tStr = (tVal && typeof tVal.text === 'string') ? tVal.text : String(tVal || '');",
+        "        if (tStr) timeW = tStr.length * timeFontSize * 0.55;",
+        "    } catch(eTW) {}",
         "    var statusMode = Math.round(getVal('Status Icon Mode', 4));",
         "    var statusStyle = Math.round(getVal('Status Icon Style', 0));",
-        "    var isSent = (thisLayer.parent && thisLayer.parent.name.indexOf('Received') === -1) ? 1 : 0;",
+        "    var isSent = 1;",
+        "    try { if (thisComp.layer('Bubble_Received')) isSent = 0; } catch(eS) {}",
         "    var hasStatus = (isSent && statusMode !== 4);",
         "    var statusW = hasStatus ? ((statusStyle === 0) ? Math.round(timeFontSize * 1.55) : Math.round(timeFontSize * 1.35)) : 0;",
+        "    var minFitW = Math.round(padX * 2 + timeW + (hasStatus ? statusW + 6 : 0));",
+        "    var canFitTime = (w >= minFitW);",
+        "    var bottomRowH = (showTime > 0 && canFitTime) ? (timeFontSize + 12) : 0;",
+        "    var dynamicH = Math.max(Math.max(36, Math.round(cornerRadius * 1.6)), boxHeight + (padY * 2) + bottomRowH);",
+        "    var h = dynamicH;",
+        "    var timeMargin = Math.max(8, Math.round(padY * 0.65));",
+        "    var bubbleRight = isSent ? (maxW / 2) : (-(maxW / 2) + w);",
         "    var statusSpacing = statusW > 0 ? 6 : 0;",
-        "    var posX = hasStatus ? ((w / 2) - padX - statusW - statusSpacing) : ((w / 2) - timeMargin);",
+        "    var posX = hasStatus ? (bubbleRight - padX - statusW - statusSpacing) : (bubbleRight - timeMargin);",
         "    var posY = (h / 2) - timeMargin;",
         "    return [posX, posY, (value.length > 2 ? value[2] : -0.5)];",
         "})();"
@@ -1503,38 +1892,70 @@
         "        } catch(e3) {}",
         "        return fallback;",
         "    }",
-        "    var w = Math.max(20, getVal('Bubble Width', getVal('Width', 0)));",
-        "    var maxW = getVal('Max Bubble Width', getVal('Screen Width', 0));",
-        "    if (maxW > 0) w = Math.min(w, maxW);",
-        "",
+        "    var rawBW = getVal('Bubble Width', 0);",
+        "    var maxW = Math.max(40, getVal('Max Bubble Width', getVal('Screen Width', 380)));",
         "    var textSize = getVal('Text Size', 20);",
         "    var cornerRadius = getVal('Corner Radius', 18);",
         "    var padOffset = getVal('Inner Padding Offset', 0);",
         "    var padX = Math.max(Math.round(cornerRadius * 1.25), Math.round(textSize * 1.15)) + padOffset;",
         "    var padY = Math.max(10, Math.round(textSize * 0.60)) + padOffset;",
-        "    var leadingFactor = 1.0;",
-        "    try { leadingFactor = Math.max(0.5, Math.min(3.0, (getVal('Leading Percent', 100) || 100) / 100.0)); } catch(eLF) {}",
-        "    var lineH = Math.max(Math.round(textSize * 1.15), Math.round(textSize * 1.35 * leadingFactor));",
+        "    var minBubbleW = Math.round((padX * 2) + (textSize * 1.15));",
+        "",
         "    var lineCount = 1;",
+        "    var autoTextW = 0;",
         "    try {",
         "        var txtL = thisComp.layer('Message_Text');",
         "        var st = txtL.text ? txtL.text.sourceText : (txtL.sourceText || null);",
         "        var stVal = (st && typeof st.value !== 'undefined') ? st.value : (st !== undefined ? st : '');",
         "        var stStr = (stVal && typeof stVal.text === 'string') ? stVal.text : String(stVal || '');",
-        "        if (stStr) lineCount = Math.max(1, stStr.split('\\n').length);",
+        "        if (stStr) {",
+        "            var lns = stStr.split('\\n');",
+        "            lineCount = Math.max(1, lns.length);",
+        "            for (var li = 0; li < lns.length; li++) {",
+        "                var lw = lns[li].length * textSize * 0.52;",
+        "                if (lw > autoTextW) autoTextW = lw;",
+        "            }",
+        "        }",
         "    } catch(eLC) {}",
+        "",
+        "    var w = 0;",
+        "    if (rawBW > 0) {",
+        "        w = rawBW;",
+        "        if (maxW > 0) w = Math.min(w, maxW);",
+        "        w = Math.max(minBubbleW, w);",
+        "    } else {",
+        "        var autoCalcW = autoTextW + (padX * 2);",
+        "        if (maxW > 0) autoCalcW = Math.min(autoCalcW, maxW);",
+        "        w = Math.max(minBubbleW, autoCalcW);",
+        "    }",
+        "",
+        "    var leadingFactor = 1.0;",
+        "    try { leadingFactor = Math.max(0.5, Math.min(3.0, (getVal('Leading Percent', 100) || 100) / 100.0)); } catch(eLF) {}",
+        "    var lineH = Math.max(Math.round(textSize * 1.15), Math.round(textSize * 1.35 * leadingFactor));",
         "    var boxHeight = (lineCount <= 1) ? Math.round(textSize * 1.10) : Math.round((lineCount - 1) * lineH + (textSize * 1.10));",
         "    var showTime = getVal('Show Timestamp', 1);",
         "    var timeFontSize = Math.max(10, Math.round(textSize * 0.58));",
-        "    var bottomRowH = (showTime > 0) ? (timeFontSize + 12) : 0;",
-        "    var dynamicH = Math.max(Math.max(36, Math.round(cornerRadius * 1.6)), boxHeight + (padY * 2) + bottomRowH);",
-        "    var h = dynamicH;",
-        "    if (w <= 0 || h <= 0) return value;",
-        "    var timeMargin = Math.max(8, Math.round(padY * 0.65));",
+        "    var timeW = 50;",
+        "    try {",
+        "        var tL = thisComp.layer('Timestamp_Text');",
+        "        var tSt = tL.text ? tL.text.sourceText : (tL.sourceText || null);",
+        "        var tVal = (tSt && typeof tSt.value !== 'undefined') ? tSt.value : (tSt !== undefined ? tSt : '');",
+        "        var tStr = (tVal && typeof tVal.text === 'string') ? tVal.text : String(tVal || '');",
+        "        if (tStr) timeW = tStr.length * timeFontSize * 0.55;",
+        "    } catch(eTW) {}",
+        "    var isSent = 1;",
+        "    try { if (thisComp.layer('Bubble_Received')) isSent = 0; } catch(eS) {}",
         "    var isRCS = (thisLayer.name.indexOf('RCS') !== -1);",
         "    var statusStyle = Math.round(getVal('Status Icon Style', 0));",
         "    var statusW = (statusStyle === 0) ? Math.round(timeFontSize * 1.55) : Math.round(timeFontSize * 1.35);",
-        "    var posX = isRCS ? ((w / 2) - padX - (statusW / 2)) : ((w / 2) - padX);",
+        "    var minFitW = Math.round(padX * 2 + timeW + statusW + 6);",
+        "    var canFitTime = (w >= minFitW);",
+        "    var bottomRowH = (showTime > 0 && canFitTime) ? (timeFontSize + 12) : 0;",
+        "    var dynamicH = Math.max(Math.max(36, Math.round(cornerRadius * 1.6)), boxHeight + (padY * 2) + bottomRowH);",
+        "    var h = dynamicH;",
+        "    var timeMargin = Math.max(8, Math.round(padY * 0.65));",
+        "    var bubbleRight = isSent ? (maxW / 2) : (-(maxW / 2) + w);",
+        "    var posX = isRCS ? (bubbleRight - padX - (statusW / 2)) : (bubbleRight - padX);",
         "    var posY = isRCS ? ((h / 2) - timeMargin - Math.round(timeFontSize * 0.32)) : ((h / 2) - timeMargin);",
         "    return [posX, posY, (value.length > 2 ? value[2] : -0.5)];",
         "})();"
@@ -1563,34 +1984,69 @@
         "        return fallback;",
         "    }",
         "",
-        "    var w = Math.max(20, getVal('Bubble Width', getVal('Width', 0)));",
-        "    var maxW = getVal('Max Bubble Width', getVal('Screen Width', 0));",
-        "    if (maxW > 0) w = Math.min(w, maxW);",
-        "",
+        "    var rawBW = getVal('Bubble Width', 0);",
+        "    var maxW = Math.max(40, getVal('Max Bubble Width', getVal('Screen Width', 380)));",
         "    var textSize = getVal('Text Size', 20);",
         "    var cornerRadius = getVal('Corner Radius', 18);",
         "    var padOffset = getVal('Inner Padding Offset', 0);",
         "    var padX = Math.max(Math.round(cornerRadius * 1.25), Math.round(textSize * 1.15)) + padOffset;",
         "    var padY = Math.max(10, Math.round(textSize * 0.60)) + padOffset;",
+        "    var minBubbleW = Math.round((padX * 2) + (textSize * 1.15));",
+        "",
+        "    var lineCount = 1;",
+        "    var autoTextW = 0;",
+        "    try {",
+        "        var st = thisLayer.text ? thisLayer.text.sourceText : (thisLayer.sourceText || null);",
+        "        var stVal = (st && typeof st.value !== 'undefined') ? st.value : (st !== undefined ? st : '');",
+        "        var stStr = (stVal && typeof stVal.text === 'string') ? stVal.text : String(stVal || '');",
+        "        if (stStr) {",
+        "            var lns = stStr.split('\\n');",
+        "            lineCount = Math.max(1, lns.length);",
+        "            for (var li = 0; li < lns.length; li++) {",
+        "                var lw = lns[li].length * textSize * 0.52;",
+        "                if (lw > autoTextW) autoTextW = lw;",
+        "            }",
+        "        }",
+        "    } catch(eLC) {}",
+        "",
+        "    var w = 0;",
+        "    if (rawBW > 0) {",
+        "        w = rawBW;",
+        "        if (maxW > 0) w = Math.min(w, maxW);",
+        "        w = Math.max(minBubbleW, w);",
+        "    } else {",
+        "        var autoCalcW = autoTextW + (padX * 2);",
+        "        if (maxW > 0) autoCalcW = Math.min(autoCalcW, maxW);",
+        "        w = Math.max(minBubbleW, autoCalcW);",
+        "    }",
+        "",
         "    var leadingFactor = 1.0;",
         "    try { leadingFactor = Math.max(0.5, Math.min(3.0, (getVal('Leading Percent', 100) || 100) / 100.0)); } catch(eLF) {}",
         "    var lineH = Math.max(Math.round(textSize * 1.15), Math.round(textSize * 1.35 * leadingFactor));",
-        "    var lineCount = 1;",
-        "    try {",
-        "        var txtL = thisComp.layer('Message_Text');",
-        "        var st = txtL.text ? txtL.text.sourceText : (txtL.sourceText || null);",
-        "        var stVal = (st && typeof st.value !== 'undefined') ? st.value : (st !== undefined ? st : '');",
-        "        var stStr = (stVal && typeof stVal.text === 'string') ? stVal.text : String(stVal || '');",
-        "        if (stStr) lineCount = Math.max(1, stStr.split('\\n').length);",
-        "    } catch(eLC) {}",
         "    var boxHeight = (lineCount <= 1) ? Math.round(textSize * 1.10) : Math.round((lineCount - 1) * lineH + (textSize * 1.10));",
-        "    var showTime = getVal('Show Timestamp', 1);",
         "    var timeFontSize = Math.max(10, Math.round(textSize * 0.58));",
-        "    var bottomRowH = (showTime > 0) ? (timeFontSize + 12) : 0;",
+        "    var timeW = 50;",
+        "    try {",
+        "        var tL = thisComp.layer('Timestamp_Text');",
+        "        var tSt = tL.text ? tL.text.sourceText : (tL.sourceText || null);",
+        "        var tVal = (tSt && typeof tSt.value !== 'undefined') ? tSt.value : (tSt !== undefined ? tSt : '');",
+        "        var tStr = (tVal && typeof tVal.text === 'string') ? tVal.text : String(tVal || '');",
+        "        if (tStr) timeW = tStr.length * timeFontSize * 0.55;",
+        "    } catch(eTW) {}",
+        "    var statusMode = Math.round(getVal('Status Icon Mode', 4));",
+        "    var isSent = 1;",
+        "    try { if (thisComp.layer('Bubble_Received')) isSent = 0; } catch(eS) {}",
+        "    var hasStatus = (isSent && statusMode !== 4);",
+        "    var statusW = hasStatus ? Math.round(timeFontSize * 1.55) : 0;",
+        "    var minFitW = Math.round(padX * 2 + timeW + (hasStatus ? statusW + 6 : 0));",
+        "    var showTime = getVal('Show Timestamp', 1);",
+        "    var canFitTime = (w >= minFitW);",
+        "    var bottomRowH = (showTime > 0 && canFitTime) ? (timeFontSize + 12) : 0;",
         "    var dynamicH = Math.max(Math.max(36, Math.round(cornerRadius * 1.6)), boxHeight + (padY * 2) + bottomRowH);",
         "    var h = dynamicH;",
         "    var capHeight = Math.round(textSize * 0.72);",
-        "    var baseX = (w > 0) ? (-(w / 2) + padX) : value[0];",
+        "    var bubbleLeft = isSent ? ((maxW / 2) - w) : -(maxW / 2);",
+        "    var baseX = (w > 0) ? (bubbleLeft + padX) : value[0];",
         "    var baseY = (h > 0) ? (-(h / 2) + padY + capHeight) : value[1];",
         "",
         "    var effectType = Math.round(getVal('Animation Effect Type', 0));",
@@ -1943,6 +2399,53 @@
         "    var showTime = getVal('Show Timestamp', 1);",
         "    if (showTime <= 0) return 0;",
         "",
+        "    var rawBW = getVal('Bubble Width', 0);",
+        "    var maxW = Math.max(40, getVal('Max Bubble Width', getVal('Screen Width', 380)));",
+        "    var textSize = getVal('Text Size', 20);",
+        "    var cornerRadius = getVal('Corner Radius', 18);",
+        "    var padOffset = getVal('Inner Padding Offset', 0);",
+        "    var padX = Math.max(Math.round(cornerRadius * 1.25), Math.round(textSize * 1.15)) + padOffset;",
+        "    var minBubbleW = Math.round((padX * 2) + (textSize * 1.15));",
+        "",
+        "    var autoTextW = 0;",
+        "    try {",
+        "        var txtL = thisComp.layer('Message_Text');",
+        "        var st = txtL.text ? txtL.text.sourceText : (txtL.sourceText || null);",
+        "        var stVal = (st && typeof st.value !== 'undefined') ? st.value : (st !== undefined ? st : '');",
+        "        var stStr = (stVal && typeof stVal.text === 'string') ? stVal.text : String(stVal || '');",
+        "        if (stStr) {",
+        "            var lns = stStr.split('\\n');",
+        "            for (var li = 0; li < lns.length; li++) {",
+        "                var lw = lns[li].length * textSize * 0.52;",
+        "                if (lw > autoTextW) autoTextW = lw;",
+        "            }",
+        "        }",
+        "    } catch(eLC) {}",
+        "",
+        "    var w = 0;",
+        "    if (rawBW > 0) {",
+        "        w = rawBW;",
+        "        if (maxW > 0) w = Math.min(w, maxW);",
+        "        w = Math.max(minBubbleW, w);",
+        "    } else {",
+        "        var autoCalcW = autoTextW + (padX * 2);",
+        "        if (maxW > 0) autoCalcW = Math.min(autoCalcW, maxW);",
+        "        w = Math.max(minBubbleW, autoCalcW);",
+        "    }",
+        "",
+        "    var timeFontSize = Math.max(10, Math.round(textSize * 0.58));",
+        "    var timeW = 50;",
+        "    try {",
+        "        var tL = thisComp.layer('Timestamp_Text');",
+        "        var tSt = tL.text ? tL.text.sourceText : (tL.sourceText || null);",
+        "        var tVal = (tSt && typeof tSt.value !== 'undefined') ? tSt.value : (tSt !== undefined ? tSt : '');",
+        "        var tStr = (tVal && typeof tVal.text === 'string') ? tVal.text : String(tVal || '');",
+        "        if (tStr) timeW = tStr.length * timeFontSize * 0.55;",
+        "    } catch(eTW) {}",
+        "    var statusW = Math.round(timeFontSize * 1.55);",
+        "    var minFitW = Math.round(padX * 2 + timeW + statusW + 6);",
+        "    if (w < minFitW) return 0;",
+        "",
         "    var style = Math.round(getVal('Status Icon Style', 0));",
         "    if (style !== 1) return 0; // Visible when style === 1 (Standard Checks)",
         "    var mode = Math.round(getVal('Status Icon Mode', 0));",
@@ -1982,6 +2485,53 @@
         "",
         "    var showTime = getVal('Show Timestamp', 1);",
         "    if (showTime <= 0) return 0;",
+        "",
+        "    var rawBW = getVal('Bubble Width', 0);",
+        "    var maxW = Math.max(40, getVal('Max Bubble Width', getVal('Screen Width', 380)));",
+        "    var textSize = getVal('Text Size', 20);",
+        "    var cornerRadius = getVal('Corner Radius', 18);",
+        "    var padOffset = getVal('Inner Padding Offset', 0);",
+        "    var padX = Math.max(Math.round(cornerRadius * 1.25), Math.round(textSize * 1.15)) + padOffset;",
+        "    var minBubbleW = Math.round((padX * 2) + (textSize * 1.15));",
+        "",
+        "    var autoTextW = 0;",
+        "    try {",
+        "        var txtL = thisComp.layer('Message_Text');",
+        "        var st = txtL.text ? txtL.text.sourceText : (txtL.sourceText || null);",
+        "        var stVal = (st && typeof st.value !== 'undefined') ? st.value : (st !== undefined ? st : '');",
+        "        var stStr = (stVal && typeof stVal.text === 'string') ? stVal.text : String(stVal || '');",
+        "        if (stStr) {",
+        "            var lns = stStr.split('\\n');",
+        "            for (var li = 0; li < lns.length; li++) {",
+        "                var lw = lns[li].length * textSize * 0.52;",
+        "                if (lw > autoTextW) autoTextW = lw;",
+        "            }",
+        "        }",
+        "    } catch(eLC) {}",
+        "",
+        "    var w = 0;",
+        "    if (rawBW > 0) {",
+        "        w = rawBW;",
+        "        if (maxW > 0) w = Math.min(w, maxW);",
+        "        w = Math.max(minBubbleW, w);",
+        "    } else {",
+        "        var autoCalcW = autoTextW + (padX * 2);",
+        "        if (maxW > 0) autoCalcW = Math.min(autoCalcW, maxW);",
+        "        w = Math.max(minBubbleW, autoCalcW);",
+        "    }",
+        "",
+        "    var timeFontSize = Math.max(10, Math.round(textSize * 0.58));",
+        "    var timeW = 50;",
+        "    try {",
+        "        var tL = thisComp.layer('Timestamp_Text');",
+        "        var tSt = tL.text ? tL.text.sourceText : (tL.sourceText || null);",
+        "        var tVal = (tSt && typeof tSt.value !== 'undefined') ? tSt.value : (tSt !== undefined ? tSt : '');",
+        "        var tStr = (tVal && typeof tVal.text === 'string') ? tVal.text : String(tVal || '');",
+        "        if (tStr) timeW = tStr.length * timeFontSize * 0.55;",
+        "    } catch(eTW) {}",
+        "    var statusW = Math.round(timeFontSize * 1.55);",
+        "    var minFitW = Math.round(padX * 2 + timeW + statusW + 6);",
+        "    if (w < minFitW) return 0;",
         "",
         "    var style = Math.round(getVal('Status Icon Style', 0));",
         "    if (style !== 0) return 0; // Visible when style === 0 (RCS Circled Checks)",
@@ -2533,6 +3083,27 @@
     dropEmojiFont.selection = 0; // Default: Auto (Preset Default)
     dropEmojiFont.preferredSize = [185, 26];
     dropEmojiFont.helpTip = "Select font specifically used for emojis. Normal text retains the Font Family selected above.";
+    // Bubble Width Row (0 = auto)
+    var grpBubbleW = pnlDim.add("group");
+    grpBubbleW.orientation = "row";
+    grpBubbleW.alignChildren = ["left", "center"];
+    var lblBubbleW = grpBubbleW.add("statictext", undefined, "Bubble Width (px):");
+    lblBubbleW.preferredSize = [135, -1];
+    var sldBubbleW = grpBubbleW.add("slider", undefined, 0, 0, 1200);
+    sldBubbleW.alignment = ["fill", "center"];
+    var txtBubbleW = grpBubbleW.add("edittext", undefined, "0");
+    txtBubbleW.characters = 5;
+    txtBubbleW.helpTip = "Bubble width in pixels (0 = auto: width depends on text amount and text-wrap, up to Max Bubble Width).";
+    sldBubbleW.onChanging = function() {
+        txtBubbleW.text = String(Math.round(sldBubbleW.value));
+    };
+    txtBubbleW.onChange = function() {
+        var v = Math.max(0, Math.min(2400, parseFloat(txtBubbleW.text) || 0));
+        sldBubbleW.value = v;
+        txtBubbleW.text = String(Math.round(v));
+    };
+    var lblBubbleWNote = pnlDim.add("statictext", undefined, "*(0 = auto: width depends on text amount and text-wrap)");
+    lblBubbleWNote.alignment = ["left", "top"];
     // Max Bubble Width Row (Directly governs maximum bubble width)
     var grpWidth = pnlDim.add("group");
     grpWidth.orientation = "row";
@@ -3554,41 +4125,57 @@
             : 0;
         var statusSpacing = statusW > 0 ? 6 : 0;
         var timeRowW = isTimeEnabled ? (timeW + statusSpacing + statusW) : 0;
-        // 1. Initial text box width: maxBubbleW minus horizontal padding
-        var textBoxW = Math.max(30, maxBubbleW - (padX * 2));
-        // 2. Wrap text
-        var lines = wrapTextToLines(msgText, textBoxW, textSize, wrapMode);
-        var maxLineW = getLinesPixelBounds(lines, textSize);
-        // 3. Overflow protection: reduce text box size by 10 pixels until the bubble fits within maxBubbleW
-        var guard = 0;
-        while ((maxLineW + (padX * 2) > maxBubbleW) && (textBoxW > 30) && guard < 100) {
-            textBoxW -= 10;
+        var reqBubbleW = (typeof params.bubbleW === "number") ? Math.max(0, params.bubbleW) : 0;
+        var minBubbleW = Math.round((padX * 2) + (textSize * 1.15));
+        var minFitW = Math.round(padX * 2 + timeW + (hasStatus ? statusW + 6 : 0));
+
+        var bubbleW = 0;
+        var textBoxW = 0;
+        var lines = [];
+        var maxLineW = 0;
+        var wrappedString = "";
+        var singleLine = false;
+        var canFitInlineTime = false;
+
+        if (reqBubbleW > 0) {
+            bubbleW = Math.min(reqBubbleW, maxBubbleW);
+            bubbleW = Math.max(minBubbleW, bubbleW);
+            textBoxW = Math.max(30, bubbleW - (padX * 2));
             lines = wrapTextToLines(msgText, textBoxW, textSize, wrapMode);
             maxLineW = getLinesPixelBounds(lines, textSize);
-            guard++;
-        }
-        var wrappedString = lines.join("\n");
-        var singleLine = (lines.length === 1);
-        // 4. Width logic:
-        // Single line: check if inline timestamp + status fit inside maxBubbleW
-        var canFitInlineTime = singleLine && isTimeEnabled && (maxLineW + timeRowW + (padX * 2) + 16 <= maxBubbleW);
-        var bubbleW = 0;
-        if (canFitInlineTime) {
-            bubbleW = maxLineW + timeRowW + (padX * 2) + 16;
-        } else if (singleLine && !isTimeEnabled) {
-            bubbleW = maxLineW + (padX * 2);
+            wrappedString = lines.join("\n");
+            singleLine = (lines.length === 1);
+            canFitInlineTime = singleLine && isTimeEnabled && (maxLineW + timeRowW + (padX * 2) + 16 <= bubbleW);
         } else {
-            // Multiline or non-inline: bubble width matches widest content line + padding
-            var contentW = isTimeEnabled ? Math.max(maxLineW, timeRowW) : maxLineW;
-            bubbleW = contentW + (padX * 2);
+            textBoxW = Math.max(30, maxBubbleW - (padX * 2));
+            lines = wrapTextToLines(msgText, textBoxW, textSize, wrapMode);
+            maxLineW = getLinesPixelBounds(lines, textSize);
+            var guard = 0;
+            while ((maxLineW + (padX * 2) > maxBubbleW) && (textBoxW > 30) && guard < 100) {
+                textBoxW -= 10;
+                lines = wrapTextToLines(msgText, textBoxW, textSize, wrapMode);
+                maxLineW = getLinesPixelBounds(lines, textSize);
+                guard++;
+            }
+            wrappedString = lines.join("\n");
+            singleLine = (lines.length === 1);
+            canFitInlineTime = singleLine && isTimeEnabled && (maxLineW + timeRowW + (padX * 2) + 16 <= maxBubbleW);
+            if (canFitInlineTime) {
+                bubbleW = maxLineW + timeRowW + (padX * 2) + 16;
+            } else if (singleLine && !isTimeEnabled) {
+                bubbleW = maxLineW + (padX * 2);
+            } else {
+                var contentW = isTimeEnabled ? Math.max(maxLineW, timeRowW) : maxLineW;
+                bubbleW = contentW + (padX * 2);
+            }
+            bubbleW = Math.min(bubbleW, maxBubbleW);
+            bubbleW = Math.max(minBubbleW, bubbleW);
         }
-        bubbleW = Math.min(bubbleW, maxBubbleW);
-        // 5. Height logic:
-        // Text block height from line count and leading
+
+        var canFitTime = (bubbleW >= minFitW);
         var lineH = Math.max(Math.round(textSize * 1.15), Math.round(textSize * 1.35 * leadingFactor));
         var boxHeight = singleLine ? Math.round(textSize * 1.10) : Math.round((lines.length - 1) * lineH + (textSize * 1.10));
-        // If timestamp or delivery receipt is on its own row, allocate comfortable vertical room
-        var bottomRowH = (!canFitInlineTime && isTimeEnabled) ? (timeFontSize + 12) : 0;
+        var bottomRowH = (!canFitInlineTime && isTimeEnabled && canFitTime) ? (timeFontSize + 12) : 0;
         var bubbleH = boxHeight + (padY * 2) + bottomRowH;
         var minBubbleH = Math.max(36, Math.round(cornerRadius * 1.6));
         bubbleH = Math.max(minBubbleH, bubbleH);
@@ -3604,6 +4191,9 @@
             boxHeight: boxHeight,
             singleLine: singleLine,
             canFitInlineTime: canFitInlineTime,
+            canFitTime: canFitTime,
+            minFitW: minFitW,
+            minBubbleW: minBubbleW,
             timeFontSize: timeFontSize,
             timeW: timeW,
             statusW: statusW,
@@ -3642,6 +4232,8 @@
             var textColor = hexToRgb(cpText.value);
             var timeColor = hexToRgb(colorSet ? colorSet.time : "#888888");
             var maxBubbleW = Math.max(80, parseFloat(txtWidth.text) || 380);
+            var reqBubbleW = (typeof txtBubbleW !== "undefined" && txtBubbleW) ? Math.max(0, parseFloat(txtBubbleW.text) || 0) : 0;
+            var reqBubbleW = (typeof txtBubbleW !== "undefined" && txtBubbleW) ? Math.max(0, parseFloat(txtBubbleW.text) || 0) : 0;
             var textSize = parseFloat(txtSize.text) || 20;
             var padOffset = parseFloat(txtPad.text) || 0;
             var leadingPercent = parseFloat(txtLeading.text) || 100;
@@ -3692,6 +4284,7 @@
             // Sizing and text wrapping layout calculation
             var layout = computeBubbleLayout({
                 msgText: msgText,
+                bubbleW: reqBubbleW,
                 maxBubbleW: maxBubbleW,
                 padX: padX,
                 padY: padY,
@@ -3712,6 +4305,7 @@
             var lineH = layout.lineH;
             var singleLine = layout.singleLine;
             var canFitInlineTime = layout.canFitInlineTime;
+            var canFitTime = layout.canFitTime;
             var timeFontSize = layout.timeFontSize;
             var timeW = layout.timeW;
             var statusW = layout.statusW;
@@ -3735,12 +4329,7 @@
                 }
             }
             var compCenter = [comp.width / 2, comp.height / 2, 0];
-            // Horizontal alignment within composition:
-            // Sent: Right-column; Received: Left-column
-            var colHalfW = Math.min(comp.width * 0.44, Math.max(maxBubbleW * 0.6, 220));
-            var posX = isSent
-                ? (compCenter[0] + colHalfW - (bubbleW / 2))
-                : (compCenter[0] - colHalfW + (bubbleW / 2));
+            var posX = compCenter[0];
             var posY = compCenter[1];
             // 1. Master Controller Layer
             var master = comp.layers.addShape ? comp.layers.addShape() : comp.layers.addNull();
@@ -3759,7 +4348,7 @@
                 var effSize = parade.addProperty("ADBE Slider Control");
                 if (effSize) { effSize.name = "Text Size"; effSize.property(1).setValue(textSize); }
                 var effBW = parade.addProperty("ADBE Slider Control");
-                if (effBW) { effBW.name = "Bubble Width"; effBW.property(1).setValue(bubbleW); }
+                if (effBW) { effBW.name = "Bubble Width"; effBW.property(1).setValue(reqBubbleW); }
                 var effBH = parade.addProperty("ADBE Slider Control");
                 if (effBH) { effBH.name = "Bubble Height"; effBH.property(1).setValue(bubbleH); }
                 var effWrap = parade.addProperty("ADBE Slider Control");
@@ -3817,13 +4406,15 @@
             // Sent: grows from Right to Left; Received: grows from Left to Right
             var originX = isSent ? (bubbleW / 2) : -(bubbleW / 2);
             var originY = (bubbleH / 2);
+            var posX_b = isSent ? (maxBubbleW / 2) : -(maxBubbleW / 2);
+            var posY_b = (bubbleH / 2);
             var bAnchor = bubbleLayer.transform.anchorPoint || (bubbleLayer.property && bubbleLayer.property("ADBE Transform Group") && bubbleLayer.property("ADBE Transform Group").property("ADBE Anchor Point"));
             if (bAnchor) {
                 bAnchor.setValue([originX, originY, 0]);
-                bAnchor.expression = BUBBLE_TRANSFORM_EXPR;
+                bAnchor.expression = BUBBLE_ANCHOR_EXPR;
             }
-            bubbleLayer.transform.position.setValue([originX, originY, 0]);
-            bubbleLayer.transform.position.expression = BUBBLE_TRANSFORM_EXPR;
+            bubbleLayer.transform.position.setValue([posX_b, posY_b, 0]);
+            bubbleLayer.transform.position.expression = BUBBLE_POS_EXPR;
             if (bubbleLayer.transform.scale) bubbleLayer.transform.scale.expression = BUBBLE_GROW_EXPR;
             if (bubbleLayer.transform.opacity) bubbleLayer.transform.opacity.expression = BUBBLE_OPACITY_EXPR;
             // Add Effect Controls to Bubble Shape Layer (matching custom_rounded_rect)
@@ -3873,8 +4464,10 @@
             // 3. Message Text Layer (proper cap-height alignment prevents clipping top border)
             var textLayer = null;
             var capHeight = Math.round(textSize * 0.72);
+            var bubbleLeft = isSent ? ((maxBubbleW / 2) - bubbleW) : -(maxBubbleW / 2);
+            var bubbleRight = isSent ? (maxBubbleW / 2) : (-(maxBubbleW / 2) + bubbleW);
             var textTopY = -(bubbleH / 2) + padY + capHeight;
-            var textLeftX = -(bubbleW / 2) + padX;
+            var textLeftX = bubbleLeft + padX;
             if (typeof comp.layers.addText === "function") {
                 textLayer = comp.layers.addText(wrappedString);
             } else {
@@ -3917,14 +4510,14 @@
             var statusCenterY = 0;
             if (hasStatus) {
                 // With delivery status: checkmark sits at standard right padding
-                timeRowRightX = (bubbleW / 2) - padX;
+                timeRowRightX = bubbleRight - padX;
                 statusX = timeRowRightX;
                 timeX = timeRowRightX - statusW - statusSpacing;
                 statusCenterX = timeRowRightX - (statusW / 2);
                 statusCenterY = timeY - Math.round(timeFontSize * 0.32);
             } else {
                 // No delivery status: align timestamp closer to the right with SAME margin bottom and right!
-                timeRowRightX = (bubbleW / 2) - timeMargin;
+                timeRowRightX = bubbleRight - timeMargin;
                 timeX = timeRowRightX;
             }
             var timeLayer = null;
@@ -3935,7 +4528,7 @@
             }
             timeLayer.name = "Timestamp_Text";
             timeLayer.parent = master;
-            timeLayer.enabled = isTimeEnabled;
+            timeLayer.enabled = (isTimeEnabled && canFitTime);
             timeLayer.fontSize = timeFontSize;
             timeLayer.fontColor = timeColor;
             timeLayer.fontFamily = selectedFont.css;
@@ -3961,6 +4554,7 @@
                 }
                 statusLayerText.name = "Status_Icon_Text";
                 statusLayerText.parent = master;
+                statusLayerText.enabled = (hasStatus && canFitTime);
                 statusLayerText.fontSize = timeFontSize;
                 statusLayerText.fontColor = statusColor;
                 statusLayerText.fontFamily = selectedFont.css;
@@ -4012,6 +4606,7 @@
                 }
                 statusLayerRCS.name = "Status_Icon_RCS";
                 statusLayerRCS.parent = master;
+                statusLayerRCS.enabled = (hasStatus && canFitTime);
                 statusLayerRCS.transform.position.setValue([statusCenterX, statusCenterY, -0.5]);
                 if (statusLayerRCS.transform && statusLayerRCS.transform.position) {
                     statusLayerRCS.transform.position.expression = STATUS_POS_EXPR;
@@ -4154,11 +4749,85 @@
                     }
                 }
             }
+            // 5B. Guide Layer for Max Bubble Width Reference (Non-renderable)
+            var guideLayer = comp.layers.addShape ? comp.layers.addShape() : null;
+            if (guideLayer) {
+                guideLayer.name = "Max_Width_Guides";
+                guideLayer.parent = master;
+                guideLayer.guideLayer = true;
+                guideLayer.label = 14;
+                if (guideLayer.transform && guideLayer.transform.position) {
+                    guideLayer.transform.position.setValue([0, 0, 0]);
+                }
+                if (guideLayer.transform && guideLayer.transform.anchorPoint) {
+                    guideLayer.transform.anchorPoint.setValue([0, 0, 0]);
+                }
+                var gRoot = guideLayer.property("ADBE Root Vectors Group") || guideLayer.property("Contents");
+                if (gRoot && gRoot.addProperty) {
+                    var gGroup = gRoot.addProperty("ADBE Vector Group");
+                    if (gGroup) {
+                        gGroup.name = "Guides";
+                        var gContents = gGroup.property("ADBE Vectors Group") || gGroup.property("Contents");
+                        if (gContents && gContents.addProperty) {
+                            var pLeft = gContents.addProperty("ADBE Vector Shape - Path");
+                            if (pLeft) {
+                                pLeft.name = "Left Guide";
+                                var pLeftProp = pLeft.property("ADBE Vector Shape") || pLeft.property("Path") || pLeft.property(1);
+                                if (pLeftProp) {
+                                    try {
+                                        var shpL = new Shape();
+                                        shpL.vertices = [[-maxBubbleW / 2, -bubbleH / 2], [-maxBubbleW / 2, bubbleH / 2]];
+                                        shpL.inTangents = [[0, 0], [0, 0]];
+                                        shpL.outTangents = [[0, 0], [0, 0]];
+                                        shpL.closed = false;
+                                        pLeftProp.setValue(shpL);
+                                    } catch(eShpL) {}
+                                    pLeftProp.expression = GUIDE_LEFT_PATH_EXPR;
+                                }
+                            }
+                            var pRight = gContents.addProperty("ADBE Vector Shape - Path");
+                            if (pRight) {
+                                pRight.name = "Right Guide";
+                                var pRightProp = pRight.property("ADBE Vector Shape") || pRight.property("Path") || pRight.property(1);
+                                if (pRightProp) {
+                                    try {
+                                        var shpR = new Shape();
+                                        shpR.vertices = [[maxBubbleW / 2, -bubbleH / 2], [maxBubbleW / 2, bubbleH / 2]];
+                                        shpR.inTangents = [[0, 0], [0, 0]];
+                                        shpR.outTangents = [[0, 0], [0, 0]];
+                                        shpR.closed = false;
+                                        pRightProp.setValue(shpR);
+                                    } catch(eShpR) {}
+                                    pRightProp.expression = GUIDE_RIGHT_PATH_EXPR;
+                                }
+                            }
+                            var gStroke = gContents.addProperty("ADBE Vector Graphic - Stroke");
+                            if (gStroke) {
+                                gStroke.name = "Guide Stroke";
+                                var gsCol = gStroke.property("ADBE Vector Stroke Color") || gStroke.property("Color");
+                                if (gsCol) gsCol.setValue([0.0, 0.78, 1.0, 0.75]);
+                                var gsWidth = gStroke.property("ADBE Vector Stroke Width") || gStroke.property("Stroke Width");
+                                if (gsWidth) gsWidth.setValue(1.5);
+                                var gsDashes = gStroke.property("ADBE Vector Stroke Dashes") || gStroke.property("Dashes");
+                                if (gsDashes && gsDashes.addProperty) {
+                                    var d1 = gsDashes.addProperty("ADBE Vector Stroke Dash 1");
+                                    if (d1) d1.setValue(6);
+                                    var gap1 = gsDashes.addProperty("ADBE Vector Stroke Gap 1");
+                                    if (gap1) gap1.setValue(4);
+                                } else if (gStroke.dashArray) {
+                                    gStroke.dashArray = [6, 4];
+                                }
+                            }
+                        }
+                    }
+                }
+            }
             // 6. Precompose all created layers into "message_" + random hex number
             var randHex = Math.floor(Math.random() * 65536).toString(16).toLowerCase();
             while (randHex.length < 4) randHex = "0" + randHex;
             var precompName = "message_" + randHex;
             var createdLayers = [master, bubbleLayer, textLayer, timeLayer];
+            if (guideLayer) createdLayers.push(guideLayer);
             if (hasStatus && statusLayerText) createdLayers.push(statusLayerText);
             if (hasStatus && statusLayerRCS) createdLayers.push(statusLayerRCS);
             var preCompItem = null;
@@ -4229,7 +4898,7 @@
                 addParentEffect("ADBE Color Control", "Status Neutral Color", timeColor);
                 addParentEffect("ADBE Color Control", "Status Read Color", readColor);
                 addParentEffect("ADBE Color Control", "Status Read Check Color", rcsReadCheckCol);
-                addParentEffect("ADBE Slider Control", "Bubble Width", bubbleW);
+                addParentEffect("ADBE Slider Control", "Bubble Width", reqBubbleW);
                 addParentEffect("ADBE Slider Control", "Bubble Height", bubbleH);
                 addParentEffect("ADBE Slider Control", "Max Bubble Width", maxBubbleW);
                 addParentEffect("ADBE Slider Control", "Text Wrap Mode", selWrapIdx);
@@ -4414,6 +5083,14 @@
                 }
             } catch(eW2) {}
             try {
+                var eBW = effSource.effect("Bubble Width");
+                if (eBW && eBW.property(1) && typeof txtBubbleW !== "undefined" && txtBubbleW) {
+                    var valBW = Math.max(0, Math.round(eBW.property(1).value));
+                    txtBubbleW.text = String(valBW);
+                    if (sldBubbleW) sldBubbleW.value = valBW;
+                }
+            } catch(eBW2) {}
+            try {
                 var eWrap = effSource.effect("Text Wrap Mode");
                 if (eWrap && eWrap.property(1) && dropTextWrap) {
                     var wrapIdx = Math.round(eWrap.property(1).value);
@@ -4564,6 +5241,7 @@
             var textColor = hexToRgb(cpText.value);
             var timeColor = hexToRgb(colorSet ? colorSet.time : "#888888");
             var maxBubbleW = Math.max(80, parseFloat(txtWidth.text) || 380);
+            var reqBubbleW = (typeof txtBubbleW !== "undefined" && txtBubbleW) ? Math.max(0, parseFloat(txtBubbleW.text) || 0) : 0;
             var textSize = parseFloat(txtSize.text) || 20;
             var padOffset = parseFloat(txtPad.text) || 0;
             var leadingPercent = parseFloat(txtLeading.text) || 100;
@@ -4612,6 +5290,7 @@
             // Sizing and text wrapping layout calculation
             var layout = computeBubbleLayout({
                 msgText: msgText,
+                bubbleW: reqBubbleW,
                 maxBubbleW: maxBubbleW,
                 padX: padX,
                 padY: padY,
@@ -4632,6 +5311,7 @@
             var lineH = layout.lineH;
             var singleLine = layout.singleLine;
             var canFitInlineTime = layout.canFitInlineTime;
+            var canFitTime = layout.canFitTime;
             var timeFontSize = layout.timeFontSize;
             var timeW = layout.timeW;
             var statusW = layout.statusW;
@@ -4686,7 +5366,7 @@
                 setLayerEffVal(targetLayer, "Status Neutral Color", timeColor);
                 setLayerEffVal(targetLayer, "Status Read Color", readColor);
                 setLayerEffVal(targetLayer, "Status Read Check Color", rcsReadCheckCol);
-                setLayerEffVal(targetLayer, "Bubble Width", bubbleW);
+                setLayerEffVal(targetLayer, "Bubble Width", reqBubbleW);
                 setLayerEffVal(targetLayer, "Bubble Height", bubbleH);
                 setLayerEffVal(targetLayer, "Max Bubble Width", maxBubbleW);
                 setLayerEffVal(targetLayer, "Screen Width", maxBubbleW);
@@ -4704,10 +5384,7 @@
             // 2. Update layers inside precomp
             if (preCompItem) {
                 var compCenter = [preCompItem.width / 2, preCompItem.height / 2, 0];
-                var colHalfW = Math.min(preCompItem.width * 0.44, Math.max(maxBubbleW * 0.6, 220));
-                var posX = isSent
-                    ? (compCenter[0] + colHalfW - (bubbleW / 2))
-                    : (compCenter[0] - colHalfW + (bubbleW / 2));
+                var posX = compCenter[0];
                 var posY = compCenter[1];
                 // Master controller inside precomp
                 var master = getLayer(preCompItem, "Bubble_Master_Controller");
@@ -4730,14 +5407,16 @@
                     setLayerEffVal(bubbleLayer, "Show Tail", hasTail ? 1 : 0);
                     var originX = isSent ? (bubbleW / 2) : -(bubbleW / 2);
                     var originY = (bubbleH / 2);
+                    var posX_b = isSent ? (maxBubbleW / 2) : -(maxBubbleW / 2);
+                    var posY_b = (bubbleH / 2);
                     var bAnchor = bubbleLayer.transform.anchorPoint || (bubbleLayer.property && bubbleLayer.property("ADBE Transform Group") && bubbleLayer.property("ADBE Transform Group").property("ADBE Anchor Point"));
                     if (bAnchor) {
                         bAnchor.setValue([originX, originY, 0]);
-                        if (!bAnchor.expression) bAnchor.expression = BUBBLE_TRANSFORM_EXPR;
+                        bAnchor.expression = BUBBLE_ANCHOR_EXPR;
                     }
                     if (bubbleLayer.transform && bubbleLayer.transform.position) {
-                        bubbleLayer.transform.position.setValue([originX, originY, 0]);
-                        if (!bubbleLayer.transform.position.expression) bubbleLayer.transform.position.expression = BUBBLE_TRANSFORM_EXPR;
+                        bubbleLayer.transform.position.setValue([posX_b, posY_b, 0]);
+                        bubbleLayer.transform.position.expression = BUBBLE_POS_EXPR;
                     }
                     // Update base shape outline
                     var baseShapeData = computeShapeData(bubbleW, bubbleH, rTL, rTR, rBR, rBL, hasTail, isSent, tailType);
@@ -4790,8 +5469,10 @@
                 // Update Message Text layer
                 var textLayer = getLayer(preCompItem, "Message_Text");
                 var capHeight = Math.round(textSize * 0.72);
+                var bubbleLeft = isSent ? ((maxBubbleW / 2) - bubbleW) : -(maxBubbleW / 2);
+                var bubbleRight = isSent ? (maxBubbleW / 2) : (-(maxBubbleW / 2) + bubbleW);
                 var textTopY = -(bubbleH / 2) + padY + capHeight;
-                var textLeftX = -(bubbleW / 2) + padX;
+                var textLeftX = bubbleLeft + padX;
                 if (textLayer) {
                     textLayer.fontSize = textSize;
                     textLayer.fontColor = textColor;
@@ -4819,18 +5500,18 @@
                 var statusCenterX = 0;
                 var statusCenterY = 0;
                 if (hasStatus) {
-                    timeRowRightX = (bubbleW / 2) - padX;
+                    timeRowRightX = bubbleRight - padX;
                     statusX = timeRowRightX;
                     timeX = timeRowRightX - statusW - statusSpacing;
                     statusCenterX = timeRowRightX - (statusW / 2);
                     statusCenterY = timeY - Math.round(timeFontSize * 0.32);
                 } else {
-                    timeRowRightX = (bubbleW / 2) - timeMargin;
+                    timeRowRightX = bubbleRight - timeMargin;
                     timeX = timeRowRightX;
                 }
                 var timeLayer = getLayer(preCompItem, "Timestamp_Text");
                 if (timeLayer) {
-                    timeLayer.enabled = isTimeEnabled;
+                    timeLayer.enabled = (isTimeEnabled && canFitTime);
                     timeLayer.fontSize = timeFontSize;
                     timeLayer.fontColor = timeColor;
                     timeLayer.fontFamily = selectedFont.css;
@@ -4847,7 +5528,7 @@
                 // Update Status text layer
                 var statusLayerText = getLayer(preCompItem, "Status_Icon_Text");
                 if (statusLayerText) {
-                    statusLayerText.enabled = hasStatus;
+                    statusLayerText.enabled = (hasStatus && canFitTime);
                     statusLayerText.fontSize = timeFontSize;
                     statusLayerText.fontColor = statusColor;
                     statusLayerText.fontFamily = selectedFont.css;
@@ -4861,11 +5542,102 @@
                 // Update Status RCS layer
                 var statusLayerRCS = getLayer(preCompItem, "Status_Icon_RCS");
                 if (statusLayerRCS) {
-                    statusLayerRCS.enabled = hasStatus;
+                    statusLayerRCS.enabled = (hasStatus && canFitTime);
                     if (statusLayerRCS.transform && statusLayerRCS.transform.position) {
                         statusLayerRCS.transform.position.setValue([statusCenterX, statusCenterY, -0.5]);
                         if (!statusLayerRCS.transform.position.expression) statusLayerRCS.transform.position.expression = STATUS_POS_EXPR;
                     }
+                }
+                // Update or create Max_Width_Guides in precomp
+                var guideLayer = getLayer(preCompItem, "Max_Width_Guides");
+                if (!guideLayer && preCompItem.layers && preCompItem.layers.addShape) {
+                    guideLayer = preCompItem.layers.addShape();
+                    guideLayer.name = "Max_Width_Guides";
+                    guideLayer.parent = master;
+                    guideLayer.guideLayer = true;
+                    guideLayer.label = 14;
+                    if (guideLayer.transform && guideLayer.transform.position) guideLayer.transform.position.setValue([0, 0, 0]);
+                    if (guideLayer.transform && guideLayer.transform.anchorPoint) guideLayer.transform.anchorPoint.setValue([0, 0, 0]);
+                    var gRoot = guideLayer.property("ADBE Root Vectors Group") || guideLayer.property("Contents");
+                    if (gRoot && gRoot.addProperty) {
+                        var gGroup = gRoot.addProperty("ADBE Vector Group");
+                        if (gGroup) {
+                            gGroup.name = "Guides";
+                            var gContents = gGroup.property("ADBE Vectors Group") || gGroup.property("Contents");
+                            if (gContents && gContents.addProperty) {
+                                var pLeft = gContents.addProperty("ADBE Vector Shape - Path");
+                                if (pLeft) {
+                                    pLeft.name = "Left Guide";
+                                    var pLeftProp = pLeft.property("ADBE Vector Shape") || pLeft.property("Path") || pLeft.property(1);
+                                    if (pLeftProp) {
+                                        try {
+                                            var shpL = new Shape();
+                                            shpL.vertices = [[-maxBubbleW / 2, -bubbleH / 2], [-maxBubbleW / 2, bubbleH / 2]];
+                                            shpL.inTangents = [[0, 0], [0, 0]];
+                                            shpL.outTangents = [[0, 0], [0, 0]];
+                                            shpL.closed = false;
+                                            pLeftProp.setValue(shpL);
+                                        } catch(eShpL) {}
+                                        pLeftProp.expression = GUIDE_LEFT_PATH_EXPR;
+                                    }
+                                }
+                                var pRight = gContents.addProperty("ADBE Vector Shape - Path");
+                                if (pRight) {
+                                    pRight.name = "Right Guide";
+                                    var pRightProp = pRight.property("ADBE Vector Shape") || pRight.property("Path") || pRight.property(1);
+                                    if (pRightProp) {
+                                        try {
+                                            var shpR = new Shape();
+                                            shpR.vertices = [[maxBubbleW / 2, -bubbleH / 2], [maxBubbleW / 2, bubbleH / 2]];
+                                            shpR.inTangents = [[0, 0], [0, 0]];
+                                            shpR.outTangents = [[0, 0], [0, 0]];
+                                            shpR.closed = false;
+                                            pRightProp.setValue(shpR);
+                                        } catch(eShpR) {}
+                                        pRightProp.expression = GUIDE_RIGHT_PATH_EXPR;
+                                    }
+                                }
+                                var gStroke = gContents.addProperty("ADBE Vector Graphic - Stroke");
+                                if (gStroke) {
+                                    gStroke.name = "Guide Stroke";
+                                    var gsCol = gStroke.property("ADBE Vector Stroke Color") || gStroke.property("Color");
+                                    if (gsCol) gsCol.setValue([0.0, 0.78, 1.0, 0.75]);
+                                    var gsWidth = gStroke.property("ADBE Vector Stroke Width") || gStroke.property("Stroke Width");
+                                    if (gsWidth) gsWidth.setValue(1.5);
+                                    var gsDashes = gStroke.property("ADBE Vector Stroke Dashes") || gStroke.property("Dashes");
+                                    if (gsDashes && gsDashes.addProperty) {
+                                        var d1 = gsDashes.addProperty("ADBE Vector Stroke Dash 1");
+                                        if (d1) d1.setValue(6);
+                                        var gap1 = gsDashes.addProperty("ADBE Vector Stroke Gap 1");
+                                        if (gap1) gap1.setValue(4);
+                                    } else if (gStroke.dashArray) {
+                                        gStroke.dashArray = [6, 4];
+                                    }
+                                }
+                            }
+                        }
+                    }
+                } else if (guideLayer) {
+                    try {
+                        var pL = guideLayer.property("Contents").property("Guides").property("Contents").property("Left Guide").property("Path");
+                        if (pL && typeof Shape !== "undefined") {
+                            var sL = new Shape();
+                            sL.vertices = [[-maxBubbleW / 2, -bubbleH / 2], [-maxBubbleW / 2, bubbleH / 2]];
+                            sL.inTangents = [[0, 0], [0, 0]];
+                            sL.outTangents = [[0, 0], [0, 0]];
+                            sL.closed = false;
+                            pL.setValue(sL);
+                        }
+                        var pR = guideLayer.property("Contents").property("Guides").property("Contents").property("Right Guide").property("Path");
+                        if (pR && typeof Shape !== "undefined") {
+                            var sR = new Shape();
+                            sR.vertices = [[maxBubbleW / 2, -bubbleH / 2], [maxBubbleW / 2, bubbleH / 2]];
+                            sR.inTangents = [[0, 0], [0, 0]];
+                            sR.outTangents = [[0, 0], [0, 0]];
+                            sR.closed = false;
+                            pR.setValue(sR);
+                        }
+                    } catch(eGLUpdate) {}
                 }
                 if (typeof preCompItem._onChanged === "function") {
                     preCompItem._onChanged();
