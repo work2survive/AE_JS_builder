@@ -687,6 +687,17 @@
                 case 'Offset':
                     prop = new Property('Offset', 'ADBE Vector Stroke Offset', 0, 'number');
                     break;
+                case 'ADBE Vector Filter - Trim':
+                case 'Trim Paths':
+                    prop = new PropertyGroup('Trim Paths 1', 'ADBE Vector Filter - Trim');
+                    prop.start = new Property('Start', 'ADBE Vector Trim Start', 0, 'number');
+                    prop.end = new Property('End', 'ADBE Vector Trim End', 100, 'number');
+                    prop.offset = new Property('Offset', 'ADBE Vector Trim Offset', 0, 'number');
+                    [prop.start, prop.end, prop.offset].forEach(tp => {
+                        tp.parentProperty = prop;
+                        prop.properties.push(tp);
+                    });
+                    break;
                 case 'ADBE Checkbox Control':
                 case 'Checkbox Control':
                     prop = new EffectCheckboxControl();
@@ -893,7 +904,21 @@
             this.dashes      = new PropertyGroup('Dashes', 'ADBE Vector Stroke Dashes');
             this.dashes.parentProperty = this;
 
-            [this.color, this.strokeWidth, this.opacity, this.lineCap, this.lineJoin, this.miterLimit, this.dashes].forEach(p => {
+            this.taper       = new PropertyGroup('Taper', 'ADBE Vector Taper');
+            this.taper.parentProperty = this;
+            this.taper.startLength = new Property('Start Length', 'ADBE Vector Taper Start Length', 0, 'number');
+            this.taper.endLength = new Property('End Length', 'ADBE Vector Taper End Length', 0, 'number');
+            this.taper.startWidth = new Property('Start Width', 'ADBE Vector Taper Start Width', 0, 'number');
+            this.taper.endWidth = new Property('End Width', 'ADBE Vector Taper End Width', 0, 'number');
+            this.taper.startEase = new Property('Start Ease', 'ADBE Vector Taper Start Ease', 0, 'number');
+            this.taper.endEase = new Property('End Ease', 'ADBE Vector Taper End Ease', 0, 'number');
+            this.taper.lengthUnits = new Property('Length Units', 'ADBE Vector Taper Length Units', 1, 'number');
+            [this.taper.startLength, this.taper.endLength, this.taper.startWidth, this.taper.endWidth, this.taper.startEase, this.taper.endEase, this.taper.lengthUnits].forEach(tp => {
+                tp.parentProperty = this.taper;
+                this.taper.properties.push(tp);
+            });
+
+            [this.color, this.strokeWidth, this.opacity, this.lineCap, this.lineJoin, this.miterLimit, this.dashes, this.taper].forEach(p => {
                 p.parentProperty = this;
                 this.properties.push(p);
             });
