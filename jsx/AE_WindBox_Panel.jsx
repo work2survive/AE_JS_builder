@@ -1,6 +1,6 @@
 // Co-authored & architected with Google DeepMind Antigravity.
 // =============================================================================
-// ADOBE AFTER EFFECTS EXTENDSCRIPT & SCRIPTUI PANEL: AE WINDBOX v1.2
+// ADOBE AFTER EFFECTS EXTENDSCRIPT & SCRIPTUI PANEL: AE WINDBOX v1.2.1
 // =============================================================================
 //
 // PURPOSE:
@@ -915,7 +915,7 @@
                 var dataObj = {
                     "$schema": "https://json-schema.org/draft/2020-12/schema",
                     "description": "After Effects WindBox - Presets configuration. Edit freely or add your own custom presets, then click the reload button (🔄) in the panel.",
-                    "version": "1.2",
+                    "version": "1.2.1",
                     "presets": cloneDefaultPresets()
                 };
                 pFile.write(JSONPolyfill.stringify(dataObj, null, 2));
@@ -1011,11 +1011,11 @@
     // ==========================================
     function buildWindBoxUI(thisObj) {
         var isPanel = (thisObj instanceof Panel);
-        var win = isPanel ? thisObj : new Window("palette", "AE WindBox v1.2", undefined, {
+        var win = isPanel ? thisObj : new Window("palette", "AE WindBox v1.2.1", undefined, {
             resizeable: true
         });
         if (!(thisObj instanceof Panel)) {
-            win.text = "AE WindBox v1.2";
+            win.text = "AE WindBox v1.2.1";
         }
 
         win.orientation = "column";
@@ -1033,7 +1033,7 @@
         pnlHeader.spacing = 3;
         pnlHeader.margins = [10, 8, 10, 8];
 
-        var lblDesc = pnlHeader.add("statictext", undefined, "v1.2 - Procedural 3D Wind Volume Particle System with Virtual Guide Cube & Precomp Rig.");
+        var lblDesc = pnlHeader.add("statictext", undefined, "v1.2.1 - Procedural 3D Wind Volume Particle System with Virtual Guide Cube & Precomp Rig.");
 
         // ---------- SYSTEM NAME & PRESETS ----------
         var headerGroup = win.add("group");
@@ -1062,7 +1062,7 @@
         btnHelp.maximumSize = [24, 22];
         btnHelp.onClick = function () {
             alert(
-                "AE WindBox + 3D Cube Maker (v1.2)\n" +
+                "AE WindBox + 3D Cube Maker (v1.2.1)\n" +
                 "=================================\n" +
                 "1. Virtual 3D Cube (Guide Layer):\n" +
                 "   Defines the 3D wind boundary. Marked as Guide Layer by default so it stays\n" +

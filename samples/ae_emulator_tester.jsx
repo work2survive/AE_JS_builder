@@ -1004,12 +1004,7 @@
 
                     var dGroup = strkContents.addProperty("ADBE Vector Group");
                     dGroup.name = "Dash_Pattern_" + (dIdx + 1);
-                    var dShape = new Shape();
-                    dShape.vertices = [[strokeColX + 220, dY], [strokeColX + 660, dY]];
-                    dShape.inTangents = [[0, 0], [0, 0]];
-                    dShape.outTangents = [[0, 0], [0, 0]];
-                    dShape.closed = false;
-                    addVectorPath(dGroup, dShape);
+                    addVectorPath(dGroup, makeLineShape(strokeColX + 220, dY, strokeColX + 660, dY));
 
                     var dStroke = dGroup.property("Contents").addProperty("ADBE Vector Graphic - Stroke");
                     dStroke.property("Color").setValue(dPat.col);
