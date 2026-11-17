@@ -45,15 +45,6 @@
 (function (thisObj) {
     "use strict";
 
-    var win = (thisObj instanceof Panel)
-        ? thisObj
-        : new Window("palette", "Scripted Chat Generator", undefined, { resizeable: true });
-
-    win.orientation = "column";
-    win.alignChildren = ["fill", "top"];
-    win.spacing = 6;
-    win.margins = 10;
-
     // -------------------------------------------------------------------------
     // 1. Constants, JSON Polyfill & Utility Helpers
     // -------------------------------------------------------------------------
@@ -559,23 +550,45 @@
     // =========================================================================
     // 2B. PRESETS FILE LOADER & CONVERSATION FOLDER MANAGER
     // =========================================================================
+    function makeFallbackFolder(pathStr) {
+        return {
+            fsName: pathStr || ".",
+            exists: false,
+            create: function () {},
+            getFiles: function () { return []; }
+        };
+    }
+
     function getScriptBaseFolder() {
         try {
-            var scriptFile = new File($.fileName);
-            if (scriptFile && scriptFile.parent && scriptFile.parent.exists) {
-                return scriptFile.parent;
+            if (typeof File !== "undefined" && typeof $ !== "undefined" && $.fileName) {
+                var scriptFile = new File($.fileName);
+                if (scriptFile && scriptFile.parent && scriptFile.parent.exists) {
+                    return scriptFile.parent;
+                }
             }
         } catch (e) {}
-        return Folder.myDocuments;
+        try {
+            if (typeof Folder !== "undefined" && Folder.myDocuments) {
+                return Folder.myDocuments;
+            }
+        } catch (e2) {}
+        return makeFallbackFolder(".");
     }
 
     function getPresetsFolder() {
         var base = getScriptBaseFolder();
-        var presetFolder = new Folder(base.fsName + "/message bubble presets");
-        if (!presetFolder.exists) {
-            try { presetFolder.create(); } catch (e) {}
-        }
-        return presetFolder;
+        var targetPath = (base && base.fsName ? base.fsName : ".") + "/message bubble presets";
+        try {
+            if (typeof Folder !== "undefined") {
+                var presetFolder = new Folder(targetPath);
+                if (!presetFolder.exists) {
+                    try { presetFolder.create(); } catch (e) {}
+                }
+                return presetFolder;
+            }
+        } catch (e2) {}
+        return makeFallbackFolder(targetPath);
     }
 
     function getPresetsFile() {
@@ -632,20 +645,20 @@
                 "conversationTitle": "Home Invitation (Android RCS Demo)",
                 "platform": "Android RCS",
                 "theme": "light",
-                "font": "Roboto",
+                "font": "Roboto (Google / Android)",
                 "emojiFont": "Noto Color Emoji (Google)",
                 "useTimestamps": true,
                 "initialTimestamp": "14:20",
                 "timeFormat": "24h",
                 "realDelayBetweenBubbles": 1.0,
                 "fakeDelayBetweenBubbles": "+00:01",
-                "bubbleWidth": 620,
-                "maxBubbleWidth": 720,
+                "bubbleWidth": 360,
+                "maxBubbleWidth": 410,
                 "textWrapping": true,
-                "textSize": 42,
-                "innerPadding": 36,
+                "textSize": 22,
+                "innerPadding": 18,
                 "lineSpacing": 130,
-                "bubbleGap": 24,
+                "bubbleGap": 14,
                 "showTail": true,
                 "groupConsecutive": true,
                 "showStatus": true,
@@ -656,10 +669,10 @@
                 "typewriterSpeed": 0,
                 "screenVisible": true,
                 "screenOpacity": 100,
-                "screenWidth": 960,
-                "screenHeight": 1680,
-                "screenInnerPadding": 48,
-                "screenCornerRadius": 64,
+                "screenWidth": 540,
+                "screenHeight": 940,
+                "screenInnerPadding": 28,
+                "screenCornerRadius": 44,
                 "screenBackgroundColor": "#F8F9FA",
                 "autoScroll": true,
                 "clipToScreen": true,
@@ -739,20 +752,20 @@
                 "conversationTitle": "Weekend Lunch Plans (iOS 12h Demo)",
                 "platform": "iOS Message",
                 "theme": "light",
-                "font": "SF Pro",
+                "font": "SF Pro (Apple / iOS)",
                 "emojiFont": "Apple Color Emoji (Apple)",
                 "useTimestamps": true,
                 "initialTimestamp": "11:45",
                 "timeFormat": "12h",
                 "realDelayBetweenBubbles": 1.2,
                 "fakeDelayBetweenBubbles": "+00:02",
-                "bubbleWidth": 620,
-                "maxBubbleWidth": 720,
+                "bubbleWidth": 360,
+                "maxBubbleWidth": 410,
                 "textWrapping": true,
-                "textSize": 42,
-                "innerPadding": 36,
+                "textSize": 22,
+                "innerPadding": 18,
                 "lineSpacing": 130,
-                "bubbleGap": 22,
+                "bubbleGap": 14,
                 "showTail": true,
                 "groupConsecutive": true,
                 "showStatus": true,
@@ -763,10 +776,10 @@
                 "typewriterSpeed": 0,
                 "screenVisible": true,
                 "screenOpacity": 100,
-                "screenWidth": 960,
-                "screenHeight": 1680,
-                "screenInnerPadding": 48,
-                "screenCornerRadius": 68,
+                "screenWidth": 540,
+                "screenHeight": 940,
+                "screenInnerPadding": 28,
+                "screenCornerRadius": 44,
                 "screenBackgroundColor": "#FFFFFF",
                 "autoScroll": true,
                 "clipToScreen": true,
@@ -818,13 +831,13 @@
                 "timeFormat": "24h",
                 "realDelayBetweenBubbles": 1.0,
                 "fakeDelayBetweenBubbles": "+00:01",
-                "bubbleWidth": 640,
-                "maxBubbleWidth": 740,
+                "bubbleWidth": 360,
+                "maxBubbleWidth": 410,
                 "textWrapping": true,
-                "textSize": 40,
-                "innerPadding": 34,
+                "textSize": 22,
+                "innerPadding": 18,
                 "lineSpacing": 130,
-                "bubbleGap": 20,
+                "bubbleGap": 14,
                 "showTail": true,
                 "groupConsecutive": true,
                 "showStatus": true,
@@ -835,10 +848,10 @@
                 "typewriterSpeed": 0,
                 "screenVisible": true,
                 "screenOpacity": 100,
-                "screenWidth": 960,
-                "screenHeight": 1680,
-                "screenInnerPadding": 44,
-                "screenCornerRadius": 56,
+                "screenWidth": 540,
+                "screenHeight": 940,
+                "screenInnerPadding": 28,
+                "screenCornerRadius": 44,
                 "screenBackgroundColor": "#0B141A",
                 "autoScroll": true,
                 "clipToScreen": true,
@@ -1523,12 +1536,13 @@
         "var tailStyle = Math.round(ctrl.effect('Tail Style (1=iOS,2=WA,3=None)')('Slider'));",
         "var showTime = ctrl.effect('Show Timecode')('Checkbox') == 1;",
         "var showStat = ctrl.effect('Show Status')('Checkbox') == 1;",
+        "var fs = ctrl.effect('Text Size')('Slider');",
         "var startT = 0; try { startT = ctrl.effect('Start Time (s)')('Slider'); } catch(e){}",
         "var rect = txt.sourceRectAtTime(Math.max(startT + 5, time), false);",
-        "var extraH = (showTime || (showStat && isSent)) ? 26 : 0;",
-        "var minW = (showTime || (showStat && isSent)) ? 140 : 60;",
+        "var extraH = (showTime || (showStat && isSent)) ? Math.round(fs * 0.68) : 0;",
+        "var minW = (showTime || (showStat && isSent)) ? Math.round(fs * 4.5) : Math.round(fs * 2.2);",
         "var w = Math.max(rect.width + pad * 2, minW);",
-        "var h = Math.max(rect.height + pad * 2 + extraH, 50);",
+        "var h = Math.max(rect.height + pad * 2 + extraH, Math.round(fs + pad * 1.6));",
         "r = Math.min(r, w / 2, h / 2);",
         "var k = 0.55228475;",
         "var kr = r * k;",
@@ -1574,12 +1588,13 @@
         "var isSent = ctrl.effect('Is Sent (Right)')('Checkbox') == 1;",
         "var showTime = ctrl.effect('Show Timecode')('Checkbox') == 1;",
         "var showStat = ctrl.effect('Show Status')('Checkbox') == 1;",
+        "var fs = ctrl.effect('Text Size')('Slider');",
         "var startT = 0; try { startT = ctrl.effect('Start Time (s)')('Slider'); } catch(e){}",
         "var rect = txt.sourceRectAtTime(Math.max(startT + 5, time), false);",
-        "var extraH = (showTime || (showStat && isSent)) ? 26 : 0;",
-        "var minW = (showTime || (showStat && isSent)) ? 140 : 60;",
+        "var extraH = (showTime || (showStat && isSent)) ? Math.round(fs * 0.68) : 0;",
+        "var minW = (showTime || (showStat && isSent)) ? Math.round(fs * 4.5) : Math.round(fs * 2.2);",
         "var w = Math.max(rect.width + pad * 2, minW);",
-        "var h = Math.max(rect.height + pad * 2 + extraH, 50);",
+        "var h = Math.max(rect.height + pad * 2 + extraH, Math.round(fs + pad * 1.6));",
         "isSent ? [w, h] : [0, h];",
         "} catch(e) { value; }"
     ].join("\n");
@@ -1592,13 +1607,14 @@
         "var isSent = ctrl.effect('Is Sent (Right)')('Checkbox') == 1;",
         "var showTime = ctrl.effect('Show Timecode')('Checkbox') == 1;",
         "var showStat = ctrl.effect('Show Status')('Checkbox') == 1;",
+        "var fs = ctrl.effect('Text Size')('Slider');",
         "var trackW = 0; try { trackW = ctrl.effect('Chat Track Width')('Slider'); } catch(e){}",
         "var startT = 0; try { startT = ctrl.effect('Start Time (s)')('Slider'); } catch(e){}",
         "var rect = txt.sourceRectAtTime(Math.max(startT + 5, time), false);",
-        "var extraH = (showTime || (showStat && isSent)) ? 26 : 0;",
-        "var minW = (showTime || (showStat && isSent)) ? 140 : 60;",
+        "var extraH = (showTime || (showStat && isSent)) ? Math.round(fs * 0.68) : 0;",
+        "var minW = (showTime || (showStat && isSent)) ? Math.round(fs * 4.5) : Math.round(fs * 2.2);",
         "var w = Math.max(rect.width + pad * 2, minW);",
-        "var h = Math.max(rect.height + pad * 2 + extraH, 50);",
+        "var h = Math.max(rect.height + pad * 2 + extraH, Math.round(fs + pad * 1.6));",
         "if (trackW > 0) {",
         "    isSent ? [trackW / 2, h / 2] : [-trackW / 2, h / 2];",
         "} else {",
@@ -1658,50 +1674,45 @@
         "var ctrl = thisComp.layer('Bubble_Controller');",
         "var startT = 0; try { startT = ctrl.effect('Start Time (s)')('Slider'); } catch(e){}",
         "var localT = time - startT;",
-        "if (localT < 0) {",
-        "    '';",
-        "} else {",
-        "    var doWrap = ctrl.effect('Auto Wrap Text')('Checkbox') == 1;",
-        "    var maxW = Math.max(80, ctrl.effect('Max Bubble Width')('Slider'));",
-        "    var pad = ctrl.effect('Inner Padding')('Slider');",
-        "    var doAnim = ctrl.effect('Entrance Animation')('Checkbox') == 1;",
-        "    var speed = ctrl.effect('Typewriter Speed')('Slider');",
-        "    var growFrames = ctrl.effect('Grow Duration (frames)')('Slider');",
-        "    var raw = value.toString();",
-        "    var fs = 42;",
-        "    try { fs = style.fontSize; } catch(e) {}",
-        "    var availW = Math.max(60, maxW - pad * 2);",
-        "    var charW = fs * 0.50;",
-        "    var maxChars = Math.max(5, Math.floor(availW / charW));",
-        "    var wrapped = raw;",
-        "    if (doWrap) {",
-        "        var paragraphs = raw.split(/\\r\\n|\\r|\\n/);",
-        "        var outLines = [];",
-        "        for (var p = 0; p < paragraphs.length; p++) {",
-        "            var words = paragraphs[p].split(' ');",
-        "            var cur = '';",
-        "            for (var i = 0; i < words.length; i++) {",
-        "                var w = words[i];",
-        "                var test = cur.length === 0 ? w : cur + ' ' + w;",
-        "                if (test.length > maxChars && cur.length > 0) {",
-        "                    outLines.push(cur);",
-        "                    cur = w;",
-        "                } else {",
-        "                    cur = test;",
-        "                }",
+        "var doWrap = ctrl.effect('Auto Wrap Text')('Checkbox') == 1;",
+        "var maxW = Math.max(80, ctrl.effect('Max Bubble Width')('Slider'));",
+        "var pad = ctrl.effect('Inner Padding')('Slider');",
+        "var doAnim = ctrl.effect('Entrance Animation')('Checkbox') == 1;",
+        "var speed = ctrl.effect('Typewriter Speed')('Slider');",
+        "var growFrames = ctrl.effect('Grow Duration (frames)')('Slider');",
+        "var raw = value.toString();",
+        "var fs = ctrl.effect('Text Size')('Slider');",
+        "var availW = Math.max(60, maxW - pad * 2);",
+        "var charW = fs * 0.50;",
+        "var maxChars = Math.max(5, Math.floor(availW / charW));",
+        "var wrapped = raw;",
+        "if (doWrap) {",
+        "    var paragraphs = raw.split(/\\r\\n|\\r|\\n/);",
+        "    var outLines = [];",
+        "    for (var p = 0; p < paragraphs.length; p++) {",
+        "        var words = paragraphs[p].split(' ');",
+        "        var cur = '';",
+        "        for (var i = 0; i < words.length; i++) {",
+        "            var w = words[i];",
+        "            var test = cur.length === 0 ? w : cur + ' ' + w;",
+        "            if (test.length > maxChars && cur.length > 0) {",
+        "                outLines.push(cur);",
+        "                cur = w;",
+        "            } else {",
+        "                cur = test;",
         "            }",
-        "            outLines.push(cur);",
         "        }",
-        "        wrapped = outLines.join('\\r');",
+        "        outLines.push(cur);",
         "    }",
-        "    if (doAnim && speed > 0) {",
-        "        var delay = (growFrames * 0.45) * thisComp.frameDuration;",
-        "        var t = Math.max(0, localT - delay);",
-        "        var count = Math.floor(t * speed);",
-        "        wrapped.substring(0, count);",
-        "    } else {",
-        "        wrapped;",
-        "    }",
+        "    wrapped = outLines.join('\\n');",
+        "}",
+        "if (localT >= 0 && doAnim && speed > 0) {",
+        "    var delay = (growFrames * 0.45) * thisComp.frameDuration;",
+        "    var t = Math.max(0, localT - delay);",
+        "    var count = Math.floor(t * speed);",
+        "    wrapped.substring(0, count);",
+        "} else {",
+        "    wrapped;",
         "}",
         "} catch(e) { value; }"
     ].join("\n");
@@ -1714,14 +1725,15 @@
         "var isSent = ctrl.effect('Is Sent (Right)')('Checkbox') == 1;",
         "var showTime = ctrl.effect('Show Timecode')('Checkbox') == 1;",
         "var showStat = ctrl.effect('Show Status')('Checkbox') == 1;",
+        "var fs = ctrl.effect('Text Size')('Slider');",
         "var startT = 0; try { startT = ctrl.effect('Start Time (s)')('Slider'); } catch(e){}",
         "var rect = txt.sourceRectAtTime(Math.max(startT + 5, time), false);",
-        "var extraH = (showTime || (showStat && isSent)) ? 26 : 0;",
-        "var minW = (showTime || (showStat && isSent)) ? 140 : 60;",
+        "var extraH = (showTime || (showStat && isSent)) ? Math.round(fs * 0.68) : 0;",
+        "var minW = (showTime || (showStat && isSent)) ? Math.round(fs * 4.5) : Math.round(fs * 2.2);",
         "var w = Math.max(rect.width + pad * 2, minW);",
-        "var h = Math.max(rect.height + pad * 2 + extraH, 50);",
-        "var statusOffset = (showStat && isSent) ? 38 : 0;",
-        "[w - pad * 0.6 - statusOffset, h - 14];",
+        "var h = Math.max(rect.height + pad * 2 + extraH, Math.round(fs + pad * 1.6));",
+        "var statusOffset = (showStat && isSent) ? Math.round(fs * 1.05) : 0;",
+        "[w - pad * 0.55 - statusOffset, h - Math.max(6, Math.round(pad * 0.42))];",
         "} catch(e) { value; }"
     ].join("\n");
 
@@ -1752,13 +1764,14 @@
         "var isSent = ctrl.effect('Is Sent (Right)')('Checkbox') == 1;",
         "var showTime = ctrl.effect('Show Timecode')('Checkbox') == 1;",
         "var showStat = ctrl.effect('Show Status')('Checkbox') == 1;",
+        "var fs = ctrl.effect('Text Size')('Slider');",
         "var startT = 0; try { startT = ctrl.effect('Start Time (s)')('Slider'); } catch(e){}",
         "var rect = txt.sourceRectAtTime(Math.max(startT + 5, time), false);",
-        "var extraH = (showTime || (showStat && isSent)) ? 26 : 0;",
-        "var minW = (showTime || (showStat && isSent)) ? 140 : 60;",
+        "var extraH = (showTime || (showStat && isSent)) ? Math.round(fs * 0.68) : 0;",
+        "var minW = (showTime || (showStat && isSent)) ? Math.round(fs * 4.5) : Math.round(fs * 2.2);",
         "var w = Math.max(rect.width + pad * 2, minW);",
-        "var h = Math.max(rect.height + pad * 2 + extraH, 50);",
-        "[w - pad * 0.55, h - 14];",
+        "var h = Math.max(rect.height + pad * 2 + extraH, Math.round(fs + pad * 1.6));",
+        "[w - pad * 0.50, h - Math.max(6, Math.round(pad * 0.42))];",
         "} catch(e) { value; }"
     ].join("\n");
 
@@ -1929,14 +1942,9 @@
     var RCS_LEFT_TICK_PATH_EXPR = [
         "try {",
         "var ctrl = thisComp.layer('Bubble_Controller');",
-        "var startT = 0; try { startT = ctrl.effect('Start Time (s)')('Slider'); } catch(e){}",
-        "var localT = Math.max(0, time - startT);",
-        "var tDeliv = ctrl.effect('Sent -> Delivered (s)')('Slider');",
         "var sz = ctrl.effect('Text Size')('Slider') * 0.42;",
         "var r = sz * 0.36;",
-        "var cx = (localT < tDeliv) ? -r : -(r * 2.55);",
-        "var cy = -r;",
-        "createPath([[cx - r*0.42, cy + r*0.02], [cx - r*0.10, cy + r*0.34], [cx + r*0.45, cy - r*0.30]], [], [], false);",
+        "createPath([[-r*0.42, r*0.02], [-r*0.10, r*0.34], [r*0.45, -r*0.30]], [], [], false);",
         "} catch(e) { value; }"
     ].join("\n");
 
@@ -1945,9 +1953,7 @@
         "var ctrl = thisComp.layer('Bubble_Controller');",
         "var sz = ctrl.effect('Text Size')('Slider') * 0.42;",
         "var r = sz * 0.36;",
-        "var cx = -r;",
-        "var cy = -r;",
-        "createPath([[cx - r*0.42, cy + r*0.02], [cx - r*0.10, cy + r*0.34], [cx + r*0.45, cy - r*0.30]], [], [], false);",
+        "createPath([[-r*0.42, r*0.02], [-r*0.10, r*0.34], [r*0.45, -r*0.30]], [], [], false);",
         "} catch(e) { value; }"
     ].join("\n");
 
@@ -2226,9 +2232,9 @@
         grpW.alignChildren = ["left", "center"];
         var lblW = grpW.add("statictext", undefined, "Bubble Width:");
         lblW.preferredSize.width = 92;
-        var sldWidth = grpW.add("slider", undefined, 620, 200, 1400);
+        var sldWidth = grpW.add("slider", undefined, 360, 140, 1400);
         sldWidth.preferredSize.width = 115;
-        var inpWidth = grpW.add("edittext", undefined, "620");
+        var inpWidth = grpW.add("edittext", undefined, "360");
         inpWidth.characters = 4;
 
         // Max Bubble Width
@@ -2237,9 +2243,9 @@
         grpMaxW.alignChildren = ["left", "center"];
         var lblMaxW = grpMaxW.add("statictext", undefined, "Max Width:");
         lblMaxW.preferredSize.width = 92;
-        var sldMaxWidth = grpMaxW.add("slider", undefined, 720, 220, 1600);
+        var sldMaxWidth = grpMaxW.add("slider", undefined, 410, 160, 1600);
         sldMaxWidth.preferredSize.width = 115;
-        var inpMaxWidth = grpMaxW.add("edittext", undefined, "720");
+        var inpMaxWidth = grpMaxW.add("edittext", undefined, "410");
         inpMaxWidth.characters = 4;
 
         // Text Size
@@ -2248,9 +2254,9 @@
         grpTS.alignChildren = ["left", "center"];
         var lblTS = grpTS.add("statictext", undefined, "Text Size:");
         lblTS.preferredSize.width = 92;
-        var sldTextSize = grpTS.add("slider", undefined, 42, 16, 110);
+        var sldTextSize = grpTS.add("slider", undefined, 22, 12, 110);
         sldTextSize.preferredSize.width = 115;
-        var inpTextSize = grpTS.add("edittext", undefined, "42");
+        var inpTextSize = grpTS.add("edittext", undefined, "22");
         inpTextSize.characters = 4;
 
         // Inner Padding
@@ -2259,9 +2265,9 @@
         grpPad.alignChildren = ["left", "center"];
         var lblPad = grpPad.add("statictext", undefined, "Inner Padding:");
         lblPad.preferredSize.width = 92;
-        var sldPad = grpPad.add("slider", undefined, 36, 10, 100);
+        var sldPad = grpPad.add("slider", undefined, 18, 8, 100);
         sldPad.preferredSize.width = 115;
-        var inpPad = grpPad.add("edittext", undefined, "36");
+        var inpPad = grpPad.add("edittext", undefined, "18");
         inpPad.characters = 4;
 
         // Line Spacing %
@@ -2281,9 +2287,9 @@
         grpGap.alignChildren = ["left", "center"];
         var lblGap = grpGap.add("statictext", undefined, "Bubble Gap:");
         lblGap.preferredSize.width = 92;
-        var sldGap = grpGap.add("slider", undefined, 24, 4, 100);
+        var sldGap = grpGap.add("slider", undefined, 14, 4, 100);
         sldGap.preferredSize.width = 115;
-        var inpGap = grpGap.add("edittext", undefined, "24");
+        var inpGap = grpGap.add("edittext", undefined, "14");
         inpGap.characters = 4;
 
         // Bubble Colors (Sent & Received)
@@ -2384,9 +2390,9 @@
         grpScrW.alignChildren = ["left", "center"];
         var lblScrW = grpScrW.add("statictext", undefined, "Screen Width:");
         lblScrW.preferredSize.width = 98;
-        var sldScreenWidth = grpScrW.add("slider", undefined, 960, 320, 2160);
+        var sldScreenWidth = grpScrW.add("slider", undefined, 540, 280, 2160);
         sldScreenWidth.preferredSize.width = 115;
-        var inpScreenWidth = grpScrW.add("edittext", undefined, "960");
+        var inpScreenWidth = grpScrW.add("edittext", undefined, "540");
         inpScreenWidth.characters = 4;
 
         // Screen Height
@@ -2395,9 +2401,9 @@
         grpScrH.alignChildren = ["left", "center"];
         var lblScrH = grpScrH.add("statictext", undefined, "Screen Height:");
         lblScrH.preferredSize.width = 98;
-        var sldScreenHeight = grpScrH.add("slider", undefined, 1680, 400, 3840);
+        var sldScreenHeight = grpScrH.add("slider", undefined, 940, 360, 3840);
         sldScreenHeight.preferredSize.width = 115;
-        var inpScreenHeight = grpScrH.add("edittext", undefined, "1680");
+        var inpScreenHeight = grpScrH.add("edittext", undefined, "940");
         inpScreenHeight.characters = 4;
 
         // Screen Inner Padding
@@ -2406,9 +2412,9 @@
         grpScrPad.alignChildren = ["left", "center"];
         var lblScrPad = grpScrPad.add("statictext", undefined, "Inner Padding:");
         lblScrPad.preferredSize.width = 98;
-        var sldScreenPad = grpScrPad.add("slider", undefined, 48, 0, 200);
+        var sldScreenPad = grpScrPad.add("slider", undefined, 28, 0, 200);
         sldScreenPad.preferredSize.width = 115;
-        var inpScreenPad = grpScrPad.add("edittext", undefined, "48");
+        var inpScreenPad = grpScrPad.add("edittext", undefined, "28");
         inpScreenPad.characters = 4;
 
         // Screen Corner Roundness
@@ -2417,9 +2423,9 @@
         grpScrRad.alignChildren = ["left", "center"];
         var lblScrRad = grpScrRad.add("statictext", undefined, "Corner Roundness:");
         lblScrRad.preferredSize.width = 98;
-        var sldScreenRadius = grpScrRad.add("slider", undefined, 64, 0, 240);
+        var sldScreenRadius = grpScrRad.add("slider", undefined, 44, 0, 240);
         sldScreenRadius.preferredSize.width = 115;
-        var inpScreenRadius = grpScrRad.add("edittext", undefined, "64");
+        var inpScreenRadius = grpScrRad.add("edittext", undefined, "44");
         inpScreenRadius.characters = 4;
 
         // Screen Background Color
@@ -2616,7 +2622,7 @@
             var entry = getCurrentConversationEntry();
             var existingHdr = (entry && entry.data && entry.data.header) ? entry.data.header : {};
             var platName = dropPlatform.selection ? dropPlatform.selection.text : "Android RCS";
-            var fontName = dropFont.selection ? dropFont.selection.text : "Roboto";
+            var fontName = dropFont.selection ? dropFont.selection.text : "Roboto (Google / Android)";
             var emojiFontName = dropEmojiFont.selection ? dropEmojiFont.selection.text : "Noto Color Emoji (Google)";
 
             return {
@@ -2630,13 +2636,13 @@
                 timeFormat: rad12h.value ? "12h" : "24h",
                 realDelayBetweenBubbles: parseFloat(inpRealDelay.text) || 1.0,
                 fakeDelayBetweenBubbles: inpFakeDelay.text || "+00:01",
-                bubbleWidth: parseInt(inpWidth.text, 10) || 620,
-                maxBubbleWidth: parseInt(inpMaxWidth.text, 10) || 720,
+                bubbleWidth: parseInt(inpWidth.text, 10) || 360,
+                maxBubbleWidth: parseInt(inpMaxWidth.text, 10) || 410,
                 textWrapping: chkTextWrap.value,
-                textSize: parseInt(inpTextSize.text, 10) || 42,
-                innerPadding: parseInt(inpPad.text, 10) || 36,
+                textSize: parseInt(inpTextSize.text, 10) || 22,
+                innerPadding: parseInt(inpPad.text, 10) || 18,
                 lineSpacing: parseInt(inpLead.text, 10) || 130,
-                bubbleGap: parseInt(inpGap.text, 10) || 24,
+                bubbleGap: parseInt(inpGap.text, 10) || 14,
                 showTail: chkShowTail.value,
                 groupConsecutive: chkGroupConsecutive.value,
                 showStatus: chkShowStatus.value,
@@ -2647,10 +2653,10 @@
                 typewriterSpeed: parseInt(inpTypewriter.text, 10) || 0,
                 screenVisible: chkScreenVisible.value,
                 screenOpacity: parseInt(inpScreenOpacity.text, 10) !== undefined && !isNaN(parseInt(inpScreenOpacity.text, 10)) ? parseInt(inpScreenOpacity.text, 10) : 100,
-                screenWidth: parseInt(inpScreenWidth.text, 10) || 960,
-                screenHeight: parseInt(inpScreenHeight.text, 10) || 1680,
-                screenInnerPadding: parseInt(inpScreenPad.text, 10) || 48,
-                screenCornerRadius: parseInt(inpScreenRadius.text, 10) || 64,
+                screenWidth: parseInt(inpScreenWidth.text, 10) || 540,
+                screenHeight: parseInt(inpScreenHeight.text, 10) || 940,
+                screenInnerPadding: parseInt(inpScreenPad.text, 10) || 28,
+                screenCornerRadius: parseInt(inpScreenRadius.text, 10) || 44,
                 screenBackgroundColor: rgbToHex(stateColors.screenBg),
                 autoScroll: chkAutoScroll.value,
                 clipToScreen: chkClipToScreen.value,
@@ -2767,9 +2773,9 @@
             radLight.value = !isDark;
 
             // Font & Emoji Font
-            var targetFont = hdr.font || (pObj && pObj.font) || "Roboto";
+            var targetFont = hdr.font || (pObj && pObj.font) || "Roboto (Google / Android)";
             for (var fi = 0; fi < FONT_NAMES.length; fi++) {
-                if (FONT_NAMES[fi] === targetFont) {
+                if (FONT_NAMES[fi] === targetFont || FONT_NAMES[fi].indexOf(targetFont) === 0) {
                     dropFont.selection = fi;
                     break;
                 }
@@ -2798,12 +2804,12 @@
 
             // Dimensions & Typography
             chkTextWrap.value = hdr.textWrapping !== false;
-            setSliderAndInput(sldWidth, inpWidth, hdr.bubbleWidth !== undefined ? hdr.bubbleWidth : 620, false);
-            setSliderAndInput(sldMaxWidth, inpMaxWidth, hdr.maxBubbleWidth !== undefined ? hdr.maxBubbleWidth : 720, false);
-            setSliderAndInput(sldTextSize, inpTextSize, hdr.textSize !== undefined ? hdr.textSize : 42, false);
-            setSliderAndInput(sldPad, inpPad, hdr.innerPadding !== undefined ? hdr.innerPadding : 36, false);
+            setSliderAndInput(sldWidth, inpWidth, hdr.bubbleWidth !== undefined ? hdr.bubbleWidth : 360, false);
+            setSliderAndInput(sldMaxWidth, inpMaxWidth, hdr.maxBubbleWidth !== undefined ? hdr.maxBubbleWidth : 410, false);
+            setSliderAndInput(sldTextSize, inpTextSize, hdr.textSize !== undefined ? hdr.textSize : 22, false);
+            setSliderAndInput(sldPad, inpPad, hdr.innerPadding !== undefined ? hdr.innerPadding : 18, false);
             setSliderAndInput(sldLead, inpLead, hdr.lineSpacing !== undefined ? hdr.lineSpacing : 130, false);
-            setSliderAndInput(sldGap, inpGap, hdr.bubbleGap !== undefined ? hdr.bubbleGap : 24, false);
+            setSliderAndInput(sldGap, inpGap, hdr.bubbleGap !== undefined ? hdr.bubbleGap : 14, false);
 
             // Status timings
             setSliderAndInput(sldDelivDelay, inpDelivDelay, hdr.sentToDeliveredDelay !== undefined ? hdr.sentToDeliveredDelay : 0.6, true);
@@ -2817,10 +2823,10 @@
             // Screen Tab Settings
             chkScreenVisible.value = hdr.screenVisible !== false;
             setSliderAndInput(sldScreenOpacity, inpScreenOpacity, hdr.screenOpacity !== undefined ? hdr.screenOpacity : 100, false);
-            setSliderAndInput(sldScreenWidth, inpScreenWidth, hdr.screenWidth !== undefined ? hdr.screenWidth : 960, false);
-            setSliderAndInput(sldScreenHeight, inpScreenHeight, hdr.screenHeight !== undefined ? hdr.screenHeight : 1680, false);
-            setSliderAndInput(sldScreenPad, inpScreenPad, hdr.screenInnerPadding !== undefined ? hdr.screenInnerPadding : 48, false);
-            setSliderAndInput(sldScreenRadius, inpScreenRadius, hdr.screenCornerRadius !== undefined ? hdr.screenCornerRadius : 64, false);
+            setSliderAndInput(sldScreenWidth, inpScreenWidth, hdr.screenWidth !== undefined ? hdr.screenWidth : 540, false);
+            setSliderAndInput(sldScreenHeight, inpScreenHeight, hdr.screenHeight !== undefined ? hdr.screenHeight : 940, false);
+            setSliderAndInput(sldScreenPad, inpScreenPad, hdr.screenInnerPadding !== undefined ? hdr.screenInnerPadding : 28, false);
+            setSliderAndInput(sldScreenRadius, inpScreenRadius, hdr.screenCornerRadius !== undefined ? hdr.screenCornerRadius : 44, false);
             chkAutoScroll.value = hdr.autoScroll !== false;
             chkClipToScreen.value = hdr.clipToScreen !== false;
             setSliderAndInput(sldScrollSmooth, inpScrollSmooth, hdr.scrollSmoothnessFrames !== undefined ? hdr.scrollSmoothnessFrames : 12, false);
@@ -3123,11 +3129,11 @@
         }
 
         function computeBubbleLayout(rawText, hdr, showTail, showStatus, isSent) {
-            var fontSize = hdr.textSize || 42;
-            var pad = hdr.innerPadding || 36;
+            var fontSize = hdr.textSize || 22;
+            var pad = hdr.innerPadding || 18;
             var leadPct = hdr.lineSpacing || 130;
-            var screenInnerW = Math.max(240, (hdr.screenWidth || 960) - 2 * (hdr.screenInnerPadding || 48));
-            var maxBubbleW = Math.min(hdr.maxBubbleWidth || 720, Math.round(screenInnerW * 0.86));
+            var screenInnerW = Math.max(200, (hdr.screenWidth || 540) - 2 * (hdr.screenInnerPadding || 28));
+            var maxBubbleW = Math.min(hdr.maxBubbleWidth || 410, Math.round(screenInnerW * 0.86));
             var availTextW = Math.max(80, maxBubbleW - pad * 2);
 
             var lines = wrapTextToLines(rawText, availTextW, fontSize, hdr.textWrapping !== false);
@@ -3140,14 +3146,14 @@
             var lineHeightPx = fontSize * (leadPct / 100);
             var textBlockH = Math.max(fontSize, fontSize + (lines.length - 1) * lineHeightPx);
             var hasFooter = hdr.useTimestamps || (showStatus && isSent);
-            var extraH = hasFooter ? 26 : 0;
-            var minW = hasFooter ? 148 : 68;
+            var extraH = hasFooter ? Math.round(fontSize * 0.68) : 0;
+            var minW = hasFooter ? Math.round(fontSize * 4.5) : Math.round(fontSize * 2.2);
 
             var bubbleW = Math.min(maxBubbleW, Math.max(Math.ceil(maxLineW + pad * 2), minW));
-            var bubbleH = Math.max(Math.ceil(textBlockH + pad * 2 + extraH), 54);
+            var bubbleH = Math.max(Math.ceil(textBlockH + pad * 2 + extraH), Math.round(fontSize + pad * 1.6));
 
             return {
-                wrappedText: lines.join("\r"),
+                wrappedText: lines.join("\n"),
                 linesCount: lines.length,
                 textWidth: Math.ceil(maxLineW),
                 textHeight: Math.ceil(textBlockH),
@@ -3205,6 +3211,23 @@
             } catch (eRange) {}
 
             prop.setValue(doc);
+
+            try {
+                textLayer.fontSize = fontSize;
+                textLayer.fontColor = fillColor;
+                textLayer.justification = (justification === ParagraphJustification.RIGHT_JUSTIFY || justification === 1 || justification === "right")
+                    ? "right"
+                    : ((justification === ParagraphJustification.CENTER_JUSTIFY || justification === 2 || justification === "center") ? "center" : "left");
+                if (leading !== undefined && leading !== null) {
+                    textLayer.leading = leading;
+                }
+                if (customFamilyCss) {
+                    textLayer.fontFamily = customFamilyCss;
+                }
+                if (emojiFamilyCss) {
+                    textLayer.emojiFontFamily = emojiFamilyCss;
+                }
+            } catch (eAssign) {}
         }
 
         // =====================================================================
@@ -3225,8 +3248,8 @@
             var statusStyleNum = (platObj && platObj.statusStyle === "rcs") ? 2 : 1;
 
             var radiusVal = (platObj && platObj.radius !== undefined) ? platObj.radius : 18;
-            var padVal = hdr.innerPadding || 36;
-            var textSizeVal = hdr.textSize || 42;
+            var padVal = hdr.innerPadding || 18;
+            var textSizeVal = hdr.textSize || 22;
             var leadPctVal = hdr.lineSpacing || 130;
             var leadPxVal = Math.round(textSizeVal * (leadPctVal / 100));
 
@@ -3246,7 +3269,7 @@
 
             addControl(fx, "ADBE Slider Control",   "Start Time (s)",                   msgItem.startTime);
             addControl(fx, "ADBE Slider Control",   "Chat Track Width",                 layout.chatTrackWidth);
-            addControl(fx, "ADBE Slider Control",   "Bubble Width",                     hdr.bubbleWidth || 620);
+            addControl(fx, "ADBE Slider Control",   "Bubble Width",                     hdr.bubbleWidth || 360);
             addControl(fx, "ADBE Slider Control",   "Max Bubble Width",                 layout.effectiveMaxBubbleWidth);
             addControl(fx, "ADBE Checkbox Control", "Auto Wrap Text",                   hdr.textWrapping !== false ? 1 : 0);
             addControl(fx, "ADBE Slider Control",   "Text Size",                        textSizeVal);
@@ -3336,10 +3359,9 @@
             safeSetExpression(textLayer.property("Source Text"), DYNAMIC_WRAP_EXPR);
 
             var txtTr = textLayer.property("ADBE Transform Group");
-            txtTr.property("ADBE Anchor Point").setValue([0, -textSizeVal * 0.82]);
-            safeSetExpression(txtTr.property("ADBE Anchor Point"), "try { var r = sourceRectAtTime(Math.max(5, time), false); [r.left, r.top]; } catch(e) { value; }");
-            txtTr.property("ADBE Position").setValue([padVal, padVal]);
-            safeSetExpression(txtTr.property("ADBE Position"), "try { var p = thisComp.layer('Bubble_Controller').effect('Inner Padding')('Slider'); [p, p]; } catch(e) { value; }");
+            txtTr.property("ADBE Anchor Point").setValue([0, 0, 0]);
+            txtTr.property("ADBE Position").setValue([padVal, padVal + Math.round(textSizeVal * 0.78), 0]);
+            safeSetExpression(txtTr.property("ADBE Position"), "try { var ctrl = thisComp.layer('Bubble_Controller'); var p = ctrl.effect('Inner Padding')('Slider'); var fs = ctrl.effect('Text Size')('Slider'); [p, p + Math.round(fs * 0.78)]; } catch(e) { value; }");
             safeSetExpression(txtTr.property("ADBE Opacity"), BUBBLE_OPACITY_EXPR);
 
             // Add Per-Character Text Animator (Nod, Shake, Blink + Dynamic Text Color)
@@ -3377,7 +3399,7 @@
             } catch (eAnim) {}
 
             // 4. Timecode_Text Layer
-            var timeSize = Math.max(14, Math.round(textSizeVal * 0.50));
+            var timeSize = Math.max(11, Math.round(textSizeVal * 0.50));
             var timeLayer = comp.layers.addText(msgItem.formattedTimestamp);
             timeLayer.name = "Timecode_Text";
             timeLayer.parent = shapeLayer;
@@ -3396,15 +3418,15 @@
             );
 
             var timeTr = timeLayer.property("ADBE Transform Group");
-            safeSetExpression(timeTr.property("ADBE Anchor Point"), "try { var r = sourceRectAtTime(0, false); [r.left + r.width, r.top + r.height]; } catch(e) { value; }");
-            var statusOffsetInit = (msgItem.showStatus && isSent) ? 38 : 0;
-            timeTr.property("ADBE Position").setValue([layout.bubbleWidth - padVal * 0.6 - statusOffsetInit, layout.bubbleHeight - 14]);
+            timeTr.property("ADBE Anchor Point").setValue([0, 0, 0]);
+            var statusOffsetInit = (msgItem.showStatus && isSent) ? Math.round(textSizeVal * 1.05) : 0;
+            timeTr.property("ADBE Position").setValue([layout.bubbleWidth - padVal * 0.55 - statusOffsetInit, layout.bubbleHeight - Math.max(6, Math.round(padVal * 0.42)), 0]);
             safeSetExpression(timeTr.property("ADBE Position"), TIMECODE_POS_EXPR);
             timeTr.property("ADBE Opacity").setValue(hdr.useTimestamps !== false ? 80 : 0);
             safeSetExpression(timeTr.property("ADBE Opacity"), TIMECODE_ENTRANCE_EXPR);
 
             // 5. Status_Check Layer (Standard Text Checkmarks ✓ -> ✓✓)
-            var statSize = Math.max(14, Math.round(textSizeVal * 0.52));
+            var statSize = Math.max(11, Math.round(textSizeVal * 0.52));
             var initCheckStr = (statusStyleNum === 2) ? "\u25CB\u2713 \u25CB\u2713" : "\u2713\u2713";
             var statLayer = comp.layers.addText(initCheckStr);
             statLayer.name = "Status_Check";
@@ -3434,8 +3456,8 @@
             } catch (eStat) {}
 
             var statTr = statLayer.property("ADBE Transform Group");
-            safeSetExpression(statTr.property("ADBE Anchor Point"), "try { var r = sourceRectAtTime(0, false); [r.left + r.width, r.top + r.height]; } catch(e) { value; }");
-            statTr.property("ADBE Position").setValue([layout.bubbleWidth - padVal * 0.55, layout.bubbleHeight - 14]);
+            statTr.property("ADBE Anchor Point").setValue([0, 0, 0]);
+            statTr.property("ADBE Position").setValue([layout.bubbleWidth - padVal * 0.50, layout.bubbleHeight - Math.max(6, Math.round(padVal * 0.42)), 0]);
             safeSetExpression(statTr.property("ADBE Position"), STATUS_POS_EXPR);
             safeSetExpression(statTr.property("ADBE Scale"), STATUS_SCALE_EXPR);
             statTr.property("ADBE Opacity").setValue((msgItem.showStatus && isSent && statusStyleNum !== 2) ? 95 : 0);
@@ -3456,7 +3478,8 @@
             var leftTickPath = rcsLeftVecs.addProperty("ADBE Vector Shape - Group");
             safeSetExpression(leftTickPath.property("ADBE Vector Shape"), RCS_LEFT_TICK_PATH_EXPR);
             var leftStroke = rcsLeftVecs.addProperty("ADBE Vector Graphic - Stroke");
-            leftStroke.property("ADBE Vector Stroke Width").setValue(2.0);
+            leftStroke.property("ADBE Vector Stroke Width").setValue(1.8);
+            leftStroke.property("ADBE Vector Stroke Color").setValue(timeCol);
             safeSetExpression(leftStroke.property("ADBE Vector Stroke Color"), STATUS_COLOR_EXPR);
 
             var rcsRightGrp = rcsContents.addProperty("ADBE Vector Group");
@@ -3468,12 +3491,13 @@
             var rightTickPath = rcsRightVecs.addProperty("ADBE Vector Shape - Group");
             safeSetExpression(rightTickPath.property("ADBE Vector Shape"), RCS_RIGHT_TICK_PATH_EXPR);
             var rightStroke = rcsRightVecs.addProperty("ADBE Vector Graphic - Stroke");
-            rightStroke.property("ADBE Vector Stroke Width").setValue(2.0);
+            rightStroke.property("ADBE Vector Stroke Width").setValue(1.8);
+            rightStroke.property("ADBE Vector Stroke Color").setValue(timeCol);
             safeSetExpression(rightStroke.property("ADBE Vector Stroke Color"), STATUS_COLOR_EXPR);
             safeSetExpression(rcsRightGrp.property("ADBE Vector Transform Group").property("ADBE Vector Opacity"), RCS_RIGHT_OPACITY_EXPR);
 
             var rcsTr = rcsLayer.property("ADBE Transform Group");
-            rcsTr.property("ADBE Position").setValue([layout.bubbleWidth - padVal * 0.55, layout.bubbleHeight - 14]);
+            rcsTr.property("ADBE Position").setValue([layout.bubbleWidth - padVal * 0.50, layout.bubbleHeight - Math.max(6, Math.round(padVal * 0.42)), 0]);
             safeSetExpression(rcsTr.property("ADBE Position"), STATUS_POS_EXPR);
             safeSetExpression(rcsTr.property("ADBE Scale"), STATUS_SCALE_EXPR);
             rcsTr.property("ADBE Opacity").setValue((msgItem.showStatus && isSent && statusStyleNum === 2) ? 95 : 0);
@@ -3566,8 +3590,8 @@
 
             var comp = app.project.activeItem;
             if (!comp || !(comp instanceof CompItem)) {
-                var compW = Math.max(1080, (hdr.screenWidth || 960) + 120);
-                var compH = Math.max(1920, (hdr.screenHeight || 1680) + 240);
+                var compW = Math.max(1920, (hdr.screenWidth || 540) + 120);
+                var compH = Math.max(1080, (hdr.screenHeight || 940) + 120);
                 var compDur = Math.max(12, Math.ceil(totalTimelineNeeded));
                 comp = app.project.items.addComp("Scripted_Chat_Comp", compW, compH, 1.0, compDur, 30);
                 comp.openInViewer();
@@ -3589,7 +3613,7 @@
                 var platObj = PLATFORMS[platName] || PLATFORMS["Android RCS"] || PLATFORMS[platformKeys[0]];
                 var fontObj = FONTS[0];
                 for (var fi = 0; fi < FONTS.length; fi++) {
-                    if (FONTS[fi].name === hdr.font) {
+                    if (FONTS[fi].name === hdr.font || FONTS[fi].name.indexOf(hdr.font) === 0) {
                         fontObj = FONTS[fi];
                         break;
                     }
@@ -3602,11 +3626,11 @@
                     }
                 }
 
-                var screenW = hdr.screenWidth || 960;
-                var screenH = hdr.screenHeight || 1680;
-                var screenPad = hdr.screenInnerPadding !== undefined ? hdr.screenInnerPadding : 48;
-                var screenRad = hdr.screenCornerRadius !== undefined ? hdr.screenCornerRadius : 64;
-                var bubbleGap = hdr.bubbleGap !== undefined ? hdr.bubbleGap : 24;
+                var screenW = hdr.screenWidth || 540;
+                var screenH = hdr.screenHeight || 940;
+                var screenPad = hdr.screenInnerPadding !== undefined ? hdr.screenInnerPadding : 28;
+                var screenRad = hdr.screenCornerRadius !== undefined ? hdr.screenCornerRadius : 44;
+                var bubbleGap = hdr.bubbleGap !== undefined ? hdr.bubbleGap : 14;
 
                 // 1. Create Chat_Master_Controller (Null at center of composition)
                 var masterCtrl = comp.layers.addNull();
@@ -3767,8 +3791,9 @@
             win.center();
             win.show();
         }
+        return win;
     }
 
-    createUI(this);
+    createUI(thisObj);
 
 })(this);

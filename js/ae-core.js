@@ -562,24 +562,86 @@
                     if (!project) return null;
                     return project.items.find(item => item.name === name) || null;
                 };
+                const sourceRectAtTime = (t, includeExtents) => {
+                    if (layer && typeof layer.sourceRectAtTime === 'function') {
+                        return layer.sourceRectAtTime(t !== undefined ? t : evalTime, includeExtents);
+                    }
+                    return { top: 0, left: 0, width: 100, height: 40 };
+                };
+                const unwrapVal = (v) => (v instanceof Property) ? v.value : v;
+                const interpVal = (v1, v2, p) => {
+                    const a = unwrapVal(v1);
+                    const b = unwrapVal(v2);
+                    if (Array.isArray(a) && Array.isArray(b)) {
+                        return a.map((item, idx) => {
+                            const n1 = Number(unwrapVal(item)) || 0;
+                            const n2 = Number(unwrapVal(b[idx] !== undefined ? b[idx] : item)) || 0;
+                            return n1 + (n2 - n1) * p;
+                        });
+                    }
+                    const n1 = Number(a) || 0;
+                    const n2 = Number(b) || 0;
+                    return n1 + (n2 - n1) * p;
+                };
+                const linear = function(t, tMin, tMax, value1, value2) {
+                    const tv = Number(unwrapVal(t)) || 0;
+                    if (arguments.length === 3) {
+                        const p = Math.max(0, Math.min(1, tv));
+                        return interpVal(tMin, tMax, p);
+                    }
+                    const minT = Number(unwrapVal(tMin)) || 0;
+                    const maxT = Number(unwrapVal(tMax)) || 0;
+                    const span = maxT - minT;
+                    const p = Math.abs(span) < 1e-9 ? (tv >= maxT ? 1 : 0) : Math.max(0, Math.min(1, (tv - minT) / span));
+                    return interpVal(value1, value2, p);
+                };
+                const ease = function(t, tMin, tMax, value1, value2) {
+                    const tv = Number(unwrapVal(t)) || 0;
+                    if (arguments.length === 3) {
+                        const p = Math.max(0, Math.min(1, tv));
+                        const e = p * p * (3 - 2 * p);
+                        return interpVal(tMin, tMax, e);
+                    }
+                    const minT = Number(unwrapVal(tMin)) || 0;
+                    const maxT = Number(unwrapVal(tMax)) || 0;
+                    const span = maxT - minT;
+                    const p = Math.abs(span) < 1e-9 ? (tv >= maxT ? 1 : 0) : Math.max(0, Math.min(1, (tv - minT) / span));
+                    const e = p * p * (3 - 2 * p);
+                    return interpVal(value1, value2, e);
+                };
+                const easeIn = ease;
+                const easeOut = ease;
+                const clamp = (val, limit1, limit2) => {
+                    const v = unwrapVal(val);
+                    const l1 = Number(unwrapVal(limit1)) || 0;
+                    const l2 = Number(unwrapVal(limit2)) || 0;
+                    const lo = Math.min(l1, l2);
+                    const hi = Math.max(l1, l2);
+                    if (Array.isArray(v)) {
+                        return v.map(x => Math.max(lo, Math.min(hi, Number(unwrapVal(x)) || 0)));
+                    }
+                    return Math.max(lo, Math.min(hi, Number(v) || 0));
+                };
 
                 let res;
                 try {
                     const evalBody = 'return eval(' + JSON.stringify(expr) + ');';
                     const fn = new Function(
                         'time', 'value', 'layer', 'thisLayer', 'parent', 'thisComp', 'comp', 'transform', 'wiggle', 'effect',
-                        'degreesToRadians', 'radiansToDegrees', 'createPath', 'seedRandom', 'random', 'Math',
+                        'degreesToRadians', 'radiansToDegrees', 'createPath', 'seedRandom', 'random',
+                        'linear', 'ease', 'easeIn', 'easeOut', 'clamp', 'sourceRectAtTime', 'Math',
                         `"use strict";\n${evalBody}`
                     );
-                    res = fn(evalTime, value, layer, thisLayer, parent, thisComp, comp, transform, wiggle, effect, degreesToRadians, radiansToDegrees, createPath, seedRandom, random, Math);
+                    res = fn(evalTime, value, layer, thisLayer, parent, thisComp, comp, transform, wiggle, effect, degreesToRadians, radiansToDegrees, createPath, seedRandom, random, linear, ease, easeIn, easeOut, clamp, sourceRectAtTime, Math);
                 } catch (evalErr) {
                     try {
                         const fn = new Function(
                             'time', 'value', 'layer', 'thisLayer', 'parent', 'thisComp', 'comp', 'transform', 'wiggle', 'effect',
-                            'degreesToRadians', 'radiansToDegrees', 'createPath', 'seedRandom', 'random', 'Math',
+                            'degreesToRadians', 'radiansToDegrees', 'createPath', 'seedRandom', 'random',
+                            'linear', 'ease', 'easeIn', 'easeOut', 'clamp', 'sourceRectAtTime', 'Math',
                             `"use strict";\n${expr}`
                         );
-                        res = fn(evalTime, value, layer, thisLayer, parent, thisComp, comp, transform, wiggle, effect, degreesToRadians, radiansToDegrees, createPath, seedRandom, random, Math);
+                        res = fn(evalTime, value, layer, thisLayer, parent, thisComp, comp, transform, wiggle, effect, degreesToRadians, radiansToDegrees, createPath, seedRandom, random, linear, ease, easeIn, easeOut, clamp, sourceRectAtTime, Math);
                     } catch (fnErr) {
                         console.warn('[AE Expression Error]', fnErr);
                     }
@@ -589,15 +651,19 @@
                     try {
                         const fn = new Function(
                             'time', 'value', 'layer', 'thisLayer', 'parent', 'thisComp', 'comp', 'transform', 'wiggle', 'effect',
-                            'degreesToRadians', 'radiansToDegrees', 'createPath', 'seedRandom', 'random', 'Math',
+                            'degreesToRadians', 'radiansToDegrees', 'createPath', 'seedRandom', 'random',
+                            'linear', 'ease', 'easeIn', 'easeOut', 'clamp', 'sourceRectAtTime', 'Math',
                             `"use strict";\n${expr}`
                         );
-                        res = fn(evalTime, value, layer, thisLayer, parent, thisComp, comp, transform, wiggle, effect, degreesToRadians, radiansToDegrees, createPath, seedRandom, random, Math);
+                        res = fn(evalTime, value, layer, thisLayer, parent, thisComp, comp, transform, wiggle, effect, degreesToRadians, radiansToDegrees, createPath, seedRandom, random, linear, ease, easeIn, easeOut, clamp, sourceRectAtTime, Math);
                     } catch (e) {}
                 }
 
                 if (res !== undefined && res !== null) {
                     if (res instanceof Property) return res.value;
+                    if (Array.isArray(res)) {
+                        return res.map(item => (item instanceof Property) ? item.value : item);
+                    }
                     return res;
                 }
                 return base;
@@ -1553,7 +1619,7 @@
             if (!str && this.text && typeof this.text === 'string') {
                 str = this.text;
             }
-            const lines = str.split('\n');
+            const lines = str.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
             const fs = this.fontSize || 24;
             const lineH = fs * 1.35;
             let maxW = 0;
@@ -1839,19 +1905,58 @@
         }
     };
 
-    // ExtendScript File Object Polyfill
+    // ExtendScript Folder & File Object Polyfills
+    class AEFolder {
+        constructor(path) {
+            this.fsName = path || '.';
+            this.name = path ? String(path).split(/[\\/]/).pop() : '';
+            this.exists = true;
+        }
+
+        get parent() {
+            const parts = String(this.fsName || '.').split(/[\\/]/);
+            parts.pop();
+            return new AEFolder(parts.join('/') || '.');
+        }
+
+        create() { return true; }
+        execute() { return true; }
+        getFiles(mask) { return []; }
+
+        static get myDocuments() { return new AEFolder('/Documents'); }
+        static get userData() { return new AEFolder('/UserData'); }
+        static get current() { return new AEFolder('.'); }
+        static get temp() { return new AEFolder('/tmp'); }
+        static selectDialog(promptStr) { return null; }
+    }
+
     class AEFile {
         constructor(path) {
             this.fsName = path || '';
             this.name = path ? String(path).split(/[\\/]/).pop() : '';
-            this.exists = true;
+            this.exists = false;
             this.content = '';
+            this.encoding = 'UTF-8';
         }
 
-        open(mode) { return true; }
+        get parent() {
+            const parts = String(this.fsName || '.').split(/[\\/]/);
+            parts.pop();
+            return new AEFolder(parts.join('/') || '.');
+        }
+
+        open(mode) {
+            if (mode === 'w') this.exists = true;
+            return true;
+        }
         read() { return this.content; }
-        write(text) { this.content = text; return true; }
+        write(text) {
+            this.content = text;
+            this.exists = true;
+            return true;
+        }
         close() { return true; }
+        execute() { return true; }
 
         static openDialog(promptStr, filter) {
             const input = document.getElementById('file-input-jsx');
@@ -1859,6 +1964,11 @@
             return null;
         }
     }
+
+    if (typeof global.Folder === 'undefined') {
+        global.Folder = AEFolder;
+    }
+    global.AEFolder = AEFolder;
 
     // Attach openDialog to global File if File exists, or assign AEFile
     if (typeof global.File !== 'undefined') {

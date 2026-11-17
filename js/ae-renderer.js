@@ -1204,7 +1204,7 @@
             if (!txt) return '';
 
             const fs = layer.fontSize || 24;
-            const lines = txt.split('\n');
+            const lines = txt.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
             let fill = '#ffffff';
             let rawCol = null;
             if (layer.effect && typeof layer.effect === 'function') {
@@ -1229,7 +1229,7 @@
                 }
             }
 
-            const textAnchor = layer.justification === 'right' ? 'end' : (layer.justification === 'center' ? 'middle' : 'start');
+            const textAnchor = (layer.justification === 'right' || layer.justification === 1) ? 'end' : ((layer.justification === 'center' || layer.justification === 2) ? 'middle' : 'start');
             const escapeXml = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
             const lineStep = (layer.leading !== undefined && layer.leading > 0)
                 ? layer.leading
@@ -1249,24 +1249,29 @@
             }
             let textFont = "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
             if (requestedFont) {
-                const cleanFont = String(requestedFont).replace(/['"]/g, '').trim();
-                const fontLower = cleanFont.toLowerCase();
-                if (fontLower.includes('courier') || fontLower.includes('consolas') || fontLower.includes('monospace')) {
-                    textFont = `"${cleanFont}", 'Courier New', Consolas, monospace`;
-                } else if (fontLower.includes('times') || fontLower.includes('georgia') || fontLower.includes('serif')) {
-                    textFont = `"${cleanFont}", Georgia, 'Times New Roman', serif`;
-                } else if (fontLower.includes('impact')) {
-                    textFont = `"${cleanFont}", Impact, sans-serif`;
-                } else if (fontLower.includes('trebuchet')) {
-                    textFont = `"${cleanFont}", 'Trebuchet MS', sans-serif`;
-                } else if (fontLower.includes('verdana')) {
-                    textFont = `"${cleanFont}", Verdana, sans-serif`;
-                } else if (fontLower.includes('myriad')) {
-                    textFont = `"${cleanFont}", 'Myriad Pro', 'Segoe UI', -apple-system, Arial, sans-serif`;
-                } else if (fontLower.includes('helvetica')) {
-                    textFont = `"${cleanFont}", 'Helvetica Neue', Helvetica, Arial, sans-serif`;
+                const rawFontStr = String(requestedFont).replace(/"/g, "'").trim();
+                if (rawFontStr.includes(',')) {
+                    textFont = rawFontStr;
                 } else {
-                    textFont = `"${cleanFont}", 'Segoe UI', Arial, -apple-system, sans-serif`;
+                    const cleanFont = rawFontStr.replace(/['"]/g, '').trim();
+                    const fontLower = cleanFont.toLowerCase();
+                    if (fontLower.includes('courier') || fontLower.includes('consolas') || fontLower.includes('monospace')) {
+                        textFont = `'${cleanFont}', 'Courier New', Consolas, monospace`;
+                    } else if (fontLower.includes('times') || fontLower.includes('georgia') || fontLower.includes('serif')) {
+                        textFont = `'${cleanFont}', Georgia, 'Times New Roman', serif`;
+                    } else if (fontLower.includes('impact')) {
+                        textFont = `'${cleanFont}', Impact, sans-serif`;
+                    } else if (fontLower.includes('trebuchet')) {
+                        textFont = `'${cleanFont}', 'Trebuchet MS', sans-serif`;
+                    } else if (fontLower.includes('verdana')) {
+                        textFont = `'${cleanFont}', Verdana, sans-serif`;
+                    } else if (fontLower.includes('myriad')) {
+                        textFont = `'${cleanFont}', 'Myriad Pro', 'Segoe UI', -apple-system, Arial, sans-serif`;
+                    } else if (fontLower.includes('helvetica')) {
+                        textFont = `'${cleanFont}', 'Helvetica Neue', Helvetica, Arial, sans-serif`;
+                    } else {
+                        textFont = `'${cleanFont}', 'Segoe UI', Arial, -apple-system, sans-serif`;
+                    }
                 }
             }
 
@@ -1359,7 +1364,10 @@
                         const subCss = Mat4.toCSS(subMat);
                         let subOpacity = (typeof subLayer.getWorldOpacity === 'function') ? subLayer.getWorldOpacity(time) : 1.0;
                         if (isStaticPreview && subOpacity === 0) {
-                            const endOpacity = (typeof subLayer.getWorldOpacity === 'function') ? subLayer.getWorldOpacity(subLayer.comp ? subLayer.comp.duration : 1.0) : 0;
+                            const compDur = (subLayer.containingComp && subLayer.containingComp.duration)
+                                ? subLayer.containingComp.duration
+                                : ((layer.source && layer.source.duration) ? layer.source.duration : (this.comp ? this.comp.duration : 10.0));
+                            const endOpacity = (typeof subLayer.getWorldOpacity === 'function') ? subLayer.getWorldOpacity(compDur) : 0;
                             if (endOpacity > 0) {
                                 subOpacity = endOpacity;
                             }
