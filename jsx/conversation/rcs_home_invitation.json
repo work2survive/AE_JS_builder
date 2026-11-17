@@ -1,0 +1,128 @@
+{
+  "$schema": "./conversation_schema.json",
+  "version": "1.0",
+  "header": {
+    "title": "RCS Home Check-in (Demo)",
+    "contactName": "Maya Lin",
+    "contactStatus": "RCS chat",
+    "platform": "Android RCS",
+    "theme": "light",
+    "initialTimestamp": "14:20",
+    "timeFormat": "24h",
+    "showTimestamps": true,
+    "realDelayBetweenBubbles": 1.0,
+    "fakeDelayBetweenBubbles": "+00:01",
+    "typography": {
+      "fontFamily": "Roboto (Google / Android)",
+      "emojiFont": "Auto (Preset Default)",
+      "textWrap": "pretty",
+      "bubbleWidth": 0,
+      "maxBubbleWidth": 320,
+      "textSize": 20,
+      "innerPaddingOffset": 0,
+      "leadingPercent": 100,
+      "bubbleGap": 12
+    },
+    "appearance": {
+      "showTail": true,
+      "smartGroupTails": false,
+      "statusIconStyle": "rcs",
+      "statusIconMode": "auto",
+      "colors": {
+        "sentBubble": "#0B57D0",
+        "sentText": "#FFFFFF",
+        "sentTime": "#C4D7F8",
+        "receivedBubble": "#F1F3F4",
+        "receivedText": "#1F1F1F",
+        "receivedTime": "#70757A"
+      }
+    },
+    "screen": {
+      "visible": true,
+      "opacity": 100,
+      "width": 460,
+      "height": 820,
+      "innerPadding": 24,
+      "backgroundColor": "#FFFFFF",
+      "cornerRadius": 36,
+      "autoScroll": true,
+      "clipOverflow": true,
+      "scrollDurationFrames": 8
+    },
+    "animation": {
+      "animateEntrance": true,
+      "bubbleGrowFrames": 5,
+      "typewriterFrames": 5,
+      "textAnimationEffect": "none",
+      "animationDecayFrames": 30,
+      "animationSpeed": 100,
+      "animationIntensity": 100
+    }
+  },
+  "messages": [
+    {
+      "id": "msg_01",
+      "type": "sent",
+      "dialogType": "text",
+      "text": "Just wrapped up the edit at the studio! Heading back now 🎬✨",
+      "realDelay": 0.2
+    },
+    {
+      "id": "msg_02",
+      "type": "received",
+      "dialogType": "text",
+      "text": "Hey, are you at home?",
+      "realDelay": 2.0,
+      "timestamp": "+00:05"
+    },
+    {
+      "id": "msg_03",
+      "type": "sent",
+      "dialogType": "text",
+      "text": "Just unlocked the front door! Why, what's up? 🔑🏠"
+    },
+    {
+      "id": "msg_04",
+      "type": "received",
+      "dialogType": "text",
+      "text": "Look outside on the porch, I dropped off iced lattes and croissants ☕🥐",
+      "timestamp": "14:32"
+    },
+    {
+      "id": "msg_05",
+      "type": "sent",
+      "dialogType": "text",
+      "text": "NO WAY!! You are an absolute lifesaver 😭🙌",
+      "timestamp": "+00:01",
+      "textEffect": "nod"
+    },
+    {
+      "id": "msg_06",
+      "type": "received",
+      "dialogType": "text",
+      "text": "Haha enjoy! Did you finish rendering the motion graphics reel?",
+      "timestamp": "+00:02"
+    },
+    {
+      "id": "msg_07",
+      "type": "sent",
+      "dialogType": "text",
+      "text": "Yep! Exporting the final ProRes master right now. Want to preview it tonight? 🚀"
+    },
+    {
+      "id": "msg_08",
+      "type": "received",
+      "dialogType": "text",
+      "text": "100%! Come by around 7pm and we'll order pizza 🍕🔥",
+      "realDelay": 1.5,
+      "timestamp": "+00:04"
+    },
+    {
+      "id": "msg_09",
+      "type": "sent",
+      "dialogType": "text",
+      "text": "Deal! See you at 7! 🎉",
+      "timestamp": "+00:01"
+    }
+  ]
+}

@@ -1,0 +1,113 @@
+{
+  "$schema": "./conversation_schema.json",
+  "version": "1.0",
+  "header": {
+    "title": "iOS Lunch Plans (12h)",
+    "contactName": "Sam Carter",
+    "contactStatus": "iMessage",
+    "platform": "iOS Message",
+    "theme": "light",
+    "initialTimestamp": "11:42 AM",
+    "timeFormat": "12h",
+    "showTimestamps": true,
+    "realDelayBetweenBubbles": 1.0,
+    "fakeDelayBetweenBubbles": "+00:01",
+    "typography": {
+      "fontFamily": "SF Pro (Apple / iOS)",
+      "emojiFont": "Auto (Preset Default)",
+      "textWrap": "pretty",
+      "bubbleWidth": 0,
+      "maxBubbleWidth": 320,
+      "textSize": 20,
+      "innerPaddingOffset": 0,
+      "leadingPercent": 100,
+      "bubbleGap": 12
+    },
+    "appearance": {
+      "showTail": true,
+      "smartGroupTails": false,
+      "statusIconStyle": "standard",
+      "statusIconMode": "auto",
+      "colors": {
+        "sentBubble": "#007AFF",
+        "sentText": "#FFFFFF",
+        "sentTime": "#CCE4FF",
+        "receivedBubble": "#E9E9EB",
+        "receivedText": "#000000",
+        "receivedTime": "#8E8E93"
+      }
+    },
+    "screen": {
+      "visible": true,
+      "opacity": 100,
+      "width": 460,
+      "height": 820,
+      "innerPadding": 24,
+      "backgroundColor": "#FFFFFF",
+      "cornerRadius": 40,
+      "autoScroll": true,
+      "clipOverflow": true,
+      "scrollDurationFrames": 8
+    },
+    "animation": {
+      "animateEntrance": true,
+      "bubbleGrowFrames": 5,
+      "typewriterFrames": 5,
+      "textAnimationEffect": "none",
+      "animationDecayFrames": 30,
+      "animationSpeed": 100,
+      "animationIntensity": 100
+    }
+  },
+  "messages": [
+    {
+      "id": "msg_01",
+      "type": "received",
+      "dialogType": "text",
+      "text": "Hey! Are we still meeting for tacos at 12:30? 🌮😊",
+      "realDelay": 0.2
+    },
+    {
+      "id": "msg_02",
+      "type": "sent",
+      "dialogType": "text",
+      "text": "Definitely! Starving already 😂"
+    },
+    {
+      "id": "msg_03",
+      "type": "received",
+      "dialogType": "text",
+      "text": "Same!! Should I grab us a table on the patio?",
+      "realDelay": 1.8,
+      "timestamp": "+00:03"
+    },
+    {
+      "id": "msg_04",
+      "type": "sent",
+      "dialogType": "text",
+      "text": "Yes please! Weather is gorgeous today ☀️🌴",
+      "timestamp": "12:00 PM"
+    },
+    {
+      "id": "msg_05",
+      "type": "received",
+      "dialogType": "text",
+      "text": "Got a corner booth outside and ordered chips & guac for the table 🥑✨",
+      "timestamp": "+00:15"
+    },
+    {
+      "id": "msg_06",
+      "type": "sent",
+      "dialogType": "text",
+      "text": "Best news all week!! Parking right now, see you in 60 seconds! 🏃‍♂️",
+      "timestamp": "+00:02",
+      "textEffect": "nod"
+    },
+    {
+      "id": "msg_07",
+      "type": "received",
+      "dialogType": "text",
+      "text": "Waving at you from the patio! 👋🍹"
+    }
+  ]
+}

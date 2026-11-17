@@ -1,0 +1,357 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/work2survive/AE_scripted_Chat/conversation/conversation_schema.json",
+  "title": "AE Scripted Chat Conversation Schema",
+  "description": "JSON schema for scripted animated chat conversations in Adobe After Effects (AE_scripted_Chat) and the upcoming Web UI editor.",
+  "type": "object",
+  "required": ["header", "messages"],
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "description": "JSON Schema URI reference."
+    },
+    "version": {
+      "type": "string",
+      "default": "1.0",
+      "description": "Schema version."
+    },
+    "header": {
+      "type": "object",
+      "description": "Common settings shared across the entire chat conversation.",
+      "properties": {
+        "title": {
+          "type": "string",
+          "default": "Scripted Chat Conversation",
+          "description": "Display title of the conversation."
+        },
+        "contactName": {
+          "type": "string",
+          "default": "Alex Rivera",
+          "description": "Name of the chat contact/recipient."
+        },
+        "contactStatus": {
+          "type": "string",
+          "default": "RCS chat",
+          "description": "Subtitle or online status (e.g. 'Online', 'RCS chat', 'iMessage')."
+        },
+        "platform": {
+          "type": "string",
+          "enum": [
+            "Android RCS",
+            "iOS Message",
+            "WhatsApp",
+            "Instagram",
+            "Facebook Messenger",
+            "Telegram",
+            "Discord",
+            "Custom"
+          ],
+          "default": "Android RCS",
+          "description": "Messaging platform preset style."
+        },
+        "theme": {
+          "type": "string",
+          "enum": ["light", "dark"],
+          "default": "light",
+          "description": "Color theme ('light' or 'dark')."
+        },
+        "initialTimestamp": {
+          "type": "string",
+          "default": "09:41",
+          "description": "Initial clock timestamp for the start of the conversation (e.g. '09:41', '14:30', '2:15 PM')."
+        },
+        "timeFormat": {
+          "type": "string",
+          "enum": ["24h", "12h"],
+          "default": "24h",
+          "description": "Clock display format: '24h' (e.g. 14:32) or '12h' (e.g. 2:32 PM)."
+        },
+        "showTimestamps": {
+          "type": "boolean",
+          "default": true,
+          "description": "Whether timestamps are shown inside message bubbles by default."
+        },
+        "realDelayBetweenBubbles": {
+          "type": "number",
+          "minimum": 0,
+          "default": 1.0,
+          "description": "Default REAL timeline delay in seconds in After Effects between consecutive bubbles appearing."
+        },
+        "fakeDelayBetweenBubbles": {
+          "type": "string",
+          "default": "+00:01",
+          "description": "Default FAKE clock increment added to the previous bubble's timestamp when a bubble does not specify its own timestamp (e.g. '+00:01' adds 1 minute)."
+        },
+        "typography": {
+          "type": "object",
+          "properties": {
+            "fontFamily": {
+              "type": "string",
+              "default": "Roboto (Google / Android)"
+            },
+            "emojiFont": {
+              "type": "string",
+              "default": "Auto (Preset Default)"
+            },
+            "textWrap": {
+              "type": "string",
+              "enum": ["auto", "pretty", "balance"],
+              "default": "pretty"
+            },
+            "bubbleWidth": {
+              "type": "number",
+              "default": 0,
+              "description": "Fixed bubble width in px (0 = automatic based on text)."
+            },
+            "maxBubbleWidth": {
+              "type": "number",
+              "default": 320,
+              "description": "Maximum width of an individual bubble in px before wrapping."
+            },
+            "textSize": {
+              "type": "number",
+              "default": 20,
+              "description": "Typography font size in px."
+            },
+            "innerPaddingOffset": {
+              "type": "number",
+              "default": 0,
+              "description": "Inner bubble padding adjustment (-20 to +100 px)."
+            },
+            "leadingPercent": {
+              "type": "number",
+              "default": 100,
+              "description": "Line height / leading percentage (70% to 160%)."
+            },
+            "bubbleGap": {
+              "type": "number",
+              "default": 12,
+              "description": "Vertical spacing in px between consecutive bubbles."
+            }
+          }
+        },
+        "appearance": {
+          "type": "object",
+          "properties": {
+            "showTail": {
+              "type": "boolean",
+              "default": true
+            },
+            "smartGroupTails": {
+              "type": "boolean",
+              "default": false,
+              "description": "If true, only displays the tail on the last consecutive bubble from the same sender."
+            },
+            "statusIconStyle": {
+              "type": "string",
+              "enum": ["rcs", "standard"],
+              "default": "rcs"
+            },
+            "statusIconMode": {
+              "type": "string",
+              "enum": ["auto", "read", "delivered", "sent", "none"],
+              "default": "auto"
+            },
+            "colors": {
+              "type": "object",
+              "properties": {
+                "sentBubble": { "type": "string", "default": "#0B57D0" },
+                "sentText": { "type": "string", "default": "#FFFFFF" },
+                "sentTime": { "type": "string", "default": "#C4D7F8" },
+                "receivedBubble": { "type": "string", "default": "#F1F3F4" },
+                "receivedText": { "type": "string", "default": "#1F1F1F" },
+                "receivedTime": { "type": "string", "default": "#70757A" }
+              }
+            }
+          }
+        },
+        "screen": {
+          "type": "object",
+          "description": "Chat screen container appearance and scrolling settings.",
+          "properties": {
+            "visible": {
+              "type": "boolean",
+              "default": true,
+              "description": "Chat screen visibility toggle."
+            },
+            "opacity": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 100,
+              "default": 100,
+              "description": "Chat screen background opacity (0-100%)."
+            },
+            "width": {
+              "type": "number",
+              "default": 460,
+              "description": "Chat screen width in px."
+            },
+            "height": {
+              "type": "number",
+              "default": 820,
+              "description": "Chat screen height in px."
+            },
+            "innerPadding": {
+              "type": "number",
+              "default": 24,
+              "description": "Inner padding in px from the chat screen edges to the bubbles."
+            },
+            "backgroundColor": {
+              "type": "string",
+              "default": "#FFFFFF",
+              "description": "Hex color of the chat screen background."
+            },
+            "cornerRadius": {
+              "type": "number",
+              "default": 36,
+              "description": "Corner roundness radius in px for the chat screen."
+            },
+            "autoScroll": {
+              "type": "boolean",
+              "default": true,
+              "description": "Automatically scroll the chat upward when bubbles overflow the vertical height of the chat screen."
+            },
+            "clipOverflow": {
+              "type": "boolean",
+              "default": true,
+              "description": "Hide/clip bubbles that scroll above the top edge of the chat screen."
+            },
+            "scrollDurationFrames": {
+              "type": "number",
+              "default": 8,
+              "description": "Duration in frames for each smooth upward auto-scroll transition."
+            }
+          }
+        },
+        "animation": {
+          "type": "object",
+          "properties": {
+            "animateEntrance": {
+              "type": "boolean",
+              "default": true
+            },
+            "bubbleGrowFrames": {
+              "type": "number",
+              "default": 5
+            },
+            "typewriterFrames": {
+              "type": "number",
+              "default": 5
+            },
+            "textAnimationEffect": {
+              "type": "string",
+              "enum": ["none", "nod", "shake", "blink"],
+              "default": "none"
+            },
+            "animationDecayFrames": {
+              "type": "number",
+              "default": 30
+            },
+            "animationSpeed": {
+              "type": "number",
+              "default": 100
+            },
+            "animationIntensity": {
+              "type": "number",
+              "default": 100
+            }
+          }
+        }
+      }
+    },
+    "messages": {
+      "type": "array",
+      "description": "Ordered array of scripted chat dialog items.",
+      "items": {
+        "type": "object",
+        "required": ["type"],
+        "properties": {
+          "id": {
+            "type": ["string", "number"],
+            "description": "Optional unique identifier for the bubble."
+          },
+          "type": {
+            "type": "string",
+            "enum": ["sent", "received"],
+            "description": "Message direction: 'sent' (right-aligned) or 'received' (left-aligned)."
+          },
+          "dialogType": {
+            "type": "string",
+            "enum": ["text", "image", "video", "carousel", "buttons", "typing"],
+            "default": "text",
+            "description": "RCS dialog type. Currently renders 'text', with 'image', 'video', 'carousel', and 'buttons' reserved for rich RCS extensions."
+          },
+          "text": {
+            "type": "string",
+            "description": "Message text content (up to 500 characters, emojis supported)."
+          },
+          "realDelay": {
+            "type": "number",
+            "minimum": 0,
+            "description": "Optional per-bubble override for the REAL delay in seconds after the previous bubble before this bubble appears in the timeline. If omitted, uses header.realDelayBetweenBubbles."
+          },
+          "timestamp": {
+            "type": "string",
+            "description": "Optional timestamp or fake clock delay. Write with '+' (e.g. '+14:32' or '+00:05') to add hours:minutes to the previous bubble's timestamp, or without '+' (e.g. '14:32') to set that exact time directly. If omitted, adds header.fakeDelayBetweenBubbles."
+          },
+          "fakeDelay": {
+            "type": "string",
+            "description": "Optional alias for relative timestamp increment (e.g. '+00:03')."
+          },
+          "showTail": {
+            "type": "boolean",
+            "description": "Optional per-bubble override for tail pointer visibility."
+          },
+          "showTimestamp": {
+            "type": "boolean",
+            "description": "Optional per-bubble override for timestamp visibility."
+          },
+          "status": {
+            "type": "string",
+            "enum": ["auto", "read", "delivered", "sent", "none"],
+            "description": "Optional per-bubble delivery status override."
+          },
+          "textEffect": {
+            "type": "string",
+            "enum": ["none", "nod", "shake", "blink"],
+            "description": "Optional per-bubble iOS 18 text animation effect override."
+          },
+          "media": {
+            "type": "object",
+            "description": "Future RCS media attachment specification (for dialogType: 'image' or 'video').",
+            "properties": {
+              "src": { "type": "string" },
+              "aspectRatio": { "type": "string" },
+              "caption": { "type": "string" },
+              "duration": { "type": "string" }
+            }
+          },
+          "carousel": {
+            "type": "array",
+            "description": "Future RCS rich card carousel items (for dialogType: 'carousel').",
+            "items": {
+              "type": "object",
+              "properties": {
+                "title": { "type": "string" },
+                "description": { "type": "string" },
+                "image": { "type": "string" },
+                "buttons": { "type": "array" }
+              }
+            }
+          },
+          "buttons": {
+            "type": "array",
+            "description": "Future RCS suggested reply / action chips (for dialogType: 'buttons').",
+            "items": {
+              "type": "object",
+              "properties": {
+                "label": { "type": "string" },
+                "action": { "type": "string" }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

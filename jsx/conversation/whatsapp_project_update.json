@@ -1,0 +1,109 @@
+{
+  "$schema": "./conversation_schema.json",
+  "version": "1.0",
+  "header": {
+    "title": "WhatsApp Night Sprint (Dark)",
+    "contactName": "Design Team Lead",
+    "contactStatus": "online",
+    "platform": "WhatsApp",
+    "theme": "dark",
+    "initialTimestamp": "21:10",
+    "timeFormat": "24h",
+    "showTimestamps": true,
+    "realDelayBetweenBubbles": 1.2,
+    "fakeDelayBetweenBubbles": "+00:02",
+    "typography": {
+      "fontFamily": "Helvetica Neue",
+      "emojiFont": "Auto (Preset Default)",
+      "textWrap": "pretty",
+      "bubbleWidth": 0,
+      "maxBubbleWidth": 330,
+      "textSize": 19,
+      "innerPaddingOffset": 0,
+      "leadingPercent": 100,
+      "bubbleGap": 10
+    },
+    "appearance": {
+      "showTail": true,
+      "smartGroupTails": false,
+      "statusIconStyle": "standard",
+      "statusIconMode": "auto",
+      "colors": {
+        "sentBubble": "#005C4B",
+        "sentText": "#E9EDEF",
+        "sentTime": "#8696A0",
+        "receivedBubble": "#202C33",
+        "receivedText": "#E9EDEF",
+        "receivedTime": "#8696A0"
+      }
+    },
+    "screen": {
+      "visible": true,
+      "opacity": 100,
+      "width": 460,
+      "height": 800,
+      "innerPadding": 22,
+      "backgroundColor": "#0B141A",
+      "cornerRadius": 32,
+      "autoScroll": true,
+      "clipOverflow": true,
+      "scrollDurationFrames": 8
+    },
+    "animation": {
+      "animateEntrance": true,
+      "bubbleGrowFrames": 5,
+      "typewriterFrames": 5,
+      "textAnimationEffect": "none",
+      "animationDecayFrames": 30,
+      "animationSpeed": 100,
+      "animationIntensity": 100
+    }
+  },
+  "messages": [
+    {
+      "id": "msg_01",
+      "type": "received",
+      "dialogType": "text",
+      "text": "Quick check — did the client approve the new 3D title sequence? 👀",
+      "realDelay": 0.2
+    },
+    {
+      "id": "msg_02",
+      "type": "sent",
+      "dialogType": "text",
+      "text": "Yes!! Zero revisions on the animation timing 🎉🙌",
+      "realDelay": 1.0,
+      "timestamp": "+00:01"
+    },
+    {
+      "id": "msg_03",
+      "type": "received",
+      "dialogType": "text",
+      "text": "Wait seriously?! Zero revisions on a Friday night?!",
+      "realDelay": 2.0,
+      "timestamp": "+00:01",
+      "textEffect": "shake"
+    },
+    {
+      "id": "msg_04",
+      "type": "sent",
+      "dialogType": "text",
+      "text": "I know right! They loved the scripted chat transition in scene 2 💬✨",
+      "timestamp": "21:18"
+    },
+    {
+      "id": "msg_05",
+      "type": "received",
+      "dialogType": "text",
+      "text": "Huge congrats to the whole crew! Upload the final package to the shared drive and enjoy the weekend 🥂🚀",
+      "timestamp": "+00:03"
+    },
+    {
+      "id": "msg_06",
+      "type": "sent",
+      "dialogType": "text",
+      "text": "Already uploaded! Have an awesome weekend everyone! 🌙✌️",
+      "timestamp": "+00:02"
+    }
+  ]
+}
