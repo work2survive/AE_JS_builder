@@ -1404,10 +1404,15 @@
             appendConsole('Cleared composition. Executing JSX script...');
             // Sandbox execution with After Effects globals
             const scriptFunc = new Function(
-                'app', '$', 'CompItem', 'Shape', 'Window', 'Panel', 'Group', 'TabbedPanel', 'Tab', 'Mat4',
+                'app', '$', 'CompItem', 'Shape', 'Window', 'Panel', 'Group', 'TabbedPanel', 'Tab', 'Mat4', 'File', 'Folder',
                 `"use strict";\n${code}`
             );
-            scriptFunc.call(window, app, $, CompItem, Shape, Window, Panel, Group, TabbedPanel, Tab, Mat4);
+            scriptFunc.call(
+                window,
+                app, $, CompItem, Shape, Window, Panel, Group, TabbedPanel, Tab, Mat4,
+                (window.AEFile || window.File),
+                (window.AEFolder || window.Folder)
+            );
             appendConsole('Script executed successfully!');
             renderTimeline();
             triggerAutoBuild();

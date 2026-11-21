@@ -1906,76 +1906,104 @@
     };
 
     // ExtendScript Folder & File Object Polyfills
-    class AEFolder {
-        constructor(path) {
-            this.fsName = path || '.';
-            this.name = path ? String(path).split(/[\\/]/).pop() : '';
-            this.exists = true;
+    function AEFolder(path) {
+        if (!(this instanceof AEFolder)) {
+            return new AEFolder(path);
         }
+        this.fsName = path ? String(path).replace(/[\\/]+$/, '') || '.' : '.';
+        this.name = this.fsName.split(/[\\/]/).pop() || '';
+        this.fullName = this.fsName;
+        this.path = this.fsName.slice(0, Math.max(0, this.fsName.lastIndexOf('/'))) || '.';
+        this.exists = true;
+    }
 
-        get parent() {
+    Object.defineProperty(AEFolder.prototype, 'parent', {
+        get: function() {
             const parts = String(this.fsName || '.').split(/[\\/]/);
             parts.pop();
             return new AEFolder(parts.join('/') || '.');
         }
+    });
 
-        create() { return true; }
-        execute() { return true; }
-        getFiles(mask) { return []; }
+    AEFolder.prototype.create = function() { return true; };
+    AEFolder.prototype.execute = function() { return true; };
+    AEFolder.prototype.getFiles = function(mask) { return []; };
+    AEFolder.prototype.selectDialog = function(promptStr) { return null; };
+    AEFolder.prototype.toString = function() { return this.fsName; };
 
-        static get myDocuments() { return new AEFolder('/Documents'); }
-        static get userData() { return new AEFolder('/UserData'); }
-        static get current() { return new AEFolder('.'); }
-        static get temp() { return new AEFolder('/tmp'); }
-        static selectDialog(promptStr) { return null; }
+    Object.defineProperties(AEFolder, {
+        myDocuments: { get: function() { return new AEFolder('/Documents'); } },
+        userData: { get: function() { return new AEFolder('/UserData'); } },
+        current: { get: function() { return new AEFolder('.'); } },
+        temp: { get: function() { return new AEFolder('/tmp'); } },
+        desktop: { get: function() { return new AEFolder('/Desktop'); } },
+        appPackage: { get: function() { return new AEFolder('/Applications'); } },
+        system: { get: function() { return new AEFolder('/System'); } }
+    });
+    AEFolder.selectDialog = function(promptStr) { return null; };
+
+    function AEFile(path) {
+        if (!(this instanceof AEFile)) {
+            return new AEFile(path);
+        }
+        this.fsName = path ? String(path) : '';
+        this.name = this.fsName ? this.fsName.split(/[\\/]/).pop() : '';
+        this.fullName = this.fsName;
+        this.absoluteURI = this.fsName;
+        this.path = this.fsName.slice(0, Math.max(0, this.fsName.lastIndexOf('/'))) || '.';
+        this.exists = false;
+        this.content = '';
+        this.encoding = 'UTF-8';
+        this.length = 0;
+        this.lineFeed = 'unix';
     }
 
-    class AEFile {
-        constructor(path) {
-            this.fsName = path || '';
-            this.name = path ? String(path).split(/[\\/]/).pop() : '';
-            this.exists = false;
-            this.content = '';
-            this.encoding = 'UTF-8';
-        }
-
-        get parent() {
+    Object.defineProperty(AEFile.prototype, 'parent', {
+        get: function() {
             const parts = String(this.fsName || '.').split(/[\\/]/);
             parts.pop();
             return new AEFolder(parts.join('/') || '.');
         }
+    });
 
-        open(mode) {
-            if (mode === 'w') this.exists = true;
-            return true;
-        }
-        read() { return this.content; }
-        write(text) {
-            this.content = text;
+    AEFile.prototype.open = function(mode) {
+        if (mode && (mode.includes('w') || mode.includes('a'))) {
             this.exists = true;
-            return true;
         }
-        close() { return true; }
-        execute() { return true; }
+        return true;
+    };
+    AEFile.prototype.read = function(chars) { return this.content; };
+    AEFile.prototype.readln = function() { return this.content; };
+    AEFile.prototype.write = function(text) {
+        this.content += (text !== undefined && text !== null ? String(text) : '');
+        this.length = this.content.length;
+        this.exists = true;
+        return true;
+    };
+    AEFile.prototype.writeln = function(text) {
+        return this.write((text !== undefined && text !== null ? String(text) : '') + '\n');
+    };
+    AEFile.prototype.close = function() { return true; };
+    AEFile.prototype.seek = function(pos) { return true; };
+    AEFile.prototype.tell = function() { return 0; };
+    AEFile.prototype.execute = function() { return true; };
+    AEFile.prototype.remove = function() { this.exists = false; this.content = ''; return true; };
+    AEFile.prototype.rename = function(newName) { this.name = newName; return true; };
+    AEFile.prototype.toString = function() { return this.fsName; };
 
-        static openDialog(promptStr, filter) {
-            const input = document.getElementById('file-input-jsx');
-            if (input) input.click();
-            return null;
-        }
-    }
+    AEFile.openDialog = function(promptStr, filter, multiSelect) {
+        const input = document.getElementById('file-input-jsx');
+        if (input) input.click();
+        return null;
+    };
+    AEFile.saveDialog = function(promptStr, filter) {
+        return null;
+    };
 
     if (typeof global.Folder === 'undefined') {
         global.Folder = AEFolder;
     }
     global.AEFolder = AEFolder;
-
-    // Attach openDialog to global File if File exists, or assign AEFile
-    if (typeof global.File !== 'undefined') {
-        global.File.openDialog = AEFile.openDialog;
-    } else {
-        global.File = AEFile;
-    }
     global.AEFile = AEFile;
 
     // Export to global scope
