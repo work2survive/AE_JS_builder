@@ -914,6 +914,65 @@
         return shapeLayer;
     }
 
+    // =========================================================================
+    // DUMMY TEXT FIELD (100 WORDS OF LOREM IPSUM)
+    // =========================================================================
+    var LOREM_IPSUM_100 =
+        "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do\n" +
+        "eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad\n" +
+        "minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip\n" +
+        "ex ea commodo consequat. Duis aute irure dolor in reprehenderit in\n" +
+        "voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur\n" +
+        "sint occaecat cupidatat non proident, sunt in culpa qui officia\n" +
+        "deserunt mollit anim id est laborum. Sed ut perspiciatis unde omnis\n" +
+        "iste natus error sit voluptatem accusantium doloremque laudantium,\n" +
+        "totam rem aperiam, eaque ipsa quae ab illo inventore veritatis et\n" +
+        "quasi architecto beatae vitae dicta sunt explicabo.";
+
+    function createDummyLoremTextLayer(comp) {
+        if (!comp) return null;
+
+        var dummyLayer = comp.layers.addText(LOREM_IPSUM_100);
+        dummyLayer.name = "Dummy Text Field (100 Words Lorem Ipsum)";
+        dummyLayer.transform.position.setValue([comp.width / 2, comp.height / 2, 0]);
+
+        try {
+            var textProp = dummyLayer.property("ADBE Text Properties") || dummyLayer.property("Text");
+            var docProp = textProp ? (textProp.property("ADBE Text Document") || dummyLayer.property("Source Text")) : dummyLayer.property("Source Text");
+            if (docProp) {
+                var doc = docProp.value;
+                if (doc) {
+                    doc.text = LOREM_IPSUM_100;
+                    doc.fontSize = 24;
+                    doc.font = "ArialMT";
+                    doc.fillColor = [0.92, 0.94, 0.98];
+                    doc.applyFill = true;
+                    doc.applyStroke = false;
+                    doc.leading = 36;
+                    doc.justification = (typeof ParagraphJustification !== "undefined")
+                        ? ParagraphJustification.LEFT_JUSTIFY
+                        : 7412;
+                    try {
+                        if (typeof doc.setBoxTextSize === "function") {
+                            doc.setBoxTextSize([820, 420]);
+                        }
+                    } catch (eBox) {}
+                    docProp.setValue(doc);
+                }
+            }
+        } catch (eDoc) {}
+
+        // Deselect other layers and select this dummy layer
+        try {
+            for (var i = 1; i <= comp.layers.length; i++) {
+                comp.layers[i].selected = false;
+            }
+        } catch (eDesel) {}
+        dummyLayer.selected = true;
+
+        return dummyLayer;
+    }
+
     function createDemoEnvironment(selectedDefIds, options) {
         var comp = app.project.items.addComp(
             "Text Properties to Effects Demo",
@@ -1346,11 +1405,10 @@
             }
 
             if (targetLayers.length === 0) {
-                try {
-                    var newLyr = comp.layers.addText("Antigravity Text Engine\nMeasuring words and line widths in real-time");
-                    newLyr.name = "Text_Sample";
-                    targetLayers.push(newLyr);
-                } catch (eAddLyr) {
+                var dummyLyr = createDummyLoremTextLayer(comp);
+                if (dummyLyr) {
+                    targetLayers.push(dummyLyr);
+                } else {
                     setStatus("Please select a text layer in the timeline.", true);
                     return;
                 }
@@ -1767,16 +1825,50 @@
             this.layout.resize();
         };
 
-        // Auto-initialize demo environment if starting with an empty comp
+        // Check if a text layer is selected when this .JSX is ran; if not, create dummy text field with 100 words of Lorem Ipsum
         try {
             var currComp = app.project ? app.project.activeItem : null;
-            if (!currComp || currComp.layers.length === 0) {
-                var initSel = getSelectedDefIds();
-                createDemoEnvironment(initSel.map, getOptions());
-                refreshMemoryDisplay();
-                setStatus("Created demo comp with Point & Paragraph text layers.");
-            } else {
-                refreshMemoryDisplay();
+            if (!currComp || !(currComp instanceof CompItem)) {
+                if (app.project && app.project.items) {
+                    for (var cIdx = 1; cIdx <= app.project.items.length; cIdx++) {
+                        if (app.project.items[cIdx] instanceof CompItem) {
+                            currComp = app.project.items[cIdx];
+                            break;
+                        }
+                    }
+                }
+                if (!currComp && app.project && app.project.items && app.project.items.addComp) {
+                    currComp = app.project.items.addComp("Text Properties Comp", 1920, 1080, 1.0, 10.0, 30.0);
+                }
+            }
+
+            if (currComp) {
+                var selectedTextLayer = null;
+                if (currComp.selectedLayers && currComp.selectedLayers.length > 0) {
+                    for (var sIdx = 0; sIdx < currComp.selectedLayers.length; sIdx++) {
+                        if (isTextLayer(currComp.selectedLayers[sIdx])) {
+                            selectedTextLayer = currComp.selectedLayers[sIdx];
+                            break;
+                        }
+                    }
+                }
+
+                if (!selectedTextLayer) {
+                    // No text layer was selected when JSX is ran -> create dummy text field with 100 words of Lorem Ipsum
+                    selectedTextLayer = createDummyLoremTextLayer(currComp);
+                    if (selectedTextLayer) {
+                        var initSel = getSelectedDefIds();
+                        applyPropertiesToLayer(currComp, selectedTextLayer, initSel.map, getOptions());
+                        measureAndStoreTextMetrics(currComp, selectedTextLayer);
+                        refreshMemoryDisplay();
+                        setStatus("Created dummy text field with 100 words of Lorem Ipsum.");
+                    }
+                } else {
+                    // A text layer is already selected -> measure it and show its metrics
+                    measureAndStoreTextMetrics(currComp, selectedTextLayer);
+                    refreshMemoryDisplay();
+                    setStatus("Ready. Active text layer: '" + selectedTextLayer.name + "'.");
+                }
             }
         } catch (eInit) {}
 
