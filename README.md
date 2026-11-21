@@ -160,6 +160,16 @@ The simulator automatically detects and loads standalone production-ready After 
    - **Repository**: [work2survive/AE_spiral_maker](https://github.com/work2survive/AE_spiral_maker)
    - **Live Demo**: [https://work2survive.github.io/AE_JS_builder/?jsx=AE_Spiral_Maker.jsx&autobuild=true](https://work2survive.github.io/AE_JS_builder/?jsx=AE_Spiral_Maker.jsx&autobuild=true)
 
+9. **[Scripted Chat Generator](https://github.com/work2survive/AE_scripted_Chat)** (`jsx/Scripted_Chat_Generator.jsx` - v1.0):
+   - Automated messenger conversation generator loading JSON conversation scripts from `conversation/` subfolder across iOS Messages, Android RCS, WhatsApp, Messenger, and Custom themes. Features reading-speed-based scheduling, responsive dynamic bubble layouts, message delivery/read status badges, and synchronized precomposition rigging.
+   - **Repository**: [work2survive/AE_scripted_Chat](https://github.com/work2survive/AE_scripted_Chat)
+   - **Live Demo**: [https://work2survive.github.io/AE_JS_builder/?jsx=Scripted_Chat_Generator.jsx&autobuild=true](https://work2survive.github.io/AE_JS_builder/?jsx=Scripted_Chat_Generator.jsx&autobuild=true)
+
+10. **[AE Get Emojis](https://github.com/work2survive/AE_Get_Emojis)** (`jsx/AE_Get_Emojis.jsx` - v1.0):
+   - Instant full-color vector emoji search, indexing, and native Shape Layer generator for Adobe After Effects. Solves After Effects' lack of color emoji font support by generating native vector shapes from OpenMoji and Twemoji databases stored in `emojis/`. Features smart search by name, Unicode hex, integer, emoji glyph, or Wikipedia text emoticons (`:D`, `:)`, `;)`, `:P`, `<3`, `</3`, `XD`, `¯\_(ツ)_/¯`), bidirectional Unicode ↔ Integer conversion (`U+1F603` ↔ `128515`), interactive catalog index sliders, dynamic `Add Emoji` / `Replace Emoji` mode, and custom outline width and size controls.
+   - **Repository**: [work2survive/AE_Get_Emojis](https://github.com/work2survive/AE_Get_Emojis)
+   - **Live Demo**: [https://work2survive.github.io/AE_JS_builder/?jsx=AE_Get_Emojis.jsx&autobuild=true](https://work2survive.github.io/AE_JS_builder/?jsx=AE_Get_Emojis.jsx&autobuild=true)
+
 #### Built-in Samples (`samples/` Folder)
 
 The simulator includes built-in sample scripts located in [`samples/`](samples/) demonstrating ScriptUI, kinetic typography, expressions, and 3D primitives:

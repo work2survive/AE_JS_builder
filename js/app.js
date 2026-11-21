@@ -348,12 +348,22 @@
                 </div>
             `;
 
-            // Click row to select
+            // Click row to select / toggle selection
             row.querySelector('.ae-layer-main-bar').onclick = (e) => {
                 if (e.target.closest('.ae-twirl') || e.target.closest('.ae-switch-3d')) return;
-                selectedLayer = layer;
+                const bar = row.querySelector('.ae-layer-main-bar');
+                const wasSelected = (selectedLayer === layer && layer.selected);
+                selectedLayer = wasSelected ? null : layer;
+                if (comp && comp.layers && comp.layers._layers) {
+                    comp.layers._layers.forEach(l => {
+                        l.selected = (l === selectedLayer);
+                    });
+                }
                 document.querySelectorAll('.ae-layer-main-bar').forEach(el => el.classList.remove('selected'));
-                row.querySelector('.ae-layer-main-bar').classList.add('selected');
+                if (selectedLayer) {
+                    bar.classList.add('selected');
+                }
+                window.dispatchEvent(new CustomEvent('ae-layer-selection-changed', { detail: { layer: selectedLayer } }));
             };
 
             // 3D Switch toggle
@@ -1100,6 +1110,9 @@
                         if (layer && effectName) {
                             syncCubeFromControls(layer);
                             syncCylinderFromControls(layer);
+                            if (typeof window.__syncEmojiLayerFromEffect === 'function') {
+                                window.__syncEmojiLayerFromEffect(layer, effectName);
+                            }
                         }
                     }
                 };
@@ -1216,6 +1229,9 @@
                     prop.animMode = 'default';
                     syncCubeFromControls(layer);
                     syncCylinderFromControls(layer);
+                    if (typeof window.__syncEmojiLayerFromEffect === 'function') {
+                        window.__syncEmojiLayerFromEffect(layer, effName);
+                    }
                     renderTimeline();
                     appendConsole(`Toggled [${effName}] = ${chk.checked ? 1 : 0}`);
                 }
@@ -1365,10 +1381,10 @@
         const buildBtn = buttons.slice().reverse().find(b => (b.textContent || '').toLowerCase().includes('build'));
         if (buildBtn) return buildBtn;
 
-        // 2. Look for button with text containing "create" or "generate"
+        // 2. Look for button with text containing "create", "generate", "add emoji", or "replace emoji"
         const createBtn = buttons.slice().reverse().find(b => {
             const txt = (b.textContent || '').toLowerCase();
-            return txt.includes('create') || txt.includes('generate');
+            return txt.includes('create') || txt.includes('generate') || txt.includes('add emoji') || txt.includes('replace emoji');
         });
         if (createBtn) return createBtn;
 

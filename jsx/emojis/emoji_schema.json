@@ -1,0 +1,72 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "AE Get Emojis Database Schema",
+  "description": "Schema for emojis/emoji_index.json and vector shape databases used by AE_Get_Emojis.jsx",
+  "type": "object",
+  "properties": {
+    "version": {
+      "type": "string"
+    },
+    "totalCount": {
+      "type": "integer"
+    },
+    "emojis": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "index",
+          "hexcode",
+          "unicode",
+          "unicodeInt",
+          "emoji",
+          "name",
+          "group",
+          "tags",
+          "emoticons"
+        ],
+        "properties": {
+          "index": {
+            "type": "integer",
+            "description": "1-based slider index"
+          },
+          "hexcode": {
+            "type": "string",
+            "description": "Uppercase Unicode hex codepoint (e.g. '1F603')"
+          },
+          "unicode": {
+            "type": "string",
+            "description": "Formatted Unicode string (e.g. 'U+1F603')"
+          },
+          "unicodeInt": {
+            "type": "integer",
+            "description": "Integer conversion of Unicode hex (e.g. 128515)"
+          },
+          "emoji": {
+            "type": "string",
+            "description": "UTF-8 emoji glyph character"
+          },
+          "name": {
+            "type": "string",
+            "description": "CLDR / OpenMoji annotation name"
+          },
+          "group": {
+            "type": "string"
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "emoticons": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    }
+  }
+}

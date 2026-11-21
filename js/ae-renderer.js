@@ -681,6 +681,11 @@
                     }
                 }
 
+                // Check if this group has multiple VectorShapePath siblings (compound path)
+                const pathProps = group.properties.filter(p => p instanceof VectorShapePath);
+                const combinePathsAsCompound = (pathProps.length > 1 && !(localStroke && localStroke.taper));
+                let compoundPathsRendered = false;
+
                 // Render shapes
                 for (const prop of group.properties) {
                     if (prop instanceof VectorShapeRect) {
@@ -770,21 +775,40 @@
                             svgChildren += `<path d="${d}" ${fillAttr} ${strokeAttr} />`;
                         }
                     } else if (prop instanceof VectorShapePath) {
-                        const shapeData = prop.path.getValueAtTime(time);
-                        if (shapeData && shapeData.vertices && shapeData.vertices.length > 0) {
-                            const d = this.generateSVGPathData(shapeData);
-                            const fillAttr = formatFillAttr(localFill);
-                            if (localStroke && localStroke.taper) {
-                                if (localFill) {
-                                    svgChildren += `<path d="${d}" ${fillAttr} stroke="none" />`;
+                        if (combinePathsAsCompound) {
+                            if (!compoundPathsRendered) {
+                                compoundPathsRendered = true;
+                                const dParts = [];
+                                for (const pp of pathProps) {
+                                    const sd = pp.path.getValueAtTime(time);
+                                    if (sd && sd.vertices && sd.vertices.length > 0) {
+                                        const subD = this.generateSVGPathData(sd);
+                                        if (subD) dParts.push(subD);
+                                    }
                                 }
-                                const taperedD = this.generateTaperedPathData(shapeData, localStroke);
-                                if (taperedD) {
-                                    svgChildren += `<path d="${taperedD}" fill="${localStroke.color}" stroke="none" />`;
+                                if (dParts.length > 0) {
+                                    const fillAttr = formatFillAttr(localFill);
+                                    const strokeAttr = formatStrokeAttrs(localStroke);
+                                    svgChildren += `<path d="${dParts.join(' ')}" fill-rule="evenodd" ${fillAttr} ${strokeAttr} />`;
                                 }
-                            } else {
-                                const strokeAttr = formatStrokeAttrs(localStroke);
-                                svgChildren += `<path d="${d}" ${fillAttr} ${strokeAttr} />`;
+                            }
+                        } else {
+                            const shapeData = prop.path.getValueAtTime(time);
+                            if (shapeData && shapeData.vertices && shapeData.vertices.length > 0) {
+                                const d = this.generateSVGPathData(shapeData);
+                                const fillAttr = formatFillAttr(localFill);
+                                if (localStroke && localStroke.taper) {
+                                    if (localFill) {
+                                        svgChildren += `<path d="${d}" ${fillAttr} stroke="none" />`;
+                                    }
+                                    const taperedD = this.generateTaperedPathData(shapeData, localStroke);
+                                    if (taperedD) {
+                                        svgChildren += `<path d="${taperedD}" fill="${localStroke.color}" stroke="none" />`;
+                                    }
+                                } else {
+                                    const strokeAttr = formatStrokeAttrs(localStroke);
+                                    svgChildren += `<path d="${d}" ${fillAttr} ${strokeAttr} />`;
+                                }
                             }
                         }
                     } else if (prop instanceof VectorGroup) {
