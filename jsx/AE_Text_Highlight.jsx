@@ -568,9 +568,18 @@
             '            } else if (just === "right") {',
             '                lineStartX = -totalLineW;',
             '            }',
-            '            var posX = lineStartX + prefixW + (matchW / 2);',
-            '            var posY = (targetLine * lineH) - (fs * 0.25);',
-            '            [posX, posY];',
+            '            var rawPosX = lineStartX + prefixW + (matchW / 2);',
+            '            var rawPosY = (targetLine * lineH) - (fs * 0.25);',
+            '            var offX = 0, offY = 0;',
+            '            try { offX = thisLayer.effect("Offset X")(1).value; } catch(e) {}',
+            '            try { offY = thisLayer.effect("Offset Y")(1).value; } catch(e) {}',
+            '            try {',
+            '                var compPt = txtLayer.toComp([rawPosX, rawPosY]);',
+            '                var localPt = thisLayer.fromComp(compPt);',
+            '                [localPt[0] + offX, localPt[1] + offY];',
+            '            } catch(eCoord) {',
+            '                [rawPosX + offX, rawPosY + offY];',
+            '            }',
             '        }',
             '    }',
             '}'
@@ -665,8 +674,17 @@
                     if (just === "center") lineStartX = -totW / 2;
                     else if (just === "right") lineStartX = -totW;
 
-                    initX = lineStartX + pW + (mW / 2);
-                    initY = (targetLine * lineH) - (fs * 0.25);
+                    var rawInitX = lineStartX + pW + (mW / 2);
+                    var rawInitY = (targetLine * lineH) - (fs * 0.25);
+                    try {
+                        var compPt = textLayer.toComp([rawInitX, rawInitY]);
+                        var localPt = shapeLayer.fromComp(compPt);
+                        initX = localPt[0] + currentOffsetX;
+                        initY = localPt[1] + currentOffsetY;
+                    } catch(eInitCoord) {
+                        initX = rawInitX + currentOffsetX;
+                        initY = rawInitY + currentOffsetY;
+                    }
                 }
 
                 rect.property("ADBE Vector Rect Size").setValue([initW, initH]);
@@ -709,6 +727,8 @@
     var currentPaddingX       = 8;  // Default 8px horizontal padding
     var currentRoundness      = 6;  // Default 6px corner radius
     var currentOpacity        = 100;
+    var currentOffsetX        = 0;  // Fine-tuning position offset X
+    var currentOffsetY        = 0;  // Fine-tuning position offset Y
 
     // Dummy Text Randomization State
     var dummyFont      = "Georgia";
@@ -859,6 +879,24 @@
     var txtRound = grpRound.add("edittext", undefined, "6");
     txtRound.preferredSize.width = 45;
     grpRound.add("statictext", undefined, "px (0 = Square blocks)");
+
+    // Position Offset (X / Y)
+    var grpOffset = pnlAppearance.add("group");
+    grpOffset.orientation = "row";
+    grpOffset.alignChildren = ["left", "center"];
+    var lblOff = grpOffset.add("statictext", undefined, "Offset X / Y:");
+    lblOff.preferredSize.width = 90;
+
+    var sldOffX = grpOffset.add("slider", undefined, 0, -100, 100);
+    sldOffX.preferredSize.width = 50;
+    var txtOffX = grpOffset.add("edittext", undefined, "0");
+    txtOffX.preferredSize.width = 32;
+
+    var sldOffY = grpOffset.add("slider", undefined, 0, -100, 100);
+    sldOffY.preferredSize.width = 50;
+    var txtOffY = grpOffset.add("edittext", undefined, "0");
+    txtOffY.preferredSize.width = 32;
+    grpOffset.add("statictext", undefined, "px");
 
     // Color & Opacity Row
     var grpCol = pnlAppearance.add("group");
@@ -1067,6 +1105,30 @@
         if (isNaN(v)) v = 6;
         sldRound.value = v;
         currentRoundness = v;
+    };
+
+    sldOffX.onChanging = sldOffX.onChange = function() {
+        var v = Math.round(sldOffX.value);
+        txtOffX.text = String(v);
+        currentOffsetX = v;
+    };
+    txtOffX.onChange = function() {
+        var v = parseInt(txtOffX.text, 10);
+        if (isNaN(v)) v = 0;
+        sldOffX.value = v;
+        currentOffsetX = v;
+    };
+
+    sldOffY.onChanging = sldOffY.onChange = function() {
+        var v = Math.round(sldOffY.value);
+        txtOffY.text = String(v);
+        currentOffsetY = v;
+    };
+    txtOffY.onChange = function() {
+        var v = parseInt(txtOffY.text, 10);
+        if (isNaN(v)) v = 0;
+        sldOffY.value = v;
+        currentOffsetY = v;
     };
 
     sldOp.onChanging = sldOp.onChange = function() {
@@ -1291,6 +1353,8 @@
             addOrUpdateEffectSlider(shapeLayer, "Thickness Y", currentThickness);
             addOrUpdateEffectSlider(shapeLayer, "Padding X", currentPaddingX);
             addOrUpdateEffectSlider(shapeLayer, "Roundness", currentRoundness);
+            addOrUpdateEffectSlider(shapeLayer, "Offset X", currentOffsetX);
+            addOrUpdateEffectSlider(shapeLayer, "Offset Y", currentOffsetY);
             addOrUpdateEffectColor(shapeLayer, "Highlight Color", currentHighlightColor);
             addOrUpdateEffectSlider(shapeLayer, "Highlight Opacity", currentOpacity);
 
@@ -1350,6 +1414,8 @@
             addOrUpdateEffectSlider(shapeLayer, "Thickness Y", currentThickness);
             addOrUpdateEffectSlider(shapeLayer, "Padding X", currentPaddingX);
             addOrUpdateEffectSlider(shapeLayer, "Roundness", currentRoundness);
+            addOrUpdateEffectSlider(shapeLayer, "Offset X", currentOffsetX);
+            addOrUpdateEffectSlider(shapeLayer, "Offset Y", currentOffsetY);
             addOrUpdateEffectColor(shapeLayer, "Highlight Color", currentHighlightColor);
             addOrUpdateEffectSlider(shapeLayer, "Highlight Opacity", currentOpacity);
         } catch(e) {
