@@ -217,11 +217,35 @@
     function getTextLayerString(lyr) {
         if (!lyr) return "";
         try {
+            if (lyr.text && typeof lyr.text === "string" && lyr.text.length > 0) {
+                return lyr.text;
+            }
+        } catch(e0) {}
+        try {
             var p = getTextProp(lyr);
-            if (p && p.value) {
+            if (p) {
+                var hadExpr = false;
+                var oldExprEnabled = false;
+                try {
+                    hadExpr = (p.expression && p.expression.length > 0);
+                    oldExprEnabled = p.expressionEnabled;
+                    if (hadExpr && oldExprEnabled) {
+                        p.expressionEnabled = false;
+                    }
+                } catch(eExpr) {}
+
                 var v = p.value;
-                if (typeof v === "string") return v;
-                if (v && typeof v.text === "string") return v.text;
+                var res = "";
+                if (typeof v === "string") res = v;
+                else if (v && typeof v.text === "string") res = v.text;
+
+                try {
+                    if (hadExpr && oldExprEnabled) {
+                        p.expressionEnabled = true;
+                    }
+                } catch(eExpr2) {}
+
+                if (res) return res;
             }
         } catch(e) {}
         return "";
@@ -3886,29 +3910,61 @@
         try {
             var prop = getTextProp(lyr);
             if (!prop) return;
-            var doc = prop.value;
-            if (!doc) return;
-            if (textStr !== undefined && textStr !== null) {
-                doc.text = String(textStr);
+
+            var oldExpr = "";
+            var hadExpr = false;
+            try {
+                if (prop.expression && prop.expression.length > 0) {
+                    oldExpr = prop.expression;
+                    hadExpr = prop.expressionEnabled;
+                    prop.expression = "";
+                }
+            } catch(eClr) {}
+
+            var doc = null;
+            try {
+                doc = prop.value;
+            } catch(eVal) {}
+
+            if (typeof doc === "object" && doc !== null) {
+                if (textStr !== undefined && textStr !== null) {
+                    doc.text = String(textStr);
+                }
+                if (typeof fontSize === "number" && fontSize > 0) {
+                    doc.fontSize = fontSize;
+                }
+                if (fontColor) {
+                    doc.applyFill = true;
+                    doc.fillColor = fontColor;
+                }
+                if (justification) {
+                    doc.justification = justification;
+                }
+                if (typeof lineLeading === "number" && lineLeading > 0) {
+                    doc.autoLeading = false;
+                    doc.leading = lineLeading;
+                }
+                prop.setValue(doc);
+            } else {
+                if (textStr !== undefined && textStr !== null) {
+                    prop.setValue(String(textStr));
+                }
             }
-            if (typeof fontSize === "number" && fontSize > 0) {
-                doc.fontSize = fontSize;
+
+            if (lyr.text !== undefined && textStr !== undefined && textStr !== null) {
+                lyr.text = String(textStr);
             }
-            if (fontColor) {
-                doc.applyFill = true;
-                doc.fillColor = fontColor;
-            }
-            if (justification) {
-                doc.justification = justification;
-            }
-            if (typeof lineLeading === "number" && lineLeading > 0) {
-                doc.autoLeading = false;
-                doc.leading = lineLeading;
-            }
-            prop.setValue(doc);
+
             applyFontWithFallback(prop, candidates);
             if (emojiCandidates && emojiCandidates.length > 0 && textStr) {
                 applyEmojiFontToRanges(prop, textStr, emojiCandidates, fontSize);
+            }
+
+            if (oldExpr) {
+                try {
+                    prop.expression = oldExpr;
+                    prop.expressionEnabled = hadExpr;
+                } catch(eRst) {}
             }
         } catch(eFmt) {}
     }
@@ -5127,8 +5183,11 @@
                         }
                     } catch(eBFill) {}
                 }
+                precompLayer.selected = true;
+                lastTargetId = getTargetUniqueId({ parentComp: comp, precompLayer: precompLayer, preCompItem: preCompItem });
             } else {
                 master.selected = true;
+                lastTargetId = null;
             }
         } catch (err) {
             alert("Could not generate Message Bubble:\n" + err.toString());
@@ -5193,9 +5252,25 @@
         }
         return null;
     }
-    var lastTargetLayer = null;
+    function getTargetUniqueId(target) {
+        if (!target) return null;
+        try {
+            if (target.precompLayer) {
+                var pId = (target.parentComp && target.parentComp.id) ? target.parentComp.id : 0;
+                var lIdx = target.precompLayer.index || 0;
+                var lName = target.precompLayer.name || "";
+                return "p_" + pId + "_l_" + lIdx + "_" + lName;
+            }
+            if (target.preCompItem) {
+                return "c_" + (target.preCompItem.id || target.preCompItem.name || 0);
+            }
+        } catch(e) {}
+        return null;
+    }
+    var lastTargetId = null;
     function loadSettingsFromPrecomp(target) {
         if (!target) return;
+        if (txtMessage && txtMessage.active) return;
         var pLayer = target.precompLayer;
         var pComp = target.preCompItem;
         if (pComp) {
@@ -5344,6 +5419,9 @@
     }
     function checkSelectionState() {
         try {
+            if (txtMessage && txtMessage.active) {
+                return;
+            }
             var target = getSelectedMessageBubblePrecomp();
             if (target) {
                 var targetName = (target.precompLayer ? target.precompLayer.name : (target.preCompItem ? target.preCompItem.name : ""));
@@ -5351,16 +5429,16 @@
                 if (btnBuild.text !== updateText) {
                     btnBuild.text = updateText;
                 }
-                var currentKey = target.precompLayer || target.preCompItem;
-                if (currentKey && currentKey !== lastTargetLayer) {
-                    lastTargetLayer = currentKey;
+                var currentId = getTargetUniqueId(target);
+                if (currentId && currentId !== lastTargetId) {
+                    lastTargetId = currentId;
                     loadSettingsFromPrecomp(target);
                 }
             } else {
                 if (btnBuild.text !== "Create Message Bubble") {
                     btnBuild.text = "Create Message Bubble";
                 }
-                lastTargetLayer = null;
+                lastTargetId = null;
             }
         } catch(e) {}
     }
@@ -5637,6 +5715,9 @@
                     var justRight = (typeof ParagraphJustification !== "undefined" && ParagraphJustification && ParagraphJustification.RIGHT_JUSTIFY) ? ParagraphJustification.RIGHT_JUSTIFY : null;
                     textLayer.emojiFontFamily = getActiveEmojiFontFamily();
                     formatTextLayer(textLayer, msgText, textSize, textColor, justLeft, lineH, getActiveFontCandidates(), getActiveEmojiCandidates());
+                    if (textLayer.text !== undefined) {
+                        textLayer.text = msgText;
+                    }
                     if (textLayer.property && textLayer.property("Source Text")) {
                         textLayer.property("Source Text").expression = DYNAMIC_WRAP_EXPR;
                     } else if (textLayer.sourceText) {
@@ -5804,6 +5885,7 @@
             }
             if (precompLayer) {
                 precompLayer.selected = true;
+                lastTargetId = getTargetUniqueId(activeTarget);
             }
         } catch(err) {
             alert("Could not update Message Bubble:\n" + err.toString());
@@ -5820,12 +5902,13 @@
     btnBuild.alignment = ["fill", "top"];
     btnBuild.preferredSize = [-1, 36];
     btnBuild.onClick = function() {
-        checkSelectionState();
         var activeTarget = getSelectedMessageBubblePrecomp();
         if (activeTarget) {
             updateExistingMessageBubble(activeTarget);
+            lastTargetId = getTargetUniqueId(activeTarget);
         } else {
             buildMessageBubble();
+            lastTargetId = null;
         }
     };
     // --- Bottom Subtle Repository Link ---
