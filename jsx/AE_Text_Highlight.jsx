@@ -39,7 +39,34 @@
     "use strict";
 
     var SCRIPT_TITLE   = "AE Text Highlight";
-    var SCRIPT_VERSION = "v1.1.1";
+    var SCRIPT_VERSION = "v1.1.2";
+
+    // =========================================================================
+    // 0. EXTENDSCRIPT ES3 SAFE POLYFILLS & STRING HELPERS
+    // =========================================================================
+    function trimStr(s) {
+        if (s === null || s === undefined) return "";
+        return String(s).replace(/^[\s\uFEFF\xA0]+|[\s\uFEFF\xA0]+$/g, "");
+    }
+
+    if (typeof String.prototype.trim !== "function") {
+        String.prototype.trim = function() {
+            return trimStr(this);
+        };
+    }
+
+    if (typeof Array.prototype.indexOf !== "function") {
+        Array.prototype.indexOf = function(item, fromIndex) {
+            var len = this.length >>> 0;
+            var from = Number(fromIndex) || 0;
+            from = (from < 0) ? Math.ceil(from) : Math.floor(from);
+            if (from < 0) from += len;
+            for (; from < len; from++) {
+                if (from in this && this[from] === item) return from;
+            }
+            return -1;
+        };
+    }
 
     // =========================================================================
     // 1. CONSTANTS, TYPICAL FONTS & DEFAULT DATA
@@ -107,7 +134,7 @@
     // =========================================================================
     function hexToRgb(hex) {
         if (!hex) return [1, 1, 1];
-        hex = String(hex).replace("#", "").trim();
+        hex = trimStr(String(hex).replace("#", ""));
         if (hex.length === 3) {
             hex = hex.charAt(0) + hex.charAt(0) + hex.charAt(1) + hex.charAt(1) + hex.charAt(2) + hex.charAt(2);
         }
@@ -135,7 +162,7 @@
     function measureTextExact(str, fontSize, fontName) {
         if (!str) return 0;
         var fs = Number(fontSize) || 34;
-        var cleanFont = String(fontName || "Georgia").replace(/['"]/g, "").trim();
+        var cleanFont = trimStr(String(fontName || "Georgia").replace(/['"]/g, ""));
 
         // 1. If in browser / simulator environment, use Canvas 2D font metric
         if (typeof document !== "undefined") {
@@ -223,14 +250,14 @@
                 : (currentLine + " " + word);
 
             var w = measureTextExact(testLine, fontSize, fontName);
-            if (w > maxBoxWidth && currentLine.trim().length > 0) {
+            if (w > maxBoxWidth && trimStr(currentLine).length > 0) {
                 lines.push(currentLine);
                 currentLine = word;
             } else {
                 currentLine = testLine;
             }
         }
-        if (currentLine.trim().length > 0) {
+        if (trimStr(currentLine).length > 0) {
             lines.push(currentLine);
         }
         return lines.join("\n");
@@ -238,7 +265,7 @@
 
     function sanitizeSearchTerm(term) {
         if (!term) return "";
-        return String(term).replace(/^[\s,"']+|[\s,"']+$/g, "").trim();
+        return trimStr(String(term).replace(/^[\s,"']+|[\s,"']+$/g, ""));
     }
 
     function parseHighlightTerms(rawStr) {
@@ -248,7 +275,7 @@
         var seen = {};
 
         for (var i = 0; i < lines.length; i++) {
-            var line = lines[i].trim();
+            var line = trimStr(lines[i]);
             if (!line) continue;
             var chunks = line.split(/,\s*(?=(?:[^"]*"[^"]*")*[^"]*$)/);
             for (var c = 0; c < chunks.length; c++) {
@@ -269,7 +296,7 @@
         var rawSentences = textStr.split(/[\.\!\?]+/);
         var cleanSentences = [];
         for (var s = 0; s < rawSentences.length; s++) {
-            var sent = rawSentences[s].replace(/[\r\n]+/g, " ").replace(/\s+/g, " ").replace(/^[^a-zA-Z0-9]+|[^a-zA-Z0-9]+$/g, "").trim();
+            var sent = trimStr(rawSentences[s].replace(/[\r\n]+/g, " ").replace(/\s+/g, " ").replace(/^[^a-zA-Z0-9]+|[^a-zA-Z0-9]+$/g, ""));
             if (sent.split(/\s+/).length >= 3) {
                 cleanSentences.push(sent);
             }
@@ -290,7 +317,7 @@
         var lowerSent = pickedSentence.toLowerCase();
 
         for (var w = 0; w < rawWords.length; w++) {
-            var wd = rawWords[w].trim();
+            var wd = trimStr(rawWords[w]);
             var lowerWd = wd.toLowerCase();
             if (wd.length >= 5 && !seen[lowerWd]) {
                 seen[lowerWd] = true;
@@ -384,7 +411,7 @@
         '                document.body.appendChild(c);',
         '            }',
         '            var ctx = c.getContext("2d");',
-        '            var cleanFont = String(fontName || "Georgia").replace(/[\'"]/g, "").trim();',
+        '            var cleanFont = String(fontName || "Georgia").replace(/[\'"]/g, "").replace(/^[\\s\\uFEFF\\xA0]+|[\\s\\uFEFF\\xA0]+$/g, "");',
         '            var fLower = cleanFont.toLowerCase();',
         '            var fStack = cleanFont;',
         '            if (fLower.indexOf("courier") !== -1 || fLower.indexOf("mono") !== -1) {',
