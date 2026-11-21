@@ -1,6 +1,6 @@
 // Co-authored & architected with Google DeepMind Antigravity.
 // =============================================================================
-// ADOBE AFTER EFFECTS EXTENDSCRIPT & SCRIPTUI PANEL: AE TEXT HIGHLIGHT v1.1
+// ADOBE AFTER EFFECTS EXTENDSCRIPT & SCRIPTUI PANEL: AE TEXT HIGHLIGHT v1.1.1
 // =============================================================================
 //
 // PURPOSE:
@@ -39,7 +39,7 @@
     "use strict";
 
     var SCRIPT_TITLE   = "AE Text Highlight";
-    var SCRIPT_VERSION = "v1.1";
+    var SCRIPT_VERSION = "v1.1.1";
 
     // =========================================================================
     // 1. CONSTANTS, TYPICAL FONTS & DEFAULT DATA
