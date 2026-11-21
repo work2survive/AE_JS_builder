@@ -169,7 +169,6 @@ The simulator automatically detects and loads standalone production-ready After 
    - Instant full-color vector emoji search, indexing, and native Shape Layer generator for Adobe After Effects. Solves After Effects' lack of color emoji font support by generating native vector shapes from OpenMoji and Twemoji databases stored in `emojis/`. Features smart search by name, Unicode hex, integer, emoji glyph, or Wikipedia text emoticons (`:D`, `:)`, `;)`, `:P`, `<3`, `</3`, `XD`, `¯\_(ツ)_/¯`), bidirectional Unicode ↔ Integer conversion (`U+1F603` ↔ `128515`), interactive catalog index sliders, dynamic `Add Emoji` / `Replace Emoji` mode, and custom outline width and size controls.
    - **Repository**: [work2survive/AE_Get_Emojis](https://github.com/work2survive/AE_Get_Emojis)
    - **Live Demo**: [https://work2survive.github.io/AE_JS_builder/?jsx=AE_Get_Emojis.jsx&autobuild=true](https://work2survive.github.io/AE_JS_builder/?jsx=AE_Get_Emojis.jsx&autobuild=true)
-
 #### Built-in Samples (`samples/` Folder)
 
 The simulator includes built-in sample scripts located in [`samples/`](samples/) demonstrating ScriptUI, kinetic typography, expressions, and 3D primitives:
@@ -232,6 +231,8 @@ The production tools built and tested inside this simulator are also available a
 - **[AE Message Bubble Generator](https://github.com/work2survive/AE_message_bubble)**: Authentic chat and text message bubble generator for iOS, Android RCS, WhatsApp, Instagram, Messenger, and Custom themes (v1.0).
 - **[AE WindBox](https://github.com/work2survive/AE_windBox)**: Procedural 3D wind volume particle system with dynamic 3D cube bounding box, 3-axis positional and rotational turbulence, and master controller rigging (v1.0).
 - **[AE Spiral Maker](https://github.com/work2survive/AE_spiral_maker)**: Procedural vector spiral generator featuring 5 mathematical spiral algorithms, native After Effects Stroke Taper integration for independent start and end stroke thicknesses, analytical cubic Bézier derivative tangents, and factory presets (v1.0).
+- **[AE Scripted Chat](https://github.com/work2survive/AE_scripted_Chat)**: Fully animated multi-message chat conversation generator with smart timestamps, real vs fake delays, auto-scrolling, and JSON conversation management (v1.0).
+- **[AE Get Emojis](https://github.com/work2survive/AE_Get_Emojis)**: Full-color vector emoji search, catalog indexer, and native After Effects shape layer generator supporting OpenMoji & Twemoji with emoticon parsing and bidirectional Unicode conversion (v1.0).
 
 ---
 
