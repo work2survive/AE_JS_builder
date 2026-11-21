@@ -1291,7 +1291,7 @@
                                 : fName;
                             discoveredConversations.push({
                                 fileName: fName,
-                                label: fName + " — " + title,
+                                label: fName,
                                 filePath: f.fsName,
                                 source: "folder",
                                 data: parsed
@@ -1319,7 +1319,7 @@
                                         : pName;
                                     discoveredConversations.push({
                                         fileName: pName,
-                                        label: "[AE Project] " + pName + " — " + pTitle,
+                                        label: pName,
                                         filePath: projItem.file.fsName,
                                         source: "ae_project",
                                         data: parsedProj
@@ -1342,7 +1342,7 @@
                     : defName;
                 discoveredConversations.push({
                     fileName: defName,
-                    label: defName + " — " + defTitle,
+                    label: defName,
                     filePath: getConversationFolder().fsName + "/" + defName,
                     source: "builtin",
                     data: defData
@@ -2269,8 +2269,8 @@
         var pnlTopConv = win.add("panel", undefined, "Conversation (.JSON in /conversation/)");
         pnlTopConv.orientation = "column";
         pnlTopConv.alignChildren = ["fill", "top"];
-        pnlTopConv.spacing = 5;
-        pnlTopConv.margins = [10, 14, 10, 8];
+        pnlTopConv.spacing = 6;
+        pnlTopConv.margins = [10, 14, 10, 10];
 
         var grpConvRow = pnlTopConv.add("group");
         grpConvRow.orientation = "row";
@@ -3256,12 +3256,12 @@
                             var pTitle = (parsed.header && parsed.header.conversationTitle) ? parsed.header.conversationTitle : pName;
                             discoveredConversations.push({
                                 fileName: pName,
-                                label: pName + " — " + pTitle,
+                                label: pName,
                                 filePath: picked.fsName,
                                 source: "folder",
                                 data: parsed
                             });
-                            dropConversation.add("item", pName + " — " + pTitle);
+                            dropConversation.add("item", pName);
                             dropConversation.selection = discoveredConversations.length - 1;
                             selectConversationByIndex(discoveredConversations.length - 1);
                             importConversationIntoAEProject(discoveredConversations[discoveredConversations.length - 1]);
