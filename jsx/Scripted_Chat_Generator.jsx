@@ -349,6 +349,7 @@
         "Android RCS": {
             label: "Android RCS style",
             radius: 18,
+            bubbleGap: 18,
             tailType: "modern",
             font: "Roboto (Google / Android)",
             fontIndex: 1,
@@ -372,6 +373,7 @@
         "iOS Message": {
             label: "iOS message style",
             radius: 18,
+            bubbleGap: 18,
             tailType: "ios",
             font: "SF Pro (Apple / iOS)",
             fontIndex: 0,
@@ -395,6 +397,7 @@
         "WhatsApp": {
             label: "WhatsApp style",
             radius: 8,
+            bubbleGap: 14,
             tailType: "classic",
             font: "Helvetica Neue",
             fontIndex: 3,
@@ -418,6 +421,7 @@
         "Instagram": {
             label: "Instagram style",
             radius: 20,
+            bubbleGap: 18,
             tailType: "none",
             font: "SF Pro (Apple / iOS)",
             fontIndex: 0,
@@ -441,6 +445,7 @@
         "Facebook Messenger": {
             label: "Messenger style",
             radius: 18,
+            bubbleGap: 14,
             tailType: "none",
             font: "Segoe UI (Windows)",
             fontIndex: 2,
@@ -464,6 +469,7 @@
         "Telegram": {
             label: "Telegram style",
             radius: 14,
+            bubbleGap: 14,
             tailType: "classic",
             font: "Open Sans",
             fontIndex: 6,
@@ -487,6 +493,7 @@
         "Discord": {
             label: "Discord style",
             radius: 12,
+            bubbleGap: 18,
             tailType: "none",
             font: "Inter",
             fontIndex: 5,
@@ -510,6 +517,7 @@
         "Custom": {
             label: "Custom Preset",
             radius: 18,
+            bubbleGap: 18,
             tailType: "modern",
             font: "System Default",
             fontIndex: 7,
@@ -621,9 +629,10 @@
                     if (content && content.length > 2) {
                         var parsed = JSONPolyfill.parse(content);
                         if (parsed && typeof parsed === "object") {
-                            for (var k in parsed) {
-                                if (parsed.hasOwnProperty(k)) {
-                                    PLATFORMS[k] = parsed[k];
+                            var prMap = (parsed && parsed.presets) ? parsed.presets : parsed;
+                            for (var k in prMap) {
+                                if (prMap.hasOwnProperty(k) && k !== "$schema" && k !== "description" && k !== "version") {
+                                    PLATFORMS[k] = prMap[k];
                                 }
                             }
                             updatePlatformKeys();
@@ -658,7 +667,7 @@
                 "textSize": 22,
                 "innerPadding": 18,
                 "lineSpacing": 130,
-                "bubbleGap": 14,
+                "bubbleGap": 18,
                 "showTail": true,
                 "groupConsecutive": true,
                 "showStatus": true,
@@ -765,7 +774,7 @@
                 "textSize": 22,
                 "innerPadding": 18,
                 "lineSpacing": 130,
-                "bubbleGap": 14,
+                "bubbleGap": 18,
                 "showTail": true,
                 "groupConsecutive": true,
                 "showStatus": true,
@@ -837,7 +846,7 @@
                 "textSize": 22,
                 "innerPadding": 18,
                 "lineSpacing": 130,
-                "bubbleGap": 14,
+                "bubbleGap": 18,
                 "showTail": true,
                 "groupConsecutive": true,
                 "showStatus": true,
@@ -1539,7 +1548,7 @@
         "var fs = ctrl.effect('Text Size')('Slider');",
         "var startT = 0; try { startT = ctrl.effect('Start Time (s)')('Slider'); } catch(e){}",
         "var rect = txt.sourceRectAtTime(Math.max(startT + 5, time), false);",
-        "var extraH = (showTime || (showStat && isSent)) ? Math.round(fs * 0.68) : 0;",
+        "var extraH = (showTime || (showStat && isSent)) ? Math.max(Math.round(fs * 0.90), 18) : 0;",
         "var minW = (showTime || (showStat && isSent)) ? Math.round(fs * 4.5) : Math.round(fs * 2.2);",
         "var w = Math.max(rect.width + pad * 2, minW);",
         "var h = Math.max(rect.height + pad * 2 + extraH, Math.round(fs + pad * 1.6));",
@@ -1591,7 +1600,7 @@
         "var fs = ctrl.effect('Text Size')('Slider');",
         "var startT = 0; try { startT = ctrl.effect('Start Time (s)')('Slider'); } catch(e){}",
         "var rect = txt.sourceRectAtTime(Math.max(startT + 5, time), false);",
-        "var extraH = (showTime || (showStat && isSent)) ? Math.round(fs * 0.68) : 0;",
+        "var extraH = (showTime || (showStat && isSent)) ? Math.max(Math.round(fs * 0.90), 18) : 0;",
         "var minW = (showTime || (showStat && isSent)) ? Math.round(fs * 4.5) : Math.round(fs * 2.2);",
         "var w = Math.max(rect.width + pad * 2, minW);",
         "var h = Math.max(rect.height + pad * 2 + extraH, Math.round(fs + pad * 1.6));",
@@ -1611,7 +1620,7 @@
         "var trackW = 0; try { trackW = ctrl.effect('Chat Track Width')('Slider'); } catch(e){}",
         "var startT = 0; try { startT = ctrl.effect('Start Time (s)')('Slider'); } catch(e){}",
         "var rect = txt.sourceRectAtTime(Math.max(startT + 5, time), false);",
-        "var extraH = (showTime || (showStat && isSent)) ? Math.round(fs * 0.68) : 0;",
+        "var extraH = (showTime || (showStat && isSent)) ? Math.max(Math.round(fs * 0.90), 18) : 0;",
         "var minW = (showTime || (showStat && isSent)) ? Math.round(fs * 4.5) : Math.round(fs * 2.2);",
         "var w = Math.max(rect.width + pad * 2, minW);",
         "var h = Math.max(rect.height + pad * 2 + extraH, Math.round(fs + pad * 1.6));",
@@ -2134,6 +2143,18 @@
         chkGroupConsecutive.value = true;
         chkGroupConsecutive.helpTip = "Only show tail on the last bubble of consecutive messages from the same sender";
 
+        var grpMainGapRow = pnlPlat.add("group");
+        grpMainGapRow.orientation = "row";
+        grpMainGapRow.alignChildren = ["left", "center"];
+        grpMainGapRow.spacing = 8;
+        var lblMainGap = grpMainGapRow.add("statictext", undefined, "Bubble Gap (Spacing):");
+        lblMainGap.preferredSize.width = 135;
+        lblMainGap.helpTip = "Vertical spacing in pixels between consecutive message bubbles";
+        var sldMainGap = grpMainGapRow.add("slider", undefined, 18, 4, 100);
+        sldMainGap.preferredSize.width = 100;
+        var inpMainGap = grpMainGapRow.add("edittext", undefined, "18");
+        inpMainGap.characters = 4;
+
         // 1B. Timestamps & Real vs Fake Delays
         var pnlTiming = tabChat.add("panel", undefined, "Timestamps & Delays (Real vs. Fake)");
         pnlTiming.orientation = "column";
@@ -2642,7 +2663,7 @@
                 textSize: parseInt(inpTextSize.text, 10) || 22,
                 innerPadding: parseInt(inpPad.text, 10) || 18,
                 lineSpacing: parseInt(inpLead.text, 10) || 130,
-                bubbleGap: parseInt(inpGap.text, 10) || 14,
+                bubbleGap: parseInt(inpMainGap.text, 10) || parseInt(inpGap.text, 10) || 18,
                 showTail: chkShowTail.value,
                 groupConsecutive: chkGroupConsecutive.value,
                 showStatus: chkShowStatus.value,
@@ -2809,7 +2830,11 @@
             setSliderAndInput(sldTextSize, inpTextSize, hdr.textSize !== undefined ? hdr.textSize : 22, false);
             setSliderAndInput(sldPad, inpPad, hdr.innerPadding !== undefined ? hdr.innerPadding : 18, false);
             setSliderAndInput(sldLead, inpLead, hdr.lineSpacing !== undefined ? hdr.lineSpacing : 130, false);
-            setSliderAndInput(sldGap, inpGap, hdr.bubbleGap !== undefined ? hdr.bubbleGap : 14, false);
+            var gapVal = hdr.bubbleGap !== undefined ? hdr.bubbleGap : (pObj && pObj.bubbleGap !== undefined ? pObj.bubbleGap : 18);
+            setSliderAndInput(sldGap, inpGap, gapVal, false);
+            if (typeof sldMainGap !== "undefined" && typeof inpMainGap !== "undefined") {
+                setSliderAndInput(sldMainGap, inpMainGap, gapVal, false);
+            }
 
             // Status timings
             setSliderAndInput(sldDelivDelay, inpDelivDelay, hdr.sentToDeliveredDelay !== undefined ? hdr.sentToDeliveredDelay : 0.6, true);
@@ -2856,7 +2881,12 @@
         bindSliderEdit(sldTextSize, inpTextSize, false);
         bindSliderEdit(sldPad, inpPad, false);
         bindSliderEdit(sldLead, inpLead, false);
-        bindSliderEdit(sldGap, inpGap, false);
+        bindSliderEdit(sldGap, inpGap, false, function (val) {
+            setSliderAndInput(sldMainGap, inpMainGap, val, false);
+        });
+        bindSliderEdit(sldMainGap, inpMainGap, false, function (val) {
+            setSliderAndInput(sldGap, inpGap, val, false);
+        });
         bindSliderEdit(sldDelivDelay, inpDelivDelay, true);
         bindSliderEdit(sldReadDelay, inpReadDelay, true);
         bindSliderEdit(sldScreenOpacity, inpScreenOpacity, false);
@@ -2899,6 +2929,12 @@
                     }
                 }
                 chkShowTail.value = (p.tailType !== "none");
+                if (p.bubbleGap !== undefined) {
+                    setSliderAndInput(sldGap, inpGap, p.bubbleGap, false);
+                    if (typeof sldMainGap !== "undefined" && typeof inpMainGap !== "undefined") {
+                        setSliderAndInput(sldMainGap, inpMainGap, p.bubbleGap, false);
+                    }
+                }
                 applyPlatformThemeColors(platName, radDark.value, false, null);
             }
         };
@@ -3143,10 +3179,10 @@
                 if (lw > maxLineW) maxLineW = lw;
             }
 
-            var lineHeightPx = fontSize * (leadPct / 100);
-            var textBlockH = Math.max(fontSize, fontSize + (lines.length - 1) * lineHeightPx);
+            var lineHeightPx = Math.max(fontSize * (leadPct / 100), fontSize * 1.35);
+            var textBlockH = lines.length * lineHeightPx;
             var hasFooter = hdr.useTimestamps || (showStatus && isSent);
-            var extraH = hasFooter ? Math.round(fontSize * 0.68) : 0;
+            var extraH = hasFooter ? Math.max(Math.round(fontSize * 0.90), 18) : 0;
             var minW = hasFooter ? Math.round(fontSize * 4.5) : Math.round(fontSize * 2.2);
 
             var bubbleW = Math.min(maxBubbleW, Math.max(Math.ceil(maxLineW + pad * 2), minW));

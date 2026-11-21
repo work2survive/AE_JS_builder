@@ -1,11 +1,12 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "description": "After Effects Message Bubble Generator - Platform Style Presets",
-  "version": "1.1",
+  "description": "After Effects Scripted Chat & Message Bubble Generator - Platform Style Presets",
+  "version": "1.2",
   "presets": {
     "Android RCS": {
       "label": "Android RCS style",
       "radius": 18,
+      "bubbleGap": 18,
       "tailType": "modern",
       "font": "Roboto (Google / Android)",
       "fontIndex": 1,
@@ -26,6 +27,7 @@
       ],
       "statusStyle": "rcs",
       "light": {
+        "screenBg": "#FFFFFF",
         "sent": {
           "bubble": "#0b57d0",
           "text": "#ffffff",
@@ -40,6 +42,7 @@
         }
       },
       "dark": {
+        "screenBg": "#131314",
         "sent": {
           "bubble": "#a8c7fa",
           "text": "#041e49",
@@ -65,6 +68,7 @@
     "iOS Message": {
       "label": "iOS message style",
       "radius": 18,
+      "bubbleGap": 18,
       "tailType": "ios",
       "font": "SF Pro (Apple / iOS)",
       "fontIndex": 0,
@@ -87,6 +91,7 @@
       ],
       "statusStyle": "standard",
       "light": {
+        "screenBg": "#FFFFFF",
         "sent": {
           "bubble": "#007aff",
           "text": "#ffffff",
@@ -101,6 +106,7 @@
         }
       },
       "dark": {
+        "screenBg": "#000000",
         "sent": {
           "bubble": "#0b84fe",
           "text": "#ffffff",
@@ -126,6 +132,7 @@
     "WhatsApp": {
       "label": "WhatsApp style",
       "radius": 8,
+      "bubbleGap": 14,
       "tailType": "classic",
       "font": "Helvetica Neue",
       "fontIndex": 3,
@@ -144,6 +151,7 @@
       ],
       "statusStyle": "standard",
       "light": {
+        "screenBg": "#EFEAE2",
         "sent": {
           "bubble": "#d9fdd3",
           "text": "#111b21",
@@ -158,6 +166,7 @@
         }
       },
       "dark": {
+        "screenBg": "#0B141A",
         "sent": {
           "bubble": "#005c4b",
           "text": "#e9edef",
@@ -182,6 +191,7 @@
     "Instagram": {
       "label": "Instagram style",
       "radius": 20,
+      "bubbleGap": 18,
       "tailType": "none",
       "font": "SF Pro (Apple / iOS)",
       "fontIndex": 0,
@@ -201,6 +211,7 @@
       ],
       "statusStyle": "standard",
       "light": {
+        "screenBg": "#FFFFFF",
         "sent": {
           "bubble": "#3797f0",
           "text": "#ffffff",
@@ -215,6 +226,7 @@
         }
       },
       "dark": {
+        "screenBg": "#121212",
         "sent": {
           "bubble": "#3797f0",
           "text": "#ffffff",
@@ -239,6 +251,7 @@
     "Facebook Messenger": {
       "label": "Messenger style",
       "radius": 18,
+      "bubbleGap": 14,
       "tailType": "none",
       "font": "Segoe UI (Windows)",
       "fontIndex": 2,
@@ -258,6 +271,7 @@
       ],
       "statusStyle": "standard",
       "light": {
+        "screenBg": "#FFFFFF",
         "sent": {
           "bubble": "#0084ff",
           "text": "#ffffff",
@@ -272,6 +286,7 @@
         }
       },
       "dark": {
+        "screenBg": "#18191A",
         "sent": {
           "bubble": "#0084ff",
           "text": "#ffffff",
@@ -296,6 +311,7 @@
     "Telegram": {
       "label": "Telegram style",
       "radius": 14,
+      "bubbleGap": 14,
       "tailType": "classic",
       "font": "Open Sans",
       "fontIndex": 6,
@@ -316,6 +332,7 @@
       ],
       "statusStyle": "standard",
       "light": {
+        "screenBg": "#DCE6D5",
         "sent": {
           "bubble": "#effdde",
           "text": "#000000",
@@ -330,6 +347,7 @@
         }
       },
       "dark": {
+        "screenBg": "#0E1621",
         "sent": {
           "bubble": "#2b5278",
           "text": "#ffffff",
@@ -354,6 +372,7 @@
     "Discord": {
       "label": "Discord style",
       "radius": 12,
+      "bubbleGap": 18,
       "tailType": "none",
       "font": "Inter",
       "fontIndex": 5,
@@ -374,6 +393,7 @@
       ],
       "statusStyle": "standard",
       "light": {
+        "screenBg": "#FFFFFF",
         "sent": {
           "bubble": "#5865f2",
           "text": "#ffffff",
@@ -388,6 +408,7 @@
         }
       },
       "dark": {
+        "screenBg": "#313338",
         "sent": {
           "bubble": "#5865f2",
           "text": "#ffffff",
@@ -413,6 +434,7 @@
     "Custom": {
       "label": "Custom Preset",
       "radius": 18,
+      "bubbleGap": 18,
       "tailType": "modern",
       "font": "System Default",
       "fontIndex": 7,
@@ -433,6 +455,7 @@
       ],
       "statusStyle": "standard",
       "light": {
+        "screenBg": "#FFFFFF",
         "sent": {
           "bubble": "#007aff",
           "text": "#ffffff",
@@ -447,6 +470,7 @@
         }
       },
       "dark": {
+        "screenBg": "#121212",
         "sent": {
           "bubble": "#0b84fe",
           "text": "#ffffff",
