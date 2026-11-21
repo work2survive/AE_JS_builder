@@ -202,10 +202,23 @@
             this.name = name;
             this.matchName = matchName || name;
             this.parentProperty = null;
+            this.enabled = true;
         }
 
         property(nameOrIndex) {
             return null;
+        }
+
+        remove() {
+            if (this.parentProperty && this.parentProperty.properties) {
+                const idx = this.parentProperty.properties.indexOf(this);
+                if (idx !== -1) {
+                    this.parentProperty.properties.splice(idx, 1);
+                    if (this.parentProperty._notifyChange) {
+                        this.parentProperty._notifyChange();
+                    }
+                }
+            }
         }
     }
 
@@ -1680,6 +1693,28 @@
             const layer = new TextLayer('Text Layer ' + count, this.comp, textStr);
             layer.transform.position.setValue([this.comp.width / 2, this.comp.height / 2, 0]);
             this.unshift(layer);
+            this._notify();
+            return layer;
+        }
+
+        addSolid(color, name, width, height, pixelAspect, duration) {
+            const count = this.length + 1;
+            const layerName = name || ('Solid ' + count);
+            const w = width || this.comp.width;
+            const h = height || this.comp.height;
+            const layer = new ShapeLayer(layerName, this.comp);
+            layer.width = w;
+            layer.height = h;
+
+            const group = layer.property("Contents").addProperty("ADBE Vector Group");
+            group.name = "Solid Plate";
+            const rect = group.property("Contents").addProperty("ADBE Vector Shape - Rect");
+            rect.property("Size").setValue([w, h]);
+            const fill = group.property("Contents").addProperty("ADBE Vector Graphic - Fill");
+            fill.property("Color").setValue(color || [0.1, 0.1, 0.1]);
+
+            layer.transform.position.setValue([this.comp.width / 2, this.comp.height / 2, 0]);
+            this.push(layer);
             this._notify();
             return layer;
         }

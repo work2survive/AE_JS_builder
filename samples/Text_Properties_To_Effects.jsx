@@ -33,6 +33,16 @@
     var SCRIPT_VERSION = "v1.2";
 
     // Global in-memory cache initialization
+    var globalObj = (typeof $ !== "undefined" && typeof $.global !== "undefined")
+        ? $.global
+        : (typeof globalThis !== "undefined" ? globalThis : (typeof window !== "undefined" ? window : this));
+
+    if (typeof $ === "undefined") {
+        $ = { global: globalObj, writeln: function (msg) { if (typeof console !== "undefined") console.log(msg); } };
+    } else if (typeof $.global === "undefined") {
+        $.global = globalObj;
+    }
+
     if (typeof $.global.AE_TEXT_BOX_MEMORY === "undefined") {
         $.global.AE_TEXT_BOX_MEMORY = {
             layerName: "",
@@ -914,8 +924,13 @@
             30.0
         );
 
-        var bgSolid = comp.layers.addSolid([0.07, 0.08, 0.10], "Dark Backdrop", 1920, 1080, 1.0);
-        bgSolid.locked = true;
+        var bgSolid = null;
+        if (typeof comp.layers.addSolid === "function") {
+            try {
+                bgSolid = comp.layers.addSolid([0.07, 0.08, 0.10], "Dark Backdrop", 1920, 1080, 1.0);
+                bgSolid.locked = true;
+            } catch (eSolid) {}
+        }
 
         var textLayer1 = comp.layers.addText("ANTIGRAVITY RESPONSIVE TEXT");
         textLayer1.name = "Demo 1 - Point Text";
@@ -965,6 +980,9 @@
     // =========================================================================
     // 4. SCRIPTUI USER INTERFACE BUILDER
     // =========================================================================
+    // =========================================================================
+    // 4. SCRIPTUI USER INTERFACE BUILDER
+    // =========================================================================
     function buildUI(thisObj) {
         var win = (thisObj instanceof Panel)
             ? thisObj
@@ -977,6 +995,7 @@
         win.alignChildren = ["fill", "top"];
         win.spacing = 8;
         win.margins = 10;
+        win.preferredSize = [420, 680];
 
         win.textMemoryStore = $.global.AE_TEXT_BOX_MEMORY;
 
@@ -997,11 +1016,11 @@
         var lblDesc = pnlHeader.add(
             "statictext",
             undefined,
-            "Expose hidden textbox bounds, sourceRect, alignment, word/line count sliders & in-memory arrays."
+            "Check or uncheck properties below to show or hide their effects on the timeline in real-time."
         );
 
         // ---------------------------------------------------------------------
-        // Quick Presets Toolbar
+        // Quick Presets & Sync Toolbar
         // ---------------------------------------------------------------------
         var grpToolbar = win.add("group");
         grpToolbar.orientation = "row";
@@ -1011,17 +1030,14 @@
         var btnPresetCommon = grpToolbar.add("button", undefined, "★ Common");
         btnPresetCommon.helpTip = "Select standard width, height, word count, line count, alignment & indents";
 
-        var btnPresetBounds = grpToolbar.add("button", undefined, "📐 Bounds");
-        btnPresetBounds.helpTip = "Select all sourceRect dimensions & center offset";
-
-        var btnPresetTypo = grpToolbar.add("button", undefined, "🔤 Typo");
-        btnPresetTypo.helpTip = "Select font size, leading, tracking, stroke & colors";
-
         var btnPresetAll = grpToolbar.add("button", undefined, "☑ All");
-        btnPresetAll.helpTip = "Select all properties";
+        btnPresetAll.helpTip = "Select all properties to show as effects";
 
         var btnPresetNone = grpToolbar.add("button", undefined, "☐ None");
         btnPresetNone.helpTip = "Deselect all properties";
+
+        var btnReadTimeline = grpToolbar.add("button", undefined, "🔄 Read Timeline");
+        btnReadTimeline.helpTip = "Inspects selected layer and sets checkboxes to match effects currently in timeline";
 
         // ---------------------------------------------------------------------
         // Tabbed Panel: Categorized Property Checkboxes + In-Memory Store
@@ -1031,133 +1047,126 @@
         tpanel.alignment = ["fill", "fill"];
 
         var checkboxMap = {};
+        var PROPERTY_DEFS_MAP = {};
+        for (var pd = 0; pd < PROPERTY_DEFS.length; pd++) {
+            PROPERTY_DEFS_MAP[PROPERTY_DEFS[pd].id] = PROPERTY_DEFS[pd];
+        }
 
+        // Helper to add checkbox and wire live timeline show/hide toggle
         function addCheckboxItem(container, def) {
             var chk = container.add("checkbox", undefined, def.label);
             chk.value = def.defaultChecked;
-            chk.helpTip = def.tooltip || "";
+            chk.helpTip = (def.tooltip || "") + " (Toggling shows or hides this effect in the timeline)";
             chk.alignment = ["fill", "top"];
             checkboxMap[def.id] = chk;
+
+            // Live event: Checking/unchecking shows or hides this effect on the timeline
+            chk.onClick = function () {
+                syncPropertyToTimeline(def, chk.value);
+            };
+
             return chk;
         }
 
-        // --- TAB 1: Bounds & Dimensions ---
-        var tabBounds = tpanel.add("tab", undefined, "📐 Dimensions");
-        tabBounds.orientation = "column";
-        tabBounds.alignChildren = ["fill", "top"];
-        tabBounds.spacing = 6;
-        tabBounds.margins = 8;
+        // =====================================================================
+        // TAB 1: ⚡ TIMELINE EFFECTS (SHOW / HIDE CHECKBOXES)
+        // =====================================================================
+        var tabTimeline = tpanel.add("tab", undefined, "⚡ Timeline Effects");
+        tabTimeline.orientation = "column";
+        tabTimeline.alignChildren = ["fill", "top"];
+        tabTimeline.spacing = 6;
+        tabTimeline.margins = 8;
 
-        var pnlSR = tabBounds.add("panel", undefined, "sourceRectAtTime() Properties");
+        // Subpanel 1: Box & Dimensions Properties
+        var pnlSR = tabTimeline.add("panel", undefined, "📐 Box & Dimensions (Show/Hide in Timeline)");
         pnlSR.orientation = "column";
         pnlSR.alignChildren = ["fill", "top"];
-        pnlSR.spacing = 4;
+        pnlSR.spacing = 3;
 
-        for (var i = 0; i < PROPERTY_DEFS.length; i++) {
-            if (PROPERTY_DEFS[i].category === "bounds") {
-                addCheckboxItem(pnlSR, PROPERTY_DEFS[i]);
-            }
+        var boxProps = ["sr_width", "sr_height", "box_width", "box_height", "sr_size", "box_size", "sr_left", "sr_top"];
+        for (var bi = 0; bi < boxProps.length; bi++) {
+            var bDef = PROPERTY_DEFS_MAP[boxProps[bi]];
+            if (bDef) addCheckboxItem(pnlSR, bDef);
         }
 
-        // --- TAB 2: Paragraph Box & Indent ---
-        var tabBox = tpanel.add("tab", undefined, "📦 Box & Indent");
-        tabBox.orientation = "column";
-        tabBox.alignChildren = ["fill", "top"];
-        tabBox.spacing = 6;
-        tabBox.margins = 8;
+        // Subpanel 2: Alignment, Indent & Styling
+        var pnlAlign = tabTimeline.add("panel", undefined, "📝 Alignment, Indent & Style (Show/Hide in Timeline)");
+        pnlAlign.orientation = "column";
+        pnlAlign.alignChildren = ["fill", "top"];
+        pnlAlign.spacing = 3;
 
-        var pnlBox = tabBox.add("panel", undefined, "Paragraph Box Text & Alignment");
-        pnlBox.orientation = "column";
-        pnlBox.alignChildren = ["fill", "top"];
-        pnlBox.spacing = 4;
-
-        for (var j = 0; j < PROPERTY_DEFS.length; j++) {
-            if (PROPERTY_DEFS[j].category === "box") {
-                addCheckboxItem(pnlBox, PROPERTY_DEFS[j]);
-            }
+        var alignProps = ["align_index", "align_ratio", "indent_left", "indent_right_spare", "baseline_offset", "typo_font_size", "typo_leading"];
+        for (var ai = 0; ai < alignProps.length; ai++) {
+            var aDef = PROPERTY_DEFS_MAP[alignProps[ai]];
+            if (aDef) addCheckboxItem(pnlAlign, aDef);
         }
 
-        // --- TAB 3: Typography & Style ---
-        var tabTypo = tpanel.add("tab", undefined, "🎨 Typography");
-        tabTypo.orientation = "column";
-        tabTypo.alignChildren = ["fill", "top"];
-        tabTypo.spacing = 6;
-        tabTypo.margins = 8;
-
-        var pnlTypo = tabTypo.add("panel", undefined, "Font & Character Styling");
-        pnlTypo.orientation = "column";
-        pnlTypo.alignChildren = ["fill", "top"];
-        pnlTypo.spacing = 4;
-
-        for (var k = 0; k < PROPERTY_DEFS.length; k++) {
-            if (PROPERTY_DEFS[k].category === "typo") {
-                addCheckboxItem(pnlTypo, PROPERTY_DEFS[k]);
-            }
-        }
-
-        // --- TAB 4: Metrics, Sliders & Rigging ---
-        var tabMetrics = tpanel.add("tab", undefined, "📊 Metrics & Rig");
-        tabMetrics.orientation = "column";
-        tabMetrics.alignChildren = ["fill", "top"];
-        tabMetrics.spacing = 6;
-        tabMetrics.margins = 8;
-
-        var pnlCounters = tabMetrics.add("panel", undefined, "Word & Line Count Sliders (Create Effects on Layer)");
+        // Subpanel 3: Word & Line Count Sliders (Controls on Timeline Layer)
+        var pnlCounters = tabTimeline.add("panel", undefined, "🔢 Word & Line Counters (Timeline Sliders & Live Readouts)");
         pnlCounters.orientation = "column";
         pnlCounters.alignChildren = ["fill", "top"];
-        pnlCounters.spacing = 4;
-        for (var m = 0; m < PROPERTY_DEFS.length; m++) {
-            if (PROPERTY_DEFS[m].category === "counters") {
-                addCheckboxItem(pnlCounters, PROPERTY_DEFS[m]);
-            }
-        }
+        pnlCounters.spacing = 5;
 
-        var pnlRig = tabMetrics.add("panel", undefined, "Responsive Rigging Helpers");
-        pnlRig.orientation = "column";
-        pnlRig.alignChildren = ["fill", "top"];
-        pnlRig.spacing = 4;
-        for (var n = 0; n < PROPERTY_DEFS.length; n++) {
-            if (PROPERTY_DEFS[n].category === "rigging") {
-                addCheckboxItem(pnlRig, PROPERTY_DEFS[n]);
-            }
-        }
+        // Row for Amount of Words: Checkbox + Scrubbable Slider + Count Input
+        var grpWordRow = pnlCounters.add("group");
+        grpWordRow.orientation = "row";
+        grpWordRow.alignment = ["fill", "center"];
+        grpWordRow.spacing = 6;
+        var chkWordsDef = PROPERTY_DEFS_MAP["cnt_words"];
+        var chkWordAmount = grpWordRow.add("checkbox", undefined, "Amount of Words:");
+        chkWordAmount.value = true;
+        chkWordAmount.preferredSize = [135, -1];
+        chkWordAmount.helpTip = "Shows or hides 'Amount of Words' Slider Control in the timeline";
+        checkboxMap["cnt_words"] = chkWordAmount;
 
-        // --- TAB 5: In-Memory Store & Measured Sliders Inspector ---
+        var sldWordAmount = grpWordRow.add("slider", undefined, 0, 0, 500);
+        sldWordAmount.alignment = ["fill", "center"];
+        var txtWordAmount = grpWordRow.add("edittext", undefined, "0");
+        txtWordAmount.characters = 4;
+        txtWordAmount.readonly = true;
+
+        chkWordAmount.onClick = function () {
+            if (chkWordsDef) syncPropertyToTimeline(chkWordsDef, chkWordAmount.value);
+        };
+
+        // Row for Amount of Text Lines: Checkbox + Scrubbable Slider + Count Input
+        var grpLineRow = pnlCounters.add("group");
+        grpLineRow.orientation = "row";
+        grpLineRow.alignment = ["fill", "center"];
+        grpLineRow.spacing = 6;
+        var chkLinesDef = PROPERTY_DEFS_MAP["cnt_lines"];
+        var chkLineAmount = grpLineRow.add("checkbox", undefined, "Amount of Text Lines:");
+        chkLineAmount.value = true;
+        chkLineAmount.preferredSize = [135, -1];
+        chkLineAmount.helpTip = "Shows or hides 'Amount of Text Lines' Slider Control in the timeline";
+        checkboxMap["cnt_lines"] = chkLineAmount;
+
+        var sldLineAmount = grpLineRow.add("slider", undefined, 0, 0, 100);
+        sldLineAmount.alignment = ["fill", "center"];
+        var txtLineAmount = grpLineRow.add("edittext", undefined, "0");
+        txtLineAmount.characters = 4;
+        txtLineAmount.readonly = true;
+
+        chkLineAmount.onClick = function () {
+            if (chkLinesDef) syncPropertyToTimeline(chkLinesDef, chkLineAmount.value);
+        };
+
+        // Extra counter metrics: Longest Line Width & Characters
+        var grpExtraCounters = pnlCounters.add("group");
+        grpExtraCounters.orientation = "row";
+        grpExtraCounters.alignment = ["fill", "center"];
+        grpExtraCounters.spacing = 8;
+        if (PROPERTY_DEFS_MAP["cnt_longest_line"]) addCheckboxItem(grpExtraCounters, PROPERTY_DEFS_MAP["cnt_longest_line"]);
+        if (PROPERTY_DEFS_MAP["cnt_chars"]) addCheckboxItem(grpExtraCounters, PROPERTY_DEFS_MAP["cnt_chars"]);
+
+        // =====================================================================
+        // TAB 2: 💾 IN-MEMORY WORDS & LINES STORE
+        // =====================================================================
         var tabMemory = tpanel.add("tab", undefined, "💾 Memory Store");
         tabMemory.orientation = "column";
         tabMemory.alignChildren = ["fill", "top"];
         tabMemory.spacing = 6;
         tabMemory.margins = 8;
-
-        // Sliders showing the measured amount of words and lines in the UI
-        var pnlAmounts = tabMemory.add("panel", undefined, "Measured Amounts in Memory");
-        pnlAmounts.orientation = "column";
-        pnlAmounts.alignChildren = ["fill", "top"];
-        pnlAmounts.spacing = 6;
-
-        // Amount of Words UI Slider Row
-        var grpWordRow = pnlAmounts.add("group");
-        grpWordRow.orientation = "row";
-        grpWordRow.alignment = ["fill", "center"];
-        var lblWordAmount = grpWordRow.add("statictext", undefined, "Amount of Words:");
-        lblWordAmount.preferredSize = [130, -1];
-        var sldWordAmount = grpWordRow.add("slider", undefined, 0, 0, 500);
-        sldWordAmount.alignment = ["fill", "center"];
-        var txtWordAmount = grpWordRow.add("edittext", undefined, "0");
-        txtWordAmount.characters = 5;
-        txtWordAmount.readonly = true;
-
-        // Amount of Text Lines UI Slider Row
-        var grpLineRow = pnlAmounts.add("group");
-        grpLineRow.orientation = "row";
-        grpLineRow.alignment = ["fill", "center"];
-        var lblLineAmount = grpLineRow.add("statictext", undefined, "Amount of Text Lines:");
-        lblLineAmount.preferredSize = [130, -1];
-        var sldLineAmount = grpLineRow.add("slider", undefined, 0, 0, 100);
-        sldLineAmount.alignment = ["fill", "center"];
-        var txtLineAmount = grpLineRow.add("edittext", undefined, "0");
-        txtLineAmount.characters = 5;
-        txtLineAmount.readonly = true;
 
         var pnlMemStats = tabMemory.add("panel", undefined, "In-Memory Metrics ($.global.AE_TEXT_BOX_MEMORY)");
         pnlMemStats.orientation = "column";
@@ -1179,11 +1188,11 @@
         var rdoViewJSON = grpMemViews.add("radiobutton", undefined, "JSON Arrays");
         rdoViewWords.value = true;
 
-        var txtMemDisplay = pnlMemStats.add("edittext", undefined, "// No text layer measured yet.\n// Select a text layer and click 'Measure & Store in Memory'.", {
+        var txtMemDisplay = pnlMemStats.add("edittext", undefined, "// No text layer measured yet.\n// Select a text layer and click 'Measure Selected Text'.", {
             multiline: true,
             readonly: true
         });
-        txtMemDisplay.preferredSize = [-1, 110];
+        txtMemDisplay.preferredSize = [-1, 140];
 
         var grpMemBtns = pnlMemStats.add("group");
         grpMemBtns.orientation = "row";
@@ -1199,9 +1208,227 @@
         var btnPrintConsole = grpMemBtns.add("button", undefined, "📜 Output to Console");
         btnPrintConsole.helpTip = "Prints formatted word and line width tables to ExtendScript console";
 
-        tpanel.selection = 0;
+        // =====================================================================
+        // TAB 3: ⚙️ RIGGING & EXECUTION OPTIONS
+        // =====================================================================
+        var tabOptions = tpanel.add("tab", undefined, "⚙️ Options & Rigging");
+        tabOptions.orientation = "column";
+        tabOptions.alignChildren = ["fill", "top"];
+        tabOptions.spacing = 6;
+        tabOptions.margins = 8;
 
-        // Function to refresh the Memory Store UI text and sliders
+        var pnlOpts = tabOptions.add("panel", undefined, "Effect Calculation Mode");
+        pnlOpts.orientation = "column";
+        pnlOpts.alignChildren = ["fill", "top"];
+        pnlOpts.spacing = 4;
+
+        var grpMode = pnlOpts.add("group");
+        grpMode.orientation = "row";
+        grpMode.alignChildren = ["left", "center"];
+        grpMode.spacing = 10;
+        var rdoLive = grpMode.add("radiobutton", undefined, "⚡ Live Expressions (Dynamic)");
+        rdoLive.value = true;
+        rdoLive.helpTip = "Effects update in real time as text or layers change";
+        var rdoStatic = grpMode.add("radiobutton", undefined, "🧊 Bake Static Values");
+        rdoStatic.helpTip = "Sets fixed numbers without expressions";
+
+        var grpChkOpts = tabOptions.add("panel", undefined, "Rigging Helpers");
+        grpChkOpts.orientation = "column";
+        grpChkOpts.alignChildren = ["fill", "top"];
+        grpChkOpts.spacing = 4;
+
+        var chkRemoveExisting = grpChkOpts.add("checkbox", undefined, "Remove existing property effects first");
+        chkRemoveExisting.value = false;
+
+        var chkPrefix = grpChkOpts.add("checkbox", undefined, "Add '[Prop]' prefix to effect names");
+        chkPrefix.value = false;
+
+        var chkAutoCenter = grpChkOpts.add("checkbox", undefined, "Auto-center Anchor Point to text bounds");
+        chkAutoCenter.value = false;
+
+        var grpOptionBtns = tabOptions.add("group");
+        grpOptionBtns.orientation = "row";
+        grpOptionBtns.alignChildren = ["fill", "center"];
+        grpOptionBtns.spacing = 6;
+
+        var btnCreateBg = grpOptionBtns.add("button", undefined, "📦 Background Box Rig");
+        btnCreateBg.helpTip = "Creates a shape layer behind selected text dynamically linked to its bounds";
+
+        var btnDemo = grpOptionBtns.add("button", undefined, "✨ Create Demo Comp");
+        btnDemo.helpTip = "Creates a test composition with Point & Box text layers";
+
+        var btnRemove = grpOptionBtns.add("button", undefined, "🗑️ Remove All Effects");
+        btnRemove.helpTip = "Removes any previously added property effects from selected layers";
+
+        tpanel.selection = 0; // Tab 1 active by default
+
+        // ---------------------------------------------------------------------
+        // Action & Status Bar
+        // ---------------------------------------------------------------------
+        var grpActions = win.add("group");
+        grpActions.orientation = "row";
+        grpActions.alignChildren = ["fill", "center"];
+        grpActions.spacing = 6;
+
+        var btnApply = grpActions.add("button", undefined, "⚡ Apply All Checked Effects");
+        btnApply.preferredSize = [-1, 32];
+        btnApply.helpTip = "Applies all currently checked property effects to selected text layers";
+
+        var lblStatus = win.add("statictext", undefined, "Ready. Check/uncheck any property to show/hide that effect in the timeline.");
+        lblStatus.alignment = ["fill", "bottom"];
+        try {
+            lblStatus.graphics.font = ScriptUI.newFont("Verdana", "REGULAR", 10);
+        } catch (e) {}
+
+        function setStatus(msg, isError) {
+            lblStatus.text = (isError ? "⚠ " : "✔ ") + msg;
+        }
+
+        function getSelectedDefIds() {
+            var selected = {};
+            var count = 0;
+            for (var id in checkboxMap) {
+                if (checkboxMap.hasOwnProperty(id) && checkboxMap[id].value) {
+                    selected[id] = true;
+                    count++;
+                }
+            }
+            return { map: selected, count: count };
+        }
+
+        function getOptions() {
+            return {
+                mode: rdoLive.value ? "expression" : "static",
+                removeExisting: chkRemoveExisting.value,
+                usePrefix: chkPrefix.value,
+                autoCenterAnchor: chkAutoCenter.value
+            };
+        }
+
+        // ---------------------------------------------------------------------
+        // LIVE TIMELINE SYNC: Shows or hides the effect in the timeline
+        // ---------------------------------------------------------------------
+        function syncPropertyToTimeline(def, isChecked) {
+            var comp = app.project ? app.project.activeItem : null;
+            if (!comp || !(comp instanceof CompItem)) {
+                if (app.project && app.project.items) {
+                    for (var ci = 1; ci <= app.project.items.length; ci++) {
+                        if (app.project.items[ci] instanceof CompItem) {
+                            comp = app.project.items[ci];
+                            break;
+                        }
+                    }
+                }
+                if (!comp && app.project && app.project.items && app.project.items.addComp) {
+                    try {
+                        comp = app.project.items.addComp("Text Properties Comp", 1920, 1080, 1.0, 10.0, 30.0);
+                    } catch (eComp) {}
+                }
+            }
+            if (!comp || !(comp instanceof CompItem)) {
+                setStatus("No active composition available.");
+                return;
+            }
+
+            var targetLayers = [];
+            if (comp.selectedLayers && comp.selectedLayers.length > 0) {
+                targetLayers = comp.selectedLayers;
+            } else {
+                for (var li = 1; li <= comp.layers.length; li++) {
+                    if (isTextLayer(comp.layers[li])) {
+                        targetLayers.push(comp.layers[li]);
+                        break;
+                    }
+                }
+                if (targetLayers.length === 0 && comp.layers.length > 0) {
+                    targetLayers.push(comp.layers[1]);
+                }
+            }
+
+            if (targetLayers.length === 0) {
+                try {
+                    var newLyr = comp.layers.addText("Antigravity Text Engine\nMeasuring words and line widths in real-time");
+                    newLyr.name = "Text_Sample";
+                    targetLayers.push(newLyr);
+                } catch (eAddLyr) {
+                    setStatus("Please select a text layer in the timeline.", true);
+                    return;
+                }
+            }
+
+            if (app.beginUndoGroup) {
+                app.beginUndoGroup((isChecked ? "Show " : "Hide ") + def.effectName + " Effect");
+            }
+
+            var prefix = (chkPrefix && chkPrefix.value) ? "[Prop]" : "";
+            var targetName = prefix ? (prefix + " " + def.effectName) : def.effectName;
+            var isExpr = (rdoLive && rdoLive.value);
+
+            for (var i = 0; i < targetLayers.length; i++) {
+                var layer = targetLayers[i];
+                var fxGroup = layer.property("ADBE Effect Parade") || layer.property("Effects");
+                if (!fxGroup) continue;
+
+                var existingFx = fxGroup.property(targetName) || fxGroup.property(def.effectName);
+
+                if (isChecked) {
+                    // SHOW / ADD / ENABLE EFFECT
+                    if (!existingFx) {
+                        try {
+                            existingFx = fxGroup.addProperty(def.matchName);
+                            if (existingFx) existingFx.name = targetName;
+                        } catch (eAdd) {}
+                    }
+                    if (existingFx) {
+                        existingFx.enabled = true;
+                        var ctrl = existingFx.property(1);
+                        if (ctrl) {
+                            if (isExpr && def.expression) {
+                                try { ctrl.expression = def.expression; } catch (eExp) {}
+                            } else {
+                                try {
+                                    ctrl.expression = "";
+                                    var textDoc = getTextDocument(layer);
+                                    var rect = getSourceRect(layer);
+                                    var sVal = (typeof def.evalStatic === "function")
+                                        ? def.evalStatic(layer, textDoc, rect)
+                                        : def.defaultVal;
+                                    if (sVal !== null && typeof sVal !== "undefined") {
+                                        ctrl.setValue(sVal);
+                                    }
+                                } catch (eVal) {}
+                            }
+                        }
+                    }
+                } else {
+                    // HIDE / DISABLE / REMOVE EFFECT FROM TIMELINE
+                    if (existingFx) {
+                        try { existingFx.enabled = false; } catch (eEn) {}
+                        try {
+                            if (existingFx.remove) existingFx.remove();
+                        } catch (eRm) {}
+                    }
+                }
+
+                // If text layer, measure & store in memory
+                if (isTextLayer(layer)) {
+                    measureAndStoreTextMetrics(comp, layer);
+                }
+            }
+
+            if (app.endUndoGroup) {
+                app.endUndoGroup();
+            }
+
+            refreshMemoryDisplay();
+
+            var verb = isChecked ? "👁️ Shown in Timeline: " : "🚫 Hidden from Timeline: ";
+            setStatus(verb + def.effectName);
+        }
+
+        // ---------------------------------------------------------------------
+        // Memory Display Refresh
+        // ---------------------------------------------------------------------
         function refreshMemoryDisplay() {
             var mem = $.global.AE_TEXT_BOX_MEMORY;
             if (!mem || !mem.words) {
@@ -1217,7 +1444,6 @@
             var wCount = mem.totalWords || 0;
             var lCount = mem.totalLines || 0;
 
-            // Update UI Sliders
             if (wCount > sldWordAmount.maxvalue) sldWordAmount.maxvalue = wCount + 50;
             sldWordAmount.value = wCount;
             txtWordAmount.text = String(wCount);
@@ -1251,13 +1477,13 @@
                     "  \"totalLines\": " + lCount + ",",
                     "  \"words\": " + (function() {
                         var q = [];
-                        for (var i = 0; i < mem.words.length; i++) q.push('"' + mem.words[i].replace(/"/g, '\\"') + '"');
+                        for (var i = 0; i < mem.words.length; i++) q.push('\"' + mem.words[i].replace(/"/g, '\\"') + '\"');
                         return "[" + q.join(", ") + "]";
                     })() + ",",
                     "  \"wordWidths\": [" + mem.wordWidths.join(", ") + "],",
                     "  \"lines\": " + (function() {
                         var q = [];
-                        for (var i = 0; i < mem.lines.length; i++) q.push('"' + mem.lines[i].replace(/"/g, '\\"') + '"');
+                        for (var i = 0; i < mem.lines.length; i++) q.push('\"' + mem.lines[i].replace(/"/g, '\\"') + '\"');
                         return "[" + q.join(", ") + "]";
                     })() + ",",
                     "  \"lineWidths\": [" + mem.lineWidths.join(", ") + "],",
@@ -1277,7 +1503,7 @@
         rdoViewJSON.onClick = refreshMemoryDisplay;
 
         // ---------------------------------------------------------------------
-        // Preset Button Event Handlers
+        // Preset Toolbar Handlers
         // ---------------------------------------------------------------------
         function setCheckboxes(filterFn) {
             for (var p = 0; p < PROPERTY_DEFS.length; p++) {
@@ -1290,17 +1516,18 @@
 
         btnPresetAll.onClick = function () {
             setCheckboxes(function () { return true; });
+            setStatus("Checked all properties.");
         };
 
         btnPresetNone.onClick = function () {
             setCheckboxes(function () { return false; });
+            setStatus("Unchecked all properties.");
         };
 
         btnPresetCommon.onClick = function () {
             setCheckboxes(function (def) {
                 return (def.id === "sr_width" ||
                         def.id === "sr_height" ||
-                        def.id === "sr_center" ||
                         def.id === "box_width" ||
                         def.id === "box_height" ||
                         def.id === "align_index" ||
@@ -1309,125 +1536,49 @@
                         def.id === "cnt_words" ||
                         def.id === "cnt_lines");
             });
-            tpanel.selection = 3; // Switch to Metrics & Rig tab
+            setStatus("Checked common dimensions, alignment, indent & counters.");
         };
 
-        btnPresetBounds.onClick = function () {
-            setCheckboxes(function (def) { return def.category === "bounds"; });
-            tpanel.selection = 0;
-        };
-
-        btnPresetTypo.onClick = function () {
-            setCheckboxes(function (def) { return def.category === "typo"; });
-            tpanel.selection = 2;
-        };
-
-        // ---------------------------------------------------------------------
-        // Options Panel
-        // ---------------------------------------------------------------------
-        var pnlOpts = win.add("panel", undefined, "Execution Options");
-        pnlOpts.orientation = "column";
-        pnlOpts.alignChildren = ["fill", "top"];
-        pnlOpts.spacing = 4;
-        pnlOpts.margins = [8, 8, 8, 8];
-
-        var grpMode = pnlOpts.add("group");
-        grpMode.orientation = "row";
-        grpMode.alignChildren = ["left", "center"];
-        grpMode.spacing = 10;
-        var rdoLive = grpMode.add("radiobutton", undefined, "⚡ Live Expressions (Dynamic)");
-        rdoLive.value = true;
-        rdoLive.helpTip = "Effects update in real time as text or layers change";
-        var rdoStatic = grpMode.add("radiobutton", undefined, "🧊 Bake Static Values");
-        rdoStatic.helpTip = "Sets fixed numbers without expressions (faster rendering, no expressions)";
-
-        var grpChkOpts = pnlOpts.add("group");
-        grpChkOpts.orientation = "column";
-        grpChkOpts.alignChildren = ["fill", "top"];
-        grpChkOpts.spacing = 3;
-
-        var chkRemoveExisting = grpChkOpts.add("checkbox", undefined, "Remove existing property effects first");
-        chkRemoveExisting.value = true;
-        chkRemoveExisting.helpTip = "Avoids duplicate effect controls when re-running";
-
-        var chkPrefix = grpChkOpts.add("checkbox", undefined, "Add '[Prop]' prefix to effect names");
-        chkPrefix.value = false;
-        chkPrefix.helpTip = "Prefixes effect names with [Prop] for easy identification";
-
-        var chkAutoCenter = grpChkOpts.add("checkbox", undefined, "Auto-center Anchor Point to text bounds");
-        chkAutoCenter.value = false;
-        chkAutoCenter.helpTip = "Adds expression to Layer Anchor Point so text stays centered regardless of length";
-
-        // ---------------------------------------------------------------------
-        // Action Buttons
-        // ---------------------------------------------------------------------
-        var grpActions = win.add("group");
-        grpActions.orientation = "column";
-        grpActions.alignChildren = ["fill", "top"];
-        grpActions.spacing = 6;
-
-        var btnApply = grpActions.add("button", undefined, "⚡ Apply Effects to Selected Layers");
-        btnApply.preferredSize = [-1, 32];
-        btnApply.helpTip = "Adds chosen property effects and stores words and line widths in memory";
-
-        var grpSecondary = grpActions.add("group");
-        grpSecondary.orientation = "row";
-        grpSecondary.alignChildren = ["fill", "center"];
-        grpSecondary.spacing = 6;
-
-        var btnRemove = grpSecondary.add("button", undefined, "🗑️ Remove Effects");
-        btnRemove.helpTip = "Removes any previously added property effects from selected layers";
-
-        var btnCreateBg = grpSecondary.add("button", undefined, "📦 Background Box Rig");
-        btnCreateBg.helpTip = "Creates a shape layer behind selected text dynamically linked to its bounds & padding";
-
-        var btnDemo = grpActions.add("button", undefined, "✨ Create Demo Comp & Test Layers");
-        btnDemo.helpTip = "Creates a test composition with Point & Box text layers and applies the effects";
-
-        // ---------------------------------------------------------------------
-        // Status Bar
-        // ---------------------------------------------------------------------
-        var lblStatus = win.add("statictext", undefined, "Ready. Select text or layer(s) and click 'Apply Effects'.");
-        lblStatus.alignment = ["fill", "bottom"];
-        try {
-            lblStatus.graphics.font = ScriptUI.newFont("Verdana", "REGULAR", 10);
-        } catch (e) {}
-
-        function setStatus(msg, isError) {
-            lblStatus.text = (isError ? "⚠ " : "✔ ") + msg;
-        }
-
-        function getSelectedDefIds() {
-            var selected = {};
-            var count = 0;
-            for (var id in checkboxMap) {
-                if (checkboxMap.hasOwnProperty(id) && checkboxMap[id].value) {
-                    selected[id] = true;
-                    count++;
-                }
+        btnReadTimeline.onClick = function () {
+            var comp = app.project ? app.project.activeItem : null;
+            if (!comp || !comp.selectedLayers || comp.selectedLayers.length === 0) {
+                setStatus("Select a layer to read timeline effects.", true);
+                return;
             }
-            return { map: selected, count: count };
-        }
-
-        function getOptions() {
-            return {
-                mode: rdoLive.value ? "expression" : "static",
-                removeExisting: chkRemoveExisting.value,
-                usePrefix: chkPrefix.value,
-                autoCenterAnchor: chkAutoCenter.value
-            };
-        }
-
-        // ---------------------------------------------------------------------
-        // Button Click Handlers
-        // ---------------------------------------------------------------------
-        btnApply.onClick = function () {
-            var selInfo = getSelectedDefIds();
-            if (selInfo.count === 0) {
-                alert("Please check at least one property to create as an effect.");
+            var layer = comp.selectedLayers[0];
+            var fxGroup = layer.property("ADBE Effect Parade") || layer.property("Effects");
+            if (!fxGroup) {
+                setStatus("No Effects group found on layer '" + layer.name + "'.", true);
                 return;
             }
 
+            var prefix = (chkPrefix && chkPrefix.value) ? "[Prop]" : "";
+            var activeCount = 0;
+
+            for (var p = 0; p < PROPERTY_DEFS.length; p++) {
+                var def = PROPERTY_DEFS[p];
+                var chk = checkboxMap[def.id];
+                if (!chk) continue;
+
+                var targetName = prefix ? (prefix + " " + def.effectName) : def.effectName;
+                var fx = fxGroup.property(targetName) || fxGroup.property(def.effectName);
+
+                if (fx && fx.enabled !== false) {
+                    chk.value = true;
+                    activeCount++;
+                } else {
+                    chk.value = false;
+                }
+            }
+
+            setStatus("Read layer '" + layer.name + "': " + activeCount + " effect(s) active on timeline.");
+        };
+
+        // ---------------------------------------------------------------------
+        // Action Button Handlers
+        // ---------------------------------------------------------------------
+        btnApply.onClick = function () {
+            var selInfo = getSelectedDefIds();
             var comp = app.project ? app.project.activeItem : null;
             if (!comp || !(comp instanceof CompItem)) {
                 var answer = confirm("No active composition found.\nWould you like to create a Demo Comp with sample text layers?");
@@ -1448,11 +1599,21 @@
 
             var layers = comp.selectedLayers;
             if (!layers || layers.length === 0) {
-                alert("Please select one or more layers in '" + comp.name + "'.\n(Text layers recommended for full property support)");
+                // If no selection, target first text layer
+                for (var li = 1; li <= comp.layers.length; li++) {
+                    if (isTextLayer(comp.layers[li])) {
+                        layers = [comp.layers[li]];
+                        break;
+                    }
+                }
+            }
+
+            if (!layers || layers.length === 0) {
+                alert("Please select one or more text layers in the comp.");
                 return;
             }
 
-            app.beginUndoGroup("Apply Properties to Effects");
+            app.beginUndoGroup("Apply All Checked Effects");
             var totalAdded = 0;
             var processedLayers = 0;
             var opts = getOptions();
@@ -1467,10 +1628,9 @@
                     }
                 }
                 refreshMemoryDisplay();
-                setStatus("Applied " + totalAdded + " effects across " + processedLayers + " layer(s). In-memory store updated!");
+                setStatus("Applied " + totalAdded + " effect(s) across " + processedLayers + " layer(s).");
             } catch (err) {
                 setStatus("Error: " + err.toString(), true);
-                alert("Error applying properties:\n" + err.toString());
             } finally {
                 app.endUndoGroup();
             }
@@ -1478,15 +1638,9 @@
 
         btnRemove.onClick = function () {
             var comp = app.project ? app.project.activeItem : null;
-            if (!comp || !(comp instanceof CompItem)) {
-                alert("Please open a composition first.");
-                return;
-            }
+            if (!comp || !(comp instanceof CompItem)) return;
             var layers = comp.selectedLayers;
-            if (!layers || layers.length === 0) {
-                alert("Please select the layer(s) you wish to remove property effects from.");
-                return;
-            }
+            if (!layers || layers.length === 0) return;
 
             app.beginUndoGroup("Remove Property Effects");
             var totalRemoved = 0;
@@ -1494,6 +1648,7 @@
                 for (var l = 0; l < layers.length; l++) {
                     totalRemoved += removePropertyEffects(layers[l]);
                 }
+                setCheckboxes(function () { return false; });
                 setStatus("Removed " + totalRemoved + " property effect(s).");
             } catch (err) {
                 setStatus("Error removing effects: " + err.toString(), true);
@@ -1504,25 +1659,16 @@
 
         btnCreateBg.onClick = function () {
             var comp = app.project ? app.project.activeItem : null;
-            if (!comp || !(comp instanceof CompItem)) {
-                alert("Please open a composition first.");
+            if (!comp || !(comp instanceof CompItem) || !comp.selectedLayers || comp.selectedLayers.length === 0) {
+                alert("Please select a text layer first.");
                 return;
             }
-            var layers = comp.selectedLayers;
-            if (!layers || layers.length === 0) {
-                alert("Please select a text layer first to create a responsive background box for it.");
-                return;
-            }
-
             app.beginUndoGroup("Create Responsive Background Box");
             try {
-                var bg = createResponsiveBackground(comp, layers[0]);
-                if (bg) {
-                    setStatus("Created responsive background: " + bg.name);
-                }
+                var bg = createResponsiveBackground(comp, comp.selectedLayers[0]);
+                if (bg) setStatus("Created responsive background: " + bg.name);
             } catch (err) {
-                setStatus("Error creating background: " + err.toString(), true);
-                alert("Error creating background:\n" + err.toString());
+                setStatus("Error: " + err.toString(), true);
             } finally {
                 app.endUndoGroup();
             }
@@ -1537,34 +1683,25 @@
                 setStatus("Created demo comp with Point & Box text layers!");
             } catch (demoErr) {
                 setStatus("Error: " + demoErr.toString(), true);
-                alert("Error creating demo:\n" + demoErr.toString());
             } finally {
                 app.endUndoGroup();
             }
         };
 
-        // --- In-Memory Store Handlers ---
         btnMeasure.onClick = function () {
             var comp = app.project ? app.project.activeItem : null;
-            if (!comp || !(comp instanceof CompItem)) {
-                alert("Please open a composition and select a text layer.");
+            if (!comp || !comp.selectedLayers || comp.selectedLayers.length === 0 || !isTextLayer(comp.selectedLayers[0])) {
+                alert("Please select a Text Layer to measure.");
                 return;
             }
-            var layers = comp.selectedLayers;
-            if (!layers || layers.length === 0 || !isTextLayer(layers[0])) {
-                alert("Please select a Text Layer to measure words and line widths.");
-                return;
-            }
-
             app.beginUndoGroup("Measure Text Metrics");
             try {
-                var mem = measureAndStoreTextMetrics(comp, layers[0]);
+                var mem = measureAndStoreTextMetrics(comp, comp.selectedLayers[0]);
                 refreshMemoryDisplay();
-                tpanel.selection = 4; // Switch to Memory Store tab
+                tpanel.selection = 1; // Switch to Memory Store tab
                 setStatus("Measured " + mem.totalWords + " words and " + mem.totalLines + " lines into memory!");
             } catch (measErr) {
-                setStatus("Error measuring: " + measErr.toString(), true);
-                alert("Error measuring text metrics:\n" + measErr.toString());
+                setStatus("Error: " + measErr.toString(), true);
             } finally {
                 app.endUndoGroup();
             }
@@ -1573,10 +1710,7 @@
         btnCopyMem.onClick = function () {
             refreshMemoryDisplay();
             var textToCopy = txtMemDisplay.text;
-            if (!textToCopy) {
-                alert("No in-memory metrics to copy yet.");
-                return;
-            }
+            if (!textToCopy) return;
 
             var dlg = new Window("dialog", "In-Memory Text Metrics (Copy)", undefined, { resizeable: true });
             dlg.orientation = "column";
@@ -1633,8 +1767,22 @@
             this.layout.resize();
         };
 
+        // Auto-initialize demo environment if starting with an empty comp
+        try {
+            var currComp = app.project ? app.project.activeItem : null;
+            if (!currComp || currComp.layers.length === 0) {
+                var initSel = getSelectedDefIds();
+                createDemoEnvironment(initSel.map, getOptions());
+                refreshMemoryDisplay();
+                setStatus("Created demo comp with Point & Paragraph text layers.");
+            } else {
+                refreshMemoryDisplay();
+            }
+        } catch (eInit) {}
+
         return win;
     }
+
 
     // =========================================================================
     // 5. INITIALIZATION & EXECUTION
