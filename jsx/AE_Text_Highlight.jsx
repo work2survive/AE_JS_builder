@@ -31,7 +31,7 @@
 //      - "🎲 Randomize Dummy & Layout" button to instantly test new combinations.
 //      - Real-time Effect Controls (Thickness Y, Padding X, Roundness, Color, Opacity).
 //
-// REPOSITORY: https://github.com/work2survive/AE_Text_Highlight
+// REPOSITORY: https://github.com/work2survive/AE-Text-Highlight
 // LIVE DEMO:  https://work2survive.github.io/AE_JS_builder/?jsx=AE_Text_Highlight.jsx&autobuild=true
 // =============================================================================
 
