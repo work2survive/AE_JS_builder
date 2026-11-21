@@ -2,31 +2,31 @@
   "$schema": "./conversation_schema.json",
   "version": "1.0",
   "header": {
-    "title": "WhatsApp Night Sprint (Dark)",
-    "contactName": "Design Team Lead",
+    "title": "Motion Design Review (WhatsApp Dark Demo)",
+    "contactName": "Liam Brooks",
     "contactStatus": "online",
     "platform": "WhatsApp",
     "theme": "dark",
-    "initialTimestamp": "21:10",
+    "initialTimestamp": "18:10",
     "timeFormat": "24h",
     "showTimestamps": true,
-    "realDelayBetweenBubbles": 1.2,
-    "fakeDelayBetweenBubbles": "+00:02",
+    "realDelayBetweenBubbles": 1.0,
+    "fakeDelayBetweenBubbles": "+00:01",
     "typography": {
-      "fontFamily": "Helvetica Neue",
+      "fontFamily": "SF Pro (Apple / iOS)",
       "emojiFont": "Auto (Preset Default)",
       "textWrap": "pretty",
       "bubbleWidth": 0,
-      "maxBubbleWidth": 330,
-      "textSize": 19,
+      "maxBubbleWidth": 320,
+      "textSize": 20,
       "innerPaddingOffset": 0,
       "leadingPercent": 100,
-      "bubbleGap": 10
+      "bubbleGap": 18
     },
     "appearance": {
       "showTail": true,
       "smartGroupTails": false,
-      "statusIconStyle": "standard",
+      "statusIconStyle": "whatsapp",
       "statusIconMode": "auto",
       "colors": {
         "sentBubble": "#005C4B",
@@ -41,10 +41,10 @@
       "visible": true,
       "opacity": 100,
       "width": 460,
-      "height": 800,
-      "innerPadding": 22,
+      "height": 820,
+      "innerPadding": 24,
       "backgroundColor": "#0B141A",
-      "cornerRadius": 32,
+      "cornerRadius": 36,
       "autoScroll": true,
       "clipOverflow": true,
       "scrollDurationFrames": 8
@@ -61,14 +61,14 @@
   },
   "messages": [
     {
-      "id": "msg_01",
+      "id": "wa_01",
       "type": "received",
       "dialogType": "text",
       "text": "Quick check — did the client approve the new 3D title sequence? 👀",
       "realDelay": 0.2
     },
     {
-      "id": "msg_02",
+      "id": "wa_02",
       "type": "sent",
       "dialogType": "text",
       "text": "Yes!! Zero revisions on the animation timing 🎉🙌",
@@ -76,7 +76,7 @@
       "timestamp": "+00:01"
     },
     {
-      "id": "msg_03",
+      "id": "wa_03",
       "type": "received",
       "dialogType": "text",
       "text": "Wait seriously?! Zero revisions on a Friday night?!",
@@ -85,24 +85,84 @@
       "textEffect": "shake"
     },
     {
-      "id": "msg_04",
+      "id": "wa_04",
       "type": "sent",
       "dialogType": "text",
       "text": "I know right! They loved the scripted chat transition in scene 2 💬✨",
-      "timestamp": "21:18"
+      "realDelay": 1.2,
+      "timestamp": "18:15"
     },
     {
-      "id": "msg_05",
+      "id": "wa_05",
       "type": "received",
       "dialogType": "text",
-      "text": "Huge congrats to the whole crew! Upload the final package to the shared drive and enjoy the weekend 🥂🚀",
+      "text": "Huge congrats to the whole crew! Upload the final package to the shared drive 🥂🚀",
+      "realDelay": 1.5,
       "timestamp": "+00:03"
     },
     {
-      "id": "msg_06",
+      "id": "wa_06",
       "type": "sent",
       "dialogType": "text",
       "text": "Already uploaded! Have an awesome weekend everyone! 🌙✌️",
+      "realDelay": 1.0,
+      "timestamp": "+00:02"
+    },
+    {
+      "id": "wa_07",
+      "type": "received",
+      "dialogType": "text",
+      "text": "Did you also include the Lottie export for the mobile app team? 📱",
+      "realDelay": 1.4,
+      "timestamp": "+00:02"
+    },
+    {
+      "id": "wa_08",
+      "type": "sent",
+      "dialogType": "text",
+      "text": "Yes, both JSON and dotLottie formats are in /assets/lottie! 📦",
+      "realDelay": 1.2,
+      "timestamp": "+00:01"
+    },
+    {
+      "id": "wa_09",
+      "type": "received",
+      "dialogType": "text",
+      "text": "Awesome! And the typography package?",
+      "realDelay": 1.5,
+      "timestamp": "+00:03"
+    },
+    {
+      "id": "wa_10",
+      "type": "sent",
+      "dialogType": "text",
+      "text": "All Google & system fonts linked in the documentation 📝✨",
+      "realDelay": 1.0,
+      "timestamp": "+00:01"
+    },
+    {
+      "id": "wa_11",
+      "type": "received",
+      "dialogType": "text",
+      "text": "Perfect handoff. Producer just signed off on the invoice too 💸👏",
+      "realDelay": 1.4,
+      "timestamp": "+00:02"
+    },
+    {
+      "id": "wa_12",
+      "type": "sent",
+      "dialogType": "text",
+      "text": "Best news ever! Drinks on the company tonight! 🍻🥳",
+      "realDelay": 1.2,
+      "timestamp": "+00:01",
+      "textEffect": "nod"
+    },
+    {
+      "id": "wa_13",
+      "type": "received",
+      "dialogType": "text",
+      "text": "See you all on Monday! Enjoy the weekend! 🎉🕺",
+      "realDelay": 1.0,
       "timestamp": "+00:02"
     }
   ]

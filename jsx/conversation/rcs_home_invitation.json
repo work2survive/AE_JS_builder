@@ -2,7 +2,7 @@
   "$schema": "./conversation_schema.json",
   "version": "1.0",
   "header": {
-    "title": "RCS Home Check-in (Demo)",
+    "title": "Home Check-in & Dinner (Android RCS Demo)",
     "contactName": "Maya Lin",
     "contactStatus": "RCS chat",
     "platform": "Android RCS",
@@ -21,7 +21,7 @@
       "textSize": 20,
       "innerPaddingOffset": 0,
       "leadingPercent": 100,
-      "bubbleGap": 12
+      "bubbleGap": 18
     },
     "appearance": {
       "showTail": true,
@@ -61,56 +61,63 @@
   },
   "messages": [
     {
-      "id": "msg_01",
+      "id": "rcs_01",
       "type": "sent",
       "dialogType": "text",
       "text": "Just wrapped up the edit at the studio! Heading back now 🎬✨",
       "realDelay": 0.2
     },
     {
-      "id": "msg_02",
+      "id": "rcs_02",
       "type": "received",
       "dialogType": "text",
       "text": "Hey, are you at home?",
       "realDelay": 2.0,
-      "timestamp": "+00:05"
+      "timestamp": "+00:02"
     },
     {
-      "id": "msg_03",
+      "id": "rcs_03",
       "type": "sent",
       "dialogType": "text",
-      "text": "Just unlocked the front door! Why, what's up? 🔑🏠"
+      "text": "Just unlocked the front door! Why, what's up? 🔑🏠",
+      "realDelay": 1.2,
+      "timestamp": "+00:01"
     },
     {
-      "id": "msg_04",
+      "id": "rcs_04",
       "type": "received",
       "dialogType": "text",
       "text": "Look outside on the porch, I dropped off iced lattes and croissants ☕🥐",
-      "timestamp": "14:32"
+      "realDelay": 1.8,
+      "timestamp": "14:26"
     },
     {
-      "id": "msg_05",
+      "id": "rcs_05",
       "type": "sent",
       "dialogType": "text",
       "text": "NO WAY!! You are an absolute lifesaver 😭🙌",
+      "realDelay": 1.0,
       "timestamp": "+00:01",
       "textEffect": "nod"
     },
     {
-      "id": "msg_06",
+      "id": "rcs_06",
       "type": "received",
       "dialogType": "text",
       "text": "Haha enjoy! Did you finish rendering the motion graphics reel?",
+      "realDelay": 1.5,
       "timestamp": "+00:02"
     },
     {
-      "id": "msg_07",
+      "id": "rcs_07",
       "type": "sent",
       "dialogType": "text",
-      "text": "Yep! Exporting the final ProRes master right now. Want to preview it tonight? 🚀"
+      "text": "Yep! Exporting the final ProRes master right now. Want to preview it tonight? 🚀",
+      "realDelay": 1.2,
+      "timestamp": "+00:01"
     },
     {
-      "id": "msg_08",
+      "id": "rcs_08",
       "type": "received",
       "dialogType": "text",
       "text": "100%! Come by around 7pm and we'll order pizza 🍕🔥",
@@ -118,11 +125,53 @@
       "timestamp": "+00:04"
     },
     {
-      "id": "msg_09",
+      "id": "rcs_09",
       "type": "sent",
       "dialogType": "text",
-      "text": "Deal! See you at 7! 🎉",
+      "text": "Deal! Should we get deep dish or classic thin crust? 🍕",
+      "realDelay": 1.0,
       "timestamp": "+00:01"
+    },
+    {
+      "id": "rcs_10",
+      "type": "received",
+      "dialogType": "text",
+      "text": "Deep dish with extra garlic butter dip for sure 🤤✨",
+      "realDelay": 1.4,
+      "timestamp": "+00:02"
+    },
+    {
+      "id": "rcs_11",
+      "type": "sent",
+      "dialogType": "text",
+      "text": "Placing the order now so it arrives right when you get here 🛵💨",
+      "realDelay": 1.2,
+      "timestamp": "+00:01"
+    },
+    {
+      "id": "rcs_12",
+      "type": "received",
+      "dialogType": "text",
+      "text": "Grabbing my laptop and heading over, thanks again! 🏃‍♂️💻",
+      "realDelay": 1.5,
+      "timestamp": "+00:03"
+    },
+    {
+      "id": "rcs_13",
+      "type": "sent",
+      "dialogType": "text",
+      "text": "Door's unlocked, come straight in! 🚪✨",
+      "realDelay": 1.0,
+      "timestamp": "+00:01"
+    },
+    {
+      "id": "rcs_14",
+      "type": "received",
+      "dialogType": "text",
+      "text": "Just arrived at the 3rd floor, smell that pizza! 🎉🥂",
+      "realDelay": 1.2,
+      "timestamp": "+00:01",
+      "textEffect": "nod"
     }
   ]
 }

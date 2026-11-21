@@ -2,12 +2,12 @@
   "$schema": "./conversation_schema.json",
   "version": "1.0",
   "header": {
-    "title": "iOS Lunch Plans (12h)",
+    "title": "Weekend Lunch Plans (iOS 12h Demo)",
     "contactName": "Sam Carter",
     "contactStatus": "iMessage",
     "platform": "iOS Message",
     "theme": "light",
-    "initialTimestamp": "11:42 AM",
+    "initialTimestamp": "11:45 AM",
     "timeFormat": "12h",
     "showTimestamps": true,
     "realDelayBetweenBubbles": 1.0,
@@ -21,7 +21,7 @@
       "textSize": 20,
       "innerPaddingOffset": 0,
       "leadingPercent": 100,
-      "bubbleGap": 12
+      "bubbleGap": 18
     },
     "appearance": {
       "showTail": true,
@@ -61,53 +61,109 @@
   },
   "messages": [
     {
-      "id": "msg_01",
+      "id": "ios_01",
       "type": "received",
       "dialogType": "text",
-      "text": "Hey! Are we still meeting for tacos at 12:30? 🌮😊",
+      "text": "Morning! Still on for tacos today? 🌮",
       "realDelay": 0.2
     },
     {
-      "id": "msg_02",
+      "id": "ios_02",
       "type": "sent",
       "dialogType": "text",
-      "text": "Definitely! Starving already 😂"
+      "text": "100%! I've been thinking about them all week 😋",
+      "realDelay": 1.0,
+      "timestamp": "+00:01"
     },
     {
-      "id": "msg_03",
+      "id": "ios_03",
       "type": "received",
       "dialogType": "text",
-      "text": "Same!! Should I grab us a table on the patio?",
+      "text": "Haha same! Should we meet at 12:30?",
       "realDelay": 1.8,
-      "timestamp": "+00:03"
-    },
-    {
-      "id": "msg_04",
-      "type": "sent",
-      "dialogType": "text",
-      "text": "Yes please! Weather is gorgeous today ☀️🌴",
       "timestamp": "12:00 PM"
     },
     {
-      "id": "msg_05",
-      "type": "received",
-      "dialogType": "text",
-      "text": "Got a corner booth outside and ordered chips & guac for the table 🥑✨",
-      "timestamp": "+00:15"
-    },
-    {
-      "id": "msg_06",
+      "id": "ios_04",
       "type": "sent",
       "dialogType": "text",
-      "text": "Best news all week!! Parking right now, see you in 60 seconds! 🏃‍♂️",
-      "timestamp": "+00:02",
+      "text": "12:30 works great. See you at La Taqueria! 🙌",
+      "realDelay": 1.2,
+      "timestamp": "+00:03",
       "textEffect": "nod"
     },
     {
-      "id": "msg_07",
+      "id": "ios_05",
       "type": "received",
       "dialogType": "text",
-      "text": "Waving at you from the patio! 👋🍹"
+      "text": "I just got here a bit early — grabbing a table on the patio! ☀️",
+      "realDelay": 1.5,
+      "timestamp": "+00:15"
+    },
+    {
+      "id": "ios_06",
+      "type": "sent",
+      "dialogType": "text",
+      "text": "Awesome! Weather is gorgeous out today 🌴",
+      "realDelay": 1.0,
+      "timestamp": "+00:01"
+    },
+    {
+      "id": "ios_07",
+      "type": "received",
+      "dialogType": "text",
+      "text": "Got a corner booth outside and ordered chips & guac for the table 🥑✨",
+      "realDelay": 1.8,
+      "timestamp": "+00:04"
+    },
+    {
+      "id": "ios_08",
+      "type": "sent",
+      "dialogType": "text",
+      "text": "Best news all week!! Parking right now, see you in 60 seconds! 🏃‍♂️",
+      "realDelay": 1.4,
+      "timestamp": "+00:02"
+    },
+    {
+      "id": "ios_09",
+      "type": "received",
+      "dialogType": "text",
+      "text": "Waving at you from the patio right under the yellow umbrella! 👋🍹",
+      "realDelay": 1.2,
+      "timestamp": "+00:01"
+    },
+    {
+      "id": "ios_10",
+      "type": "sent",
+      "dialogType": "text",
+      "text": "Just walked through the gate, spotted you! 😎",
+      "realDelay": 1.0,
+      "timestamp": "+00:01"
+    },
+    {
+      "id": "ios_11",
+      "type": "received",
+      "dialogType": "text",
+      "text": "The fresh carnitas and fish tacos just arrived too, perfect timing! 🌮🔥",
+      "realDelay": 1.5,
+      "timestamp": "+00:01"
+    },
+    {
+      "id": "ios_12",
+      "type": "sent",
+      "dialogType": "text",
+      "text": "Oh man, that looks and smells incredible! Digging in! 🙌🎉",
+      "realDelay": 1.2,
+      "timestamp": "+00:01",
+      "textEffect": "nod"
+    },
+    {
+      "id": "ios_13",
+      "type": "received",
+      "dialogType": "text",
+      "text": "Cheers to Friday lunch! 🍻🌮",
+      "realDelay": 1.0,
+      "timestamp": "+00:02"
     }
   ]
 }

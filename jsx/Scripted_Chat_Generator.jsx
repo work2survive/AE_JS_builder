@@ -649,256 +649,479 @@
     // Default Built-in Conversations (written to /conversation/ if missing, and used as fallback)
     var DEFAULT_CONVERSATIONS = {
         "rcs_home_invitation.json": {
-            "schemaVersion": "1.0",
-            "header": {
-                "conversationTitle": "Home Invitation (Android RCS Demo)",
-                "platform": "Android RCS",
-                "theme": "light",
-                "font": "Roboto (Google / Android)",
-                "emojiFont": "Noto Color Emoji (Google)",
-                "useTimestamps": true,
-                "initialTimestamp": "14:20",
-                "timeFormat": "24h",
-                "realDelayBetweenBubbles": 1.0,
-                "fakeDelayBetweenBubbles": "+00:01",
-                "bubbleWidth": 360,
-                "maxBubbleWidth": 410,
-                "textWrapping": true,
-                "textSize": 22,
-                "innerPadding": 18,
-                "lineSpacing": 130,
-                "bubbleGap": 18,
-                "showTail": true,
-                "groupConsecutive": true,
-                "showStatus": true,
-                "sentToDeliveredDelay": 0.6,
-                "deliveredToReadDelay": 1.2,
-                "entranceAnimation": true,
-                "growDuration": 12,
-                "typewriterSpeed": 0,
-                "screenVisible": true,
-                "screenOpacity": 100,
-                "screenWidth": 540,
-                "screenHeight": 940,
-                "screenInnerPadding": 28,
-                "screenCornerRadius": 44,
-                "screenBackgroundColor": "#F8F9FA",
-                "autoScroll": true,
-                "clipToScreen": true,
-                "scrollSmoothnessFrames": 12
-            },
-            "messages": [
-                {
-                    "id": "msg_01",
-                    "type": "text",
-                    "direction": "sent",
-                    "text": "Hey! Just finished work 👋"
+                "schemaVersion": "1.0",
+                "header": {
+                        "conversationTitle": "Home Check-in & Dinner (Android RCS Demo)",
+                        "platform": "Android RCS",
+                        "theme": "light",
+                        "font": "Roboto (Google / Android)",
+                        "emojiFont": "Auto (Preset Default)",
+                        "useTimestamps": true,
+                        "initialTimestamp": "14:20",
+                        "timeFormat": "24h",
+                        "realDelayBetweenBubbles": 1.0,
+                        "fakeDelayBetweenBubbles": "+00:01",
+                        "bubbleWidth": 0,
+                        "maxBubbleWidth": 320,
+                        "textWrapping": true,
+                        "textSize": 20,
+                        "innerPadding": 18,
+                        "lineSpacing": 100,
+                        "bubbleGap": 18,
+                        "showTail": true,
+                        "groupConsecutive": true,
+                        "showStatus": true,
+                        "sentToDeliveredDelay": 0.6,
+                        "deliveredToReadDelay": 1.2,
+                        "entranceAnimation": true,
+                        "growDuration": 10,
+                        "typewriterSpeed": 0,
+                        "screenVisible": true,
+                        "screenOpacity": 100,
+                        "screenWidth": 460,
+                        "screenHeight": 820,
+                        "screenInnerPadding": 24,
+                        "screenCornerRadius": 36,
+                        "screenBackgroundColor": "#FFFFFF",
+                        "autoScroll": true,
+                        "clipToScreen": true,
+                        "scrollSmoothnessFrames": 8
                 },
-                {
-                    "id": "msg_02",
-                    "type": "text",
-                    "direction": "received",
-                    "text": "Hey, are you at home?",
-                    "realDelay": 2.0,
-                    "timestamp": "+00:02"
-                },
-                {
-                    "id": "msg_03",
-                    "type": "text",
-                    "direction": "sent",
-                    "text": "Almost! Walking up the street right now 🏃‍♂️",
-                    "timestamp": "+00:01"
-                },
-                {
-                    "id": "msg_04",
-                    "type": "text",
-                    "direction": "sent",
-                    "text": "Give me 5 minutes!",
-                    "realDelay": 0.8
-                },
-                {
-                    "id": "msg_05",
-                    "type": "text",
-                    "direction": "received",
-                    "text": "Awesome! I brought pizza 🍕 and drinks",
-                    "realDelay": 1.5,
-                    "timestamp": "+00:05"
-                },
-                {
-                    "id": "msg_06",
-                    "type": "text",
-                    "direction": "sent",
-                    "text": "No way!! Best surprise ever 😍",
-                    "timestamp": "14:32",
-                    "textAnimation": { "nod": true, "shake": false, "blink": false }
-                },
-                {
-                    "id": "msg_07",
-                    "type": "text",
-                    "direction": "received",
-                    "text": "Ring the buzzer when you're downstairs 🔔",
-                    "realDelay": 1.2
-                },
-                {
-                    "id": "msg_08",
-                    "type": "text",
-                    "direction": "sent",
-                    "text": "Just arrived at the door! Unlocking now 🔑"
-                },
-                {
-                    "id": "msg_09",
-                    "type": "text",
-                    "direction": "received",
-                    "text": "Come on up, 3rd floor! 🎉",
-                    "realDelay": 1.5,
-                    "textAnimation": { "nod": true, "shake": false, "blink": false }
-                }
-            ]
+                "messages": [
+                        {
+                                "id": "rcs_01",
+                                "type": "text",
+                                "direction": "sent",
+                                "text": "Just wrapped up the edit at the studio! Heading back now 🎬✨",
+                                "realDelay": 0.2
+                        },
+                        {
+                                "id": "rcs_02",
+                                "type": "text",
+                                "direction": "received",
+                                "text": "Hey, are you at home?",
+                                "realDelay": 2.0,
+                                "timestamp": "+00:02"
+                        },
+                        {
+                                "id": "rcs_03",
+                                "type": "text",
+                                "direction": "sent",
+                                "text": "Just unlocked the front door! Why, what's up? 🔑🏠",
+                                "realDelay": 1.2,
+                                "timestamp": "+00:01"
+                        },
+                        {
+                                "id": "rcs_04",
+                                "type": "text",
+                                "direction": "received",
+                                "text": "Look outside on the porch, I dropped off iced lattes and croissants ☕🥐",
+                                "realDelay": 1.8,
+                                "timestamp": "14:26"
+                        },
+                        {
+                                "id": "rcs_05",
+                                "type": "text",
+                                "direction": "sent",
+                                "text": "NO WAY!! You are an absolute lifesaver 😭🙌",
+                                "realDelay": 1.0,
+                                "timestamp": "+00:01",
+                                "textAnimation": {
+                                        "nod": true,
+                                        "shake": false,
+                                        "blink": false
+                                }
+                        },
+                        {
+                                "id": "rcs_06",
+                                "type": "text",
+                                "direction": "received",
+                                "text": "Haha enjoy! Did you finish rendering the motion graphics reel?",
+                                "realDelay": 1.5,
+                                "timestamp": "+00:02"
+                        },
+                        {
+                                "id": "rcs_07",
+                                "type": "text",
+                                "direction": "sent",
+                                "text": "Yep! Exporting the final ProRes master right now. Want to preview it tonight? 🚀",
+                                "realDelay": 1.2,
+                                "timestamp": "+00:01"
+                        },
+                        {
+                                "id": "rcs_08",
+                                "type": "text",
+                                "direction": "received",
+                                "text": "100%! Come by around 7pm and we'll order pizza 🍕🔥",
+                                "realDelay": 1.5,
+                                "timestamp": "+00:04"
+                        },
+                        {
+                                "id": "rcs_09",
+                                "type": "text",
+                                "direction": "sent",
+                                "text": "Deal! Should we get deep dish or classic thin crust? 🍕",
+                                "realDelay": 1.0,
+                                "timestamp": "+00:01"
+                        },
+                        {
+                                "id": "rcs_10",
+                                "type": "text",
+                                "direction": "received",
+                                "text": "Deep dish with extra garlic butter dip for sure 🤤✨",
+                                "realDelay": 1.4,
+                                "timestamp": "+00:02"
+                        },
+                        {
+                                "id": "rcs_11",
+                                "type": "text",
+                                "direction": "sent",
+                                "text": "Placing the order now so it arrives right when you get here 🛵💨",
+                                "realDelay": 1.2,
+                                "timestamp": "+00:01"
+                        },
+                        {
+                                "id": "rcs_12",
+                                "type": "text",
+                                "direction": "received",
+                                "text": "Grabbing my laptop and heading over, thanks again! 🏃‍♂️💻",
+                                "realDelay": 1.5,
+                                "timestamp": "+00:03"
+                        },
+                        {
+                                "id": "rcs_13",
+                                "type": "text",
+                                "direction": "sent",
+                                "text": "Door's unlocked, come straight in! 🚪✨",
+                                "realDelay": 1.0,
+                                "timestamp": "+00:01"
+                        },
+                        {
+                                "id": "rcs_14",
+                                "type": "text",
+                                "direction": "received",
+                                "text": "Just arrived at the 3rd floor, smell that pizza! 🎉🥂",
+                                "realDelay": 1.2,
+                                "timestamp": "+00:01",
+                                "textAnimation": {
+                                        "nod": true,
+                                        "shake": false,
+                                        "blink": false
+                                }
+                        }
+                ]
         },
         "ios_lunch_plans.json": {
-            "schemaVersion": "1.0",
-            "header": {
-                "conversationTitle": "Weekend Lunch Plans (iOS 12h Demo)",
-                "platform": "iOS Message",
-                "theme": "light",
-                "font": "SF Pro (Apple / iOS)",
-                "emojiFont": "Apple Color Emoji (Apple)",
-                "useTimestamps": true,
-                "initialTimestamp": "11:45",
-                "timeFormat": "12h",
-                "realDelayBetweenBubbles": 1.2,
-                "fakeDelayBetweenBubbles": "+00:02",
-                "bubbleWidth": 360,
-                "maxBubbleWidth": 410,
-                "textWrapping": true,
-                "textSize": 22,
-                "innerPadding": 18,
-                "lineSpacing": 130,
-                "bubbleGap": 18,
-                "showTail": true,
-                "groupConsecutive": true,
-                "showStatus": true,
-                "sentToDeliveredDelay": 0.7,
-                "deliveredToReadDelay": 1.4,
-                "entranceAnimation": true,
-                "growDuration": 12,
-                "typewriterSpeed": 0,
-                "screenVisible": true,
-                "screenOpacity": 100,
-                "screenWidth": 540,
-                "screenHeight": 940,
-                "screenInnerPadding": 28,
-                "screenCornerRadius": 44,
-                "screenBackgroundColor": "#FFFFFF",
-                "autoScroll": true,
-                "clipToScreen": true,
-                "scrollSmoothnessFrames": 12
-            },
-            "messages": [
-                {
-                    "id": "ios_01",
-                    "type": "text",
-                    "direction": "received",
-                    "text": "Morning! Still on for tacos today? 🌮"
+                "schemaVersion": "1.0",
+                "header": {
+                        "conversationTitle": "Weekend Lunch Plans (iOS 12h Demo)",
+                        "platform": "iOS Message",
+                        "theme": "light",
+                        "font": "SF Pro (Apple / iOS)",
+                        "emojiFont": "Auto (Preset Default)",
+                        "useTimestamps": true,
+                        "initialTimestamp": "11:45 AM",
+                        "timeFormat": "12h",
+                        "realDelayBetweenBubbles": 1.0,
+                        "fakeDelayBetweenBubbles": "+00:01",
+                        "bubbleWidth": 0,
+                        "maxBubbleWidth": 320,
+                        "textWrapping": true,
+                        "textSize": 20,
+                        "innerPadding": 18,
+                        "lineSpacing": 100,
+                        "bubbleGap": 18,
+                        "showTail": true,
+                        "groupConsecutive": true,
+                        "showStatus": true,
+                        "sentToDeliveredDelay": 0.6,
+                        "deliveredToReadDelay": 1.2,
+                        "entranceAnimation": true,
+                        "growDuration": 10,
+                        "typewriterSpeed": 0,
+                        "screenVisible": true,
+                        "screenOpacity": 100,
+                        "screenWidth": 460,
+                        "screenHeight": 820,
+                        "screenInnerPadding": 24,
+                        "screenCornerRadius": 40,
+                        "screenBackgroundColor": "#FFFFFF",
+                        "autoScroll": true,
+                        "clipToScreen": true,
+                        "scrollSmoothnessFrames": 8
                 },
-                {
-                    "id": "ios_02",
-                    "type": "text",
-                    "direction": "sent",
-                    "text": "100%! I've been thinking about them all week 😋",
-                    "realDelay": 1.0,
-                    "timestamp": "+00:01"
-                },
-                {
-                    "id": "ios_03",
-                    "type": "text",
-                    "direction": "received",
-                    "text": "Haha same! Should we meet at 12:30?",
-                    "realDelay": 1.8,
-                    "timestamp": "12:00"
-                },
-                {
-                    "id": "ios_04",
-                    "type": "text",
-                    "direction": "sent",
-                    "text": "12:30 works great. See you at La Taqueria! 🙌",
-                    "timestamp": "+00:03",
-                    "textAnimation": { "nod": true, "shake": false, "blink": false }
-                }
-            ]
+                "messages": [
+                        {
+                                "id": "ios_01",
+                                "type": "text",
+                                "direction": "received",
+                                "text": "Morning! Still on for tacos today? 🌮",
+                                "realDelay": 0.2
+                        },
+                        {
+                                "id": "ios_02",
+                                "type": "text",
+                                "direction": "sent",
+                                "text": "100%! I've been thinking about them all week 😋",
+                                "realDelay": 1.0,
+                                "timestamp": "+00:01"
+                        },
+                        {
+                                "id": "ios_03",
+                                "type": "text",
+                                "direction": "received",
+                                "text": "Haha same! Should we meet at 12:30?",
+                                "realDelay": 1.8,
+                                "timestamp": "12:00 PM"
+                        },
+                        {
+                                "id": "ios_04",
+                                "type": "text",
+                                "direction": "sent",
+                                "text": "12:30 works great. See you at La Taqueria! 🙌",
+                                "realDelay": 1.2,
+                                "timestamp": "+00:03",
+                                "textAnimation": {
+                                        "nod": true,
+                                        "shake": false,
+                                        "blink": false
+                                }
+                        },
+                        {
+                                "id": "ios_05",
+                                "type": "text",
+                                "direction": "received",
+                                "text": "I just got here a bit early — grabbing a table on the patio! ☀️",
+                                "realDelay": 1.5,
+                                "timestamp": "+00:15"
+                        },
+                        {
+                                "id": "ios_06",
+                                "type": "text",
+                                "direction": "sent",
+                                "text": "Awesome! Weather is gorgeous out today 🌴",
+                                "realDelay": 1.0,
+                                "timestamp": "+00:01"
+                        },
+                        {
+                                "id": "ios_07",
+                                "type": "text",
+                                "direction": "received",
+                                "text": "Got a corner booth outside and ordered chips & guac for the table 🥑✨",
+                                "realDelay": 1.8,
+                                "timestamp": "+00:04"
+                        },
+                        {
+                                "id": "ios_08",
+                                "type": "text",
+                                "direction": "sent",
+                                "text": "Best news all week!! Parking right now, see you in 60 seconds! 🏃‍♂️",
+                                "realDelay": 1.4,
+                                "timestamp": "+00:02"
+                        },
+                        {
+                                "id": "ios_09",
+                                "type": "text",
+                                "direction": "received",
+                                "text": "Waving at you from the patio right under the yellow umbrella! 👋🍹",
+                                "realDelay": 1.2,
+                                "timestamp": "+00:01"
+                        },
+                        {
+                                "id": "ios_10",
+                                "type": "text",
+                                "direction": "sent",
+                                "text": "Just walked through the gate, spotted you! 😎",
+                                "realDelay": 1.0,
+                                "timestamp": "+00:01"
+                        },
+                        {
+                                "id": "ios_11",
+                                "type": "text",
+                                "direction": "received",
+                                "text": "The fresh carnitas and fish tacos just arrived too, perfect timing! 🌮🔥",
+                                "realDelay": 1.5,
+                                "timestamp": "+00:01"
+                        },
+                        {
+                                "id": "ios_12",
+                                "type": "text",
+                                "direction": "sent",
+                                "text": "Oh man, that looks and smells incredible! Digging in! 🙌🎉",
+                                "realDelay": 1.2,
+                                "timestamp": "+00:01",
+                                "textAnimation": {
+                                        "nod": true,
+                                        "shake": false,
+                                        "blink": false
+                                }
+                        },
+                        {
+                                "id": "ios_13",
+                                "type": "text",
+                                "direction": "received",
+                                "text": "Cheers to Friday lunch! 🍻🌮",
+                                "realDelay": 1.0,
+                                "timestamp": "+00:02"
+                        }
+                ]
         },
         "whatsapp_project_update.json": {
-            "schemaVersion": "1.0",
-            "header": {
-                "conversationTitle": "Motion Design Review (WhatsApp Dark Demo)",
-                "platform": "WhatsApp",
-                "theme": "dark",
-                "font": "Helvetica Neue",
-                "emojiFont": "WhatsApp (Apple/Custom)",
-                "useTimestamps": true,
-                "initialTimestamp": "18:10",
-                "timeFormat": "24h",
-                "realDelayBetweenBubbles": 1.0,
-                "fakeDelayBetweenBubbles": "+00:01",
-                "bubbleWidth": 360,
-                "maxBubbleWidth": 410,
-                "textWrapping": true,
-                "textSize": 22,
-                "innerPadding": 18,
-                "lineSpacing": 130,
-                "bubbleGap": 18,
-                "showTail": true,
-                "groupConsecutive": true,
-                "showStatus": true,
-                "sentToDeliveredDelay": 0.5,
-                "deliveredToReadDelay": 1.0,
-                "entranceAnimation": true,
-                "growDuration": 10,
-                "typewriterSpeed": 0,
-                "screenVisible": true,
-                "screenOpacity": 100,
-                "screenWidth": 540,
-                "screenHeight": 940,
-                "screenInnerPadding": 28,
-                "screenCornerRadius": 44,
-                "screenBackgroundColor": "#0B141A",
-                "autoScroll": true,
-                "clipToScreen": true,
-                "scrollSmoothnessFrames": 12
-            },
-            "messages": [
-                {
-                    "id": "wa_01",
-                    "type": "text",
-                    "direction": "received",
-                    "text": "Hey! Did the client approve the new chat animation? 🎬"
+                "schemaVersion": "1.0",
+                "header": {
+                        "conversationTitle": "Motion Design Review (WhatsApp Dark Demo)",
+                        "platform": "WhatsApp",
+                        "theme": "dark",
+                        "font": "SF Pro (Apple / iOS)",
+                        "emojiFont": "Auto (Preset Default)",
+                        "useTimestamps": true,
+                        "initialTimestamp": "18:10",
+                        "timeFormat": "24h",
+                        "realDelayBetweenBubbles": 1.0,
+                        "fakeDelayBetweenBubbles": "+00:01",
+                        "bubbleWidth": 0,
+                        "maxBubbleWidth": 320,
+                        "textWrapping": true,
+                        "textSize": 20,
+                        "innerPadding": 18,
+                        "lineSpacing": 100,
+                        "bubbleGap": 18,
+                        "showTail": true,
+                        "groupConsecutive": true,
+                        "showStatus": true,
+                        "sentToDeliveredDelay": 0.6,
+                        "deliveredToReadDelay": 1.2,
+                        "entranceAnimation": true,
+                        "growDuration": 10,
+                        "typewriterSpeed": 0,
+                        "screenVisible": true,
+                        "screenOpacity": 100,
+                        "screenWidth": 460,
+                        "screenHeight": 820,
+                        "screenInnerPadding": 24,
+                        "screenCornerRadius": 36,
+                        "screenBackgroundColor": "#0B141A",
+                        "autoScroll": true,
+                        "clipToScreen": true,
+                        "scrollSmoothnessFrames": 8
                 },
-                {
-                    "id": "wa_02",
-                    "type": "text",
-                    "direction": "sent",
-                    "text": "Yes! They loved the automatic scroll and timestamp calculation 🔥",
-                    "realDelay": 1.4,
-                    "timestamp": "+00:02"
-                },
-                {
-                    "id": "wa_03",
-                    "type": "text",
-                    "direction": "received",
-                    "text": "Hey, are you at home?",
-                    "realDelay": 2.0,
-                    "timestamp": "19:05"
-                },
-                {
-                    "id": "wa_04",
-                    "type": "text",
-                    "direction": "sent",
-                    "text": "Yep! Exporting the final .JSON package right now 💻✨",
-                    "timestamp": "+00:01"
-                }
-            ]
+                "messages": [
+                        {
+                                "id": "wa_01",
+                                "type": "text",
+                                "direction": "received",
+                                "text": "Quick check — did the client approve the new 3D title sequence? 👀",
+                                "realDelay": 0.2
+                        },
+                        {
+                                "id": "wa_02",
+                                "type": "text",
+                                "direction": "sent",
+                                "text": "Yes!! Zero revisions on the animation timing 🎉🙌",
+                                "realDelay": 1.0,
+                                "timestamp": "+00:01"
+                        },
+                        {
+                                "id": "wa_03",
+                                "type": "text",
+                                "direction": "received",
+                                "text": "Wait seriously?! Zero revisions on a Friday night?!",
+                                "realDelay": 2.0,
+                                "timestamp": "+00:01",
+                                "textAnimation": {
+                                        "nod": false,
+                                        "shake": true,
+                                        "blink": false
+                                }
+                        },
+                        {
+                                "id": "wa_04",
+                                "type": "text",
+                                "direction": "sent",
+                                "text": "I know right! They loved the scripted chat transition in scene 2 💬✨",
+                                "realDelay": 1.2,
+                                "timestamp": "18:15"
+                        },
+                        {
+                                "id": "wa_05",
+                                "type": "text",
+                                "direction": "received",
+                                "text": "Huge congrats to the whole crew! Upload the final package to the shared drive 🥂🚀",
+                                "realDelay": 1.5,
+                                "timestamp": "+00:03"
+                        },
+                        {
+                                "id": "wa_06",
+                                "type": "text",
+                                "direction": "sent",
+                                "text": "Already uploaded! Have an awesome weekend everyone! 🌙✌️",
+                                "realDelay": 1.0,
+                                "timestamp": "+00:02"
+                        },
+                        {
+                                "id": "wa_07",
+                                "type": "text",
+                                "direction": "received",
+                                "text": "Did you also include the Lottie export for the mobile app team? 📱",
+                                "realDelay": 1.4,
+                                "timestamp": "+00:02"
+                        },
+                        {
+                                "id": "wa_08",
+                                "type": "text",
+                                "direction": "sent",
+                                "text": "Yes, both JSON and dotLottie formats are in /assets/lottie! 📦",
+                                "realDelay": 1.2,
+                                "timestamp": "+00:01"
+                        },
+                        {
+                                "id": "wa_09",
+                                "type": "text",
+                                "direction": "received",
+                                "text": "Awesome! And the typography package?",
+                                "realDelay": 1.5,
+                                "timestamp": "+00:03"
+                        },
+                        {
+                                "id": "wa_10",
+                                "type": "text",
+                                "direction": "sent",
+                                "text": "All Google & system fonts linked in the documentation 📝✨",
+                                "realDelay": 1.0,
+                                "timestamp": "+00:01"
+                        },
+                        {
+                                "id": "wa_11",
+                                "type": "text",
+                                "direction": "received",
+                                "text": "Perfect handoff. Producer just signed off on the invoice too 💸👏",
+                                "realDelay": 1.4,
+                                "timestamp": "+00:02"
+                        },
+                        {
+                                "id": "wa_12",
+                                "type": "text",
+                                "direction": "sent",
+                                "text": "Best news ever! Drinks on the company tonight! 🍻🥳",
+                                "realDelay": 1.2,
+                                "timestamp": "+00:01",
+                                "textAnimation": {
+                                        "nod": true,
+                                        "shake": false,
+                                        "blink": false
+                                }
+                        },
+                        {
+                                "id": "wa_13",
+                                "type": "text",
+                                "direction": "received",
+                                "text": "See you all on Monday! Enjoy the weekend! 🎉🕺",
+                                "realDelay": 1.0,
+                                "timestamp": "+00:02"
+                        }
+                ]
         }
-    };
+};
 
     function getConversationFolder() {
         var base = getScriptBaseFolder();
