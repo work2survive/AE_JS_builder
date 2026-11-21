@@ -965,6 +965,7 @@
         "",
         "    var lineCount = 1;",
         "    var autoTextW = 0;",
+        "    var lastLineW = 0;",
         "    try {",
         "        var txtL = thisComp.layer('Message_Text');",
         "        var st = txtL.text ? txtL.text.sourceText : (txtL.sourceText || null);",
@@ -976,6 +977,9 @@
         "            for (var li = 0; li < lns.length; li++) {",
         "                var lw = lns[li].length * textSize * 0.52;",
         "                if (lw > autoTextW) autoTextW = lw;",
+        "            }",
+        "            if (lns.length > 0) {",
+        "                lastLineW = lns[lns.length - 1].length * textSize * 0.52;",
         "            }",
         "        }",
         "    } catch(eLC) {}",
@@ -994,7 +998,9 @@
         "    var leadingFactor = 1.0;",
         "    try { leadingFactor = Math.max(0.5, Math.min(3.0, (getVal('Leading Percent', 100) || 100) / 100.0)); } catch(eLF) {}",
         "    var lineH = Math.max(Math.round(textSize * 1.15), Math.round(textSize * 1.35 * leadingFactor));",
-        "    var boxHeight = (lineCount <= 1) ? Math.round(textSize * 1.10) : Math.round((lineCount - 1) * lineH + (textSize * 1.10));",
+        "    var capHeight = Math.round(textSize * 0.70);",
+        "    var descenderDepth = Math.round(textSize * 0.22);",
+        "    var boxHeight = (lineCount <= 1) ? (capHeight + descenderDepth) : Math.round((lineCount - 1) * lineH + capHeight + descenderDepth);",
         "",
         "    var timeFontSize = Math.max(10, Math.round(textSize * 0.58));",
         "    var timeW = 50;",
@@ -1008,11 +1014,16 @@
         "    var statusMode = Math.round(getVal('Status Icon Mode', 4));",
         "    var isSent = (thisLayer.name.indexOf('Sent') !== -1) ? 1 : (thisLayer.name.indexOf('Received') !== -1 ? 0 : 1);",
         "    var hasStatus = (isSent && statusMode !== 4);",
-        "    var statusW = hasStatus ? Math.round(timeFontSize * 1.55) : 0;",
-        "    var minFitW = Math.round(padX * 2 + timeW + (hasStatus ? statusW + 6 : 0));",
+        "    var statusStyle = Math.round(getVal('Status Icon Style', 0));",
+        "    var statusW = hasStatus ? ((statusStyle === 0) ? Math.round(timeFontSize * 1.55) : Math.round(timeFontSize * 1.35)) : 0;",
+        "    var statusSpacing = (hasStatus && statusW > 0) ? 6 : 0;",
+        "    var timeRowW = timeW + statusSpacing + statusW;",
+        "    var minFitW = Math.round(padX * 2 + timeRowW);",
         "    var showTime = getVal('Show Timestamp', 1);",
         "    var canFitTime = (w >= minFitW);",
-        "    var bottomRowH = (showTime > 0 && canFitTime) ? (timeFontSize + 12) : 0;",
+        "    var timeGap = Math.max(12, Math.round(textSize * 0.60));",
+        "    var canFitInlineTime = (showTime > 0) && canFitTime && (lastLineW + timeGap + timeRowW <= (w - (padX * 2)));",
+        "    var bottomRowH = (showTime > 0 && canFitTime && !canFitInlineTime) ? (timeFontSize + 10) : 0;",
         "    var dynamicH = Math.max(Math.max(36, Math.round(cornerRadius * 1.6)), boxHeight + (padY * 2) + bottomRowH);",
         "    var h = dynamicH;",
         "    var rTL = Math.max(0, getVal('Radius Top-Left', 18));",
@@ -1493,6 +1504,7 @@
         "    var effMaxW = Math.max(minBubbleW, maxW);",
         "    var lineCount = 1;",
         "    var autoTextW = 0;",
+        "    var lastLineW = 0;",
         "    try {",
         "        var txtL = thisComp.layer('Message_Text');",
         "        var st = txtL.text ? txtL.text.sourceText : (txtL.sourceText || null);",
@@ -1504,6 +1516,9 @@
         "            for (var li = 0; li < lns.length; li++) {",
         "                var lw = lns[li].length * textSize * 0.52;",
         "                if (lw > autoTextW) autoTextW = lw;",
+        "            }",
+        "            if (lns.length > 0) {",
+        "                lastLineW = lns[lns.length - 1].length * textSize * 0.52;",
         "            }",
         "        }",
         "    } catch(eLC) {}",
@@ -1520,7 +1535,9 @@
         "    var leadingFactor = 1.0;",
         "    try { leadingFactor = Math.max(0.5, Math.min(3.0, (getVal('Leading Percent', 100) || 100) / 100.0)); } catch(eLF) {}",
         "    var lineH = Math.max(Math.round(textSize * 1.15), Math.round(textSize * 1.35 * leadingFactor));",
-        "    var boxHeight = (lineCount <= 1) ? Math.round(textSize * 1.10) : Math.round((lineCount - 1) * lineH + (textSize * 1.10));",
+        "    var capHeight = Math.round(textSize * 0.70);",
+        "    var descenderDepth = Math.round(textSize * 0.22);",
+        "    var boxHeight = (lineCount <= 1) ? (capHeight + descenderDepth) : Math.round((lineCount - 1) * lineH + capHeight + descenderDepth);",
         "    var timeFontSize = Math.max(10, Math.round(textSize * 0.58));",
         "    var timeW = 50;",
         "    try {",
@@ -1534,11 +1551,16 @@
         "    var isSent = 1;",
         "    try { if (thisComp.layer('Bubble_Received')) isSent = 0; } catch(eS) {}",
         "    var hasStatus = (isSent && statusMode !== 4);",
-        "    var statusW = hasStatus ? Math.round(timeFontSize * 1.55) : 0;",
-        "    var minFitW = Math.round(padX * 2 + timeW + (hasStatus ? statusW + 6 : 0));",
+        "    var statusStyle = Math.round(getVal('Status Icon Style', 0));",
+        "    var statusW = hasStatus ? ((statusStyle === 0) ? Math.round(timeFontSize * 1.55) : Math.round(timeFontSize * 1.35)) : 0;",
+        "    var statusSpacing = (hasStatus && statusW > 0) ? 6 : 0;",
+        "    var timeRowW = timeW + statusSpacing + statusW;",
+        "    var minFitW = Math.round(padX * 2 + timeRowW);",
         "    var showTime = getVal('Show Timestamp', 1);",
         "    var canFitTime = (w >= minFitW);",
-        "    var bottomRowH = (showTime > 0 && canFitTime) ? (timeFontSize + 12) : 0;",
+        "    var timeGap = Math.max(12, Math.round(textSize * 0.60));",
+        "    var canFitInlineTime = (showTime > 0) && canFitTime && (lastLineW + timeGap + timeRowW <= (w - (padX * 2)));",
+        "    var bottomRowH = (showTime > 0 && canFitTime && !canFitInlineTime) ? (timeFontSize + 10) : 0;",
         "    var dynamicH = Math.max(Math.max(36, Math.round(cornerRadius * 1.6)), boxHeight + (padY * 2) + bottomRowH);",
         "    var h = dynamicH;",
         "    var x = -effMaxW / 2;",
@@ -1573,6 +1595,7 @@
         "    var effMaxW = Math.max(minBubbleW, maxW);",
         "    var lineCount = 1;",
         "    var autoTextW = 0;",
+        "    var lastLineW = 0;",
         "    try {",
         "        var txtL = thisComp.layer('Message_Text');",
         "        var st = txtL.text ? txtL.text.sourceText : (txtL.sourceText || null);",
@@ -1584,6 +1607,9 @@
         "            for (var li = 0; li < lns.length; li++) {",
         "                var lw = lns[li].length * textSize * 0.52;",
         "                if (lw > autoTextW) autoTextW = lw;",
+        "            }",
+        "            if (lns.length > 0) {",
+        "                lastLineW = lns[lns.length - 1].length * textSize * 0.52;",
         "            }",
         "        }",
         "    } catch(eLC) {}",
@@ -1600,7 +1626,9 @@
         "    var leadingFactor = 1.0;",
         "    try { leadingFactor = Math.max(0.5, Math.min(3.0, (getVal('Leading Percent', 100) || 100) / 100.0)); } catch(eLF) {}",
         "    var lineH = Math.max(Math.round(textSize * 1.15), Math.round(textSize * 1.35 * leadingFactor));",
-        "    var boxHeight = (lineCount <= 1) ? Math.round(textSize * 1.10) : Math.round((lineCount - 1) * lineH + (textSize * 1.10));",
+        "    var capHeight = Math.round(textSize * 0.70);",
+        "    var descenderDepth = Math.round(textSize * 0.22);",
+        "    var boxHeight = (lineCount <= 1) ? (capHeight + descenderDepth) : Math.round((lineCount - 1) * lineH + capHeight + descenderDepth);",
         "    var timeFontSize = Math.max(10, Math.round(textSize * 0.58));",
         "    var timeW = 50;",
         "    try {",
@@ -1614,11 +1642,16 @@
         "    var isSent = 1;",
         "    try { if (thisComp.layer('Bubble_Received')) isSent = 0; } catch(eS) {}",
         "    var hasStatus = (isSent && statusMode !== 4);",
-        "    var statusW = hasStatus ? Math.round(timeFontSize * 1.55) : 0;",
-        "    var minFitW = Math.round(padX * 2 + timeW + (hasStatus ? statusW + 6 : 0));",
+        "    var statusStyle = Math.round(getVal('Status Icon Style', 0));",
+        "    var statusW = hasStatus ? ((statusStyle === 0) ? Math.round(timeFontSize * 1.55) : Math.round(timeFontSize * 1.35)) : 0;",
+        "    var statusSpacing = (hasStatus && statusW > 0) ? 6 : 0;",
+        "    var timeRowW = timeW + statusSpacing + statusW;",
+        "    var minFitW = Math.round(padX * 2 + timeRowW);",
         "    var showTime = getVal('Show Timestamp', 1);",
         "    var canFitTime = (w >= minFitW);",
-        "    var bottomRowH = (showTime > 0 && canFitTime) ? (timeFontSize + 12) : 0;",
+        "    var timeGap = Math.max(12, Math.round(textSize * 0.60));",
+        "    var canFitInlineTime = (showTime > 0) && canFitTime && (lastLineW + timeGap + timeRowW <= (w - (padX * 2)));",
+        "    var bottomRowH = (showTime > 0 && canFitTime && !canFitInlineTime) ? (timeFontSize + 10) : 0;",
         "    var dynamicH = Math.max(Math.max(36, Math.round(cornerRadius * 1.6)), boxHeight + (padY * 2) + bottomRowH);",
         "    var h = dynamicH;",
         "    var x = effMaxW / 2;",
@@ -1655,6 +1688,7 @@
         "",
         "    var lineCount = 1;",
         "    var autoTextW = 0;",
+        "    var lastLineW = 0;",
         "    try {",
         "        var txtL = thisComp.layer('Message_Text');",
         "        var st = txtL.text ? txtL.text.sourceText : (txtL.sourceText || null);",
@@ -1666,6 +1700,9 @@
         "            for (var li = 0; li < lns.length; li++) {",
         "                var lw = lns[li].length * textSize * 0.52;",
         "                if (lw > autoTextW) autoTextW = lw;",
+        "            }",
+        "            if (lns.length > 0) {",
+        "                lastLineW = lns[lns.length - 1].length * textSize * 0.52;",
         "            }",
         "        }",
         "    } catch(eLC) {}",
@@ -1684,7 +1721,9 @@
         "    var leadingFactor = 1.0;",
         "    try { leadingFactor = Math.max(0.5, Math.min(3.0, (getVal('Leading Percent', 100) || 100) / 100.0)); } catch(eLF) {}",
         "    var lineH = Math.max(Math.round(textSize * 1.15), Math.round(textSize * 1.35 * leadingFactor));",
-        "    var boxHeight = (lineCount <= 1) ? Math.round(textSize * 1.10) : Math.round((lineCount - 1) * lineH + (textSize * 1.10));",
+        "    var capHeight = Math.round(textSize * 0.70);",
+        "    var descenderDepth = Math.round(textSize * 0.22);",
+        "    var boxHeight = (lineCount <= 1) ? (capHeight + descenderDepth) : Math.round((lineCount - 1) * lineH + capHeight + descenderDepth);",
         "",
         "    var timeFontSize = Math.max(10, Math.round(textSize * 0.58));",
         "    var timeW = 50;",
@@ -1698,11 +1737,16 @@
         "    var statusMode = Math.round(getVal('Status Icon Mode', 4));",
         "    var isSent = (thisLayer.name.indexOf('Sent') !== -1) ? 1 : (thisLayer.name.indexOf('Received') !== -1 ? 0 : 1);",
         "    var hasStatus = (isSent && statusMode !== 4);",
-        "    var statusW = hasStatus ? Math.round(timeFontSize * 1.55) : 0;",
-        "    var minFitW = Math.round(padX * 2 + timeW + (hasStatus ? statusW + 6 : 0));",
+        "    var statusStyle = Math.round(getVal('Status Icon Style', 0));",
+        "    var statusW = hasStatus ? ((statusStyle === 0) ? Math.round(timeFontSize * 1.55) : Math.round(timeFontSize * 1.35)) : 0;",
+        "    var statusSpacing = (hasStatus && statusW > 0) ? 6 : 0;",
+        "    var timeRowW = timeW + statusSpacing + statusW;",
+        "    var minFitW = Math.round(padX * 2 + timeRowW);",
         "    var showTime = getVal('Show Timestamp', 1);",
         "    var canFitTime = (w >= minFitW);",
-        "    var bottomRowH = (showTime > 0 && canFitTime) ? (timeFontSize + 12) : 0;",
+        "    var timeGap = Math.max(12, Math.round(textSize * 0.60));",
+        "    var canFitInlineTime = (showTime > 0) && canFitTime && (lastLineW + timeGap + timeRowW <= (w - (padX * 2)));",
+        "    var bottomRowH = (showTime > 0 && canFitTime && !canFitInlineTime) ? (timeFontSize + 10) : 0;",
         "    var dynamicH = Math.max(Math.max(36, Math.round(cornerRadius * 1.6)), boxHeight + (padY * 2) + bottomRowH);",
         "    var h = dynamicH;",
         "    var isSent = (thisLayer.name.indexOf('Sent') !== -1) ? 1 : 0;",
@@ -1741,6 +1785,7 @@
         "",
         "    var lineCount = 1;",
         "    var autoTextW = 0;",
+        "    var lastLineW = 0;",
         "    try {",
         "        var txtL = thisComp.layer('Message_Text');",
         "        var st = txtL.text ? txtL.text.sourceText : (txtL.sourceText || null);",
@@ -1752,6 +1797,9 @@
         "            for (var li = 0; li < lns.length; li++) {",
         "                var lw = lns[li].length * textSize * 0.52;",
         "                if (lw > autoTextW) autoTextW = lw;",
+        "            }",
+        "            if (lns.length > 0) {",
+        "                lastLineW = lns[lns.length - 1].length * textSize * 0.52;",
         "            }",
         "        }",
         "    } catch(eLC) {}",
@@ -1770,7 +1818,9 @@
         "    var leadingFactor = 1.0;",
         "    try { leadingFactor = Math.max(0.5, Math.min(3.0, (getVal('Leading Percent', 100) || 100) / 100.0)); } catch(eLF) {}",
         "    var lineH = Math.max(Math.round(textSize * 1.15), Math.round(textSize * 1.35 * leadingFactor));",
-        "    var boxHeight = (lineCount <= 1) ? Math.round(textSize * 1.10) : Math.round((lineCount - 1) * lineH + (textSize * 1.10));",
+        "    var capHeight = Math.round(textSize * 0.70);",
+        "    var descenderDepth = Math.round(textSize * 0.22);",
+        "    var boxHeight = (lineCount <= 1) ? (capHeight + descenderDepth) : Math.round((lineCount - 1) * lineH + capHeight + descenderDepth);",
         "",
         "    var timeFontSize = Math.max(10, Math.round(textSize * 0.58));",
         "    var timeW = 50;",
@@ -1784,11 +1834,16 @@
         "    var statusMode = Math.round(getVal('Status Icon Mode', 4));",
         "    var isSent = (thisLayer.name.indexOf('Sent') !== -1) ? 1 : 0;",
         "    var hasStatus = (isSent && statusMode !== 4);",
-        "    var statusW = hasStatus ? Math.round(timeFontSize * 1.55) : 0;",
-        "    var minFitW = Math.round(padX * 2 + timeW + (hasStatus ? statusW + 6 : 0));",
+        "    var statusStyle = Math.round(getVal('Status Icon Style', 0));",
+        "    var statusW = hasStatus ? ((statusStyle === 0) ? Math.round(timeFontSize * 1.55) : Math.round(timeFontSize * 1.35)) : 0;",
+        "    var statusSpacing = (hasStatus && statusW > 0) ? 6 : 0;",
+        "    var timeRowW = timeW + statusSpacing + statusW;",
+        "    var minFitW = Math.round(padX * 2 + timeRowW);",
         "    var showTime = getVal('Show Timestamp', 1);",
         "    var canFitTime = (w >= minFitW);",
-        "    var bottomRowH = (showTime > 0 && canFitTime) ? (timeFontSize + 12) : 0;",
+        "    var timeGap = Math.max(12, Math.round(textSize * 0.60));",
+        "    var canFitInlineTime = (showTime > 0) && canFitTime && (lastLineW + timeGap + timeRowW <= (w - (padX * 2)));",
+        "    var bottomRowH = (showTime > 0 && canFitTime && !canFitInlineTime) ? (timeFontSize + 10) : 0;",
         "    var dynamicH = Math.max(Math.max(36, Math.round(cornerRadius * 1.6)), boxHeight + (padY * 2) + bottomRowH);",
         "    var h = dynamicH;",
         "    var px = isSent ? (effMaxW / 2) : -(effMaxW / 2);",
@@ -1831,6 +1886,7 @@
         "",
         "    var lineCount = 1;",
         "    var autoTextW = 0;",
+        "    var lastLineW = 0;",
         "    try {",
         "        var txtL = thisComp.layer('Message_Text');",
         "        var st = txtL.text ? txtL.text.sourceText : (txtL.sourceText || null);",
@@ -1842,6 +1898,9 @@
         "            for (var li = 0; li < lns.length; li++) {",
         "                var lw = lns[li].length * textSize * 0.52;",
         "                if (lw > autoTextW) autoTextW = lw;",
+        "            }",
+        "            if (lns.length > 0) {",
+        "                lastLineW = lns[lns.length - 1].length * textSize * 0.52;",
         "            }",
         "        }",
         "    } catch(eLC) {}",
@@ -1860,7 +1919,9 @@
         "    var leadingFactor = 1.0;",
         "    try { leadingFactor = Math.max(0.5, Math.min(3.0, (getVal('Leading Percent', 100) || 100) / 100.0)); } catch(eLF) {}",
         "    var lineH = Math.max(Math.round(textSize * 1.15), Math.round(textSize * 1.35 * leadingFactor));",
-        "    var boxHeight = (lineCount <= 1) ? Math.round(textSize * 1.10) : Math.round((lineCount - 1) * lineH + (textSize * 1.10));",
+        "    var capHeight = Math.round(textSize * 0.70);",
+        "    var descenderDepth = Math.round(textSize * 0.22);",
+        "    var boxHeight = (lineCount <= 1) ? (capHeight + descenderDepth) : Math.round((lineCount - 1) * lineH + capHeight + descenderDepth);",
         "    var showTime = getVal('Show Timestamp', 1);",
         "    var timeFontSize = Math.max(10, Math.round(textSize * 0.58));",
         "    var timeW = 50;",
@@ -1876,16 +1937,20 @@
         "    try { if (thisComp.layer('Bubble_Received')) isSent = 0; } catch(eS) {}",
         "    var hasStatus = (isSent && statusMode !== 4);",
         "    var statusW = hasStatus ? ((statusStyle === 0) ? Math.round(timeFontSize * 1.55) : Math.round(timeFontSize * 1.35)) : 0;",
-        "    var minFitW = Math.round(padX * 2 + timeW + (hasStatus ? statusW + 6 : 0));",
+        "    var statusSpacing = (hasStatus && statusW > 0) ? 6 : 0;",
+        "    var timeRowW = timeW + statusSpacing + statusW;",
+        "    var minFitW = Math.round(padX * 2 + timeRowW);",
         "    var canFitTime = (w >= minFitW);",
-        "    var bottomRowH = (showTime > 0 && canFitTime) ? (timeFontSize + 12) : 0;",
+        "    var timeGap = Math.max(12, Math.round(textSize * 0.60));",
+        "    var canFitInlineTime = (showTime > 0) && canFitTime && (lastLineW + timeGap + timeRowW <= (w - (padX * 2)));",
+        "    var bottomRowH = (showTime > 0 && canFitTime && !canFitInlineTime) ? (timeFontSize + 10) : 0;",
         "    var dynamicH = Math.max(Math.max(36, Math.round(cornerRadius * 1.6)), boxHeight + (padY * 2) + bottomRowH);",
         "    var h = dynamicH;",
         "    var timeMargin = Math.max(8, Math.round(padY * 0.65));",
         "    var bubbleRight = isSent ? (effMaxW / 2) : (-(effMaxW / 2) + w);",
-        "    var statusSpacing = statusW > 0 ? 6 : 0;",
-        "    var posX = hasStatus ? (bubbleRight - padX - statusW - statusSpacing) : (bubbleRight - timeMargin);",
-        "    var posY = (h / 2) - timeMargin;",
+        "    var timeRowRightX = canFitInlineTime ? (bubbleRight - padX) : (hasStatus ? (bubbleRight - padX) : (bubbleRight - timeMargin));",
+        "    var posX = hasStatus ? (timeRowRightX - statusW - statusSpacing) : timeRowRightX;",
+        "    var posY = canFitInlineTime ? (-(h / 2) + padY + capHeight + (lineCount - 1) * lineH) : ((h / 2) - timeMargin);",
         "    return [posX, posY, (value.length > 2 ? value[2] : -0.5)];",
         "})();"
     ].join("\n");
@@ -1923,6 +1988,7 @@
         "",
         "    var lineCount = 1;",
         "    var autoTextW = 0;",
+        "    var lastLineW = 0;",
         "    try {",
         "        var txtL = thisComp.layer('Message_Text');",
         "        var st = txtL.text ? txtL.text.sourceText : (txtL.sourceText || null);",
@@ -1934,6 +2000,9 @@
         "            for (var li = 0; li < lns.length; li++) {",
         "                var lw = lns[li].length * textSize * 0.52;",
         "                if (lw > autoTextW) autoTextW = lw;",
+        "            }",
+        "            if (lns.length > 0) {",
+        "                lastLineW = lns[lns.length - 1].length * textSize * 0.52;",
         "            }",
         "        }",
         "    } catch(eLC) {}",
@@ -1952,7 +2021,9 @@
         "    var leadingFactor = 1.0;",
         "    try { leadingFactor = Math.max(0.5, Math.min(3.0, (getVal('Leading Percent', 100) || 100) / 100.0)); } catch(eLF) {}",
         "    var lineH = Math.max(Math.round(textSize * 1.15), Math.round(textSize * 1.35 * leadingFactor));",
-        "    var boxHeight = (lineCount <= 1) ? Math.round(textSize * 1.10) : Math.round((lineCount - 1) * lineH + (textSize * 1.10));",
+        "    var capHeight = Math.round(textSize * 0.70);",
+        "    var descenderDepth = Math.round(textSize * 0.22);",
+        "    var boxHeight = (lineCount <= 1) ? (capHeight + descenderDepth) : Math.round((lineCount - 1) * lineH + capHeight + descenderDepth);",
         "    var showTime = getVal('Show Timestamp', 1);",
         "    var timeFontSize = Math.max(10, Math.round(textSize * 0.58));",
         "    var timeW = 50;",
@@ -1968,15 +2039,20 @@
         "    var isRCS = (thisLayer.name.indexOf('RCS') !== -1);",
         "    var statusStyle = Math.round(getVal('Status Icon Style', 0));",
         "    var statusW = (statusStyle === 0) ? Math.round(timeFontSize * 1.55) : Math.round(timeFontSize * 1.35);",
-        "    var minFitW = Math.round(padX * 2 + timeW + statusW + 6);",
+        "    var timeRowW = timeW + 6 + statusW;",
+        "    var minFitW = Math.round(padX * 2 + timeRowW);",
         "    var canFitTime = (w >= minFitW);",
-        "    var bottomRowH = (showTime > 0 && canFitTime) ? (timeFontSize + 12) : 0;",
+        "    var timeGap = Math.max(12, Math.round(textSize * 0.60));",
+        "    var canFitInlineTime = (showTime > 0) && canFitTime && (lastLineW + timeGap + timeRowW <= (w - (padX * 2)));",
+        "    var bottomRowH = (showTime > 0 && canFitTime && !canFitInlineTime) ? (timeFontSize + 10) : 0;",
         "    var dynamicH = Math.max(Math.max(36, Math.round(cornerRadius * 1.6)), boxHeight + (padY * 2) + bottomRowH);",
         "    var h = dynamicH;",
         "    var timeMargin = Math.max(8, Math.round(padY * 0.65));",
         "    var bubbleRight = isSent ? (effMaxW / 2) : (-(effMaxW / 2) + w);",
-        "    var posX = isRCS ? (bubbleRight - padX - (statusW / 2)) : (bubbleRight - padX);",
-        "    var posY = isRCS ? ((h / 2) - timeMargin - Math.round(timeFontSize * 0.32)) : ((h / 2) - timeMargin);",
+        "    var timeRowRightX = bubbleRight - padX;",
+        "    var posX = isRCS ? (timeRowRightX - (statusW / 2)) : timeRowRightX;",
+        "    var baseTimeY = canFitInlineTime ? (-(h / 2) + padY + capHeight + (lineCount - 1) * lineH) : ((h / 2) - timeMargin);",
+        "    var posY = isRCS ? (baseTimeY - Math.round(timeFontSize * 0.32)) : baseTimeY;",
         "    return [posX, posY, (value.length > 2 ? value[2] : -0.5)];",
         "})();"
     ].join("\n");
@@ -2017,6 +2093,7 @@
         "",
         "    var lineCount = 1;",
         "    var autoTextW = 0;",
+        "    var lastLineW = 0;",
         "    try {",
         "        var st = thisLayer.text ? thisLayer.text.sourceText : (thisLayer.sourceText || null);",
         "        var stVal = (st && typeof st.value !== 'undefined') ? st.value : (st !== undefined ? st : '');",
@@ -2027,6 +2104,9 @@
         "            for (var li = 0; li < lns.length; li++) {",
         "                var lw = lns[li].length * textSize * 0.52;",
         "                if (lw > autoTextW) autoTextW = lw;",
+        "            }",
+        "            if (lns.length > 0) {",
+        "                lastLineW = lns[lns.length - 1].length * textSize * 0.52;",
         "            }",
         "        }",
         "    } catch(eLC) {}",
@@ -2045,7 +2125,9 @@
         "    var leadingFactor = 1.0;",
         "    try { leadingFactor = Math.max(0.5, Math.min(3.0, (getVal('Leading Percent', 100) || 100) / 100.0)); } catch(eLF) {}",
         "    var lineH = Math.max(Math.round(textSize * 1.15), Math.round(textSize * 1.35 * leadingFactor));",
-        "    var boxHeight = (lineCount <= 1) ? Math.round(textSize * 1.10) : Math.round((lineCount - 1) * lineH + (textSize * 1.10));",
+        "    var capHeight = Math.round(textSize * 0.70);",
+        "    var descenderDepth = Math.round(textSize * 0.22);",
+        "    var boxHeight = (lineCount <= 1) ? (capHeight + descenderDepth) : Math.round((lineCount - 1) * lineH + capHeight + descenderDepth);",
         "    var timeFontSize = Math.max(10, Math.round(textSize * 0.58));",
         "    var timeW = 50;",
         "    try {",
@@ -2059,14 +2141,19 @@
         "    var isSent = 1;",
         "    try { if (thisComp.layer('Bubble_Received')) isSent = 0; } catch(eS) {}",
         "    var hasStatus = (isSent && statusMode !== 4);",
-        "    var statusW = hasStatus ? Math.round(timeFontSize * 1.55) : 0;",
-        "    var minFitW = Math.round(padX * 2 + timeW + (hasStatus ? statusW + 6 : 0));",
+        "    var statusStyle = Math.round(getVal('Status Icon Style', 0));",
+        "    var statusW = hasStatus ? ((statusStyle === 0) ? Math.round(timeFontSize * 1.55) : Math.round(timeFontSize * 1.35)) : 0;",
+        "    var statusSpacing = (hasStatus && statusW > 0) ? 6 : 0;",
+        "    var timeRowW = timeW + statusSpacing + statusW;",
+        "    var minFitW = Math.round(padX * 2 + timeRowW);",
         "    var showTime = getVal('Show Timestamp', 1);",
         "    var canFitTime = (w >= minFitW);",
-        "    var bottomRowH = (showTime > 0 && canFitTime) ? (timeFontSize + 12) : 0;",
+        "    var timeGap = Math.max(12, Math.round(textSize * 0.60));",
+        "    var canFitInlineTime = (showTime > 0) && canFitTime && (lastLineW + timeGap + timeRowW <= (w - (padX * 2)));",
+        "    var bottomRowH = (showTime > 0 && canFitTime && !canFitInlineTime) ? (timeFontSize + 10) : 0;",
         "    var dynamicH = Math.max(Math.max(36, Math.round(cornerRadius * 1.6)), boxHeight + (padY * 2) + bottomRowH);",
         "    var h = dynamicH;",
-        "    var capHeight = Math.round(textSize * 0.72);",
+        "    var capHeight = Math.round(textSize * 0.70);",
         "    var bubbleLeft = isSent ? ((effMaxW / 2) - w) : -(effMaxW / 2);",
         "    var baseX = (w > 0) ? (bubbleLeft + padX) : value[0];",
         "    var baseY = (h > 0) ? (-(h / 2) + padY + capHeight) : value[1];",
@@ -4164,6 +4251,8 @@
         var wrappedString = "";
         var singleLine = false;
         var canFitInlineTime = false;
+        var timeGap = Math.max(12, Math.round(textSize * 0.60));
+        var canFitTime = false;
 
         if (reqBubbleW > 0) {
             bubbleW = Math.min(reqBubbleW, effMaxW);
@@ -4173,7 +4262,10 @@
             maxLineW = getLinesPixelBounds(lines, textSize);
             wrappedString = lines.join("\n");
             singleLine = (lines.length === 1);
-            canFitInlineTime = singleLine && isTimeEnabled && (maxLineW + timeRowW + (padX * 2) + 16 <= bubbleW);
+            var lastLine = (lines.length > 0) ? lines[lines.length - 1] : "";
+            var lastLineW = measureTypographyWidth(lastLine, textSize);
+            canFitTime = (bubbleW >= minFitW);
+            canFitInlineTime = isTimeEnabled && canFitTime && (lastLineW + timeGap + timeRowW <= bubbleW - (padX * 2));
         } else {
             textBoxW = Math.max(minTextW, effMaxW - (padX * 2));
             lines = wrapTextToLines(msgText, textBoxW, textSize, wrapMode);
@@ -4188,23 +4280,45 @@
             }
             wrappedString = lines.join("\n");
             singleLine = (lines.length === 1);
-            canFitInlineTime = singleLine && isTimeEnabled && (maxLineW + timeRowW + (padX * 2) + 16 <= effMaxW);
-            if (canFitInlineTime) {
-                bubbleW = maxLineW + timeRowW + (padX * 2) + 16;
-            } else if (singleLine && !isTimeEnabled) {
-                bubbleW = maxLineW + (padX * 2);
+            var lastLine = (lines.length > 0) ? lines[lines.length - 1] : "";
+            var lastLineW = measureTypographyWidth(lastLine, textSize);
+
+            if (isTimeEnabled) {
+                if (singleLine) {
+                    if (maxLineW + timeGap + timeRowW + (padX * 2) <= effMaxW) {
+                        bubbleW = maxLineW + timeGap + timeRowW + (padX * 2);
+                        canFitInlineTime = true;
+                    } else {
+                        bubbleW = Math.max(maxLineW, timeRowW) + (padX * 2);
+                        canFitInlineTime = false;
+                    }
+                } else {
+                    if (lastLineW + timeGap + timeRowW <= maxLineW) {
+                        bubbleW = maxLineW + (padX * 2);
+                        canFitInlineTime = true;
+                    } else if (lastLineW + timeGap + timeRowW + (padX * 2) <= effMaxW) {
+                        bubbleW = (lastLineW + timeGap + timeRowW) + (padX * 2);
+                        canFitInlineTime = true;
+                    } else {
+                        bubbleW = Math.max(maxLineW, timeRowW) + (padX * 2);
+                        canFitInlineTime = false;
+                    }
+                }
             } else {
-                var contentW = isTimeEnabled ? Math.max(maxLineW, timeRowW) : maxLineW;
-                bubbleW = contentW + (padX * 2);
+                bubbleW = maxLineW + (padX * 2);
+                canFitInlineTime = false;
             }
             bubbleW = Math.min(bubbleW, effMaxW);
             bubbleW = Math.max(minBubbleW, bubbleW);
+            canFitTime = (bubbleW >= minFitW);
+            if (!canFitTime) canFitInlineTime = false;
         }
 
-        var canFitTime = (bubbleW >= minFitW);
+        var capHeight = Math.round(textSize * 0.70);
+        var descenderDepth = Math.round(textSize * 0.22);
         var lineH = Math.max(Math.round(textSize * 1.15), Math.round(textSize * 1.35 * leadingFactor));
-        var boxHeight = singleLine ? Math.round(textSize * 1.10) : Math.round((lines.length - 1) * lineH + (textSize * 1.10));
-        var bottomRowH = (!canFitInlineTime && isTimeEnabled && canFitTime) ? (timeFontSize + 12) : 0;
+        var boxHeight = (lines.length <= 1) ? (capHeight + descenderDepth) : Math.round((lines.length - 1) * lineH + capHeight + descenderDepth);
+        var bottomRowH = (!canFitInlineTime && isTimeEnabled && canFitTime) ? (timeFontSize + 10) : 0;
         var bubbleH = boxHeight + (padY * 2) + bottomRowH;
         var minBubbleH = Math.max(36, Math.round(cornerRadius * 1.6));
         bubbleH = Math.max(minBubbleH, bubbleH);
@@ -4217,9 +4331,12 @@
             bubbleW: bubbleW,
             bubbleH: bubbleH,
             lineH: lineH,
+            capHeight: capHeight,
+            descenderDepth: descenderDepth,
             boxHeight: boxHeight,
             singleLine: singleLine,
             canFitInlineTime: canFitInlineTime,
+            bottomRowH: bottomRowH,
             canFitTime: canFitTime,
             minFitW: minFitW,
             minBubbleW: minBubbleW,
@@ -4492,7 +4609,7 @@
             fill.property("Color").setValue(bubbleColor);
             // 3. Message Text Layer (proper cap-height alignment prevents clipping top border)
             var textLayer = null;
-            var capHeight = Math.round(textSize * 0.72);
+            var capHeight = layout.capHeight || Math.round(textSize * 0.70);
             var effMaxW = Math.max(layout.minBubbleW, maxBubbleW);
             var bubbleLeft = isSent ? ((effMaxW / 2) - bubbleW) : -(effMaxW / 2);
             var bubbleRight = isSent ? (effMaxW / 2) : (-(effMaxW / 2) + bubbleW);
@@ -4534,20 +4651,23 @@
             // 4. Timestamp & Status Row (allocated space for sent/delivered/read status icon)
             var timeRowRightX = 0;
             var timeX = 0;
-            var timeY = (bubbleH / 2) - timeMargin;
+            var timeY = 0;
             var statusX = 0;
             var statusCenterX = 0;
             var statusCenterY = 0;
-            if (hasStatus) {
-                // With delivery status: checkmark sits at standard right padding
+            if (canFitInlineTime) {
+                timeY = -(bubbleH / 2) + padY + capHeight + (lines.length - 1) * lineH;
                 timeRowRightX = bubbleRight - padX;
+            } else {
+                timeY = (bubbleH / 2) - timeMargin;
+                timeRowRightX = hasStatus ? (bubbleRight - padX) : (bubbleRight - timeMargin);
+            }
+            if (hasStatus) {
                 statusX = timeRowRightX;
                 timeX = timeRowRightX - statusW - statusSpacing;
                 statusCenterX = timeRowRightX - (statusW / 2);
                 statusCenterY = timeY - Math.round(timeFontSize * 0.32);
             } else {
-                // No delivery status: align timestamp closer to the right with SAME margin bottom and right!
-                timeRowRightX = bubbleRight - timeMargin;
                 timeX = timeRowRightX;
             }
             var timeLayer = null;
@@ -5498,7 +5618,7 @@
                 }
                 // Update Message Text layer
                 var textLayer = getLayer(preCompItem, "Message_Text");
-                var capHeight = Math.round(textSize * 0.72);
+                var capHeight = layout.capHeight || Math.round(textSize * 0.70);
                 var effMaxW = Math.max(layout.minBubbleW, maxBubbleW);
                 var bubbleLeft = isSent ? ((effMaxW / 2) - bubbleW) : -(effMaxW / 2);
                 var bubbleRight = isSent ? (effMaxW / 2) : (-(effMaxW / 2) + bubbleW);
@@ -5526,18 +5646,23 @@
                 // Update Timestamp Text layer
                 var timeRowRightX = 0;
                 var timeX = 0;
-                var timeY = (bubbleH / 2) - timeMargin;
+                var timeY = 0;
                 var statusX = 0;
                 var statusCenterX = 0;
                 var statusCenterY = 0;
-                if (hasStatus) {
+                if (canFitInlineTime) {
+                    timeY = -(bubbleH / 2) + padY + capHeight + (lines.length - 1) * lineH;
                     timeRowRightX = bubbleRight - padX;
+                } else {
+                    timeY = (bubbleH / 2) - timeMargin;
+                    timeRowRightX = hasStatus ? (bubbleRight - padX) : (bubbleRight - timeMargin);
+                }
+                if (hasStatus) {
                     statusX = timeRowRightX;
                     timeX = timeRowRightX - statusW - statusSpacing;
                     statusCenterX = timeRowRightX - (statusW / 2);
                     statusCenterY = timeY - Math.round(timeFontSize * 0.32);
                 } else {
-                    timeRowRightX = bubbleRight - timeMargin;
                     timeX = timeRowRightX;
                 }
                 var timeLayer = getLayer(preCompItem, "Timestamp_Text");
