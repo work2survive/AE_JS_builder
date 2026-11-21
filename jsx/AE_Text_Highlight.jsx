@@ -39,7 +39,7 @@
     "use strict";
 
     var SCRIPT_TITLE   = "AE Text Highlight";
-    var SCRIPT_VERSION = "v1.1.2";
+    var SCRIPT_VERSION = "v1.1.3";
 
     // =========================================================================
     // 0. EXTENDSCRIPT ES3 SAFE POLYFILLS & STRING HELPERS
@@ -347,23 +347,62 @@
     }
 
     function getSelectedTextLayer(comp) {
-        if (!comp || !comp.selectedLayers || comp.selectedLayers.length === 0) return null;
-        for (var i = 0; i < comp.selectedLayers.length; i++) {
-            var l = comp.selectedLayers[i];
-            if (typeof TextLayer !== "undefined" && l instanceof TextLayer) return l;
-            if (l.property("ADBE Text Properties") !== null || l.property("Text") !== null) return l;
-        }
+        if (!comp) return null;
+        try {
+            if (!comp.selectedLayers || comp.selectedLayers.length === 0) return null;
+            for (var i = 0; i < comp.selectedLayers.length; i++) {
+                var l = comp.selectedLayers[i];
+                if (!l) continue;
+                if (typeof TextLayer !== "undefined" && l instanceof TextLayer) return l;
+                try {
+                    if (l.property("ADBE Text Properties") || l.property("Source Text")) return l;
+                } catch(eProp) {}
+            }
+        } catch(e) {}
         return null;
     }
 
     function findLayerByName(comp, name) {
-        if (!comp || !comp.layers) return null;
-        var total = comp.numLayers || comp.layers.length || 0;
-        for (var i = 1; i <= total; i++) {
-            var l = (typeof comp.layer === "function") ? comp.layer(i) : comp.layers[i - 1];
-            if (l && l.name === name) return l;
-        }
+        if (!comp) return null;
+        try {
+            var total = comp.numLayers;
+            if (typeof total !== "number" && comp.layers) total = comp.layers.length;
+            for (var i = 1; i <= total; i++) {
+                var l = (typeof comp.layer === "function") ? comp.layer(i) : comp.layers[i - 1];
+                if (l && l.name === name) return l;
+            }
+        } catch(e) {}
         return null;
+    }
+
+    function getTextLayerDocument(layer) {
+        if (!layer) return null;
+        try {
+            var prop = layer.property("ADBE Text Properties") || layer.property("Text");
+            var docProp = prop ? (prop.property("ADBE Text Document") || prop.property("Source Text")) : layer.property("Source Text");
+            if (docProp && docProp.value) return docProp.value;
+        } catch(e) {}
+        try {
+            if (layer.text && layer.text.sourceText && layer.text.sourceText.value) {
+                return layer.text.sourceText.value;
+            }
+        } catch(e2) {}
+        return null;
+    }
+
+    function getTextLayerString(layer) {
+        if (!layer) return "";
+        try {
+            var doc = getTextLayerDocument(layer);
+            if (doc) {
+                if (typeof doc.text === "string") return doc.text;
+                if (typeof doc === "string") return doc;
+            }
+        } catch(e) {}
+        try {
+            if (typeof layer.text === "string") return layer.text;
+        } catch(e2) {}
+        return "";
     }
 
     function addOrUpdateEffectSlider(layer, effectName, defaultVal) {
@@ -616,26 +655,38 @@
     // =========================================================================
     // 4. MAIN BUILD & RIGGING ENGINE
     // =========================================================================
-    function createHighlightGroups(shapeLayer, textLayer, terms, paddingX, thicknessY, roundness, highlightColor, highlightOpacity) {
+    function createHighlightGroups(shapeLayer, textLayer, targetTextLayerName, terms, paddingX, thicknessY, roundness, highlightColor, highlightOpacity) {
         var contents = shapeLayer.property("ADBE Root Vectors Group") || shapeLayer.property("Contents");
         if (!contents) return 0;
 
-        var textStr = "";
-        try {
-            var st = textLayer.text.sourceText;
-            textStr = (st.value && st.value.text !== undefined) ? String(st.value.text) : String(st.value || "");
-        } catch(e) {
-            textStr = String(textLayer.text || "");
-        }
-        if (!textStr) textStr = LOREM_IPSUM_RAW;
+        var textDoc = getTextLayerDocument(textLayer);
+        var textStr = getTextLayerString(textLayer) || LOREM_IPSUM_RAW;
 
         var lowerText = textStr.toLowerCase();
         var lines = textStr.replace(/\r\n/g, "\n").replace(/\r/g, "\n").split("\n");
-        var fs = textLayer.fontSize || 34;
-        var fontName = textLayer.fontFamily || "Georgia";
-        var leading = textLayer.leading || 0;
+
+        var fs = 34;
+        if (textDoc && textDoc.fontSize) fs = textDoc.fontSize;
+        else if (textLayer.fontSize) fs = textLayer.fontSize;
+
+        var fontName = "Georgia";
+        if (textDoc && textDoc.font) fontName = textDoc.font;
+        else if (textLayer.fontFamily) fontName = textLayer.fontFamily;
+
+        var leading = 0;
+        if (textDoc && textDoc.leading) leading = textDoc.leading;
+        else if (textLayer.leading) leading = textLayer.leading;
+
         var lineH = (leading > 0) ? leading : (fs * 1.35);
-        var just = textLayer.justification || "left";
+
+        var just = "left";
+        if (textDoc && textDoc.justification !== undefined) {
+            var j = textDoc.justification;
+            if (j === 2 || j === "center" || (typeof ParagraphJustification !== "undefined" && j === ParagraphJustification.CENTER_JUSTIFY)) just = "center";
+            else if (j === 1 || j === "right" || (typeof ParagraphJustification !== "undefined" && j === ParagraphJustification.RIGHT_JUSTIFY)) just = "right";
+        } else if (textLayer.justification) {
+            just = textLayer.justification;
+        }
 
         var totalCreated = 0;
 
@@ -703,15 +754,8 @@
 
                     var rawInitX = lineStartX + pW + (mW / 2);
                     var rawInitY = (targetLine * lineH) - (fs * 0.25);
-                    try {
-                        var compPt = textLayer.toComp([rawInitX, rawInitY]);
-                        var localPt = shapeLayer.fromComp(compPt);
-                        initX = localPt[0] + currentOffsetX;
-                        initY = localPt[1] + currentOffsetY;
-                    } catch(eInitCoord) {
-                        initX = rawInitX + currentOffsetX;
-                        initY = rawInitY + currentOffsetY;
-                    }
+                    initX = rawInitX + currentOffsetX;
+                    initY = rawInitY + currentOffsetY;
                 }
 
                 rect.property("ADBE Vector Rect Size").setValue([initW, initH]);
@@ -721,8 +765,8 @@
                 fill.property("ADBE Vector Fill Color").setValue(highlightColor);
                 fill.property("ADBE Vector Fill Opacity").setValue(highlightOpacity);
 
-                rect.property("ADBE Vector Rect Size").expression = generateRectSizeExpression(term, m, textLayer.name);
-                rect.property("ADBE Vector Rect Position").expression = generateRectPositionExpression(term, m, textLayer.name);
+                rect.property("ADBE Vector Rect Size").expression = generateRectSizeExpression(term, m, targetTextLayerName);
+                rect.property("ADBE Vector Rect Position").expression = generateRectPositionExpression(term, m, targetTextLayerName);
                 rect.property("ADBE Vector Rect Roundness").expression = 'try { Math.max(0, thisLayer.effect("Roundness")(1).value); } catch(e) { value; }';
 
                 fill.property("ADBE Vector Fill Color").expression = 'try { thisLayer.effect("Highlight Color")(1); } catch(e) { value; }';
@@ -1260,10 +1304,14 @@
         if (!comp || !(comp instanceof CompItem)) {
             comp = app.project.items.addComp("AE Text Highlight Comp", 1920, 1080, 1, 10, 30);
         }
+        if (comp && typeof comp.openInViewer === "function") {
+            try { comp.openInViewer(); } catch(eOpen) {}
+        }
 
         if (app.beginUndoGroup) app.beginUndoGroup("AE Text Highlight Build");
         try {
             var textLayer = getSelectedTextLayer(comp);
+            var textLayerName = "";
 
             // Scenario A: No text layer selected -> auto-generate randomized ~100-word dummy text layer
             if (!textLayer) {
@@ -1275,15 +1323,16 @@
                 var activeFont = isDemo ? "Georgia" : dummyFont;
                 var activeAlign = isDemo ? "left" : dummyAlignment;
 
+                textLayerName = isDemo ? "Slow Living Quote" : ("Dummy Text - " + activeFont + " (" + activeAlign + ")");
                 textLayer = comp.layers.addText(sampleText);
-                textLayer.name = isDemo ? "Slow Living Quote" : ("Dummy Text - " + activeFont + " (" + activeAlign + ")");
+                textLayer.name = textLayerName;
 
                 // Setup font styling
                 try {
                     var textProp = textLayer.property("ADBE Text Properties") || textLayer.property("Text");
-                    var textDoc = textProp ? (textProp.property("ADBE Text Document") || textProp.property("Source Text")) : null;
-                    if (textDoc) {
-                        var doc = textDoc.value;
+                    var textDocProp = textProp ? (textProp.property("ADBE Text Document") || textProp.property("Source Text")) : textLayer.property("Source Text");
+                    if (textDocProp) {
+                        var doc = textDocProp.value;
                         if (typeof TextDocument !== "undefined" && doc instanceof TextDocument) {
                             doc.fontSize = 34;
                             doc.font = activeFont;
@@ -1291,7 +1340,7 @@
                             doc.applyFill = true;
                             doc.applyStroke = false;
                             doc.justification = (activeAlign === "center") ? 2 : ((activeAlign === "right") ? 1 : 0);
-                            textDoc.setValue(doc);
+                            textDocProp.setValue(doc);
                         } else {
                             textLayer.fontSize = 34;
                             textLayer.fontFamily = activeFont;
@@ -1314,9 +1363,73 @@
                     posX = Math.max(120, (comp.width - dummyBoxWidth) / 2);
                 }
                 textLayer.transform.position.setValue([posX, 200, 0]);
+            } else {
+                textLayerName = textLayer.name;
             }
 
-            // Scenario B: Background Plate
+            // Always ensure textLayer reference is fresh
+            textLayer = findLayerByName(comp, textLayerName);
+            if (!textLayer) {
+                throw new Error("Unable to locate Text Layer: " + textLayerName);
+            }
+
+            // Scenario C: Create Highlight Shape Layer
+            var shapeLayerName = textLayerName + " - Highlights";
+            var existingShape = findLayerByName(comp, shapeLayerName);
+            if (existingShape) {
+                try { existingShape.remove(); } catch(eRem) {}
+                textLayer = findLayerByName(comp, textLayerName);
+            }
+
+            var shapeLayer = comp.layers.addShape();
+            shapeLayer.name = shapeLayerName;
+
+            // Add Master Expression Controls ON THE SHAPE LAYER
+            addOrUpdateEffectSlider(shapeLayer, "Thickness Y", currentThickness);
+            addOrUpdateEffectSlider(shapeLayer, "Padding X", currentPaddingX);
+            addOrUpdateEffectSlider(shapeLayer, "Roundness", currentRoundness);
+            addOrUpdateEffectSlider(shapeLayer, "Offset X", currentOffsetX);
+            addOrUpdateEffectSlider(shapeLayer, "Offset Y", currentOffsetY);
+            addOrUpdateEffectColor(shapeLayer, "Highlight Color", currentHighlightColor);
+            addOrUpdateEffectSlider(shapeLayer, "Highlight Opacity", currentOpacity);
+
+            // Parse highlight targets
+            var terms = parseHighlightTerms(txtHighlights.text);
+            if (terms.length === 0) {
+                var rawStr = getTextLayerString(textLayer) || LOREM_IPSUM_RAW;
+                var autoTerms = extractRandomWordsAndSentence(rawStr);
+                terms = autoTerms.words.concat([autoTerms.sentence]);
+                txtHighlights.text = terms.join("\n");
+            }
+
+            // Build vector groups & zero-drift procedural expressions
+            createHighlightGroups(
+                shapeLayer,
+                textLayer,
+                textLayerName,
+                terms,
+                currentPaddingX,
+                currentThickness,
+                currentRoundness,
+                currentHighlightColor,
+                currentOpacity
+            );
+
+            // Parent to text layer
+            shapeLayer.parent = textLayer;
+            shapeLayer.transform.position.setValue([0, 0, 0]);
+            shapeLayer.transform.anchorPoint.setValue([0, 0, 0]);
+            shapeLayer.transform.scale.setValue([100, 100, 100]);
+            shapeLayer.transform.rotation.setValue(0);
+
+            // Stacking: Place shape layer directly behind text layer
+            try {
+                if (typeof shapeLayer.moveAfter === "function") {
+                    shapeLayer.moveAfter(textLayer);
+                }
+            } catch(eMove) {}
+
+            // Scenario B: Background Plate (placed at the absolute bottom of comp)
             if (chkCreateBg.value) {
                 var bgLayer = findLayerByName(comp, "Text Background");
                 if (!bgLayer) {
@@ -1342,75 +1455,26 @@
                         }
                     } catch(eBg) {}
                 }
-                if (bgLayer && typeof bgLayer.moveToEnd === "function") {
-                    bgLayer.moveToEnd();
-                }
-            }
-
-            // Scenario C: Create Highlight Shape Layer
-            var shapeLayerName = textLayer.name + " - Highlights";
-            var shapeLayer = findLayerByName(comp, shapeLayerName);
-            if (!shapeLayer) {
-                shapeLayer = comp.layers.addShape();
-                shapeLayer.name = shapeLayerName;
-            } else {
-                var contents = shapeLayer.property("Contents") || shapeLayer.property("ADBE Root Vectors Group");
-                if (contents) {
-                    while (contents.numProperties > 0) {
-                        contents.property(1).remove();
+                try {
+                    if (bgLayer && typeof bgLayer.moveToEnd === "function") {
+                        bgLayer.moveToEnd();
                     }
-                }
+                } catch(eBgMove) {}
             }
 
-            // Stacking: Place shape layer directly behind text layer
-            try {
-                if (typeof shapeLayer.moveAfter === "function") {
-                    shapeLayer.moveAfter(textLayer);
-                }
-            } catch(eMove) {}
-
-            // Parent to text layer
-            shapeLayer.parent = textLayer;
-            shapeLayer.transform.position.setValue([0, 0, 0]);
-            shapeLayer.transform.anchorPoint.setValue([0, 0, 0]);
-            shapeLayer.transform.scale.setValue([100, 100, 100]);
-            shapeLayer.transform.rotation.setValue(0);
-
-            // Add Master Expression Controls
-            addOrUpdateEffectSlider(shapeLayer, "Thickness Y", currentThickness);
-            addOrUpdateEffectSlider(shapeLayer, "Padding X", currentPaddingX);
-            addOrUpdateEffectSlider(shapeLayer, "Roundness", currentRoundness);
-            addOrUpdateEffectSlider(shapeLayer, "Offset X", currentOffsetX);
-            addOrUpdateEffectSlider(shapeLayer, "Offset Y", currentOffsetY);
-            addOrUpdateEffectColor(shapeLayer, "Highlight Color", currentHighlightColor);
-            addOrUpdateEffectSlider(shapeLayer, "Highlight Opacity", currentOpacity);
-
-            // Parse highlight targets
-            var terms = parseHighlightTerms(txtHighlights.text);
-            if (terms.length === 0) {
-                var autoTerms = extractRandomWordsAndSentence(textLayer.text.sourceText.value || LOREM_IPSUM_RAW);
-                terms = autoTerms.words.concat([autoTerms.sentence]);
-                txtHighlights.text = terms.join("\n");
+            // Fresh UI selection & status refresh
+            var finalTxt = findLayerByName(comp, textLayerName);
+            if (finalTxt) {
+                try { finalTxt.selected = true; } catch(eSel1) {}
             }
-
-            // Build vector groups & zero-drift procedural expressions
-            createHighlightGroups(
-                shapeLayer,
-                textLayer,
-                terms,
-                currentPaddingX,
-                currentThickness,
-                currentRoundness,
-                currentHighlightColor,
-                currentOpacity
-            );
-
-            textLayer.selected = true;
-            shapeLayer.selected = false;
+            var finalShape = findLayerByName(comp, shapeLayerName);
+            if (finalShape) {
+                try { finalShape.selected = false; } catch(eSel2) {}
+            }
             updateSelectionStatus();
 
         } catch(err) {
-            alert("Error building highlights: " + err.toString());
+            alert("Error building highlights at line " + (err.line || "unknown") + ":\n" + (err.message || err.toString()));
         } finally {
             if (app.endUndoGroup) app.endUndoGroup();
         }
@@ -1424,7 +1488,7 @@
         if (!textLayer) {
             for (var i = 1; i <= comp.numLayers; i++) {
                 var l = (typeof comp.layer === "function") ? comp.layer(i) : comp.layers[i - 1];
-                if (l && l.name && l.name.indexOf(" - Highlights") !== -1) {
+                if (l && l.name && l.name.indexOf(" - Highlights") !== -1 && l.parent) {
                     textLayer = l.parent;
                     break;
                 }
