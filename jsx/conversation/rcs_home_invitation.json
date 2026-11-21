@@ -47,7 +47,8 @@
       "cornerRadius": 36,
       "autoScroll": true,
       "clipOverflow": true,
-      "scrollDurationFrames": 8
+      "scrollDurationFrames": 8,
+      "useScreenAsMask": true
     },
     "animation": {
       "animateEntrance": true,

@@ -49,7 +49,7 @@
     "use strict";
 
     var SCRIPT_TITLE = "AE / Emulator Tester";
-    var SCRIPT_VERSION = "v1.2.2";
+    var SCRIPT_VERSION = "v1.3.0";
 
     // -------------------------------------------------------------------------
     // 1. ScriptUI Window / Panel Initialization
@@ -102,6 +102,9 @@
 
     var chkGradients = pnlModules.add("checkbox", undefined, "Fill Styles: Solid Colors & Linear/Radial Gradients");
     chkGradients.value = true;
+
+    var chkTextProps = pnlModules.add("checkbox", undefined, "Text Properties & Box Metrics (Words, Lines & Effects)");
+    chkTextProps.value = true;
 
     var chkWiggle = pnlModules.add("checkbox", undefined, "Enable Subtle 3D Animation / Wiggle");
     chkWiggle.value = false;
@@ -240,6 +243,45 @@
         { multiline: true }
     );
     txtMulti.preferredSize = [-1, 70];
+
+    // Word Count & Line Count Sliders & Text Box Metrics Panel
+    var pnlAmounts = tabTextInputs.add("panel", undefined, "Text Metrics & Word/Line Count Sliders");
+    pnlAmounts.orientation = "column";
+    pnlAmounts.alignChildren = ["fill", "top"];
+    pnlAmounts.spacing = 6;
+
+    // Word Count Slider + Checkbox
+    var grpWords = pnlAmounts.add("group");
+    grpWords.orientation = "row";
+    grpWords.alignment = ["fill", "top"];
+    var chkWords = grpWords.add("checkbox", undefined, "Amount of Words:");
+    chkWords.value = true;
+    chkWords.preferredSize = [130, -1];
+    var sldWords = grpWords.add("slider", undefined, 14, 1, 50);
+    sldWords.minvalue = 1;
+    sldWords.maxvalue = 50;
+    sldWords.value = 14;
+    sldWords.alignment = ["fill", "center"];
+    var txtWords = grpWords.add("edittext", undefined, "14");
+    txtWords.characters = 3;
+
+    // Line Count Slider + Checkbox
+    var grpLines = pnlAmounts.add("group");
+    grpLines.orientation = "row";
+    grpLines.alignment = ["fill", "top"];
+    var chkLines = grpLines.add("checkbox", undefined, "Amount of Text Lines:");
+    chkLines.value = true;
+    chkLines.preferredSize = [130, -1];
+    var sldLines = grpLines.add("slider", undefined, 3, 1, 20);
+    sldLines.minvalue = 1;
+    sldLines.maxvalue = 20;
+    sldLines.value = 3;
+    sldLines.alignment = ["fill", "center"];
+    var txtLines = grpLines.add("edittext", undefined, "3");
+    txtLines.characters = 3;
+
+    hookSliderText(sldWords, txtWords, 1, 50);
+    hookSliderText(sldLines, txtLines, 1, 20);
 
     // =========================================================================
     // TAB 3: 🔘 SELECTORS, BUTTONS & LISTS SHOWCASE
@@ -600,6 +642,7 @@
             var doShapes = chkShapes.value;
             var doStrokes = chkStrokes.value;
             var doGradients = chkGradients.value;
+            var doTextProps = chkTextProps.value;
             var doWiggle = chkWiggle.value;
 
             var baseFontSize = parseInt(txtFontSize.text, 10) || 15;
@@ -1211,6 +1254,134 @@
                         } catch(eTap) {}
                     }
                 }
+            }
+
+            // =================================================================
+            // MODULE 5: TEXT BOX METRICS, WORDS, LINES & EFFECTS HARNESS
+            // =================================================================
+            if (doTextProps) {
+                var tpColX = Math.round(110 * sF);
+                var tpY = Math.round(825 * sF);
+
+                // Section Label
+                var lblTp = comp.layers.addText("MODULE 5: TEXT BOX METRICS, WORDS, LINES & TIMELINE EFFECTS");
+                lblTp.name = "TEST_12_Text_Props_Section_Title";
+                lblTp.transform.position.setValue([tpColX, tpY, 0]);
+                setupTextDocument(lblTp, "MODULE 5: TEXT BOX METRICS, WORDS, LINES & EFFECTS (IN-MEMORY)", "Segoe UI", Math.round(13 * sF), [0.38, 0.70, 1.0], "left");
+
+                // Sample multi-line paragraph text for metrics and effect generation
+                var sampleText = "Antigravity Dynamic Text Engine\nMeasuring words, line metrics, and bounding dimensions\nStoring live arrays directly in ExtendScript global memory";
+                var tpLayer = comp.layers.addText(sampleText);
+                tpLayer.name = "TEST_13_Paragraph_Box_Text";
+                tpLayer.transform.position.setValue([tpColX, tpY + Math.round(28 * sF), 0]);
+                setupTextDocument(tpLayer, sampleText, "Segoe UI", Math.round(13 * sF), [1.0, 1.0, 1.0], "left");
+
+                // Word and Line detection
+                var words = sampleText.match(/\S+/g) || [];
+                var rawLines = sampleText.split(/\r\n|\r|\n/);
+                var wordWidths = [];
+                var lineWidths = [];
+
+                // Accurate width measurements using offscreen text probe
+                try {
+                    var probeLayer = comp.layers.addText("");
+                    probeLayer.enabled = false;
+                    for (var wIdx = 0; wIdx < words.length; wIdx++) {
+                        setupTextDocument(probeLayer, words[wIdx], "Segoe UI", Math.round(13 * sF), [1, 1, 1], "left");
+                        var wRect = probeLayer.sourceRectAtTime(0, false);
+                        wordWidths.push(Math.round(wRect.width * 10) / 10);
+                    }
+                    for (var lIdx = 0; lIdx < rawLines.length; lIdx++) {
+                        setupTextDocument(probeLayer, rawLines[lIdx], "Segoe UI", Math.round(13 * sF), [1, 1, 1], "left");
+                        var lRect = probeLayer.sourceRectAtTime(0, false);
+                        lineWidths.push(Math.round(lRect.width * 10) / 10);
+                    }
+                    probeLayer.remove();
+                } catch(eProbe) {
+                    for (var ew = 0; ew < words.length; ew++) { wordWidths.push(words[ew].length * 8); }
+                    for (var el = 0; el < rawLines.length; el++) { lineWidths.push(rawLines[el].length * 8); }
+                }
+
+                // Store in memory
+                $.global.AE_TEXT_BOX_MEMORY = {
+                    lastUpdated: new Date().toString(),
+                    layerName: tpLayer.name,
+                    fullText: sampleText,
+                    totalWords: words.length,
+                    totalLines: rawLines.length,
+                    words: words,
+                    wordWidths: wordWidths,
+                    lineWidths: lineWidths
+                };
+
+                // Sync UI sliders in Tab 2
+                try {
+                    if (typeof sldWords !== "undefined" && typeof txtWords !== "undefined") {
+                        sldWords.value = words.length;
+                        txtWords.text = String(words.length);
+                    }
+                    if (typeof sldLines !== "undefined" && typeof txtLines !== "undefined") {
+                        sldLines.value = rawLines.length;
+                        txtLines.text = String(rawLines.length);
+                    }
+                } catch(eSync) {}
+
+                // Add Timeline Slider & Checkbox Effects to tpLayer
+                var fxGroup = tpLayer.property("ADBE Effect Parade") || tpLayer.property("Effects");
+                if (fxGroup) {
+                    // Amount of Words Slider
+                    var fxWords = fxGroup.addProperty("ADBE Slider Control");
+                    fxWords.name = "Amount of Words";
+                    fxWords.property("Slider").setValue(words.length);
+
+                    // Amount of Text Lines Slider
+                    var fxLines = fxGroup.addProperty("ADBE Slider Control");
+                    fxLines.name = "Amount of Text Lines";
+                    fxLines.property("Slider").setValue(rawLines.length);
+
+                    // Box Width (sourceRect) Slider
+                    var fxW = fxGroup.addProperty("ADBE Slider Control");
+                    fxW.name = "Box Width (sourceRect)";
+                    try {
+                        fxW.property("Slider").expression = "Math.round(sourceRectAtTime(time, false).width);";
+                    } catch(eExpW) {
+                        fxW.property("Slider").setValue(Math.round(tpLayer.sourceRectAtTime(0, false).width));
+                    }
+
+                    // Box Height (sourceRect) Slider
+                    var fxH = fxGroup.addProperty("ADBE Slider Control");
+                    fxH.name = "Box Height (sourceRect)";
+                    try {
+                        fxH.property("Slider").expression = "Math.round(sourceRectAtTime(time, false).height);";
+                    } catch(eExpH) {
+                        fxH.property("Slider").setValue(Math.round(tpLayer.sourceRectAtTime(0, false).height));
+                    }
+
+                    // Word & Line Memory Cache Active Checkbox
+                    var fxChk = fxGroup.addProperty("ADBE Checkbox Control");
+                    fxChk.name = "Word & Line Memory Cache Active";
+                    fxChk.property("Checkbox").setValue(1);
+                }
+
+                // Dynamic background card behind the text
+                try {
+                    var cardLayer = comp.layers.addShape();
+                    cardLayer.name = "TEST_14_Text_Dynamic_Card";
+                    cardLayer.moveAfter(tpLayer);
+                    var cardContents = cardLayer.property("Contents");
+                    var cardGroup = cardContents.addProperty("ADBE Vector Group");
+                    cardGroup.name = "Card_Base";
+                    var cardRect = cardGroup.property("Contents").addProperty("ADBE Vector Shape - Rect");
+                    cardRect.property("Size").setValue([Math.round(620 * sF), Math.round(85 * sF)]);
+                    cardRect.property("Roundness").setValue(Math.round(8 * sF));
+                    var cardFill = cardGroup.property("Contents").addProperty("ADBE Vector Graphic - Fill");
+                    cardFill.property("Color").setValue([0.08, 0.12, 0.18]);
+                    cardFill.property("Opacity").setValue(85);
+                    var cardStroke = cardGroup.property("Contents").addProperty("ADBE Vector Graphic - Stroke");
+                    cardStroke.property("Color").setValue([0.22, 0.48, 0.85]);
+                    cardStroke.property("Stroke Width").setValue(1.5);
+                    cardLayer.transform.position.setValue([tpColX + Math.round(300 * sF), tpY + Math.round(52 * sF), 0]);
+                } catch(eCard) {}
             }
 
             progBar.value = 100;

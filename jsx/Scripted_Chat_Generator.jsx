@@ -1205,6 +1205,14 @@
         if (hdr.showTail === undefined && appCfg.showTail !== undefined) hdr.showTail = appCfg.showTail;
         if (hdr.groupConsecutive === undefined && appCfg.smartGroupTails !== undefined) hdr.groupConsecutive = appCfg.smartGroupTails;
 
+        if (hdr.useScreenAsMask === undefined) {
+            if (scr.useScreenAsMask !== undefined) hdr.useScreenAsMask = scr.useScreenAsMask;
+            else if (hdr.clipToScreen !== undefined) hdr.useScreenAsMask = hdr.clipToScreen;
+            else if (scr.clipOverflow !== undefined) hdr.useScreenAsMask = scr.clipOverflow;
+            else hdr.useScreenAsMask = true;
+        }
+        if (hdr.clipToScreen === undefined) hdr.clipToScreen = hdr.useScreenAsMask;
+
         if (hdr.screenVisible === undefined && scr.visible !== undefined) hdr.screenVisible = scr.visible;
         if (hdr.screenOpacity === undefined && scr.opacity !== undefined) hdr.screenOpacity = scr.opacity;
         if (hdr.screenWidth === undefined && scr.width !== undefined) hdr.screenWidth = scr.width;
@@ -1377,6 +1385,10 @@
         convEntry.data.header = updatedHeader;
         if (convEntry.data.header.typography) {
             convEntry.data.header.typography.textWrap = updatedHeader.textWrap;
+        }
+        if (convEntry.data.header.screen) {
+            convEntry.data.header.screen.useScreenAsMask = updatedHeader.useScreenAsMask;
+            convEntry.data.header.screen.clipOverflow = updatedHeader.useScreenAsMask;
         }
         DEFAULT_CONVERSATIONS[convEntry.fileName] = cloneObject(convEntry.data);
         try {
@@ -1751,33 +1763,40 @@
         ].join("\n");
     }
 
-    var BUBBLE_PRECOMP_OPACITY_EXPR = [
-        "try {",
-        "    var ctrl = thisComp.layer('Chat_Master_Controller');",
-        "    var clip = ctrl.effect('Clip Bubbles Outside Screen')('Checkbox') == 1;",
-        "    if (!clip) {",
-        "        100;",
-        "    } else {",
-        "        var screenH = ctrl.effect('Screen Height')('Slider');",
-        "        var screenPad = ctrl.effect('Screen Inner Padding')('Slider');",
-        "        var scrollPos = thisComp.layer('Chat_Scroll_Controller').transform.position;",
-        "        var relY = transform.position[1] + scrollPos[1];",
-        "        var halfScreen = screenH / 2 - screenPad * 0.35;",
-        "        var fadeZone = Math.max(24, screenPad * 0.9);",
-        "        var distTop = (relY + halfScreen);",
-        "        var distBot = (halfScreen - relY);",
-        "        if (distTop < -fadeZone || distBot < -fadeZone) {",
-        "            0;",
-        "        } else if (distTop < fadeZone) {",
-        "            Math.max(0, Math.min(100, ((distTop + fadeZone) / (2 * fadeZone)) * 100));",
-        "        } else if (distBot < fadeZone) {",
-        "            Math.max(0, Math.min(100, ((distBot + fadeZone) / (2 * fadeZone)) * 100));",
-        "        } else {",
-        "            100;",
-        "        }",
-        "    }",
-        "} catch(e) { 100; }"
-    ].join("\n");
+    function buildBubbleOpacityExpr(bubbleH, bubbleW) {
+        var bH = Math.round(bubbleH || 100);
+        return [
+            "try {",
+            "    var ctrl = thisComp.layer('Chat_Master_Controller');",
+            "    var useMask = true;",
+            "    try { useMask = ctrl.effect('Use Screen as Mask')('Checkbox') == 1; } catch(e) {",
+            "        try { useMask = ctrl.effect('Clip Bubbles Outside Screen')('Checkbox') == 1; } catch(e2) { useMask = true; }",
+            "    }",
+            "    if (!useMask) {",
+            "        100;",
+            "    } else {",
+            "        var screenH = ctrl.effect('Screen Height')('Slider');",
+            "        var scrollPos = thisComp.layer('Chat_Scroll_Controller').transform.position;",
+            "        var relY = transform.position[1] + scrollPos[1];",
+            "        var bH = " + bH + ";",
+            "        var topEdge = relY - bH / 2;",
+            "        var botEdge = relY + bH / 2;",
+            "        var halfH = screenH / 2;",
+            "        if (topEdge >= halfH || botEdge <= -halfH) {",
+            "            0;",
+            "        } else if (topEdge < -halfH) {",
+            "            var vis = botEdge - (-halfH);",
+            "            Math.max(0, Math.min(100, (vis / Math.max(1, bH)) * 100));",
+            "        } else if (botEdge > halfH) {",
+            "            var vis = halfH - topEdge;",
+            "            Math.max(0, Math.min(100, (vis / Math.max(1, bH)) * 100));",
+            "        } else {",
+            "            100;",
+            "        }",
+            "    }",
+            "} catch(e) { 100; }"
+        ].join("\n");
+    }
 
     var PATH_EXPR = [
         "try {",
@@ -2619,6 +2638,10 @@
         var chkScreenVisible = pnlScreen.add("checkbox", undefined, "Show Chat Screen Background");
         chkScreenVisible.value = true;
 
+        var chkScreenAsMask = pnlScreen.add("checkbox", undefined, "Use Screen as Mask");
+        chkScreenAsMask.value = true;
+        chkScreenAsMask.helpTip = "Use the screen boundaries and corner radius as a mask. When enabled, no message bubbles are visible outside the screen, regardless of screen visibility or opacity.";
+
         // Screen Opacity
         var grpScrOp = pnlScreen.add("group");
         grpScrOp.orientation = "row";
@@ -2696,6 +2719,13 @@
 
         var chkClipToScreen = pnlScroll.add("checkbox", undefined, "Fade / Clip Bubbles Exiting Top & Bottom of Screen");
         chkClipToScreen.value = true;
+
+        chkScreenAsMask.onClick = function () {
+            chkClipToScreen.value = this.value;
+        };
+        chkClipToScreen.onClick = function () {
+            chkScreenAsMask.value = this.value;
+        };
 
         var grpScrollSmooth = pnlScroll.add("group");
         grpScrollSmooth.orientation = "row";
@@ -2905,6 +2935,8 @@
                 screenInnerPadding: parseInt(inpScreenPad.text, 10) || 28,
                 screenCornerRadius: parseInt(inpScreenRadius.text, 10) || 44,
                 screenBackgroundColor: rgbToHex(stateColors.screenBg),
+                useScreenAsMask: chkScreenAsMask.value,
+                clipToScreen: chkScreenAsMask.value,
                 autoScroll: chkAutoScroll.value,
                 clipToScreen: chkClipToScreen.value,
                 scrollSmoothnessFrames: parseInt(inpScrollSmooth.text, 10) || 12,
@@ -3085,7 +3117,9 @@
             setSliderAndInput(sldScreenPad, inpScreenPad, hdr.screenInnerPadding !== undefined ? hdr.screenInnerPadding : 28, false);
             setSliderAndInput(sldScreenRadius, inpScreenRadius, hdr.screenCornerRadius !== undefined ? hdr.screenCornerRadius : 44, false);
             chkAutoScroll.value = hdr.autoScroll !== false;
-            chkClipToScreen.value = hdr.clipToScreen !== false;
+            var maskActive = (hdr.useScreenAsMask !== undefined) ? (hdr.useScreenAsMask !== false) : ((hdr.clipToScreen !== undefined) ? (hdr.clipToScreen !== false) : true);
+            chkScreenAsMask.value = maskActive;
+            chkClipToScreen.value = maskActive;
             setSliderAndInput(sldScrollSmooth, inpScrollSmooth, hdr.scrollSmoothnessFrames !== undefined ? hdr.scrollSmoothnessFrames : 12, false);
 
             // Colors
@@ -3911,7 +3945,7 @@
                     var pcTr = preCompLayer.property("ADBE Transform Group");
                     pcTr.property("ADBE Anchor Point").setValue([preComp.width / 2, preComp.height / 2, 0]);
                     pcTr.property("ADBE Position").setValue([0, bubbleCenterY, 0]);
-                    safeSetExpression(pcTr.property("ADBE Opacity"), BUBBLE_PRECOMP_OPACITY_EXPR);
+                    safeSetExpression(pcTr.property("ADBE Opacity"), buildBubbleOpacityExpr(layout.bubbleHeight, layout.bubbleWidth));
                 }
             } catch (ePre) {}
 
@@ -4015,6 +4049,7 @@
 
                 var mFx = masterCtrl.property("ADBE Effect Parade");
                 addControl(mFx, "ADBE Checkbox Control", "Show Chat Screen",            hdr.screenVisible !== false ? 1 : 0);
+                addControl(mFx, "ADBE Checkbox Control", "Use Screen as Mask",         hdr.useScreenAsMask !== false ? 1 : 0);
                 addControl(mFx, "ADBE Slider Control",   "Screen Opacity",              hdr.screenOpacity !== undefined ? hdr.screenOpacity : 100);
                 addControl(mFx, "ADBE Slider Control",   "Screen Width",                screenW);
                 addControl(mFx, "ADBE Slider Control",   "Screen Height",               screenH);

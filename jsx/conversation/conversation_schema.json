@@ -262,6 +262,11 @@
               "type": "number",
               "default": 8,
               "description": "Duration in frames for each smooth upward auto-scroll transition."
+            },
+            "useScreenAsMask": {
+              "type": "boolean",
+              "default": true,
+              "description": "Use screen boundaries and corner radius as a mask. When enabled, no message bubbles are visible outside the screen, regardless of screen visibility or opacity."
             }
           }
         },

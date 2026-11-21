@@ -1341,6 +1341,34 @@
             const layers = this.comp.layers;
             const currentIds = new Set();
 
+            // Detect active Chat_Master_Controller and "Use Screen as Mask"
+            let screenClipData = null;
+            const masterCtrl = layers.find(l => l.name === 'Chat_Master_Controller');
+            if (masterCtrl && masterCtrl.enabled) {
+                try {
+                    const effMask = masterCtrl.effect('Use Screen as Mask') || masterCtrl.effect('Clip Bubbles Outside Screen');
+                    const useMask = effMask ? ((effMask('Checkbox') ? effMask('Checkbox').value : effMask.value) == 1) : true;
+                    if (useMask) {
+                        const effW = masterCtrl.effect('Screen Width');
+                        const effH = masterCtrl.effect('Screen Height');
+                        const effR = masterCtrl.effect('Screen Corner Radius');
+                        const sw = effW ? ((effW('Slider') ? effW('Slider').value : effW.value) || 540) : 540;
+                        const sh = effH ? ((effH('Slider') ? effH('Slider').value : effH.value) || 940) : 940;
+                        const sr = effR ? ((effR('Slider') ? effR('Slider').value : effR.value) || 44) : 44;
+                        const mMat = masterCtrl.getWorldMatrix(time);
+                        const cx = (mMat && mMat[12] !== undefined) ? mMat[12] : (this.comp.width / 2);
+                        const cy = (mMat && mMat[13] !== undefined) ? mMat[13] : (this.comp.height / 2);
+                        screenClipData = {
+                            cx: cx,
+                            cy: cy,
+                            w: sw,
+                            h: sh,
+                            r: Math.max(0, Math.min(sr, sw / 2, sh / 2))
+                        };
+                    }
+                } catch (eM) {}
+            }
+
             for (let i = layers.length - 1; i >= 0; i--) {
                 const layer = layers[i];
                 if (!layer.enabled) continue;
@@ -1367,6 +1395,25 @@
                 layerEl.style.transform = cssMat;
                 layerEl.style.opacity = opacity;
                 layerEl.style.transformStyle = layer.threeDLayer ? 'preserve-3d' : 'flat';
+
+                // Clip bubble layers strictly to screen boundaries if Use Screen as Mask is active
+                if (layer.name && layer.name.indexOf('bubble_') === 0) {
+                    if (screenClipData) {
+                        const lx = worldMat[12] !== undefined ? worldMat[12] : (this.comp.width / 2);
+                        const ly = worldMat[13] !== undefined ? worldMat[13] : (this.comp.height / 2);
+                        const l = (screenClipData.cx - screenClipData.w / 2) - lx;
+                        const r = (screenClipData.cx + screenClipData.w / 2) - lx;
+                        const t = (screenClipData.cy - screenClipData.h / 2) - ly;
+                        const b = (screenClipData.cy + screenClipData.h / 2) - ly;
+                        const rad = screenClipData.r;
+                        const clipPathStr = `path('M ${l + rad} ${t} L ${r - rad} ${t} A ${rad} ${rad} 0 0 1 ${r} ${t + rad} L ${r} ${b - rad} A ${rad} ${rad} 0 0 1 ${r - rad} ${b} L ${l + rad} ${b} A ${rad} ${rad} 0 0 1 ${l} ${b - rad} L ${l} ${t + rad} A ${rad} ${rad} 0 0 1 ${l + rad} ${t} Z')`;
+                        layerEl.style.clipPath = clipPathStr;
+                    } else {
+                        layerEl.style.clipPath = '';
+                    }
+                } else if (layerEl.style.clipPath) {
+                    layerEl.style.clipPath = '';
+                }
 
                 // Precomposition or Shape Layer SVG Render
                 if (layer.source && layer.source.layers) {
