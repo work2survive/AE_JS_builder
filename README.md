@@ -102,6 +102,10 @@ Full procedural emulation of Adobe After Effects' native Stroke Taper feature (`
   - **External Scripts (Whole URL)**: `https://work2survive.github.io/AE_JS_builder/?jsx=https://github.com/work2survive/AE-Cube-Maker-3D/blob/main/cube_maker.jsx&autobuild=true`
   - **Auto-Conversion & Protocol Handling**: Automatically detects and converts GitHub raw links (`raw.githubusercontent.com`), GitHub blob links (`github.com/.../blob/...`), raw/branch paths, and Gists into direct raw scripts with CORS headers.
   - Automatically fetches the code, populates the editor and preset dropdown, renders the ScriptUI panel, and triggers `&autobuild=true` immediately upon arrival. Pressing the **Clear** button resets the stage and cleans URL parameters.
+- **External Repository Sandbox & 30-Minute Temporary File Isolation**:
+  - Scripts loaded from external repositories (excluding `work2survive.github`) are automatically sandboxed in a scoped temporary folder (`/tmp/temp_external_<hash>/`).
+  - Any files or folders created by third-party scripts via ExtendScript `File` and `Folder` (`Folder.userData`, `Folder.myDocuments`, `Folder.current`, `new File(...)`, `file.write(...)`) work exclusively inside this isolated temporary folder.
+  - All files created by external scripts are marked as temporary with a 30-minute Time-To-Live (TTL) and are automatically deleted upon expiration.
 - Comes with a sample test script: [`test_script.jsx`](file:///g:/My%20Drive/_openProjects/My_AE_assets/AE_JS_builder/test_script.jsx).
 
 ### 10. ScriptUI Panel & Dialog Emulator

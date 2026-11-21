@@ -1905,12 +1905,239 @@
         }
     };
 
+    // =========================================================================
+    // ExtendScript Virtual File System (AEVirtualFS) with 30-Minute Temporary TTL
+    // =========================================================================
+    const TEMP_FILE_TTL_MS = 30 * 60 * 1000; // 30 minutes in milliseconds
+    const VFS_STORAGE_PREFIX = 'ae_vfs_file:';
+    const VFS_REGISTRY_KEY = 'ae_vfs_temp_registry';
+
+    function isWork2surviveOrigin(urlOrPath) {
+        if (!urlOrPath || typeof urlOrPath !== 'string') return true;
+        const s = urlOrPath.toLowerCase().trim();
+        // Local scripts, samples, presets, or empty/data URLs are trusted
+        if (!/^https?:\/\//i.test(s) && !s.startsWith('//')) {
+            return true;
+        }
+        // Trusted work2survive repositories & GitHub pages:
+        return s.includes('work2survive.github.io') ||
+               s.includes('github.com/work2survive/') ||
+               s.includes('raw.githubusercontent.com/work2survive/');
+    }
+
+    const AEExecutionContext = {
+        currentSource: null,
+        isTemporary: false,
+        tempDir: '/tmp/temp_sandbox',
+        setContext: function(sourceUrl) {
+            this.currentSource = sourceUrl || null;
+            const isTrusted = isWork2surviveOrigin(sourceUrl);
+            this.isTemporary = !isTrusted;
+            if (this.isTemporary) {
+                let hash = 0;
+                const str = String(sourceUrl || 'external');
+                for (let i = 0; i < str.length; i++) {
+                    hash = ((hash << 5) - hash) + str.charCodeAt(i);
+                    hash |= 0;
+                }
+                const folderId = Math.abs(hash).toString(36);
+                this.tempDir = `/tmp/temp_external_${folderId}`;
+            } else {
+                this.tempDir = '/tmp';
+            }
+        }
+    };
+    global.AEExecutionContext = AEExecutionContext;
+
+    class AEVirtualFS {
+        static getRegistry() {
+            try {
+                const raw = localStorage.getItem(VFS_REGISTRY_KEY);
+                return raw ? JSON.parse(raw) : {};
+            } catch (e) {
+                return {};
+            }
+        }
+
+        static saveRegistry(reg) {
+            try {
+                localStorage.setItem(VFS_REGISTRY_KEY, JSON.stringify(reg));
+            } catch (e) {}
+        }
+
+        static normalizePath(p) {
+            if (!p) return '/';
+            let norm = String(p).replace(/\\/g, '/').replace(/\/+/g, '/');
+            if (norm.length > 1 && norm.endsWith('/')) {
+                norm = norm.slice(0, -1);
+            }
+            return norm;
+        }
+
+        static resolvePath(p, isTemporary, tempDir) {
+            if (!p) return isTemporary ? (tempDir || '/tmp') : '/';
+            let norm = String(p).replace(/\\/g, '/');
+            if (isTemporary) {
+                const base = tempDir || '/tmp';
+                if (!norm.startsWith(base)) {
+                    norm = base + '/' + norm.replace(/^\/+/, '');
+                }
+            }
+            return this.normalizePath(norm);
+        }
+
+        static purgeExpiredFiles(onPurgeCallback) {
+            const now = Date.now();
+            const reg = this.getRegistry();
+            let changed = false;
+
+            for (const [path, meta] of Object.entries(reg)) {
+                if (meta.isTemporary && meta.expiresAt && now >= meta.expiresAt) {
+                    try {
+                        localStorage.removeItem(VFS_STORAGE_PREFIX + path);
+                    } catch (e) {}
+                    delete reg[path];
+                    changed = true;
+                    if (typeof onPurgeCallback === 'function') {
+                        onPurgeCallback(path, meta);
+                    } else if (typeof global.appendConsole === 'function') {
+                        global.appendConsole(`🗑️ [Temp Cleanup] Temporary file "${meta.name || path}" from external repository has expired (30 min) and was automatically deleted.`, false);
+                    }
+                }
+            }
+
+            if (changed) {
+                this.saveRegistry(reg);
+            }
+        }
+
+        static writeFile(path, content, isTemporary, sourceUrl) {
+            const norm = this.normalizePath(path);
+            const now = Date.now();
+            const reg = this.getRegistry();
+
+            const existing = reg[norm];
+            const meta = {
+                path: norm,
+                name: norm.split('/').pop() || '',
+                isTemporary: !!isTemporary,
+                sourceUrl: sourceUrl || (existing ? existing.sourceUrl : ''),
+                createdAt: existing ? existing.createdAt : now,
+                modifiedAt: now,
+                expiresAt: isTemporary ? (now + TEMP_FILE_TTL_MS) : null
+            };
+
+            reg[norm] = meta;
+            this.saveRegistry(reg);
+
+            try {
+                localStorage.setItem(VFS_STORAGE_PREFIX + norm, content !== undefined && content !== null ? String(content) : '');
+            } catch (e) {
+                console.warn('[AEVirtualFS] LocalStorage save error:', e);
+            }
+            return meta;
+        }
+
+        static readFile(path) {
+            this.purgeExpiredFiles();
+            const norm = this.normalizePath(path);
+            const reg = this.getRegistry();
+            if (!reg[norm]) return null;
+            try {
+                return localStorage.getItem(VFS_STORAGE_PREFIX + norm) || '';
+            } catch (e) {
+                return '';
+            }
+        }
+
+        static exists(path) {
+            this.purgeExpiredFiles();
+            const norm = this.normalizePath(path);
+            const reg = this.getRegistry();
+            return !!reg[norm];
+        }
+
+        static deleteFile(path) {
+            const norm = this.normalizePath(path);
+            const reg = this.getRegistry();
+            if (reg[norm]) {
+                delete reg[norm];
+                this.saveRegistry(reg);
+            }
+            try {
+                localStorage.removeItem(VFS_STORAGE_PREFIX + norm);
+            } catch (e) {}
+            return true;
+        }
+
+        static getFiles(folderPath, mask) {
+            this.purgeExpiredFiles();
+            const normFolder = this.normalizePath(folderPath);
+            const reg = this.getRegistry();
+            const results = [];
+
+            for (const [path, meta] of Object.entries(reg)) {
+                const pathParent = path.slice(0, Math.max(0, path.lastIndexOf('/'))) || '/';
+                if (pathParent === normFolder) {
+                    if (!mask || mask === '*' || mask === '*.*') {
+                        results.push(path);
+                    } else if (mask.startsWith('*.')) {
+                        const ext = mask.slice(1).toLowerCase();
+                        if (path.toLowerCase().endsWith(ext)) {
+                            results.push(path);
+                        }
+                    } else if (path.toLowerCase().includes(mask.toLowerCase())) {
+                        results.push(path);
+                    }
+                }
+            }
+            return results;
+        }
+
+        static getTempFiles() {
+            this.purgeExpiredFiles();
+            const reg = this.getRegistry();
+            return Object.values(reg).filter(m => m.isTemporary);
+        }
+
+        static clearAllTempFiles() {
+            const reg = this.getRegistry();
+            let changed = false;
+            for (const [path, meta] of Object.entries(reg)) {
+                if (meta.isTemporary) {
+                    try {
+                        localStorage.removeItem(VFS_STORAGE_PREFIX + path);
+                    } catch (e) {}
+                    delete reg[path];
+                    changed = true;
+                }
+            }
+            if (changed) this.saveRegistry(reg);
+        }
+    }
+    global.AEVirtualFS = AEVirtualFS;
+
+    // Purge expired files on startup
+    try {
+        AEVirtualFS.purgeExpiredFiles();
+    } catch (e) {}
+
+    // Periodic 30-minute expiration check (every 10 seconds)
+    if (typeof setInterval !== 'undefined') {
+        setInterval(() => {
+            try {
+                AEVirtualFS.purgeExpiredFiles();
+            } catch (e) {}
+        }, 10000);
+    }
+
     // ExtendScript Folder & File Object Polyfills
     function AEFolder(path) {
         if (!(this instanceof AEFolder)) {
             return new AEFolder(path);
         }
-        this.fsName = path ? String(path).replace(/[\\/]+$/, '') || '.' : '.';
+        const resolved = AEVirtualFS.resolvePath(path, AEExecutionContext.isTemporary, AEExecutionContext.tempDir);
+        this.fsName = resolved;
         this.name = this.fsName.split(/[\\/]/).pop() || '';
         this.fullName = this.fsName;
         this.path = this.fsName.slice(0, Math.max(0, this.fsName.lastIndexOf('/'))) || '.';
@@ -1927,18 +2154,52 @@
 
     AEFolder.prototype.create = function() { return true; };
     AEFolder.prototype.execute = function() { return true; };
-    AEFolder.prototype.getFiles = function(mask) { return []; };
+    AEFolder.prototype.getFiles = function(mask) {
+        const filePaths = AEVirtualFS.getFiles(this.fsName, mask);
+        return filePaths.map(p => new AEFile(p));
+    };
     AEFolder.prototype.selectDialog = function(promptStr) { return null; };
     AEFolder.prototype.toString = function() { return this.fsName; };
 
     Object.defineProperties(AEFolder, {
-        myDocuments: { get: function() { return new AEFolder('/Documents'); } },
-        userData: { get: function() { return new AEFolder('/UserData'); } },
-        current: { get: function() { return new AEFolder('.'); } },
-        temp: { get: function() { return new AEFolder('/tmp'); } },
-        desktop: { get: function() { return new AEFolder('/Desktop'); } },
-        appPackage: { get: function() { return new AEFolder('/Applications'); } },
-        system: { get: function() { return new AEFolder('/System'); } }
+        myDocuments: {
+            get: function() {
+                const base = AEExecutionContext.isTemporary ? (AEExecutionContext.tempDir + '/Documents') : '/Documents';
+                return new AEFolder(base);
+            }
+        },
+        userData: {
+            get: function() {
+                const base = AEExecutionContext.isTemporary ? (AEExecutionContext.tempDir + '/UserData') : '/UserData';
+                return new AEFolder(base);
+            }
+        },
+        current: {
+            get: function() {
+                return new AEFolder(AEExecutionContext.isTemporary ? AEExecutionContext.tempDir : '.');
+            }
+        },
+        temp: {
+            get: function() {
+                return new AEFolder(AEExecutionContext.isTemporary ? AEExecutionContext.tempDir : '/tmp');
+            }
+        },
+        desktop: {
+            get: function() {
+                const base = AEExecutionContext.isTemporary ? (AEExecutionContext.tempDir + '/Desktop') : '/Desktop';
+                return new AEFolder(base);
+            }
+        },
+        appPackage: {
+            get: function() {
+                return new AEFolder('/Applications');
+            }
+        },
+        system: {
+            get: function() {
+                return new AEFolder('/System');
+            }
+        }
     });
     AEFolder.selectDialog = function(promptStr) { return null; };
 
@@ -1946,17 +2207,24 @@
         if (!(this instanceof AEFile)) {
             return new AEFile(path);
         }
-        this.fsName = path ? String(path) : '';
+        const resolved = AEVirtualFS.resolvePath(path, AEExecutionContext.isTemporary, AEExecutionContext.tempDir);
+        this.fsName = resolved;
         this.name = this.fsName ? this.fsName.split(/[\\/]/).pop() : '';
         this.fullName = this.fsName;
         this.absoluteURI = this.fsName;
         this.path = this.fsName.slice(0, Math.max(0, this.fsName.lastIndexOf('/'))) || '.';
-        this.exists = false;
-        this.content = '';
+        this.content = AEVirtualFS.readFile(this.fsName) || '';
         this.encoding = 'UTF-8';
-        this.length = 0;
+        this.length = this.content.length;
         this.lineFeed = 'unix';
+        this._writeMode = false;
     }
+
+    Object.defineProperty(AEFile.prototype, 'exists', {
+        get: function() {
+            return AEVirtualFS.exists(this.fsName);
+        }
+    });
 
     Object.defineProperty(AEFile.prototype, 'parent', {
         get: function() {
@@ -1967,8 +2235,12 @@
     });
 
     AEFile.prototype.open = function(mode) {
+        this.content = AEVirtualFS.readFile(this.fsName) || '';
         if (mode && (mode.includes('w') || mode.includes('a'))) {
-            this.exists = true;
+            this._writeMode = true;
+            if (mode.includes('w')) this.content = '';
+        } else {
+            this._writeMode = false;
         }
         return true;
     };
@@ -1977,17 +2249,31 @@
     AEFile.prototype.write = function(text) {
         this.content += (text !== undefined && text !== null ? String(text) : '');
         this.length = this.content.length;
-        this.exists = true;
         return true;
     };
     AEFile.prototype.writeln = function(text) {
         return this.write((text !== undefined && text !== null ? String(text) : '') + '\n');
     };
-    AEFile.prototype.close = function() { return true; };
+    AEFile.prototype.close = function() {
+        if (this._writeMode) {
+            const isTemp = AEExecutionContext.isTemporary;
+            const meta = AEVirtualFS.writeFile(this.fsName, this.content, isTemp, AEExecutionContext.currentSource);
+            this._writeMode = false;
+            if (isTemp && typeof global.appendConsole === 'function') {
+                global.appendConsole(`📁 [Temporary File Saved] "${this.name}" created in temporary folder (${this.parent.fsName}). Expires and will be deleted in 30 minutes.`, false);
+            }
+        }
+        return true;
+    };
     AEFile.prototype.seek = function(pos) { return true; };
     AEFile.prototype.tell = function() { return 0; };
     AEFile.prototype.execute = function() { return true; };
-    AEFile.prototype.remove = function() { this.exists = false; this.content = ''; return true; };
+    AEFile.prototype.remove = function() {
+        AEVirtualFS.deleteFile(this.fsName);
+        this.content = '';
+        this.length = 0;
+        return true;
+    };
     AEFile.prototype.rename = function(newName) { this.name = newName; return true; };
     AEFile.prototype.toString = function() { return this.fsName; };
 
@@ -2000,6 +2286,15 @@
         return null;
     };
 
+    try {
+        Object.defineProperty(global, 'File', {
+            value: AEFile,
+            writable: true,
+            configurable: true
+        });
+    } catch (e) {
+        try { global.File = AEFile; } catch (err) {}
+    }
     if (typeof global.Folder === 'undefined') {
         global.Folder = AEFolder;
     }

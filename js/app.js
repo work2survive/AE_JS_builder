@@ -1398,10 +1398,22 @@
         }, retryCount === 0 ? 120 : 150);
     }
 
-    function runUserScript(code) {
+    function runUserScript(code, sourceUrl) {
         try {
             clearCompLayers();
             appendConsole('Cleared composition. Executing JSX script...');
+
+            // Configure execution context for temporary vs trusted files
+            if (window.AEExecutionContext) {
+                const activeSource = sourceUrl || window.__currentScriptSource || null;
+                window.AEExecutionContext.setContext(activeSource);
+                if (window.AEExecutionContext.isTemporary) {
+                    appendConsole(`🛡️ [Sandbox Active] Running JSX from external repository: ${activeSource || 'external'}`, false);
+                    appendConsole(`📁 Working Directory redirected to temporary folder: ${window.AEExecutionContext.tempDir}`, false);
+                    appendConsole(`⏱️ All files created by this script are temporary and will be deleted after 30 minutes.`, false);
+                }
+            }
+
             // Sandbox execution with After Effects globals
             const scriptFunc = new Function(
                 'app', '$', 'CompItem', 'Shape', 'Window', 'Panel', 'Group', 'TabbedPanel', 'Tab', 'Mat4', 'File', 'Folder',
@@ -1754,7 +1766,8 @@
                     if (currentFilenameEl) currentFilenameEl.textContent = fname;
                     appendConsole(`Selected "${fname}" from ${folder}/ folder. Executing...`);
                     if (updateUrl) updateURLForJSX(fname, isPush);
-                    runUserScript(code);
+                    window.__currentScriptSource = `${folder}/${fname}`;
+                    runUserScript(code, `${folder}/${fname}`);
                 }
             } else if (val.startsWith('preset:')) {
                 const key = val.slice(7);
@@ -1768,7 +1781,8 @@
                     if (currentFilenameEl) currentFilenameEl.textContent = PRESETS[key].name;
                     appendConsole(`Selected preset "${PRESETS[key].name}". Executing...`);
                     if (updateUrl) updateURLForJSX(key, isPush);
-                    runUserScript(PRESETS[key].code);
+                    window.__currentScriptSource = `preset:${key}`;
+                    runUserScript(PRESETS[key].code, `preset:${key}`);
                 }
             }
         }
@@ -1948,8 +1962,9 @@
                 if (matched) {
                     presetSelect.value = matched;
                 }
+                window.__currentScriptSource = `file:${file.name}`;
                 // Automatically execute the loaded script
-                runUserScript(content);
+                runUserScript(content, `file:${file.name}`);
             };
             reader.onerror = () => {
                 appendConsole(`Failed to read file "${file.name}"`, true);
@@ -2027,8 +2042,9 @@
                 updateURLForJSX(urlStr, isPush);
             }
 
+            window.__currentScriptSource = urlStr;
             // Execute script
-            runUserScript(code);
+            runUserScript(code, urlStr);
             return filename;
         }
 
@@ -2229,13 +2245,14 @@
 
         // Buttons
         document.getElementById('btn-run-script').onclick = () => {
-            runUserScript(codeTextarea.value);
+            runUserScript(codeTextarea.value, window.__currentScriptSource || 'editor');
         };
 
         document.getElementById('btn-clear-comp').onclick = (e) => {
             clearCompLayers();
             if (e && e.shiftKey) {
                 removeJSXFromURL();
+                window.__currentScriptSource = null;
                 if (currentFilenameEl) currentFilenameEl.textContent = 'None';
                 const scriptUIView = document.getElementById('scriptui-dock-host');
                 if (scriptUIView) {
@@ -2250,7 +2267,7 @@
         // Keyboard Shortcut: Ctrl+Enter to Run
         window.addEventListener('keydown', (e) => {
             if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
-                runUserScript(codeTextarea.value);
+                runUserScript(codeTextarea.value, window.__currentScriptSource || 'editor');
             }
         });
 
