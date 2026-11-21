@@ -90,7 +90,8 @@
       "text": "12:30 works great. See you at La Taqueria! 🙌",
       "realDelay": 1.2,
       "timestamp": "+00:03",
-      "textEffect": "nod"
+      "textEffect": "nod",
+      "textWrap": "balance"
     },
     {
       "id": "ios_05",

@@ -345,6 +345,8 @@
         EMOJI_FONT_NAMES.push(EMOJI_FONTS[efni].name);
     }
 
+    var TEXT_WRAP_MODES = ["pretty", "balance", "auto", "none"];
+
     var DEFAULT_PLATFORMS = {
         "Android RCS": {
             label: "Android RCS style",
@@ -1176,6 +1178,19 @@
         var scr = hdr.screen || {};
         var anim = hdr.animation || {};
 
+        if (!hdr.textWrap) {
+            if (typo.textWrap) {
+                hdr.textWrap = String(typo.textWrap).toLowerCase();
+            } else if (hdr.textWrapping !== undefined) {
+                hdr.textWrap = hdr.textWrapping ? "pretty" : "none";
+            } else {
+                hdr.textWrap = "pretty";
+            }
+        }
+        if (hdr.textWrapping === undefined) {
+            hdr.textWrapping = (hdr.textWrap !== "none");
+        }
+
         if (!hdr.conversationTitle && hdr.title) hdr.conversationTitle = hdr.title;
         if (hdr.useTimestamps === undefined && hdr.showTimestamps !== undefined) hdr.useTimestamps = hdr.showTimestamps;
 
@@ -1230,6 +1245,9 @@
             for (var i = 0; i < parsed.messages.length; i++) {
                 var m = parsed.messages[i];
                 if (!m) continue;
+                if (m.textWrap) {
+                    m.textWrap = String(m.textWrap).toLowerCase();
+                }
                 if (!m.direction && (m.type === "sent" || m.type === "received")) {
                     m.direction = m.type;
                     m.type = m.dialogType || "text";
@@ -1357,6 +1375,9 @@
     function saveConversationToFile(convEntry, updatedHeader) {
         if (!convEntry || !convEntry.data) return false;
         convEntry.data.header = updatedHeader;
+        if (convEntry.data.header.typography) {
+            convEntry.data.header.typography.textWrap = updatedHeader.textWrap;
+        }
         DEFAULT_CONVERSATIONS[convEntry.fileName] = cloneObject(convEntry.data);
         try {
             var targetPath = convEntry.filePath || (getConversationFolder().fsName + "/" + convEntry.fileName);
@@ -1574,6 +1595,7 @@
                 type: msgType,
                 direction: dir,
                 text: rawText,
+                textWrap: (m.textWrap !== undefined && m.textWrap !== null && m.textWrap !== "") ? String(m.textWrap).toLowerCase() : null,
                 startTime: currentTimelineSec,
                 realDelayUsed: realDelayUsed,
                 hasCustomRealDelay: (m.realDelay !== undefined && m.realDelay !== null),
@@ -1907,37 +1929,10 @@
         "var startT = 0; try { startT = ctrl.effect('Start Time (s)')('Slider'); } catch(e){}",
         "var localT = time - startT;",
         "var doWrap = ctrl.effect('Auto Wrap Text')('Checkbox') == 1;",
-        "var maxW = Math.max(80, ctrl.effect('Max Bubble Width')('Slider'));",
-        "var pad = ctrl.effect('Inner Padding')('Slider');",
         "var doAnim = ctrl.effect('Entrance Animation')('Checkbox') == 1;",
         "var speed = ctrl.effect('Typewriter Speed')('Slider');",
         "var growFrames = ctrl.effect('Grow Duration (frames)')('Slider');",
-        "var raw = value.toString();",
-        "var fs = ctrl.effect('Text Size')('Slider');",
-        "var availW = Math.max(60, maxW - pad * 2);",
-        "var charW = fs * 0.50;",
-        "var maxChars = Math.max(5, Math.floor(availW / charW));",
-        "var wrapped = raw;",
-        "if (doWrap) {",
-        "    var paragraphs = raw.split(/\\r\\n|\\r|\\n/);",
-        "    var outLines = [];",
-        "    for (var p = 0; p < paragraphs.length; p++) {",
-        "        var words = paragraphs[p].split(' ');",
-        "        var cur = '';",
-        "        for (var i = 0; i < words.length; i++) {",
-        "            var w = words[i];",
-        "            var test = cur.length === 0 ? w : cur + ' ' + w;",
-        "            if (test.length > maxChars && cur.length > 0) {",
-        "                outLines.push(cur);",
-        "                cur = w;",
-        "            } else {",
-        "                cur = test;",
-        "            }",
-        "        }",
-        "        outLines.push(cur);",
-        "    }",
-        "    wrapped = outLines.join('\\n');",
-        "}",
+        "var wrapped = value.toString();",
         "if (localT >= 0 && doAnim && speed > 0) {",
         "    var delay = (growFrames * 0.45) * thisComp.frameDuration;",
         "    var t = Math.max(0, localT - delay);",
@@ -2467,8 +2462,15 @@
         dropEmojiFont.selection = 0;
         dropEmojiFont.alignment = ["fill", "center"];
 
-        var chkTextWrap = pnlTypo.add("checkbox", undefined, "Auto Wrap Text to Max Bubble Width");
-        chkTextWrap.value = true;
+        var grpWrap = pnlTypo.add("group");
+        grpWrap.orientation = "row";
+        grpWrap.alignChildren = ["left", "center"];
+        var lblWrap = grpWrap.add("statictext", undefined, "Text Wrap:");
+        lblWrap.preferredSize.width = 72;
+        var dropTextWrap = grpWrap.add("dropdownlist", undefined, TEXT_WRAP_MODES);
+        dropTextWrap.selection = 0;
+        dropTextWrap.alignment = ["fill", "center"];
+        dropTextWrap.helpTip = "Text wrapping mode for chat bubbles ('pretty' avoids orphans, 'balance' equalizes line lengths, 'auto' is greedy, 'none' disables wrapping). Individual bubbles can also override this in JSON.";
 
         // Bubble Width
         var grpW = pnlTypo.add("group");
@@ -2882,7 +2884,8 @@
                 fakeDelayBetweenBubbles: inpFakeDelay.text || "+00:01",
                 bubbleWidth: parseInt(inpWidth.text, 10) || 360,
                 maxBubbleWidth: parseInt(inpMaxWidth.text, 10) || 410,
-                textWrapping: chkTextWrap.value,
+                textWrap: (dropTextWrap && dropTextWrap.selection) ? dropTextWrap.selection.text : "pretty",
+                textWrapping: (dropTextWrap && dropTextWrap.selection) ? (dropTextWrap.selection.text !== "none") : true,
                 textSize: parseInt(inpTextSize.text, 10) || 22,
                 innerPadding: parseInt(inpPad.text, 10) || 18,
                 lineSpacing: parseInt(inpLead.text, 10) || 130,
@@ -3047,7 +3050,13 @@
             setSliderAndInput(sldRealDelay, inpRealDelay, hdr.realDelayBetweenBubbles !== undefined ? hdr.realDelayBetweenBubbles : 1.0, true);
 
             // Dimensions & Typography
-            chkTextWrap.value = hdr.textWrapping !== false;
+            var targetWrap = (hdr.textWrap || (hdr.textWrapping === false ? "none" : "pretty")).toLowerCase();
+            for (var twi = 0; twi < TEXT_WRAP_MODES.length; twi++) {
+                if (TEXT_WRAP_MODES[twi] === targetWrap) {
+                    dropTextWrap.selection = twi;
+                    break;
+                }
+            }
             setSliderAndInput(sldWidth, inpWidth, hdr.bubbleWidth !== undefined ? hdr.bubbleWidth : 360, false);
             setSliderAndInput(sldMaxWidth, inpMaxWidth, hdr.maxBubbleWidth !== undefined ? hdr.maxBubbleWidth : 410, false);
             setSliderAndInput(sldTextSize, inpTextSize, hdr.textSize !== undefined ? hdr.textSize : 22, false);
@@ -3169,6 +3178,19 @@
         radDark.onClick = function () {
             var platName = dropPlatform.selection ? dropPlatform.selection.text : "Android RCS";
             applyPlatformThemeColors(platName, true, false, null);
+        };
+
+        dropTextWrap.onChange = function () {
+            var entry = getCurrentConversationEntry();
+            if (entry && entry.data && entry.data.header) {
+                var wMode = dropTextWrap.selection ? dropTextWrap.selection.text : "pretty";
+                entry.data.header.textWrap = wMode;
+                entry.data.header.textWrapping = (wMode !== "none");
+                if (entry.data.header.typography) {
+                    entry.data.header.typography.textWrap = wMode;
+                }
+            }
+            refreshMessagePreviewList();
         };
 
         // Color Picker Button Handlers
@@ -3363,31 +3385,119 @@
             return w;
         }
 
-        function wrapTextToLines(rawText, maxTextWidth, fontSize, doWrap) {
+        function wrapGreedy(words, maxW, fontSize) {
+            var lines = [];
+            var cur = "";
+            for (var w = 0; w < words.length; w++) {
+                var word = words[w];
+                var cand = cur.length === 0 ? word : (cur + " " + word);
+                if (measureTypographyLine(cand, fontSize) > maxW && cur.length > 0) {
+                    lines.push(cur);
+                    cur = word;
+                } else {
+                    cur = cand;
+                }
+            }
+            if (cur.length > 0) lines.push(cur);
+            return lines;
+        }
+
+        function wrapPretty(words, maxW, fontSize) {
+            var lines = wrapGreedy(words, maxW, fontSize);
+            if (lines.length > 1) {
+                var lastWords = lines[lines.length - 1].split(" ");
+                var prevWords = lines[lines.length - 2].split(" ");
+                if (lastWords.length === 1 && prevWords.length > 1) {
+                    var stolenWord = prevWords.pop();
+                    var newPrev = prevWords.join(" ");
+                    var newLast = stolenWord + " " + lines[lines.length - 1];
+                    if (measureTypographyLine(newLast, fontSize) <= maxW) {
+                        lines[lines.length - 2] = newPrev;
+                        lines[lines.length - 1] = newLast;
+                    }
+                }
+            }
+            return lines;
+        }
+
+        function wrapBalance(words, maxW, fontSize) {
+            var greedy = wrapGreedy(words, maxW, fontSize);
+            if (greedy.length <= 1 || words.length <= 2) {
+                return greedy;
+            }
+            if (greedy.length === 2) {
+                var bestSplit = null;
+                var bestDiff = 999999;
+                for (var k = 1; k < words.length; k++) {
+                    var l1 = words.slice(0, k).join(" ");
+                    var l2 = words.slice(k).join(" ");
+                    var w1 = measureTypographyLine(l1, fontSize);
+                    var w2 = measureTypographyLine(l2, fontSize);
+                    if (w1 <= maxW && w2 <= maxW) {
+                        var diff = Math.abs(w1 - w2);
+                        if (diff < bestDiff) {
+                            bestDiff = diff;
+                            bestSplit = [l1, l2];
+                        }
+                    }
+                }
+                if (bestSplit) return bestSplit;
+            }
+            var minWordW = 0;
+            for (var i = 0; i < words.length; i++) {
+                var ww = measureTypographyLine(words[i], fontSize);
+                if (ww > minWordW) minWordW = ww;
+            }
+            var low = minWordW;
+            var high = maxW;
+            var bestCandidate = greedy;
+            while (low <= high) {
+                var mid = Math.floor((low + high) / 2);
+                var candLines = wrapGreedy(words, mid, fontSize);
+                if (candLines.length <= greedy.length) {
+                    bestCandidate = candLines;
+                    high = mid - 1;
+                } else {
+                    low = mid + 1;
+                }
+            }
+            return bestCandidate;
+        }
+
+        function wrapTextToLines(rawText, maxTextWidth, fontSize, wrapMode) {
             var text = String(rawText || "");
             var paragraphs = text.split(/\r\n|\r|\n/);
-            if (!doWrap) return paragraphs;
+            if (wrapMode === false || wrapMode === "none" || wrapMode === "off") {
+                return paragraphs;
+            }
+            var mode = (typeof wrapMode === "string") ? wrapMode.toLowerCase() : "pretty";
+            if (mode !== "balance" && mode !== "pretty" && mode !== "auto") {
+                mode = "pretty";
+            }
 
             var wrappedLines = [];
             for (var p = 0; p < paragraphs.length; p++) {
                 var words = paragraphs[p].split(" ");
-                var currentLine = "";
-                for (var w = 0; w < words.length; w++) {
-                    var word = words[w];
-                    var candidate = currentLine.length === 0 ? word : (currentLine + " " + word);
-                    if (measureTypographyLine(candidate, fontSize) > maxTextWidth && currentLine.length > 0) {
-                        wrappedLines.push(currentLine);
-                        currentLine = word;
-                    } else {
-                        currentLine = candidate;
-                    }
+                if (words.length <= 1) {
+                    wrappedLines.push(paragraphs[p]);
+                    continue;
                 }
-                wrappedLines.push(currentLine);
+
+                if (mode === "auto") {
+                    var aLines = wrapGreedy(words, maxTextWidth, fontSize);
+                    for (var al = 0; al < aLines.length; al++) wrappedLines.push(aLines[al]);
+                } else if (mode === "balance") {
+                    var bLines = wrapBalance(words, maxTextWidth, fontSize);
+                    for (var bl = 0; bl < bLines.length; bl++) wrappedLines.push(bLines[bl]);
+                } else {
+                    var pLines = wrapPretty(words, maxTextWidth, fontSize);
+                    for (var pl = 0; pl < pLines.length; pl++) wrappedLines.push(pLines[pl]);
+                }
             }
             return wrappedLines;
         }
 
-        function computeBubbleLayout(rawText, hdr, showTail, showStatus, isSent) {
+        function computeBubbleLayout(rawText, hdr, showTail, showStatus, isSent, textWrapOverride) {
             var fontSize = hdr.textSize || 22;
             var pad = hdr.innerPadding || 18;
             var leadPct = hdr.lineSpacing || 130;
@@ -3395,7 +3505,11 @@
             var maxBubbleW = Math.min(hdr.maxBubbleWidth || 410, Math.round(screenInnerW * 0.86));
             var availTextW = Math.max(80, maxBubbleW - pad * 2);
 
-            var lines = wrapTextToLines(rawText, availTextW, fontSize, hdr.textWrapping !== false);
+            var wrapMode = (textWrapOverride !== undefined && textWrapOverride !== null && textWrapOverride !== "")
+                ? textWrapOverride
+                : (hdr.textWrap || (hdr.textWrapping !== false ? "pretty" : "none"));
+
+            var lines = wrapTextToLines(rawText, availTextW, fontSize, wrapMode);
             var maxLineW = 0;
             for (var i = 0; i < lines.length; i++) {
                 var lw = measureTypographyLine(lines[i], fontSize);
@@ -3494,7 +3608,7 @@
         // =====================================================================
         function createSingleBubbleLayersAndPrecomp(comp, msgItem, hdr, platObj, fontObj, emojiFontObj, bubbleCenterY, scrollCtrlLayer) {
             var isSent = (msgItem.direction === "sent");
-            var layout = computeBubbleLayout(msgItem.text, hdr, msgItem.showTail, msgItem.showStatus, isSent);
+            var layout = computeBubbleLayout(msgItem.text, hdr, msgItem.showTail, msgItem.showStatus, isSent, msgItem.textWrap);
 
             var bubbleCol = isSent ? stateColors.sentBubble : stateColors.receivedBubble;
             var textCol   = isSent ? stateColors.sentText   : stateColors.receivedText;
@@ -3966,7 +4080,7 @@
                 for (var bi = 0; bi < schedule.length; bi++) {
                     var msgItem = schedule[bi];
                     var isSent = (msgItem.direction === "sent");
-                    var previewLayout = computeBubbleLayout(msgItem.text, hdr, msgItem.showTail, msgItem.showStatus, isSent);
+                    var previewLayout = computeBubbleLayout(msgItem.text, hdr, msgItem.showTail, msgItem.showStatus, isSent, msgItem.textWrap);
 
                     var bubbleH = previewLayout.bubbleHeight;
                     var bubbleCenterY = (-screenH / 2) + screenPad + currentTopRelScreenTop + (bubbleH / 2);

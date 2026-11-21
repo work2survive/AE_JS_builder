@@ -63,7 +63,8 @@
         "NotoColorEmoji-Regular",
         "SegoeUIEmoji",
         "AppleColorEmoji"
-      ]
+      ],
+      "textWrap": "pretty"
     },
     "iOS Message": {
       "label": "iOS message style",
@@ -127,7 +128,8 @@
         "NotoColorEmoji",
         "NotoColorEmoji-Regular",
         "SegoeUIEmoji"
-      ]
+      ],
+      "textWrap": "pretty"
     },
     "WhatsApp": {
       "label": "WhatsApp style",
@@ -186,7 +188,8 @@
         "AppleColorEmoji",
         "NotoColorEmoji",
         "SegoeUIEmoji"
-      ]
+      ],
+      "textWrap": "pretty"
     },
     "Instagram": {
       "label": "Instagram style",
@@ -246,7 +249,8 @@
         "AppleColorEmoji",
         "NotoColorEmoji",
         "SegoeUIEmoji"
-      ]
+      ],
+      "textWrap": "pretty"
     },
     "Facebook Messenger": {
       "label": "Messenger style",
@@ -306,7 +310,8 @@
         "SegoeUIEmoji",
         "NotoColorEmoji",
         "AppleColorEmoji"
-      ]
+      ],
+      "textWrap": "pretty"
     },
     "Telegram": {
       "label": "Telegram style",
@@ -367,7 +372,8 @@
         "AppleColorEmoji",
         "NotoColorEmoji",
         "SegoeUIEmoji"
-      ]
+      ],
+      "textWrap": "pretty"
     },
     "Discord": {
       "label": "Discord style",
@@ -429,7 +435,8 @@
         "TwitterColorEmoji",
         "NotoColorEmoji",
         "SegoeUIEmoji"
-      ]
+      ],
+      "textWrap": "pretty"
     },
     "Custom": {
       "label": "Custom Preset",
@@ -490,7 +497,8 @@
         "NotoColorEmoji",
         "AppleColorEmoji",
         "SegoeUIEmoji"
-      ]
+      ],
+      "textWrap": "pretty"
     }
   }
 }

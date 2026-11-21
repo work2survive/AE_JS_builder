@@ -4,7 +4,10 @@
   "title": "AE Scripted Chat Conversation Schema",
   "description": "JSON schema for scripted animated chat conversations in Adobe After Effects (AE_scripted_Chat) and the upcoming Web UI editor.",
   "type": "object",
-  "required": ["header", "messages"],
+  "required": [
+    "header",
+    "messages"
+  ],
   "properties": {
     "$schema": {
       "type": "string",
@@ -51,7 +54,10 @@
         },
         "theme": {
           "type": "string",
-          "enum": ["light", "dark"],
+          "enum": [
+            "light",
+            "dark"
+          ],
           "default": "light",
           "description": "Color theme ('light' or 'dark')."
         },
@@ -62,7 +68,10 @@
         },
         "timeFormat": {
           "type": "string",
-          "enum": ["24h", "12h"],
+          "enum": [
+            "24h",
+            "12h"
+          ],
           "default": "24h",
           "description": "Clock display format: '24h' (e.g. 14:32) or '12h' (e.g. 2:32 PM)."
         },
@@ -95,8 +104,14 @@
             },
             "textWrap": {
               "type": "string",
-              "enum": ["auto", "pretty", "balance"],
-              "default": "pretty"
+              "enum": [
+                "auto",
+                "pretty",
+                "balance",
+                "none"
+              ],
+              "default": "pretty",
+              "description": "Default text wrapping mode for all chat bubbles: 'pretty' (avoids orphans), 'balance' (equalizes line lengths), 'auto' (greedy wrap), or 'none' (no wrapping)."
             },
             "bubbleWidth": {
               "type": "number",
@@ -144,23 +159,50 @@
             },
             "statusIconStyle": {
               "type": "string",
-              "enum": ["rcs", "standard"],
+              "enum": [
+                "rcs",
+                "standard"
+              ],
               "default": "rcs"
             },
             "statusIconMode": {
               "type": "string",
-              "enum": ["auto", "read", "delivered", "sent", "none"],
+              "enum": [
+                "auto",
+                "read",
+                "delivered",
+                "sent",
+                "none"
+              ],
               "default": "auto"
             },
             "colors": {
               "type": "object",
               "properties": {
-                "sentBubble": { "type": "string", "default": "#0B57D0" },
-                "sentText": { "type": "string", "default": "#FFFFFF" },
-                "sentTime": { "type": "string", "default": "#C4D7F8" },
-                "receivedBubble": { "type": "string", "default": "#F1F3F4" },
-                "receivedText": { "type": "string", "default": "#1F1F1F" },
-                "receivedTime": { "type": "string", "default": "#70757A" }
+                "sentBubble": {
+                  "type": "string",
+                  "default": "#0B57D0"
+                },
+                "sentText": {
+                  "type": "string",
+                  "default": "#FFFFFF"
+                },
+                "sentTime": {
+                  "type": "string",
+                  "default": "#C4D7F8"
+                },
+                "receivedBubble": {
+                  "type": "string",
+                  "default": "#F1F3F4"
+                },
+                "receivedText": {
+                  "type": "string",
+                  "default": "#1F1F1F"
+                },
+                "receivedTime": {
+                  "type": "string",
+                  "default": "#70757A"
+                }
               }
             }
           }
@@ -240,7 +282,12 @@
             },
             "textAnimationEffect": {
               "type": "string",
-              "enum": ["none", "nod", "shake", "blink"],
+              "enum": [
+                "none",
+                "nod",
+                "shake",
+                "blink"
+              ],
               "default": "none"
             },
             "animationDecayFrames": {
@@ -264,20 +311,35 @@
       "description": "Ordered array of scripted chat dialog items.",
       "items": {
         "type": "object",
-        "required": ["type"],
+        "required": [
+          "type"
+        ],
         "properties": {
           "id": {
-            "type": ["string", "number"],
+            "type": [
+              "string",
+              "number"
+            ],
             "description": "Optional unique identifier for the bubble."
           },
           "type": {
             "type": "string",
-            "enum": ["sent", "received"],
+            "enum": [
+              "sent",
+              "received"
+            ],
             "description": "Message direction: 'sent' (right-aligned) or 'received' (left-aligned)."
           },
           "dialogType": {
             "type": "string",
-            "enum": ["text", "image", "video", "carousel", "buttons", "typing"],
+            "enum": [
+              "text",
+              "image",
+              "video",
+              "carousel",
+              "buttons",
+              "typing"
+            ],
             "default": "text",
             "description": "RCS dialog type. Currently renders 'text', with 'image', 'video', 'carousel', and 'buttons' reserved for rich RCS extensions."
           },
@@ -308,22 +370,41 @@
           },
           "status": {
             "type": "string",
-            "enum": ["auto", "read", "delivered", "sent", "none"],
+            "enum": [
+              "auto",
+              "read",
+              "delivered",
+              "sent",
+              "none"
+            ],
             "description": "Optional per-bubble delivery status override."
           },
           "textEffect": {
             "type": "string",
-            "enum": ["none", "nod", "shake", "blink"],
+            "enum": [
+              "none",
+              "nod",
+              "shake",
+              "blink"
+            ],
             "description": "Optional per-bubble iOS 18 text animation effect override."
           },
           "media": {
             "type": "object",
             "description": "Future RCS media attachment specification (for dialogType: 'image' or 'video').",
             "properties": {
-              "src": { "type": "string" },
-              "aspectRatio": { "type": "string" },
-              "caption": { "type": "string" },
-              "duration": { "type": "string" }
+              "src": {
+                "type": "string"
+              },
+              "aspectRatio": {
+                "type": "string"
+              },
+              "caption": {
+                "type": "string"
+              },
+              "duration": {
+                "type": "string"
+              }
             }
           },
           "carousel": {
@@ -332,10 +413,18 @@
             "items": {
               "type": "object",
               "properties": {
-                "title": { "type": "string" },
-                "description": { "type": "string" },
-                "image": { "type": "string" },
-                "buttons": { "type": "array" }
+                "title": {
+                  "type": "string"
+                },
+                "description": {
+                  "type": "string"
+                },
+                "image": {
+                  "type": "string"
+                },
+                "buttons": {
+                  "type": "array"
+                }
               }
             }
           },
@@ -345,10 +434,24 @@
             "items": {
               "type": "object",
               "properties": {
-                "label": { "type": "string" },
-                "action": { "type": "string" }
+                "label": {
+                  "type": "string"
+                },
+                "action": {
+                  "type": "string"
+                }
               }
             }
+          },
+          "textWrap": {
+            "type": "string",
+            "enum": [
+              "auto",
+              "pretty",
+              "balance",
+              "none"
+            ],
+            "description": "Optional per-bubble text wrapping override ('auto', 'pretty', 'balance', or 'none'). If omitted, inherits header.typography.textWrap."
           }
         }
       }
