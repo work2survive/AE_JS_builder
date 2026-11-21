@@ -1,6 +1,6 @@
 // Co-authored & architected with Google DeepMind Antigravity.
 // =============================================================================
-// ADOBE AFTER EFFECTS EXTENDSCRIPT & SCRIPTUI PANEL: EXTRUDED ROUND RECTANGLE v1.4
+// ADOBE AFTER EFFECTS EXTENDSCRIPT & SCRIPTUI PANEL: EXTRUDED ROUND RECTANGLE v1.6.1
 // =============================================================================
 //
 // PURPOSE:
@@ -37,7 +37,7 @@
 (function(thisObj) {
     "use strict";
 
-    var SCRIPT_VERSION = "v1.4";
+    var SCRIPT_VERSION = "v1.6.1";
 
     // -------------------------------------------------------------------------
     // 1. ScriptUI Window / Dockable Panel Initialization
@@ -537,7 +537,7 @@
     pnlHeader.spacing = 3;
     pnlHeader.margins = [10, 8, 10, 8];
 
-    var lblDesc = pnlHeader.add("statictext", undefined, "v1.4 - Parametric 3D extruded rounded rectangle with procedural front/back caps and cylindrical corners.");
+    var lblDesc = pnlHeader.add("statictext", undefined, "v1.6.1 - Parametric 3D extruded rounded rectangle with procedural front/back caps and cylindrical corners.");
 
     // -------------------------------------------------------------------------
     // 4. Tabbed Panel (Geometry vs. Appearance)
@@ -1601,38 +1601,41 @@
 
                 // Common function to configure Rect Vector Group
                 function setupRectVector(layer, size, fillCol, fillOp, strCol, strW, strOp) {
-                    var root = layer.property("ADBE Root Vectors Group") || layer.property("Contents") || (layer.property && layer.property(1));
+                    var root = layer.property("ADBE Root Vectors Group") || layer.property("Contents") || (layer.numProperties >= 1 ? layer.property(1) : null);
                     var grp = root.addProperty("ADBE Vector Group");
                     grp.name = "Vector Group";
 
-                    var contents = grp.property("ADBE Vectors Group") || grp.property("Contents") || (grp.property && grp.property(2)) || (grp.property && grp.property(1));
+                    var contents = grp.property("ADBE Vectors Group") || grp.property("Contents") || (grp.numProperties >= 2 ? grp.property(2) : (grp.numProperties >= 1 ? grp.property(1) : null));
                     contents.addProperty("ADBE Vector Shape - Rect");
                     contents.addProperty("ADBE Vector Graphic - Fill");
                     contents.addProperty("ADBE Vector Graphic - Stroke");
 
-                    contents = grp.property("ADBE Vectors Group") || grp.property("Contents") || (grp.property && grp.property(2)) || (grp.property && grp.property(1));
+                    contents = grp.property("ADBE Vectors Group") || grp.property("Contents") || (grp.numProperties >= 2 ? grp.property(2) : (grp.numProperties >= 1 ? grp.property(1) : null));
 
-                    var rect = contents.property("ADBE Vector Shape - Rect") || contents.property(1);
+                    var rect = contents.property("ADBE Vector Shape - Rect") || (contents.numProperties >= 1 ? contents.property(1) : null);
                     if (rect) {
-                        var rSize = rect.property("ADBE Vector Rect Size") || rect.property("Size") || rect.property(2) || rect.property(1);
+                        var rSize = rect.property("ADBE Vector Rect Size") || rect.property("Size") || (rect.numProperties >= 2 ? rect.property(2) : (rect.numProperties >= 1 ? rect.property(1) : null));
                         if (rSize && rSize.setValue) rSize.setValue(size);
                     }
 
-                    var fill = contents.property("ADBE Vector Graphic - Fill") || contents.property(2);
+                    var fill = contents.property("ADBE Vector Graphic - Fill") || (contents.numProperties >= 2 ? contents.property(2) : null);
                     if (fill) {
-                        var fCol = fill.property("ADBE Vector Fill Color") || fill.property("Color") || fill.property(1);
+                        var fCol = fill.property("ADBE Vector Fill Color") || fill.property("Color") || (fill.numProperties >= 1 ? fill.property(1) : null);
                         if (fCol && fCol.setValue) fCol.setValue(fillCol);
-                        var fOp = fill.property("ADBE Vector Fill Opacity") || fill.property("Opacity") || fill.property(2);
+                        var fOp = fill.property("ADBE Vector Fill Opacity") || fill.property("Opacity") || (fill.numProperties >= 2 ? fill.property(2) : null);
                         if (fOp && fOp.setValue) fOp.setValue(fillOp);
                     }
 
-                    var stroke = contents.property("ADBE Vector Graphic - Stroke") || contents.property(3);
+                    var stroke = contents.property("ADBE Vector Graphic - Stroke");
+                    if (!stroke && contents.numProperties >= 3) {
+                        stroke = contents.property(3);
+                    }
                     if (stroke) {
-                        var sCol = stroke.property("ADBE Vector Stroke Color") || stroke.property("Color") || stroke.property(1);
+                        var sCol = stroke.property("ADBE Vector Stroke Color") || stroke.property("Color") || (stroke.numProperties >= 1 ? stroke.property(1) : null);
                         if (sCol && sCol.setValue) sCol.setValue(strCol);
-                        var sW = stroke.property("ADBE Vector Stroke Width") || stroke.property("Stroke Width") || stroke.property(2);
+                        var sW = stroke.property("ADBE Vector Stroke Width") || stroke.property("Stroke Width") || (stroke.numProperties >= 2 ? stroke.property(2) : null);
                         if (sW && sW.setValue) sW.setValue(strW);
-                        var sOp = stroke.property("ADBE Vector Stroke Opacity") || stroke.property("Opacity") || stroke.property(3);
+                        var sOp = stroke.property("ADBE Vector Stroke Opacity") || stroke.property("Opacity") || (stroke.numProperties >= 3 ? stroke.property(3) : null);
                         if (sOp && sOp.setValue) sOp.setValue(strW <= 0.0001 ? 0 : strOp);
                     }
                 }
@@ -1729,22 +1732,22 @@
                     cap.threeDLayer = true;
                     cap.shy = true;
 
-                    var root = cap.property("ADBE Root Vectors Group") || cap.property("Contents") || (cap.property && cap.property(1));
+                    var root = cap.property("ADBE Root Vectors Group") || cap.property("Contents") || (cap.numProperties >= 1 ? cap.property(1) : null);
                     var grp = root.addProperty("ADBE Vector Group");
                     grp.name = "Cap Vector";
 
-                    var contents = grp.property("ADBE Vectors Group") || grp.property("Contents") || (grp.property && grp.property(2)) || (grp.property && grp.property(1));
+                    var contents = grp.property("ADBE Vectors Group") || grp.property("Contents") || (grp.numProperties >= 2 ? grp.property(2) : (grp.numProperties >= 1 ? grp.property(1) : null));
                     contents.addProperty("ADBE Vector Shape - Group");
                     contents.addProperty("ADBE Vector Graphic - Fill");
                     if (!isInner) {
                         contents.addProperty("ADBE Vector Graphic - Stroke");
                     }
 
-                    contents = grp.property("ADBE Vectors Group") || grp.property("Contents") || (grp.property && grp.property(2)) || (grp.property && grp.property(1));
+                    contents = grp.property("ADBE Vectors Group") || grp.property("Contents") || (grp.numProperties >= 2 ? grp.property(2) : (grp.numProperties >= 1 ? grp.property(1) : null));
 
-                    var shapeGroup = contents.property("ADBE Vector Shape - Group") || contents.property(1);
+                    var shapeGroup = contents.property("ADBE Vector Shape - Group") || (contents.numProperties >= 1 ? contents.property(1) : null);
                     if (shapeGroup) {
-                        var pProp = shapeGroup.property("ADBE Vector Shape") || shapeGroup.property("Path") || (shapeGroup.numProperties >= 2 ? shapeGroup.property(2) : shapeGroup.property(1));
+                        var pProp = shapeGroup.property("ADBE Vector Shape") || shapeGroup.property("Path") || (shapeGroup.numProperties >= 2 ? shapeGroup.property(2) : (shapeGroup.numProperties >= 1 ? shapeGroup.property(1) : null));
                         if (pProp) {
                             var capData = computeCapShapeData(w, h, rTL, rTR, rBR, rBL, preventOverlap, imitateSegments, segCount);
                             if (typeof Shape !== "undefined") {
@@ -1760,22 +1763,25 @@
                         }
                     }
 
-                    var fill = contents.property("ADBE Vector Graphic - Fill") || contents.property(2);
+                    var fill = contents.property("ADBE Vector Graphic - Fill") || (contents.numProperties >= 2 ? contents.property(2) : null);
                     if (fill) {
-                        var fCol = fill.property("ADBE Vector Fill Color") || fill.property("Color") || fill.property(1);
+                        var fCol = fill.property("ADBE Vector Fill Color") || fill.property("Color") || (fill.numProperties >= 1 ? fill.property(1) : null);
                         if (fCol && fCol.setValue) fCol.setValue(capColor);
-                        var fOp = fill.property("ADBE Vector Fill Opacity") || fill.property("Opacity") || fill.property(2);
+                        var fOp = fill.property("ADBE Vector Fill Opacity") || fill.property("Opacity") || (fill.numProperties >= 2 ? fill.property(2) : null);
                         if (fOp && fOp.setValue) fOp.setValue(capsOpacity);
                     }
 
                     if (!isInner) {
-                        var stroke = contents.property("ADBE Vector Graphic - Stroke") || contents.property(3);
+                        var stroke = contents.property("ADBE Vector Graphic - Stroke");
+                        if (!stroke && contents.numProperties >= 3) {
+                            stroke = contents.property(3);
+                        }
                         if (stroke) {
-                            var sCol = stroke.property("ADBE Vector Stroke Color") || stroke.property("Color") || stroke.property(1);
+                            var sCol = stroke.property("ADBE Vector Stroke Color") || stroke.property("Color") || (stroke.numProperties >= 1 ? stroke.property(1) : null);
                             if (sCol && sCol.setValue) sCol.setValue(strokeColor);
-                            var sW = stroke.property("ADBE Vector Stroke Width") || stroke.property("Stroke Width") || stroke.property(2);
+                            var sW = stroke.property("ADBE Vector Stroke Width") || stroke.property("Stroke Width") || (stroke.numProperties >= 2 ? stroke.property(2) : null);
                             if (sW && sW.setValue) sW.setValue(strokeWidth);
-                            var sOp = stroke.property("ADBE Vector Stroke Opacity") || stroke.property("Opacity") || stroke.property(3);
+                            var sOp = stroke.property("ADBE Vector Stroke Opacity") || stroke.property("Opacity") || (stroke.numProperties >= 3 ? stroke.property(3) : null);
                             if (sOp && sOp.setValue) sOp.setValue(strokeWidth <= 0.0001 ? 0 : strokeOpacity);
                         }
                     }
@@ -1942,36 +1948,53 @@
                 // Setup layer expressions helper
                 function applyCommonMaterialExprs(lay, faceType) {
                     if (!lay) return;
-                    var root = lay.property("ADBE Root Vectors Group") || lay.property("Contents") || (lay.property && lay.property(1));
+                    var root = lay.property("ADBE Root Vectors Group") || lay.property("Contents") || (lay.numProperties >= 1 ? lay.property(1) : null);
                     if (!root) return;
-                    var grp = root.property(1);
+                    var grp = (root.numProperties >= 1) ? root.property(1) : null;
                     if (!grp) return;
-                    var contents = grp.property("ADBE Vectors Group") || grp.property("Contents") || (grp.property && grp.property(2)) || (grp.property && grp.property(1));
+                    var contents = grp.property("ADBE Vectors Group") || grp.property("Contents") || (grp.numProperties >= 2 ? grp.property(2) : (grp.numProperties >= 1 ? grp.property(1) : null));
                     if (!contents) return;
 
-                    var fill = contents.property("ADBE Vector Graphic - Fill") || contents.property(2);
+                    var fill = contents.property("ADBE Vector Graphic - Fill") || (contents.numProperties >= 2 ? contents.property(2) : null);
                     if (fill) {
-                        var fCol = fill.property("ADBE Vector Fill Color") || fill.property("Color") || fill.property(1);
+                        var fCol = fill.property("ADBE Vector Fill Color") || fill.property("Color") || (fill.numProperties >= 1 ? fill.property(1) : null);
                         if (fCol) {
                             if (faceType === "front") fCol.expression = exprFrontCol;
                             else if (faceType === "back") fCol.expression = exprBackCol;
                             else fCol.expression = exprSidesCol;
                         }
-                        var fOp = fill.property("ADBE Vector Fill Opacity") || fill.property("Opacity") || fill.property(2);
+                        var fOp = fill.property("ADBE Vector Fill Opacity") || fill.property("Opacity") || (fill.numProperties >= 2 ? fill.property(2) : null);
                         if (fOp) fOp.expression = (faceType === "front" || faceType === "back") ? exprCapsOp : exprSidesOp;
                     }
 
-                    var stroke = contents.property("ADBE Vector Graphic - Stroke") || contents.property(3);
+                    var stroke = contents.property("ADBE Vector Graphic - Stroke");
+                    if (!stroke && contents.numProperties >= 3) {
+                        stroke = contents.property(3);
+                    }
                     if (stroke) {
-                        var sCol = stroke.property("ADBE Vector Stroke Color") || stroke.property("Color") || stroke.property(1);
+                        var sCol = stroke.property("ADBE Vector Stroke Color") || stroke.property("Color") || (stroke.numProperties >= 1 ? stroke.property(1) : null);
                         if (sCol) sCol.expression = exprStrokeCol;
-                        var sW = stroke.property("ADBE Vector Stroke Width") || stroke.property("Stroke Width") || stroke.property(2);
+                        var sW = stroke.property("ADBE Vector Stroke Width") || stroke.property("Stroke Width") || (stroke.numProperties >= 2 ? stroke.property(2) : null);
                         if (sW) sW.expression = exprStrokeWidth;
-                        var sOp = stroke.property("ADBE Vector Stroke Opacity") || stroke.property("Opacity") || stroke.property(3);
+                        var sOp = stroke.property("ADBE Vector Stroke Opacity") || stroke.property("Opacity") || (stroke.numProperties >= 3 ? stroke.property(3) : null);
                         if (sOp) {
                             sOp.expression = (faceType === "front" || faceType === "back") ? exprStrokeOp : exprEdgeStrokeOp;
                         }
                     }
+                }
+
+                // Helper to retrieve Shape Path property safely
+                function getShapePathProp(layer) {
+                    if (!layer) return null;
+                    var root = layer.property("ADBE Root Vectors Group") || layer.property("Contents") || (layer.numProperties >= 1 ? layer.property(1) : null);
+                    if (!root) return null;
+                    var grp = (root.numProperties >= 1) ? root.property(1) : null;
+                    if (!grp) return null;
+                    var cont = grp.property("ADBE Vectors Group") || grp.property("Contents") || (grp.numProperties >= 2 ? grp.property(2) : (grp.numProperties >= 1 ? grp.property(1) : null));
+                    if (!cont) return null;
+                    var shp = cont.property("ADBE Vector Shape - Group") || (cont.numProperties >= 1 ? cont.property(1) : null);
+                    if (!shp) return null;
+                    return shp.property("ADBE Vector Shape") || shp.property("Path") || (shp.numProperties >= 2 ? shp.property(2) : (shp.numProperties >= 1 ? shp.property(1) : null));
                 }
 
                 // Front & Back Caps expressions
@@ -1981,11 +2004,7 @@
                 if (preCapFront) {
                     setTransformExpr(preCapFront, "Position", 'try { [0, 0, -thisComp.layer("Extruded_Rect_Master_Controller").effect("Extrude Depth")(1).value / 2]; } catch(e) { [0, 0, -' + (d / 2) + ']; }');
                     applyCommonMaterialExprs(preCapFront, "front");
-                    var rootF = preCapFront.property("ADBE Root Vectors Group") || preCapFront.property("Contents") || (preCapFront.property && preCapFront.property(1));
-                    var grpF = rootF.property(1);
-                    var contF = grpF.property("ADBE Vectors Group") || grpF.property("Contents") || (grpF.property && grpF.property(2)) || (grpF.property && grpF.property(1));
-                    var shpF = contF.property("ADBE Vector Shape - Group") || contF.property(1);
-                    var pF = shpF.property("ADBE Vector Shape") || shpF.property("Path") || (shpF.numProperties >= 2 ? shpF.property(2) : shpF.property(1));
+                    var pF = getShapePathProp(preCapFront);
                     if (pF) pF.expression = capPathExpr;
                 }
 
@@ -1993,11 +2012,7 @@
                 if (preCapFrontInner) {
                     setTransformExpr(preCapFrontInner, "Position", 'try { [0, 0, -thisComp.layer("Extruded_Rect_Master_Controller").effect("Extrude Depth")(1).value / 2 + 0.15]; } catch(e) { [0, 0, -' + (d / 2 - 0.15) + ']; }');
                     applyCommonMaterialExprs(preCapFrontInner, "sides");
-                    var rootFI = preCapFrontInner.property("ADBE Root Vectors Group") || preCapFrontInner.property("Contents") || (preCapFrontInner.property && preCapFrontInner.property(1));
-                    var grpFI = rootFI.property(1);
-                    var contFI = grpFI.property("ADBE Vectors Group") || grpFI.property("Contents") || (grpFI.property && grpFI.property(2)) || (grpFI.property && grpFI.property(1));
-                    var shpFI = contFI.property("ADBE Vector Shape - Group") || contFI.property(1);
-                    var pFI = shpFI.property("ADBE Vector Shape") || shpFI.property("Path") || (shpFI.numProperties >= 2 ? shpFI.property(2) : shpFI.property(1));
+                    var pFI = getShapePathProp(preCapFrontInner);
                     if (pFI) pFI.expression = capPathExpr;
                 }
 
@@ -2005,11 +2020,7 @@
                 if (preCapBack) {
                     setTransformExpr(preCapBack, "Position", 'try { [0, 0, thisComp.layer("Extruded_Rect_Master_Controller").effect("Extrude Depth")(1).value / 2]; } catch(e) { [0, 0, ' + (d / 2) + ']; }');
                     applyCommonMaterialExprs(preCapBack, "back");
-                    var rootB = preCapBack.property("ADBE Root Vectors Group") || preCapBack.property("Contents") || (preCapBack.property && preCapBack.property(1));
-                    var grpB = rootB.property(1);
-                    var contB = grpB.property("ADBE Vectors Group") || grpB.property("Contents") || (grpB.property && grpB.property(2)) || (grpB.property && grpB.property(1));
-                    var shpB = contB.property("ADBE Vector Shape - Group") || contB.property(1);
-                    var pB = shpB.property("ADBE Vector Shape") || shpB.property("Path") || (shpB.numProperties >= 2 ? shpB.property(2) : shpB.property(1));
+                    var pB = getShapePathProp(preCapBack);
                     if (pB) pB.expression = capPathExpr;
                 }
 
@@ -2017,18 +2028,21 @@
                 if (preCapBackInner) {
                     setTransformExpr(preCapBackInner, "Position", 'try { [0, 0, thisComp.layer("Extruded_Rect_Master_Controller").effect("Extrude Depth")(1).value / 2 - 0.15]; } catch(e) { [0, 0, ' + (d / 2 - 0.15) + ']; }');
                     applyCommonMaterialExprs(preCapBackInner, "sides");
-                    var rootBI = preCapBackInner.property("ADBE Root Vectors Group") || preCapBackInner.property("Contents") || (preCapBackInner.property && preCapBackInner.property(1));
-                    var grpBI = rootBI.property(1);
-                    var contBI = grpBI.property("ADBE Vectors Group") || grpBI.property("Contents") || (grpBI.property && grpBI.property(2)) || (grpBI.property && grpBI.property(1));
-                    var shpBI = contBI.property("ADBE Vector Shape - Group") || contBI.property(1);
-                    var pBI = shpBI.property("ADBE Vector Shape") || shpBI.property("Path") || (shpBI.numProperties >= 2 ? shpBI.property(2) : shpBI.property(1));
+                    var pBI = getShapePathProp(preCapBackInner);
                     if (pBI) pBI.expression = capPathExpr;
                 }
 
                 // Helper for wall dimensions & positions
                 var exprSolverHeader = [
                     'var m = thisComp.layer("Extruded_Rect_Master_Controller");',
-                    'function _gv(n, fb) { try { var eff = m.effect(n); return (eff && eff(1)) ? eff(1).value : fb; } catch(e) { return fb; } }',
+                    'function _gv(n, fb) {',
+                    '    try {',
+                    '        var p = m.effect(n)(1);',
+                    '        return (p && typeof p.value !== "undefined") ? p.value : (p !== undefined ? p : fb);',
+                    '    } catch(e) {',
+                    '        return fb;',
+                    '    }',
+                    '}',
                     'var w = Math.max(0, _gv("Width", ' + w + '));',
                     'var h = Math.max(0, _gv("Height", ' + h + '));',
                     'var d = Math.max(0, _gv("Extrude Depth", ' + d + '));',
@@ -2051,11 +2065,15 @@
 
                 function applyRectSizeExpr(lay, sizeExpr) {
                     if (!lay) return;
-                    var root = lay.property("ADBE Root Vectors Group") || lay.property("Contents") || (lay.property && lay.property(1));
-                    var grp = root.property(1);
-                    var contents = grp.property("ADBE Vectors Group") || grp.property("Contents") || (grp.property && grp.property(2)) || (grp.property && grp.property(1));
-                    var rect = contents.property("ADBE Vector Shape - Rect") || contents.property(1);
-                    var rSize = rect.property("ADBE Vector Rect Size") || rect.property("Size") || rect.property(2) || rect.property(1);
+                    var root = lay.property("ADBE Root Vectors Group") || lay.property("Contents") || (lay.numProperties >= 1 ? lay.property(1) : null);
+                    if (!root) return;
+                    var grp = (root.numProperties >= 1) ? root.property(1) : null;
+                    if (!grp) return;
+                    var contents = grp.property("ADBE Vectors Group") || grp.property("Contents") || (grp.numProperties >= 2 ? grp.property(2) : (grp.numProperties >= 1 ? grp.property(1) : null));
+                    if (!contents) return;
+                    var rect = contents.property("ADBE Vector Shape - Rect") || (contents.numProperties >= 1 ? contents.property(1) : null);
+                    if (!rect) return;
+                    var rSize = rect.property("ADBE Vector Rect Size") || rect.property("Size") || (rect.numProperties >= 2 ? rect.property(2) : (rect.numProperties >= 1 ? rect.property(1) : null));
                     if (rSize) rSize.expression = sizeExpr;
                 }
 
@@ -2234,36 +2252,39 @@
                 // 3. Directly update base values on vector shape fill & stroke properties
                 function updateShapeMaterial(lay, colVal, opVal, strColVal, strWVal, strOpVal) {
                     if (!lay) return;
-                    var root = lay.property("ADBE Root Vectors Group") || lay.property("Contents") || (lay.property && lay.property(1));
+                    var root = lay.property("ADBE Root Vectors Group") || lay.property("Contents") || (lay.numProperties >= 1 ? lay.property(1) : null);
                     if (!root) return;
-                    var grp = root.property(1);
+                    var grp = (root.numProperties >= 1) ? root.property(1) : null;
                     if (!grp) return;
-                    var contents = grp.property("ADBE Vectors Group") || grp.property("Contents") || (grp.property && grp.property(2)) || (grp.property && grp.property(1));
+                    var contents = grp.property("ADBE Vectors Group") || grp.property("Contents") || (grp.numProperties >= 2 ? grp.property(2) : (grp.numProperties >= 1 ? grp.property(1) : null));
                     if (!contents) return;
 
-                    var fill = contents.property("ADBE Vector Graphic - Fill") || contents.property(2);
+                    var fill = contents.property("ADBE Vector Graphic - Fill") || (contents.numProperties >= 2 ? contents.property(2) : null);
                     if (fill) {
-                        var fCol = fill.property("ADBE Vector Fill Color") || fill.property("Color") || fill.property(1);
+                        var fCol = fill.property("ADBE Vector Fill Color") || fill.property("Color") || (fill.numProperties >= 1 ? fill.property(1) : null);
                         if (fCol && typeof fCol.setValue === "function") {
                             try { fCol.setValue(colVal); } catch(eFC) {}
                         }
-                        var fOp = fill.property("ADBE Vector Fill Opacity") || fill.property("Opacity") || fill.property(2);
+                        var fOp = fill.property("ADBE Vector Fill Opacity") || fill.property("Opacity") || (fill.numProperties >= 2 ? fill.property(2) : null);
                         if (fOp && typeof fOp.setValue === "function") {
                             try { fOp.setValue(opVal); } catch(eFO) {}
                         }
                     }
 
-                    var stroke = contents.property("ADBE Vector Graphic - Stroke") || contents.property(3);
+                    var stroke = contents.property("ADBE Vector Graphic - Stroke");
+                    if (!stroke && contents.numProperties >= 3) {
+                        stroke = contents.property(3);
+                    }
                     if (stroke) {
-                        var sCol = stroke.property("ADBE Vector Stroke Color") || stroke.property("Color") || stroke.property(1);
+                        var sCol = stroke.property("ADBE Vector Stroke Color") || stroke.property("Color") || (stroke.numProperties >= 1 ? stroke.property(1) : null);
                         if (sCol && typeof sCol.setValue === "function") {
                             try { sCol.setValue(strColVal); } catch(eSC) {}
                         }
-                        var sW = stroke.property("ADBE Vector Stroke Width") || stroke.property("Stroke Width") || stroke.property(2);
+                        var sW = stroke.property("ADBE Vector Stroke Width") || stroke.property("Stroke Width") || (stroke.numProperties >= 2 ? stroke.property(2) : null);
                         if (sW && typeof sW.setValue === "function") {
                             try { sW.setValue(strWVal); } catch(eSW) {}
                         }
-                        var sOp = stroke.property("ADBE Vector Stroke Opacity") || stroke.property("Opacity") || stroke.property(3);
+                        var sOp = stroke.property("ADBE Vector Stroke Opacity") || stroke.property("Opacity") || (stroke.numProperties >= 3 ? stroke.property(3) : null);
                         if (sOp && typeof sOp.setValue === "function") {
                             try { sOp.setValue(strWVal <= 0.0001 ? 0 : strOpVal); } catch(eSO) {}
                         }

@@ -97,7 +97,11 @@ Full procedural emulation of Adobe After Effects' native Stroke Taper feature (`
 - **Drag & Drop**: Drag `.jsx` files directly from your file manager into the code editor panel.
 - **Auto-Execution**: The loaded script is automatically loaded into the editor and executed in the 3D comp, displaying real-time console output in the drawer.
 - **Auto Build Switch (`&autobuild=true`)**: A topbar toggle switch located immediately after the **Run Script** button. When active, it automatically appends `&autobuild=true` to the URL and automatically triggers the script's primary build/create button upon execution (e.g., *Build / Rebuild Extruded Rectangle*, *Build / Rebuild 3D Cube*, *Create Pie Slice Shape Layer*), generating geometry instantly without needing to press the button manually. When loading a URL containing `autobuild=true`, the switch is automatically enabled.
-- **Deep Linking & URL Routing**: The active script name is automatically synchronized with the URL (e.g., `?jsx=cylinder_maker.jsx&autobuild=true` or `?jsx=extruded_round_rectangle.jsx&autobuild=true`). Loading a link with a `?jsx=` parameter auto-detects and runs that tool immediately. Pressing the **Clear** button removes the URL parameter and resets the stage.
+- **Deep Linking & External URL Loading**: The simulator supports loading both local scripts and arbitrary external `.jsx` scripts via full web URLs:
+  - **Local Scripts**: `https://work2survive.github.io/AE_JS_builder/?jsx=cube_maker.jsx&autobuild=true`
+  - **External Scripts (Whole URL)**: `https://work2survive.github.io/AE_JS_builder/?jsx=https://github.com/work2survive/AE-Cube-Maker-3D/blob/main/cube_maker.jsx&autobuild=true`
+  - **Auto-Conversion & Protocol Handling**: Automatically detects and converts GitHub raw links (`raw.githubusercontent.com`), GitHub blob links (`github.com/.../blob/...`), raw/branch paths, and Gists into direct raw scripts with CORS headers.
+  - Automatically fetches the code, populates the editor and preset dropdown, renders the ScriptUI panel, and triggers `&autobuild=true` immediately upon arrival. Pressing the **Clear** button resets the stage and cleans URL parameters.
 - Comes with a sample test script: [`test_script.jsx`](file:///g:/My%20Drive/_openProjects/My_AE_assets/AE_JS_builder/test_script.jsx).
 
 ### 10. ScriptUI Panel & Dialog Emulator

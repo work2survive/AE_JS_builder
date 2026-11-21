@@ -8,13 +8,13 @@
     'use strict';
 
     // -------------------------------------------------------------
-    // Version Management (v1.2.2)
+    // Version Management (v1.2.4)
     // -------------------------------------------------------------
     function computeDailyVersion() {
-        return '1.2.2';
+        return '1.2.4';
     }
 
-    const APP_VERSION = '1.2.2';
+    const APP_VERSION = '1.2.4';
     global.EMULATOR_VERSION = APP_VERSION;
 
     let renderer = null;
@@ -1475,6 +1475,62 @@
         // -------------------------------------------------------------
         // URL Parameter Routing (Direct Deep Linking for .JSX files)
         // -------------------------------------------------------------
+        function isExternalURL(str) {
+            if (!str || typeof str !== 'string') return false;
+            const s = str.trim();
+            return /^https?:\/\//i.test(s) || /^\/\//.test(s) || /^(raw\.githubusercontent\.com|github\.com|gist\.githubusercontent\.com|gist\.github\.com)\//i.test(s) || /:\/\//.test(s);
+        }
+
+        function convertToDirectRawURL(urlStr) {
+            if (!urlStr || typeof urlStr !== 'string') return urlStr;
+            let cleanUrl = urlStr.trim();
+            if (!cleanUrl) return cleanUrl;
+
+            // Ensure protocol
+            if (!/^https?:\/\//i.test(cleanUrl) && !cleanUrl.startsWith('//')) {
+                cleanUrl = 'https://' + cleanUrl;
+            }
+
+            // Known repository shorthand / fallback map for work2survive repositories
+            const KNOWN_GITHUB_REPOS = {
+                'ae-cube-maker-3d': 'https://raw.githubusercontent.com/work2survive/AE-Cube-Maker-3D/main/cube_maker.jsx',
+                'ae-cylinder-maker-3d': 'https://raw.githubusercontent.com/work2survive/AE-Cylinder-Maker-3D/main/cylinder_maker.jsx',
+                'ae-pie-slice-tool': 'https://raw.githubusercontent.com/work2survive/AE-Pie-Slice-Tool/main/Pie_Slice_Generator.jsx',
+                'ae_custom_rounded_rect': 'https://raw.githubusercontent.com/work2survive/AE_Custom_Rounded_Rect/main/custom_rounded_rect.jsx',
+                'aecustomroundedrect': 'https://raw.githubusercontent.com/work2survive/AE_Custom_Rounded_Rect/main/custom_rounded_rect.jsx',
+                'ae_extruded_round_corners': 'https://raw.githubusercontent.com/work2survive/AE_Extruded_Round_corners/main/extruded_round_rectangle.jsx',
+                'extruded_round_corners_corners': 'https://raw.githubusercontent.com/work2survive/AE_Extruded_Round_corners/main/extruded_round_rectangle.jsx',
+                'ae_message_bubble': 'https://raw.githubusercontent.com/work2survive/AE_message_bubble/main/Message_Bubble_Generator.jsx',
+                'ae_windbox': 'https://raw.githubusercontent.com/work2survive/AE_windBox/main/AE_WindBox_Panel.jsx',
+                'ae_spiral_maker': 'https://raw.githubusercontent.com/work2survive/AE_spiral_maker/main/AE_Spiral_Maker.jsx'
+            };
+
+            // If a whole repository root was provided e.g. https://github.com/work2survive/AE-Cube-Maker-3D
+            const repoOnlyMatch = cleanUrl.match(/^https?:\/\/github\.com\/([^/]+)\/([^/?#]+)\/?$/i);
+            if (repoOnlyMatch) {
+                const repoKey = repoOnlyMatch[2].toLowerCase();
+                if (KNOWN_GITHUB_REPOS[repoKey]) {
+                    return KNOWN_GITHUB_REPOS[repoKey];
+                }
+            }
+
+            // Auto-convert standard GitHub blob and raw URLs:
+            // https://github.com/user/repo/blob/branch/path.jsx -> https://raw.githubusercontent.com/user/repo/branch/path.jsx
+            // https://github.com/user/repo/raw/branch/path.jsx -> https://raw.githubusercontent.com/user/repo/branch/path.jsx
+            const ghBlobMatch = cleanUrl.match(/^https?:\/\/github\.com\/([^/]+)\/([^/]+)\/(?:blob|raw)\/(.+)$/i);
+            if (ghBlobMatch) {
+                return `https://raw.githubusercontent.com/${ghBlobMatch[1]}/${ghBlobMatch[2]}/${ghBlobMatch[3]}`;
+            }
+
+            // GitHub Gist:
+            const gistMatch = cleanUrl.match(/^https?:\/\/gist\.github\.com\/([^/]+)\/([a-f0-9]+)(?:\/raw)?(?:\/.+)?$/i);
+            if (gistMatch) {
+                return `https://gist.githubusercontent.com/${gistMatch[1]}/${gistMatch[2]}/raw`;
+            }
+
+            return cleanUrl;
+        }
+
         function normalizeJSXToken(str) {
             if (!str) return '';
             return str.toLowerCase()
@@ -1544,25 +1600,34 @@
             try {
                 const url = new URL(window.location.href);
                 const urlParams = url.searchParams;
-                let target = urlParams.get('jsx') || urlParams.get('sample') || urlParams.get('url') || urlParams.get('file') || urlParams.get('preset') || urlParams.get('script');
+                let target = urlParams.get('jsx') || urlParams.get('url') || urlParams.get('sample') || urlParams.get('file') || urlParams.get('preset') || urlParams.get('script');
                 
-                // If not found in named parameters, check bare query param (e.g., ?cylinder_maker.jsx or ?cylinder)
+                // If not found in named parameters, check bare query param (e.g., ?https://... or ?cylinder_maker.jsx or ?cylinder)
                 if (!target && url.search) {
                     const rawSearch = url.search.replace(/^\?/, '').trim();
                     if (rawSearch) {
-                        const firstKey = rawSearch.split('&')[0].split('=')[0];
-                        if (firstKey && !['fbclid', 'utm_source'].includes(firstKey.toLowerCase())) {
-                            target = firstKey;
+                        if (/^https?:\/\//i.test(rawSearch) || rawSearch.startsWith('//') || /^(raw\.githubusercontent\.com|github\.com)\//i.test(rawSearch)) {
+                            const autoIdx = rawSearch.indexOf('&autobuild');
+                            target = autoIdx !== -1 ? rawSearch.slice(0, autoIdx) : rawSearch;
+                        } else {
+                            const firstKey = rawSearch.split('&')[0].split('=')[0];
+                            if (firstKey && !['fbclid', 'utm_source'].includes(firstKey.toLowerCase())) {
+                                target = firstKey;
+                            }
                         }
                     }
                 }
 
-                // Also check hash (e.g., #jsx=... or #cylinder_maker.jsx)
+                // Also check hash (e.g., #jsx=https://... or #jsx=... or #cylinder_maker.jsx)
                 if (!target && url.hash) {
                     const hash = url.hash.replace(/^#\/?/, '').trim();
                     if (hash) {
-                        const hashParams = new URLSearchParams(hash);
-                        target = hashParams.get('jsx') || hashParams.get('file') || hashParams.get('preset') || hash.split('&')[0].split('=')[0];
+                        if (/^https?:\/\//i.test(hash) || hash.startsWith('//') || /^(raw\.githubusercontent\.com|github\.com)\//i.test(hash)) {
+                            target = hash.split('&')[0];
+                        } else {
+                            const hashParams = new URLSearchParams(hash);
+                            target = hashParams.get('jsx') || hashParams.get('url') || hashParams.get('file') || hashParams.get('preset') || hash.split('&')[0].split('=')[0];
+                        }
                     }
                 }
 
@@ -1639,9 +1704,9 @@
 
         async function loadPresetOrJSX(val, updateUrl, isPush) {
             if (!val) return;
-            if (val.startsWith('http://') || val.startsWith('https://')) {
+            if (isExternalURL(val)) {
                 try {
-                    await loadAndRunJSXFromURL(val);
+                    await loadAndRunJSXFromURL(val, updateUrl, isPush);
                 } catch (e) {
                     appendConsole(`Failed to load script from URL ${val}: ${e.message}`, true);
                 }
@@ -1804,11 +1869,16 @@
             const requested = getRequestedJSXFromURL();
             let targetVal = null;
             if (requested) {
-                targetVal = findMatchingOption(requested);
-                if (targetVal) {
-                    appendConsole(`Detected "${requested}" in URL. Auto-loading...`);
+                if (isExternalURL(requested)) {
+                    targetVal = requested;
+                    appendConsole(`Detected external JSX URL in query: "${requested}". Fetching...`);
                 } else {
-                    appendConsole(`Requested file "${requested}" from URL was not found in presets. Defaulting to Cube Maker.`, true);
+                    targetVal = findMatchingOption(requested);
+                    if (targetVal) {
+                        appendConsole(`Detected "${requested}" in URL. Auto-loading...`);
+                    } else {
+                        appendConsole(`Requested file "${requested}" from URL was not found in presets. Defaulting to Cube Maker.`, true);
+                    }
                 }
             }
 
@@ -1836,9 +1906,15 @@
             }
             const requested = getRequestedJSXFromURL();
             if (requested) {
-                const matched = findMatchingOption(requested);
-                if (matched && matched !== presetSelect.value) {
-                    loadPresetOrJSX(matched, false, false);
+                if (isExternalURL(requested)) {
+                    if (presetSelect.value !== requested) {
+                        loadPresetOrJSX(requested, false, false);
+                    }
+                } else {
+                    const matched = findMatchingOption(requested);
+                    if (matched && matched !== presetSelect.value) {
+                        loadPresetOrJSX(matched, false, false);
+                    }
                 }
             } else {
                 const defaultOpt = presetSelect.querySelector('option[value="jsx:cube_maker.jsx"]');
@@ -1893,21 +1969,10 @@
         // -------------------------------------------------------------
         // Load JSX from Web URL Dialog & Fetcher
         // -------------------------------------------------------------
-        async function loadAndRunJSXFromURL(urlStr) {
+        async function loadAndRunJSXFromURL(urlStr, updateUrl = true, isPush = false) {
             if (!urlStr || typeof urlStr !== 'string') throw new Error('Please enter a valid URL.');
-            let cleanUrl = urlStr.trim();
+            let cleanUrl = convertToDirectRawURL(urlStr);
             if (!cleanUrl) throw new Error('Please enter a valid URL.');
-
-            // Auto-convert standard GitHub blob URLs to raw.githubusercontent.com
-            const ghBlobMatch = cleanUrl.match(/^https?:\/\/github\.com\/([^/]+)\/([^/]+)\/blob\/(.+)$/i);
-            if (ghBlobMatch) {
-                cleanUrl = `https://raw.githubusercontent.com/${ghBlobMatch[1]}/${ghBlobMatch[2]}/${ghBlobMatch[3]}`;
-            }
-
-            // Ensure protocol
-            if (!/^https?:\/\//i.test(cleanUrl)) {
-                cleanUrl = 'https://' + cleanUrl;
-            }
 
             appendConsole(`Fetching JSX from URL: ${cleanUrl}...`);
             const response = await fetch(cleanUrl);
@@ -1937,9 +2002,25 @@
             }
 
             codeTextarea.value = code;
-            if (currentFilenameEl) currentFilenameEl.textContent = filename;
+            if (currentFilenameEl) currentFilenameEl.textContent = `${filename} (🌐 Remote URL)`;
             appendConsole(`Loaded "${filename}" from URL (${code.length} characters). Executing...`);
-            updateURLForJSX(filename, true);
+
+            // Update preset selector to reflect external script
+            if (presetSelect) {
+                let extOpt = presetSelect.querySelector('option[data-external="true"]');
+                if (!extOpt) {
+                    extOpt = document.createElement('option');
+                    extOpt.dataset.external = 'true';
+                    presetSelect.insertBefore(extOpt, presetSelect.firstChild);
+                }
+                extOpt.value = urlStr;
+                extOpt.textContent = `🌐 ${filename} (External URL)`;
+                presetSelect.value = urlStr;
+            }
+
+            if (updateUrl) {
+                updateURLForJSX(urlStr, isPush);
+            }
 
             // Execute script
             runUserScript(code);
@@ -2001,7 +2082,7 @@
             if (txtUrlSubmit) txtUrlSubmit.textContent = 'Fetching...';
 
             try {
-                await loadAndRunJSXFromURL(url);
+                await loadAndRunJSXFromURL(url, true, true);
                 closeUrlModal();
             } catch (err) {
                 if (errUrl) {
