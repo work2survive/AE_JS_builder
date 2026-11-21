@@ -533,23 +533,35 @@
     class StaticText extends UIElement {
         constructor(text, container, properties) {
             super('statictext', text, container, properties);
+            this._text = text || '';
+        }
+
+        get text() {
+            return this.domElement ? this.domElement.textContent : this._text;
+        }
+
+        set text(val) {
+            this._text = String(val !== undefined && val !== null ? val : '');
+            if (this.domElement) {
+                this.domElement.textContent = this._text;
+            }
         }
 
         renderDOM() {
             const span = document.createElement('span');
             span.className = 'scriptui-statictext';
             this.applyCommonStyles(span);
-            if (this.text && (this.text.includes('🔵') || this.text.includes('🟡'))) {
+            if (this._text && (this._text.includes('🔵') || this._text.includes('🟡'))) {
                 span.style.color = '#64b5f6';
                 span.style.fontWeight = '600';
-            } else if (this.text && this.text.includes('🔴')) {
+            } else if (this._text && this._text.includes('🔴')) {
                 span.style.color = '#ff7675';
                 span.style.fontWeight = '600';
             }
-            if (this._onClick || (this.text && (this.text.toLowerCase().includes('github') || this.text.toLowerCase().includes('http')))) {
+            if (this._onClick || (this._text && (this._text.toLowerCase().includes('github') || this._text.toLowerCase().includes('http')))) {
                 span.classList.add('scriptui-link');
             }
-            span.textContent = this.text;
+            span.textContent = this._text;
             span.onclick = (e) => {
                 if (typeof this.onClick === 'function') {
                     e.stopPropagation();
@@ -585,6 +597,17 @@
         set text(val) {
             this._text = String(val);
             if (this.domElement) this.domElement.value = this._text;
+        }
+
+        get active() {
+            return this.domElement ? (document.activeElement === this.domElement) : false;
+        }
+
+        set active(val) {
+            if (this.domElement) {
+                if (val) this.domElement.focus();
+                else this.domElement.blur();
+            }
         }
 
         renderDOM() {

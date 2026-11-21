@@ -5184,10 +5184,22 @@
                     } catch(eBFill) {}
                 }
                 precompLayer.selected = true;
-                lastTargetId = getTargetUniqueId({ parentComp: comp, precompLayer: precompLayer, preCompItem: preCompItem });
+                lastLoadedTargetId = getTargetUniqueId({ parentComp: comp, precompLayer: precompLayer, preCompItem: preCompItem });
+                if (typeof preCompItem._onChanged === "function") {
+                    preCompItem._onChanged();
+                }
+                if (comp && typeof comp._onChanged === "function") {
+                    comp._onChanged();
+                }
+                if (typeof window !== "undefined" && window.aeRenderer && typeof window.aeRenderer.renderLayers === "function") {
+                    window.aeRenderer.renderLayers(window.aeRenderer.comp ? window.aeRenderer.comp.time : 0);
+                }
             } else {
                 master.selected = true;
-                lastTargetId = null;
+                lastLoadedTargetId = null;
+                if (comp && typeof comp._onChanged === "function") {
+                    comp._onChanged();
+                }
             }
         } catch (err) {
             alert("Could not generate Message Bubble:\n" + err.toString());
@@ -5252,6 +5264,14 @@
         }
         return null;
     }
+    function isUIElementActive(el) {
+        if (!el) return false;
+        try {
+            if (el.active) return true;
+            if (el.domElement && typeof document !== "undefined" && document.activeElement === el.domElement) return true;
+        } catch(e) {}
+        return false;
+    }
     function getTargetUniqueId(target) {
         if (!target) return null;
         try {
@@ -5267,10 +5287,10 @@
         } catch(e) {}
         return null;
     }
-    var lastTargetId = null;
+    var lastLoadedTargetId = null;
     function loadSettingsFromPrecomp(target) {
         if (!target) return;
-        if (txtMessage && txtMessage.active) return;
+        if (isUIElementActive(txtMessage)) return;
         var pLayer = target.precompLayer;
         var pComp = target.preCompItem;
         if (pComp) {
@@ -5419,7 +5439,7 @@
     }
     function checkSelectionState() {
         try {
-            if (txtMessage && txtMessage.active) {
+            if (isUIElementActive(txtMessage)) {
                 return;
             }
             var target = getSelectedMessageBubblePrecomp();
@@ -5430,15 +5450,14 @@
                     btnBuild.text = updateText;
                 }
                 var currentId = getTargetUniqueId(target);
-                if (currentId && currentId !== lastTargetId) {
-                    lastTargetId = currentId;
+                if (currentId && currentId !== lastLoadedTargetId) {
+                    lastLoadedTargetId = currentId;
                     loadSettingsFromPrecomp(target);
                 }
             } else {
                 if (btnBuild.text !== "Create Message Bubble") {
                     btnBuild.text = "Create Message Bubble";
                 }
-                lastTargetId = null;
             }
         } catch(e) {}
     }
@@ -5880,13 +5899,22 @@
                     preCompItem._onChanged();
                 }
             }
+            if (parentComp && typeof parentComp._onChanged === "function") {
+                parentComp._onChanged();
+            }
             if (parentComp && typeof parentComp._notify === "function") {
                 parentComp._notify();
             }
+            if (app.project && app.project.activeItem && typeof app.project.activeItem._onChanged === "function") {
+                app.project.activeItem._onChanged();
+            }
+            if (typeof window !== "undefined" && window.aeRenderer && typeof window.aeRenderer.renderLayers === "function") {
+                window.aeRenderer.renderLayers(window.aeRenderer.comp ? window.aeRenderer.comp.time : 0);
+            }
             if (precompLayer) {
                 precompLayer.selected = true;
-                lastTargetId = getTargetUniqueId(activeTarget);
             }
+            lastLoadedTargetId = getTargetUniqueId(activeTarget);
         } catch(err) {
             alert("Could not update Message Bubble:\n" + err.toString());
         } finally {
@@ -5905,10 +5933,9 @@
         var activeTarget = getSelectedMessageBubblePrecomp();
         if (activeTarget) {
             updateExistingMessageBubble(activeTarget);
-            lastTargetId = getTargetUniqueId(activeTarget);
+            lastLoadedTargetId = getTargetUniqueId(activeTarget);
         } else {
             buildMessageBubble();
-            lastTargetId = null;
         }
     };
     // --- Bottom Subtle Repository Link ---
