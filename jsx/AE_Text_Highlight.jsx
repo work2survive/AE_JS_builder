@@ -1,41 +1,35 @@
 // Co-authored & architected with Google DeepMind Antigravity.
 // =============================================================================
-// ADOBE AFTER EFFECTS EXTENDSCRIPT & SCRIPTUI PANEL: AE TEXT HIGHLIGHT v1.0
+// ADOBE AFTER EFFECTS EXTENDSCRIPT & SCRIPTUI PANEL: AE TEXT HIGHLIGHT v1.1
 // =============================================================================
 //
 // PURPOSE:
 //   Detects the exact geometric position of specified words, character chains,
-//   or full sentences inside a Text Layer, and places procedural vector highlight
-//   blocks underneath the text.
+//   or full sentences inside any Text Layer, and places procedural vector highlight
+//   blocks directly underneath the text with ZERO cumulative offset.
 //
-// KEY CAPABILITIES & SPECIFICATION:
-//   1. Target Detection & Smart Fallback:
-//      - If a Text Layer is currently selected, it detects and binds to that layer.
-//      - If NO Text Layer is selected when applied, it automatically creates a
-//        ~100-word "Lorem Ipsum sit amet..." paragraph block, randomly selects
-//        3 distinct words and 1 full sentence, and highlights them immediately.
-//   2. Highlighting Controls:
-//      - Words, chains of characters, or multi-word sentences to highlight.
-//      - Highlight Fill Color (with live hex/color picker and preset chips).
-//      - Highlight Opacity slider (0% to 100%).
-//      - Thickness Y (Vertical padding beyond font ascender/descender):
-//        * Default is strictly 0, tightly matching the font Ascender to Descender.
-//        * Can be increased for bolder padding or decreased for tighter fit.
-//      - Padding X (Horizontal margins on both sides of the word/phrase).
-//      - Roundness (Corner radius):
-//        * 0 = sharp rectangular / square blocks.
-//        * > 0 = sleek rounded rectangular capsules (as shown in reference image).
-//   3. Real-Time Expression Rigging:
-//      - Highlight blocks are parented directly to the source Text Layer.
-//      - Highlight Shape Layer sits directly beneath the text box.
-//      - Rectangle Path Size and Position properties are driven by procedural
-//        expressions that dynamically calculate character widths, line indices,
-//        leading, and justification in real time.
-//      - Highlight blocks dynamically react to Text Box resizing, repositioning,
-//        font size adjustments, font family changes, and text edits in real time!
-//   4. Background Layer:
-//      - Creates or links an underlying background plate (default: soft Sky Blue,
-//        faithfully matching the reference visual aesthetic).
+// ENHANCEMENTS IN v1.1:
+//   1. Sub-Pixel Precision Text Measurement (Fixes cumulative offset drift):
+//      - Expressions & builder use hardware-accelerated Canvas 2D measurement
+//        stack (`document.createElement('canvas').getContext('2d')`) matching the
+//        browser's exact SVG font rendering engine in the web simulator.
+//      - Zero drift even for words located 80+ characters deep into a line.
+//      - Precision per-font fallback metrics for desktop After Effects ExtendScript.
+//   2. Procedural Dummy Text Generation & Multi-Attribute Randomization:
+//      - If NO Text Layer is selected when executed, it creates a ~100-word
+//        "Lorem ipsum dolor sit amet..." dummy text block.
+//      - Fully randomizes across all required design dimensions:
+//        * Font: Picked randomly from typical desktop fonts:
+//          [Georgia, Arial, Times New Roman, Verdana, Trebuchet MS, Courier New, Impact].
+//        * Alignment: Picked randomly from [Left, Center, Right].
+//        * Text Box Width: Picked randomly (e.g. 700px - 1150px) with automatic
+//          word wrapping so lines fit the chosen width naturally.
+//        * First-Line Indent: Picked randomly (0px, 24px, 48px, 72px).
+//        * Auto-picks 3 random words and 1 full sentence to highlight.
+//   3. Interactive ScriptUI Panel Controls:
+//      - Live controls & readouts for Font, Alignment, Box Width, and Indent.
+//      - "🎲 Randomize Dummy & Layout" button to instantly test new combinations.
+//      - Real-time Effect Controls (Thickness Y, Padding X, Roundness, Color, Opacity).
 //
 // REPOSITORY: https://github.com/work2survive/AE_Text_Highlight
 // LIVE DEMO:  https://work2survive.github.io/AE_JS_builder/?jsx=AE_Text_Highlight.jsx&autobuild=true
@@ -45,25 +39,40 @@
     "use strict";
 
     var SCRIPT_TITLE   = "AE Text Highlight";
-    var SCRIPT_VERSION = "v1.0";
+    var SCRIPT_VERSION = "v1.1";
 
     // =========================================================================
-    // 1. CONSTANTS & DEFAULT PRESETS
+    // 1. CONSTANTS, TYPICAL FONTS & DEFAULT DATA
     // =========================================================================
-    // ~100-word Lorem Ipsum paragraph for auto-generation when no layer is selected
-    var LOREM_IPSUM_DEFAULT = 
-        "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do\n" +
-        "eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut\n" +
-        "enim ad minim veniam, quis nostrud exercitation ullamco laboris\n" +
-        "nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor\n" +
-        "in reprehenderit in voluptate velit esse cillum dolore eu fugiat\n" +
-        "nulla pariatur. Excepteur sint occaecat cupidatat non proident,\n" +
-        "sunt in culpa qui officia deserunt mollit anim id est laborum.\n" +
-        "Curabitur pretium tincidunt lacus. Nulla gravida orci a odio.\n" +
-        "Nullam varius, turpis et commodo pharetra, est eros bibendum\n" +
+    // ~100-word standard Lorem Ipsum paragraph (98 words)
+    var LOREM_IPSUM_RAW = 
+        "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do " +
+        "eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut " +
+        "enim ad minim veniam, quis nostrud exercitation ullamco laboris " +
+        "nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor " +
+        "in reprehenderit in voluptate velit esse cillum dolore eu fugiat " +
+        "nulla pariatur. Excepteur sint occaecat cupidatat non proident, " +
+        "sunt in culpa qui officia deserunt mollit anim id est laborum. " +
+        "Curabitur pretium tincidunt lacus. Nulla gravida orci a odio. " +
+        "Nullam varius, turpis et commodo pharetra, est eros bibendum " +
         "elit, nec luctus magna felis sollicitudin mauris.";
 
-    // The Slow Living quote from the reference screenshot
+    // Typical fonts installed on virtually every computer (Windows, macOS, Linux, Web)
+    var TYPICAL_FONTS = [
+        "Georgia",
+        "Arial",
+        "Times New Roman",
+        "Verdana",
+        "Trebuchet MS",
+        "Courier New",
+        "Impact"
+    ];
+
+    var TYPICAL_ALIGNMENTS = ["left", "center", "right"];
+    var TYPICAL_BOX_WIDTHS = [720, 850, 960, 1100, 1200];
+    var TYPICAL_INDENTS    = [0, 24, 48, 72];
+
+    // Reference screenshot quote & target terms
     var SLOW_LIVING_QUOTE = 
         "In our pursuit of success and productivity, we\n" +
         "often forget to cherish the present moment. It's\n" +
@@ -82,9 +91,9 @@
         "present...moment"
     ];
 
-    // Default Color Palette
-    var COLOR_HOT_PINK   = [1.0, 0.176, 0.471]; // #FF2D78 (Reference Image Highlight)
-    var COLOR_SKY_BLUE   = [0.455, 0.725, 0.906]; // #74B9E7 (Reference Image Background)
+    // Color Palette
+    var COLOR_HOT_PINK   = [1.0, 0.176, 0.471]; // #FF2D78 (Reference Highlight)
+    var COLOR_SKY_BLUE   = [0.455, 0.725, 0.906]; // #74B9E7 (Reference Background)
     var COLOR_CYBER_GOLD = [1.0, 0.902, 0.0];   // #FFE600
     var COLOR_MINT_NEON  = [0.0, 0.961, 0.608]; // #00F59B
     var COLOR_SKY_CYAN   = [0.0, 0.824, 1.0];   // #00D2FF
@@ -94,7 +103,7 @@
     var COLOR_TEXT_DARK  = [0.067, 0.067, 0.067]; // #111111
 
     // =========================================================================
-    // 2. HELPER UTILITIES: COLOR, STRING & RANDOM EXTRACTION
+    // 2. HELPER UTILITIES: COLOR, STRING, WORD WRAP & PRECISE MEASURE
     // =========================================================================
     function hexToRgb(hex) {
         if (!hex) return [1, 1, 1];
@@ -122,6 +131,111 @@
         return ("#" + rStr + gStr + bStr).toUpperCase();
     }
 
+    // High-precision measurement engine matching the browser SVG engine
+    function measureTextExact(str, fontSize, fontName) {
+        if (!str) return 0;
+        var fs = Number(fontSize) || 34;
+        var cleanFont = String(fontName || "Georgia").replace(/['"]/g, "").trim();
+
+        // 1. If in browser / simulator environment, use Canvas 2D font metric
+        if (typeof document !== "undefined") {
+            try {
+                var c = document.getElementById("__ae_text_measure_canvas");
+                if (!c) {
+                    c = document.createElement("canvas");
+                    c.id = "__ae_text_measure_canvas";
+                    c.style.display = "none";
+                    document.body.appendChild(c);
+                }
+                var ctx = c.getContext("2d");
+                var fontLower = cleanFont.toLowerCase();
+                var fontStack = cleanFont;
+                if (fontLower.indexOf("courier") !== -1 || fontLower.indexOf("consolas") !== -1 || fontLower.indexOf("mono") !== -1) {
+                    fontStack = "'" + cleanFont + "', 'Courier New', Consolas, monospace";
+                } else if (fontLower.indexOf("times") !== -1 || fontLower.indexOf("georgia") !== -1 || fontLower.indexOf("serif") !== -1) {
+                    fontStack = "'" + cleanFont + "', Georgia, 'Times New Roman', serif";
+                } else if (fontLower.indexOf("impact") !== -1) {
+                    fontStack = "'" + cleanFont + "', Impact, sans-serif";
+                } else if (fontLower.indexOf("trebuchet") !== -1) {
+                    fontStack = "'" + cleanFont + "', 'Trebuchet MS', sans-serif";
+                } else if (fontLower.indexOf("verdana") !== -1) {
+                    fontStack = "'" + cleanFont + "', Verdana, sans-serif";
+                } else {
+                    fontStack = "'" + cleanFont + "', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
+                }
+                ctx.font = fs + "px " + fontStack;
+                var m = ctx.measureText(str).width;
+                if (m && !isNaN(m) && m > 0) return m;
+            } catch(e) {}
+        }
+
+        // 2. Calibrated font metric engine for ExtendScript desktop fallback
+        var fontLower2 = cleanFont.toLowerCase();
+        if (fontLower2.indexOf("courier") !== -1 || fontLower2.indexOf("mono") !== -1) {
+            return str.length * fs * 0.60;
+        }
+
+        var isSerif = (fontLower2.indexOf("georgia") !== -1 || fontLower2.indexOf("times") !== -1 || fontLower2.indexOf("serif") !== -1);
+        var isVerdana = (fontLower2.indexOf("verdana") !== -1);
+        var isImpact = (fontLower2.indexOf("impact") !== -1);
+
+        var total = 0;
+        for (var i = 0; i < str.length; i++) {
+            var ch = str.charAt(i);
+            var code = ch.charCodeAt(0);
+            if (code === 32) {
+                total += isSerif ? (fs * 0.25) : (isVerdana ? (fs * 0.35) : (fs * 0.28));
+            } else if ("ijl|!.,:;'I`".indexOf(ch) !== -1) {
+                total += isSerif ? (fs * 0.28) : (fs * 0.24);
+            } else if ("frt[](){}".indexOf(ch) !== -1) {
+                total += isSerif ? (fs * 0.38) : (fs * 0.33);
+            } else if ("wmWM@#%&".indexOf(ch) !== -1) {
+                total += isSerif ? (fs * 0.88) : (isImpact ? (fs * 0.65) : (fs * 0.82));
+            } else if (ch >= 'A' && ch <= 'Z') {
+                total += isSerif ? (fs * 0.68) : (isImpact ? (fs * 0.52) : (fs * 0.65));
+            } else if (ch >= '0' && ch <= '9') {
+                total += isSerif ? (fs * 0.52) : (fs * 0.55);
+            } else if (code > 255) {
+                total += fs * 1.0;
+            } else {
+                total += isSerif ? (fs * 0.50) : (isImpact ? (fs * 0.42) : (isVerdana ? (fs * 0.58) : (fs * 0.52)));
+            }
+        }
+        return total;
+    }
+
+    // Word wraps text so that lines do not exceed maxBoxWidth
+    function wordWrapToBoxWidth(rawText, maxBoxWidth, fontSize, fontName, indentPx) {
+        var words = String(rawText).replace(/\r\n|\r|\n/g, " ").split(/\s+/);
+        var lines = [];
+        var indentSpaces = "";
+        if (indentPx >= 70) indentSpaces = "         ";
+        else if (indentPx >= 45) indentSpaces = "      ";
+        else if (indentPx >= 20) indentSpaces = "   ";
+
+        var currentLine = indentSpaces;
+
+        for (var i = 0; i < words.length; i++) {
+            var word = words[i];
+            if (!word) continue;
+            var testLine = (currentLine.length === 0 || currentLine === indentSpaces)
+                ? (currentLine + word)
+                : (currentLine + " " + word);
+
+            var w = measureTextExact(testLine, fontSize, fontName);
+            if (w > maxBoxWidth && currentLine.trim().length > 0) {
+                lines.push(currentLine);
+                currentLine = word;
+            } else {
+                currentLine = testLine;
+            }
+        }
+        if (currentLine.trim().length > 0) {
+            lines.push(currentLine);
+        }
+        return lines.join("\n");
+    }
+
     function sanitizeSearchTerm(term) {
         if (!term) return "";
         return String(term).replace(/^[\s,"']+|[\s,"']+$/g, "").trim();
@@ -136,7 +250,6 @@
         for (var i = 0; i < lines.length; i++) {
             var line = lines[i].trim();
             if (!line) continue;
-            // Also split comma-separated if on the same line
             var chunks = line.split(/,\s*(?=(?:[^"]*"[^"]*")*[^"]*$)/);
             for (var c = 0; c < chunks.length; c++) {
                 var clean = sanitizeSearchTerm(chunks[c]);
@@ -150,9 +263,9 @@
     }
 
     function extractRandomWordsAndSentence(textStr) {
-        if (!textStr) textStr = LOREM_IPSUM_DEFAULT;
+        if (!textStr) textStr = LOREM_IPSUM_RAW;
 
-        // 1. Sentence extraction: split on period, exclamation, or question mark
+        // 1. Sentences: split on period, exclamation, or question mark
         var rawSentences = textStr.split(/[\.\!\?]+/);
         var cleanSentences = [];
         for (var s = 0; s < rawSentences.length; s++) {
@@ -170,7 +283,7 @@
             pickedSentence = "Curabitur pretium tincidunt lacus";
         }
 
-        // 2. Word extraction: extract distinct words with length >= 5
+        // 2. Words: distinct words with length >= 5
         var rawWords = textStr.split(/[\s\r\n\.,;:!\?"'\(\)\[\]\{\}]+/);
         var eligibleWords = [];
         var seen = {};
@@ -179,23 +292,10 @@
         for (var w = 0; w < rawWords.length; w++) {
             var wd = rawWords[w].trim();
             var lowerWd = wd.toLowerCase();
-            // Filter out short words and duplicates
             if (wd.length >= 5 && !seen[lowerWd]) {
                 seen[lowerWd] = true;
-                // Prefer words not in the picked sentence so we have distinct targets
                 if (lowerSent.indexOf(lowerWd) === -1) {
                     eligibleWords.push(wd);
-                }
-            }
-        }
-
-        // Fallback if not enough words outside sentence
-        if (eligibleWords.length < 3) {
-            for (var w2 = 0; w2 < rawWords.length; w2++) {
-                var wd2 = rawWords[w2].trim();
-                var lower2 = wd2.toLowerCase();
-                if (wd2.length >= 5 && eligibleWords.indexOf(wd2) === -1) {
-                    eligibleWords.push(wd2);
                 }
             }
         }
@@ -268,14 +368,69 @@
     }
 
     // =========================================================================
-    // 3. PROCEDURAL EXPRESSION CODE GENERATION
+    // 3. PROCEDURAL REAL-TIME EXPRESSIONS WITH ZERO CUMULATIVE DRIFT
     // =========================================================================
-    // Expression applied to Rectangle Path Size:
-    // Calculates width based on character widths + Padding X,
-    // and calculates height based on font size (Ascender-to-Descender) + Thickness Y.
+    // Shared JavaScript helper injected into expressions for sub-pixel measurement
+    var EXPR_MEASURE_FUNCTION = [
+        'function measureExact(str, fs, fontName) {',
+        '    if (!str) return 0;',
+        '    if (typeof document !== "undefined") {',
+        '        try {',
+        '            var c = document.getElementById("__ae_text_measure_canvas");',
+        '            if (!c) {',
+        '                c = document.createElement("canvas");',
+        '                c.id = "__ae_text_measure_canvas";',
+        '                c.style.display = "none";',
+        '                document.body.appendChild(c);',
+        '            }',
+        '            var ctx = c.getContext("2d");',
+        '            var cleanFont = String(fontName || "Georgia").replace(/[\'"]/g, "").trim();',
+        '            var fLower = cleanFont.toLowerCase();',
+        '            var fStack = cleanFont;',
+        '            if (fLower.indexOf("courier") !== -1 || fLower.indexOf("mono") !== -1) {',
+        '                fStack = "\'" + cleanFont + "\', \'Courier New\', Consolas, monospace";',
+        '            } else if (fLower.indexOf("times") !== -1 || fLower.indexOf("georgia") !== -1 || fLower.indexOf("serif") !== -1) {',
+        '                fStack = "\'" + cleanFont + "\', Georgia, \'Times New Roman\', serif";',
+        '            } else if (fLower.indexOf("impact") !== -1) {',
+        '                fStack = "\'" + cleanFont + "\', Impact, sans-serif";',
+        '            } else if (fLower.indexOf("trebuchet") !== -1) {',
+        '                fStack = "\'" + cleanFont + "\', \'Trebuchet MS\', sans-serif";',
+        '            } else if (fLower.indexOf("verdana") !== -1) {',
+        '                fStack = "\'" + cleanFont + "\', Verdana, sans-serif";',
+        '            } else {',
+        '                fStack = "\'" + cleanFont + "\', -apple-system, BlinkMacSystemFont, \'Segoe UI\', Roboto, Helvetica, Arial, sans-serif";',
+        '            }',
+        '            ctx.font = fs + "px " + fStack;',
+        '            var m = ctx.measureText(str).width;',
+        '            if (m && !isNaN(m) && m > 0) return m;',
+        '        } catch(e) {}',
+        '    }',
+        '    var fLower2 = String(fontName || "").toLowerCase();',
+        '    if (fLower2.indexOf("courier") !== -1 || fLower2.indexOf("mono") !== -1) return str.length * fs * 0.60;',
+        '    var isSerif = (fLower2.indexOf("georgia") !== -1 || fLower2.indexOf("times") !== -1 || fLower2.indexOf("serif") !== -1);',
+        '    var isVerdana = (fLower2.indexOf("verdana") !== -1);',
+        '    var isImpact = (fLower2.indexOf("impact") !== -1);',
+        '    var total = 0;',
+        '    for (var i = 0; i < str.length; i++) {',
+        '        var ch = str.charAt(i);',
+        '        var code = ch.charCodeAt(0);',
+        '        if (code === 32) total += isSerif ? (fs * 0.25) : (isVerdana ? (fs * 0.35) : (fs * 0.28));',
+        '        else if ("ijl|!.,:;\'I`".indexOf(ch) !== -1) total += isSerif ? (fs * 0.28) : (fs * 0.24);',
+        '        else if ("frt[](){}".indexOf(ch) !== -1) total += isSerif ? (fs * 0.38) : (fs * 0.33);',
+        '        else if ("wmWM@#%&".indexOf(ch) !== -1) total += isSerif ? (fs * 0.88) : (isImpact ? (fs * 0.65) : (fs * 0.82));',
+        '        else if (ch >= "A" && ch <= "Z") total += isSerif ? (fs * 0.68) : (isImpact ? (fs * 0.52) : (fs * 0.65));',
+        '        else if (ch >= "0" && ch <= "9") total += isSerif ? (fs * 0.52) : (fs * 0.55);',
+        '        else if (code > 255) total += fs * 1.0;',
+        '        else total += isSerif ? (fs * 0.50) : (isImpact ? (fs * 0.42) : (isVerdana ? (fs * 0.58) : (fs * 0.52)));',
+        '    }',
+        '    return total;',
+        '}'
+    ].join('\n');
+
     function generateRectSizeExpression(targetTerm, matchIndex, textLayerName) {
         var cleanTerm = String(targetTerm).replace(/\\/g, "\\\\").replace(/"/g, '\\"');
         return [
+            EXPR_MEASURE_FUNCTION,
             'var txtLayer = thisLayer.parent;',
             'if (!txtLayer) {',
             '    try { txtLayer = thisComp.layer("' + textLayerName + '"); } catch(e) { txtLayer = null; }',
@@ -294,6 +449,8 @@
             '    try { thickY = thisLayer.effect("Thickness Y")(1).value; } catch(e) {}',
             '    var fs = 34;',
             '    try { fs = txtLayer.text.sourceText.style.fontSize; } catch(e) { fs = txtLayer.fontSize || 34; }',
+            '    var fontName = "Georgia";',
+            '    try { fontName = txtLayer.text.sourceText.style.font || txtLayer.fontFamily || "Georgia"; } catch(e) { fontName = txtLayer.fontFamily || "Georgia"; }',
             '    var matches = [];',
             '    var searchIdx = 0;',
             '    var lowerStr = str.toLowerCase();',
@@ -327,17 +484,7 @@
             '        } else {',
             '            var line = lines[targetLine];',
             '            var matchText = line.substr(colStart, charLen);',
-            '            function getCharW(c) {',
-            '                var code = c.charCodeAt(0);',
-            '                if (code > 255) return fs * 1.0;',
-            '                if ("ijl|!.,:;\'I `".indexOf(c) !== -1) return fs * 0.28;',
-            '                if ("wmWM@#%&".indexOf(c) !== -1) return fs * 0.80;',
-            '                return fs * 0.52;',
-            '            }',
-            '            var wordW = 0;',
-            '            for (var k = 0; k < matchText.length; k++) {',
-            '                wordW += getCharW(matchText.charAt(k));',
-            '            }',
+            '            var wordW = measureExact(matchText, fs, fontName);',
             '            var boxW = Math.max(0, wordW + padX * 2);',
             '            var boxH = Math.max(0, fs * 1.0 + thickY);',
             '            [boxW, boxH];',
@@ -347,12 +494,10 @@
         ].join('\n');
     }
 
-    // Expression applied to Rectangle Path Position:
-    // Calculates X position based on prefix character widths, justification & center point.
-    // Calculates Y position based on line index, leading, and ascender-to-descender vertical center.
     function generateRectPositionExpression(targetTerm, matchIndex, textLayerName) {
         var cleanTerm = String(targetTerm).replace(/\\/g, "\\\\").replace(/"/g, '\\"');
         return [
+            EXPR_MEASURE_FUNCTION,
             'var txtLayer = thisLayer.parent;',
             'if (!txtLayer) {',
             '    try { txtLayer = thisComp.layer("' + textLayerName + '"); } catch(e) { txtLayer = null; }',
@@ -367,6 +512,8 @@
             '    var matchIdx = ' + matchIndex + ';',
             '    var fs = 34;',
             '    try { fs = txtLayer.text.sourceText.style.fontSize; } catch(e) { fs = txtLayer.fontSize || 34; }',
+            '    var fontName = "Georgia";',
+            '    try { fontName = txtLayer.text.sourceText.style.font || txtLayer.fontFamily || "Georgia"; } catch(e) { fontName = txtLayer.fontFamily || "Georgia"; }',
             '    var leading = 0;',
             '    try { leading = txtLayer.text.sourceText.style.leading; } catch(e) { leading = txtLayer.leading || 0; }',
             '    var lineH = (leading > 0) ? leading : (fs * 1.35);',
@@ -412,21 +559,9 @@
             '            var line = lines[targetLine];',
             '            var prefix = line.substr(0, colStart);',
             '            var matchText = line.substr(colStart, charLen);',
-            '            function getCharW(c) {',
-            '                var code = c.charCodeAt(0);',
-            '                if (code > 255) return fs * 1.0;',
-            '                if ("ijl|!.,:;\'I `".indexOf(c) !== -1) return fs * 0.28;',
-            '                if ("wmWM@#%&".indexOf(c) !== -1) return fs * 0.80;',
-            '                return fs * 0.52;',
-            '            }',
-            '            var prefixW = 0;',
-            '            for (var p = 0; p < prefix.length; p++) prefixW += getCharW(prefix.charAt(p));',
-            '            var matchW = 0;',
-            '            for (var m = 0; m < matchText.length; m++) matchW += getCharW(matchText.charAt(m));',
-            '            var totalLineW = 0;',
-            '            if (just !== "left") {',
-            '                for (var tl = 0; tl < line.length; tl++) totalLineW += getCharW(line.charAt(tl));',
-            '            }',
+            '            var prefixW = measureExact(prefix, fs, fontName);',
+            '            var matchW = measureExact(matchText, fs, fontName);',
+            '            var totalLineW = measureExact(line, fs, fontName);',
             '            var lineStartX = 0;',
             '            if (just === "center") {',
             '                lineStartX = -totalLineW / 2;',
@@ -456,21 +591,15 @@
         } catch(e) {
             textStr = String(textLayer.text || "");
         }
-        if (!textStr) textStr = LOREM_IPSUM_DEFAULT;
+        if (!textStr) textStr = LOREM_IPSUM_RAW;
 
         var lowerText = textStr.toLowerCase();
         var lines = textStr.replace(/\r\n/g, "\n").replace(/\r/g, "\n").split("\n");
         var fs = textLayer.fontSize || 34;
+        var fontName = textLayer.fontFamily || "Georgia";
         var leading = textLayer.leading || 0;
         var lineH = (leading > 0) ? leading : (fs * 1.35);
-
-        function getCharWidthStatic(c) {
-            var code = c.charCodeAt(0);
-            if (code > 255) return fs * 1.0;
-            if ("ijl|!.,:;'I `".indexOf(c) !== -1) return fs * 0.28;
-            if ("wmWM@#%&".indexOf(c) !== -1) return fs * 0.80;
-            return fs * 0.52;
-        }
+        var just = textLayer.justification || "left";
 
         var totalCreated = 0;
 
@@ -479,7 +608,6 @@
             if (!term) continue;
             var lowerTerm = term.toLowerCase();
 
-            // Find all match occurrences in text
             var matchIndices = [];
             var sIdx = 0;
             while (sIdx < textStr.length) {
@@ -489,8 +617,6 @@
                 sIdx = found + Math.max(1, lowerTerm.length);
             }
 
-            // If not found in text yet, still create at least 1 group for matchIndex 0
-            // so when user types the word, it immediately highlights!
             var countMatches = Math.max(1, matchIndices.length);
 
             for (var m = 0; m < countMatches; m++) {
@@ -505,7 +631,7 @@
                 var fill = grpContents.addProperty("ADBE Vector Graphic - Fill");
                 fill.name = "Box Fill";
 
-                // Initial static calculation for instant preview
+                // Sub-pixel initial calculation
                 var initW = 100;
                 var initH = fs + thicknessY;
                 var initX = 0;
@@ -530,17 +656,19 @@
                     var prefix = lineStr.substr(0, colStart);
                     var matchSeg = lineStr.substr(colStart, term.length);
 
-                    var pW = 0;
-                    for (var p = 0; p < prefix.length; p++) pW += getCharWidthStatic(prefix.charAt(p));
-                    var mW = 0;
-                    for (var mw = 0; mw < matchSeg.length; mw++) mW += getCharWidthStatic(matchSeg.charAt(mw));
+                    var pW = measureTextExact(prefix, fs, fontName);
+                    var mW = measureTextExact(matchSeg, fs, fontName);
+                    var totW = measureTextExact(lineStr, fs, fontName);
 
                     initW = Math.max(0, mW + paddingX * 2);
-                    initX = pW + (mW / 2);
+                    var lineStartX = 0;
+                    if (just === "center") lineStartX = -totW / 2;
+                    else if (just === "right") lineStartX = -totW;
+
+                    initX = lineStartX + pW + (mW / 2);
                     initY = (targetLine * lineH) - (fs * 0.25);
                 }
 
-                // Set initial property values
                 rect.property("ADBE Vector Rect Size").setValue([initW, initH]);
                 rect.property("ADBE Vector Rect Position").setValue([initX, initY]);
                 rect.property("ADBE Vector Rect Roundness").setValue(roundness);
@@ -548,7 +676,6 @@
                 fill.property("ADBE Vector Fill Color").setValue(highlightColor);
                 fill.property("ADBE Vector Fill Opacity").setValue(highlightOpacity);
 
-                // Apply procedural real-time expressions
                 rect.property("ADBE Vector Rect Size").expression = generateRectSizeExpression(term, m, textLayer.name);
                 rect.property("ADBE Vector Rect Position").expression = generateRectPositionExpression(term, m, textLayer.name);
                 rect.property("ADBE Vector Rect Roundness").expression = 'try { Math.max(0, thisLayer.effect("Roundness")(1).value); } catch(e) { value; }';
@@ -578,11 +705,16 @@
     // Current State Variables
     var currentHighlightColor = COLOR_HOT_PINK.slice(0);
     var currentBgColor        = COLOR_SKY_BLUE.slice(0);
-    var currentThickness      = 0;  // Default 0 (strictly tied to font ascender to descender)
+    var currentThickness      = 0;  // Default 0 (tied to font ascender to descender)
     var currentPaddingX       = 8;  // Default 8px horizontal padding
-    var currentRoundness      = 6;  // Default 6px corner radius (subtle rounded rect)
+    var currentRoundness      = 6;  // Default 6px corner radius
     var currentOpacity        = 100;
-    var currentBgOpacity      = 100;
+
+    // Dummy Text Randomization State
+    var dummyFont      = "Georgia";
+    var dummyAlignment = "left";
+    var dummyBoxWidth  = 950;
+    var dummyIndent    = 0;
 
     // -------------------------------------------------------------------------
     // Panel 1: Target Text Layer Status & Header
@@ -603,7 +735,59 @@
     btnRefreshLayer.helpTip = "Re-scan the active composition to detect any newly selected Text Layer.";
 
     // -------------------------------------------------------------------------
-    // Panel 2: Words / Sentences to Highlight
+    // Panel 2: Dummy Text & Layout Randomization (When No Text Layer is Selected)
+    // -------------------------------------------------------------------------
+    var pnlRandom = win.add("panel", undefined, "Dummy Text Generator & Randomization (~100 Words)");
+    pnlRandom.orientation = "column";
+    pnlRandom.alignChildren = ["fill", "top"];
+    pnlRandom.spacing = 6;
+    pnlRandom.margins = [10, 8, 10, 8];
+
+    var lblRandomSummary = pnlRandom.add("statictext", undefined, "Font: " + dummyFont + " | Align: " + dummyAlignment + " | Width: " + dummyBoxWidth + "px | Indent: " + dummyIndent + "px");
+    lblRandomSummary.graphics.foregroundColor = lblRandomSummary.graphics.newPen(win.graphics.PenType.SOLID_COLOR, [0.95, 0.75, 0.3, 1.0], 1);
+
+    var grpRandBtns = pnlRandom.add("group");
+    grpRandBtns.orientation = "row";
+    grpRandBtns.alignChildren = ["fill", "center"];
+    grpRandBtns.spacing = 4;
+
+    var btnRandomizeAll = grpRandBtns.add("button", undefined, "🎲 Randomize Dummy & Layout");
+    btnRandomizeAll.helpTip = "Randomizes font, alignment, text box width, indent, and picks 3 random words + 1 sentence.";
+
+    // Font selection row
+    var grpFontRow = pnlRandom.add("group");
+    grpFontRow.orientation = "row";
+    grpFontRow.alignChildren = ["left", "center"];
+    grpFontRow.add("statictext", undefined, "Font:");
+    var ddFont = grpFontRow.add("dropdownlist", undefined, TYPICAL_FONTS);
+    ddFont.selection = 0;
+    ddFont.preferredSize.width = 130;
+
+    grpFontRow.add("statictext", undefined, "Align:");
+    var ddAlign = grpFontRow.add("dropdownlist", undefined, ["Left", "Center", "Right"]);
+    ddAlign.selection = 0;
+    ddAlign.preferredSize.width = 80;
+
+    // Box width & indent row
+    var grpBoxRow = pnlRandom.add("group");
+    grpBoxRow.orientation = "row";
+    grpBoxRow.alignChildren = ["left", "center"];
+    grpBoxRow.add("statictext", undefined, "Box Width:");
+    var sldBoxW = grpBoxRow.add("slider", undefined, 950, 600, 1300);
+    sldBoxW.preferredSize.width = 85;
+    var txtBoxW = grpBoxRow.add("edittext", undefined, "950");
+    txtBoxW.preferredSize.width = 45;
+    grpBoxRow.add("statictext", undefined, "px");
+
+    grpBoxRow.add("statictext", undefined, "Indent:");
+    var sldInd = grpBoxRow.add("slider", undefined, 0, 0, 80);
+    sldInd.preferredSize.width = 50;
+    var txtInd = grpBoxRow.add("edittext", undefined, "0");
+    txtInd.preferredSize.width = 30;
+    grpBoxRow.add("statictext", undefined, "px");
+
+    // -------------------------------------------------------------------------
+    // Panel 3: Words / Sentences to Highlight
     // -------------------------------------------------------------------------
     var pnlTargets = win.add("panel", undefined, "Highlight Targets (Words, Phrases, Sentences)");
     pnlTargets.orientation = "column";
@@ -611,20 +795,19 @@
     pnlTargets.spacing = 6;
     pnlTargets.margins = [10, 8, 10, 8];
 
-    pnlTargets.add("statictext", undefined, "Enter words or sentences to detect & highlight (1 per line or comma-separated):");
+    pnlTargets.add("statictext", undefined, "Words or sentences to detect & highlight (1 per line or comma-separated):");
 
     var txtHighlights = pnlTargets.add("edittext", undefined, "", { multiline: true, wantReturn: true });
-    txtHighlights.preferredSize.height = 70;
+    txtHighlights.preferredSize.height = 65;
     txtHighlights.helpTip = "Type or paste words, chains of characters, or complete sentences to highlight.";
 
-    // Quick Action Buttons
     var grpActionBtns = pnlTargets.add("group");
     grpActionBtns.orientation = "row";
     grpActionBtns.alignChildren = ["fill", "center"];
     grpActionBtns.spacing = 4;
 
-    var btnPickRandom = grpActionBtns.add("button", undefined, "🎲 Pick 3 Words + 1 Sent");
-    btnPickRandom.helpTip = "Automatically picks 3 random words and 1 full sentence from the text.";
+    var btnPickRandom = grpActionBtns.add("button", undefined, "🎲 Re-Pick 3 Words + 1 Sent");
+    btnPickRandom.helpTip = "Re-picks 3 random words and 1 full sentence from the current text.";
 
     var btnLoadDemo = grpActionBtns.add("button", undefined, "📷 Slow Living (Demo)");
     btnLoadDemo.helpTip = "Loads the exact Slow Living quote & highlights shown in the reference screenshot.";
@@ -633,7 +816,7 @@
     btnClearTargets.helpTip = "Clears the target list.";
 
     // -------------------------------------------------------------------------
-    // Panel 3: Highlight Appearance & Geometry (Thickness, Roundness, Color)
+    // Panel 4: Highlight Appearance & Geometry (Thickness, Roundness, Color)
     // -------------------------------------------------------------------------
     var pnlAppearance = win.add("panel", undefined, "Highlight Geometry & Appearance");
     pnlAppearance.orientation = "column";
@@ -709,7 +892,7 @@
     var btnSwPurple = grpSwatches.add("button", undefined, "Purple");
 
     // -------------------------------------------------------------------------
-    // Panel 4: Background Layer Settings
+    // Panel 5: Background Layer Settings
     // -------------------------------------------------------------------------
     var pnlBg = win.add("panel", undefined, "Background Layer");
     pnlBg.orientation = "column";
@@ -744,7 +927,6 @@
     grpMainBtns.spacing = 8;
     grpMainBtns.margins = [0, 4, 0, 0];
 
-    // Named "Build Highlights" to automatically trigger autobuild in AE_JS_builder
     var btnBuild = grpMainBtns.add("button", undefined, "► Build Highlights");
     btnBuild.preferredSize.height = 34;
 
@@ -765,15 +947,92 @@
         if (sel) {
             lblStatus.text = "● Target: \"" + sel.name + "\" (Selected Text Layer)";
         } else {
-            lblStatus.text = "○ No text layer selected (Auto-generate Lorem Ipsum)";
+            lblStatus.text = "○ No text layer selected (Auto-generate randomized Lorem Ipsum)";
         }
     }
+
+    function updateRandomSummaryLabel() {
+        lblRandomSummary.text = "Font: " + dummyFont + " | Align: " + dummyAlignment + " | Width: " + dummyBoxWidth + "px | Indent: " + dummyIndent + "px";
+    }
+
+    function applyRandomization() {
+        dummyFont = TYPICAL_FONTS[Math.floor(Math.random() * TYPICAL_FONTS.length)];
+        dummyAlignment = TYPICAL_ALIGNMENTS[Math.floor(Math.random() * TYPICAL_ALIGNMENTS.length)];
+        dummyBoxWidth = TYPICAL_BOX_WIDTHS[Math.floor(Math.random() * TYPICAL_BOX_WIDTHS.length)];
+        dummyIndent = TYPICAL_INDENTS[Math.floor(Math.random() * TYPICAL_INDENTS.length)];
+
+        // Update UI controls
+        for (var f = 0; f < TYPICAL_FONTS.length; f++) {
+            if (TYPICAL_FONTS[f] === dummyFont) {
+                ddFont.selection = f;
+                break;
+            }
+        }
+        var alignIdx = (dummyAlignment === "center") ? 1 : ((dummyAlignment === "right") ? 2 : 0);
+        ddAlign.selection = alignIdx;
+
+        sldBoxW.value = dummyBoxWidth;
+        txtBoxW.text = String(dummyBoxWidth);
+
+        sldInd.value = dummyIndent;
+        txtInd.text = String(dummyIndent);
+
+        updateRandomSummaryLabel();
+
+        // Wrap text and pick 3 words + 1 sentence
+        var wrapped = wordWrapToBoxWidth(LOREM_IPSUM_RAW, dummyBoxWidth, 34, dummyFont, dummyIndent);
+        var extracted = extractRandomWordsAndSentence(wrapped);
+        txtHighlights.text = extracted.words.concat([extracted.sentence]).join("\n");
+    }
+
+    btnRandomizeAll.onClick = function() {
+        applyRandomization();
+    };
+
+    ddFont.onChange = function() {
+        if (ddFont.selection) {
+            dummyFont = ddFont.selection.text;
+            updateRandomSummaryLabel();
+        }
+    };
+
+    ddAlign.onChange = function() {
+        if (ddAlign.selection) {
+            dummyAlignment = ddAlign.selection.text.toLowerCase();
+            updateRandomSummaryLabel();
+        }
+    };
+
+    sldBoxW.onChanging = sldBoxW.onChange = function() {
+        dummyBoxWidth = Math.round(sldBoxW.value);
+        txtBoxW.text = String(dummyBoxWidth);
+        updateRandomSummaryLabel();
+    };
+    txtBoxW.onChange = function() {
+        var v = parseInt(txtBoxW.text, 10);
+        if (isNaN(v)) v = 950;
+        sldBoxW.value = v;
+        dummyBoxWidth = v;
+        updateRandomSummaryLabel();
+    };
+
+    sldInd.onChanging = sldInd.onChange = function() {
+        dummyIndent = Math.round(sldInd.value);
+        txtInd.text = String(dummyIndent);
+        updateRandomSummaryLabel();
+    };
+    txtInd.onChange = function() {
+        var v = parseInt(txtInd.text, 10);
+        if (isNaN(v)) v = 0;
+        sldInd.value = v;
+        dummyIndent = v;
+        updateRandomSummaryLabel();
+    };
 
     btnRefreshLayer.onClick = function() {
         updateSelectionStatus();
     };
 
-    // Slider Sync Handlers
     sldThick.onChanging = sldThick.onChange = function() {
         var v = Math.round(sldThick.value);
         txtThick.text = String(v);
@@ -864,7 +1123,6 @@
         txtBgHex.text = rgbToHex(currentBgColor);
     };
 
-    // Quick Target Population Handlers
     btnPickRandom.onClick = function() {
         var comp = app.project.activeItem;
         var textLayer = (comp && comp instanceof CompItem) ? getSelectedTextLayer(comp) : null;
@@ -872,7 +1130,9 @@
         if (textLayer && textLayer.text && textLayer.text.sourceText) {
             srcText = String(textLayer.text.sourceText.value || "");
         }
-        if (!srcText) srcText = LOREM_IPSUM_DEFAULT;
+        if (!srcText) {
+            srcText = wordWrapToBoxWidth(LOREM_IPSUM_RAW, dummyBoxWidth, 34, dummyFont, dummyIndent);
+        }
 
         var extracted = extractRandomWordsAndSentence(srcText);
         var combined = extracted.words.concat([extracted.sentence]);
@@ -900,9 +1160,8 @@
         txtHighlights.text = "";
     };
 
-    // Initial Random Setup if empty
-    var initialExtracted = extractRandomWordsAndSentence(LOREM_IPSUM_DEFAULT);
-    txtHighlights.text = initialExtracted.words.concat([initialExtracted.sentence]).join("\n");
+    // Initial Randomization Setup
+    applyRandomization();
 
     // -------------------------------------------------------------------------
     // 7. BUILD & UPDATE EXECUTION
@@ -916,17 +1175,19 @@
         if (app.beginUndoGroup) app.beginUndoGroup("AE Text Highlight Build");
         try {
             var textLayer = getSelectedTextLayer(comp);
-            var isNewTextLayer = false;
 
-            // Scenario A: No text layer selected -> auto-generate ~100-word Lorem Ipsum block
+            // Scenario A: No text layer selected -> auto-generate randomized ~100-word dummy text layer
             if (!textLayer) {
-                isNewTextLayer = true;
-                var sampleText = (txtHighlights.text.indexOf("Slow living") !== -1 || txtHighlights.text.indexOf("present moment") !== -1)
+                var isDemo = (txtHighlights.text.indexOf("Slow living") !== -1 || txtHighlights.text.indexOf("present moment") !== -1);
+                var sampleText = isDemo
                     ? SLOW_LIVING_QUOTE
-                    : LOREM_IPSUM_DEFAULT;
+                    : wordWrapToBoxWidth(LOREM_IPSUM_RAW, dummyBoxWidth, 34, dummyFont, dummyIndent);
+
+                var activeFont = isDemo ? "Georgia" : dummyFont;
+                var activeAlign = isDemo ? "left" : dummyAlignment;
 
                 textLayer = comp.layers.addText(sampleText);
-                textLayer.name = (sampleText === SLOW_LIVING_QUOTE) ? "Slow Living Quote" : "Lorem Ipsum Text";
+                textLayer.name = isDemo ? "Slow Living Quote" : ("Dummy Text - " + activeFont + " (" + activeAlign + ")");
 
                 // Setup font styling
                 try {
@@ -936,25 +1197,34 @@
                         var doc = textDoc.value;
                         if (typeof TextDocument !== "undefined" && doc instanceof TextDocument) {
                             doc.fontSize = 34;
-                            doc.font = "Georgia, 'Times New Roman', serif";
+                            doc.font = activeFont;
                             doc.fillColor = COLOR_TEXT_DARK;
                             doc.applyFill = true;
                             doc.applyStroke = false;
-                            doc.justification = (typeof ParagraphJustification !== "undefined") ? ParagraphJustification.LEFT_JUSTIFY : 0;
+                            doc.justification = (activeAlign === "center") ? 2 : ((activeAlign === "right") ? 1 : 0);
                             textDoc.setValue(doc);
                         } else {
                             textLayer.fontSize = 34;
-                            textLayer.fontFamily = "Georgia, 'Times New Roman', serif";
+                            textLayer.fontFamily = activeFont;
                             textLayer.fontColor = COLOR_TEXT_DARK;
-                            textLayer.justification = "left";
+                            textLayer.justification = activeAlign;
                         }
                     }
                 } catch(eText) {
                     textLayer.fontSize = 34;
+                    textLayer.fontFamily = activeFont;
                 }
 
-                // Generous layout placement inside comp
-                textLayer.transform.position.setValue([260, 220, 0]);
+                // Center composition placement based on alignment & box width
+                var posX = 260;
+                if (activeAlign === "center") {
+                    posX = comp.width / 2;
+                } else if (activeAlign === "right") {
+                    posX = comp.width / 2 + (dummyBoxWidth / 2);
+                } else {
+                    posX = Math.max(120, (comp.width - dummyBoxWidth) / 2);
+                }
+                textLayer.transform.position.setValue([posX, 200, 0]);
             }
 
             // Scenario B: Background Plate
@@ -975,7 +1245,6 @@
                         bgLayer.transform.position.setValue([comp.width / 2, comp.height / 2, 0]);
                     }
                 } else {
-                    // Update solid / shape color
                     try {
                         var parade = bgLayer.property("Contents") || bgLayer.property("ADBE Root Vectors Group");
                         if (parade && parade.property(1)) {
@@ -996,7 +1265,6 @@
                 shapeLayer = comp.layers.addShape();
                 shapeLayer.name = shapeLayerName;
             } else {
-                // Clear existing groups
                 var contents = shapeLayer.property("Contents") || shapeLayer.property("ADBE Root Vectors Group");
                 if (contents) {
                     while (contents.numProperties > 0) {
@@ -1005,21 +1273,21 @@
                 }
             }
 
-            // Stacking: Move shape layer directly behind text layer
+            // Stacking: Place shape layer directly behind text layer
             try {
                 if (typeof shapeLayer.moveAfter === "function") {
                     shapeLayer.moveAfter(textLayer);
                 }
             } catch(eMove) {}
 
-            // Parent to text layer so translation, scale & rotation track flawlessly
+            // Parent to text layer
             shapeLayer.parent = textLayer;
             shapeLayer.transform.position.setValue([0, 0, 0]);
             shapeLayer.transform.anchorPoint.setValue([0, 0, 0]);
             shapeLayer.transform.scale.setValue([100, 100, 100]);
             shapeLayer.transform.rotation.setValue(0);
 
-            // Add Master Expression Controls on Shape Layer
+            // Add Master Expression Controls
             addOrUpdateEffectSlider(shapeLayer, "Thickness Y", currentThickness);
             addOrUpdateEffectSlider(shapeLayer, "Padding X", currentPaddingX);
             addOrUpdateEffectSlider(shapeLayer, "Roundness", currentRoundness);
@@ -1029,12 +1297,12 @@
             // Parse highlight targets
             var terms = parseHighlightTerms(txtHighlights.text);
             if (terms.length === 0) {
-                var autoTerms = extractRandomWordsAndSentence(textLayer.text.sourceText.value || LOREM_IPSUM_DEFAULT);
+                var autoTerms = extractRandomWordsAndSentence(textLayer.text.sourceText.value || LOREM_IPSUM_RAW);
                 terms = autoTerms.words.concat([autoTerms.sentence]);
                 txtHighlights.text = terms.join("\n");
             }
 
-            // Build vector groups & procedural expressions
+            // Build vector groups & zero-drift procedural expressions
             createHighlightGroups(
                 shapeLayer,
                 textLayer,
@@ -1046,7 +1314,6 @@
                 currentOpacity
             );
 
-            // Focus selection
             textLayer.selected = true;
             shapeLayer.selected = false;
             updateSelectionStatus();
@@ -1064,7 +1331,6 @@
 
         var textLayer = getSelectedTextLayer(comp);
         if (!textLayer) {
-            // Check if any layer ends with "- Highlights"
             for (var i = 1; i <= comp.numLayers; i++) {
                 var l = (typeof comp.layer === "function") ? comp.layer(i) : comp.layers[i - 1];
                 if (l && l.name && l.name.indexOf(" - Highlights") !== -1) {

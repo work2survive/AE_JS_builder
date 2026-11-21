@@ -1880,9 +1880,13 @@
     // 5. INITIALIZATION & EXECUTION
     // =========================================================================
     var panel = buildUI(thisObj);
-    if (panel instanceof Window) {
-        panel.center();
-        panel.show();
+    if (panel) {
+        if (typeof panel.center === "function") {
+            try { panel.center(); } catch (eCenter) {}
+        }
+        if (typeof panel.show === "function") {
+            try { panel.show(); } catch (eShow) {}
+        }
     }
 
 })(this);
