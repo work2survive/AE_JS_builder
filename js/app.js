@@ -1764,7 +1764,7 @@
                 // If over HTTP, try fetching fresh from disk
                 if (window.location.protocol.startsWith('http')) {
                     try {
-                        const resp = await fetch(`${folder}/${encodeURIComponent(fname)}`);
+                        const resp = await fetch(`${folder}/${encodeURIComponent(fname)}?t=${Date.now()}`, { cache: 'no-cache' });
                         if (resp.ok) {
                             const freshCode = await resp.text();
                             if (freshCode && freshCode.trim().length > 0) {
