@@ -1,6 +1,6 @@
 // Co-authored & architected with Google DeepMind Antigravity.
 // =============================================================================
-// ADOBE AFTER EFFECTS EXTENDSCRIPT & SCRIPTUI PANEL: AE TEXT HIGHLIGHT v1.2.2
+// ADOBE AFTER EFFECTS EXTENDSCRIPT & SCRIPTUI PANEL: AE TEXT HIGHLIGHT v1.3.0
 // =============================================================================
 //
 // PURPOSE:
@@ -8,16 +8,29 @@
 //   or full sentences inside any Text Layer, and places procedural vector highlight
 //   blocks directly underneath the text with ZERO cumulative offset.
 //
-// NEW IN v1.2.2:
-//   1. Fixed Misplaced Highlight Coordinates:
-//      - Added automatic Paragraph (Area / Box) Text detection and visual line wrapping.
-//      - Integrated native sourceRectAtTime() origin tracking (sRect.left / sRect.top),
-//        eliminating coordinate drift for text boxes with centered or custom anchor points.
-//      - Implemented temporary hidden measurement layer for 100% exact sub-pixel After Effects
-//        typography engine matching (resolves runaway horizontal offsets).
-//      - Streamlined runtime expressions to evaluate instantly without frame-by-frame overhead.
-//   2. Removed All Background Options:
-//      - Completely removed Background Plate controls, presets, and layer generation logic.
+// ARCHITECTURAL REFERENCE & TEXT PROPERTY EXTRACTION ENGINE:
+//   Built with deep reference to Text & Box Properties to Effects:
+//   https://github.com/work2survive/AE_JS_builder/blob/main/samples/Text_Properties_To_Effects.jsx
+//   Extracts complete typography metrics, paragraph box boundaries (boxText, boxTextSize),
+//   glyph bounding boundaries (sourceRectAtTime), justification enums (Left, Center, Right),
+//   indents, spare margins, and live in-memory word/line metrics store.
+//
+// NEW IN v1.3.0:
+//   1. Fully Integrated Text & Box Properties Engine:
+//      - Direct architecture from Text_Properties_To_Effects.jsx.
+//      - Extracts boxText, boxTextSize, justification (7412, 7413, 7414 enums),
+//        leading, autoLeading, tracking, baselineShift, and sourceRect geometry.
+//      - Implements in-memory metrics cache ($.global.AE_TEXT_BOX_MEMORY, layer._textMetrics).
+//   2. Eliminated Coordinate Drift & Wrong-Word Targeting:
+//      - Replaced fragile character-index projection with direct line-by-line token matching.
+//      - Automatically centers highlight blocks on visual glyph centers for Left, Center,
+//        and Right paragraph justifications.
+//      - Handles multi-line phrases and sentences seamlessly across line wraps.
+//   3. Fixed Paragraph Justification Enums:
+//      - Full support for After Effects ExtendScript enums (ParagraphJustification.RIGHT_JUSTIFY / 7413,
+//        CENTER_JUSTIFY / 7414, LEFT_JUSTIFY / 7412).
+//   4. Clean Appearance:
+//      - Background plate and options remain completely removed.
 //
 // REPOSITORY: https://github.com/work2survive/AE-Text-Highlight
 // LIVE DEMO:  https://work2survive.github.io/AE_JS_builder/?jsx=AE_Text_Highlight.jsx&autobuild=true
@@ -27,8 +40,38 @@
     "use strict";
 
     var SCRIPT_TITLE    = "AE Text Highlight";
-    var SCRIPT_VERSION  = "v1.2.2";
+    var SCRIPT_VERSION  = "v1.3.0";
     var GITHUB_REPO_URL = "https://github.com/work2survive/AE-Text-Highlight";
+
+    // Global in-memory cache initialization (matching Text_Properties_To_Effects.jsx)
+    var globalObj = (typeof $ !== "undefined" && typeof $.global !== "undefined")
+        ? $.global
+        : (typeof globalThis !== "undefined" ? globalThis : (typeof window !== "undefined" ? window : this));
+
+    if (typeof $ === "undefined") {
+        $ = { global: globalObj, writeln: function (msg) { if (typeof console !== "undefined") console.log(msg); } };
+    } else if (typeof $.global === "undefined") {
+        $.global = globalObj;
+    }
+
+    if (typeof $.global.AE_TEXT_BOX_MEMORY === "undefined") {
+        $.global.AE_TEXT_BOX_MEMORY = {
+            layerName: "",
+            words: [],
+            wordWidths: [],
+            lines: [],
+            lineWidths: [],
+            spaceWidth: 0,
+            fontSize: 0,
+            boxWidth: 0,
+            boxHeight: 0,
+            totalWords: 0,
+            totalLines: 0,
+            maxLineWidth: 0,
+            maxWordWidth: 0,
+            timestamp: 0
+        };
+    }
 
     // =========================================================================
     // 0. EXTENDSCRIPT ES3 SAFE POLYFILLS & STRING HELPERS
@@ -434,7 +477,24 @@
         return null;
     }
 
-    function getTextLayerDocument(layer) {
+    // =========================================================================
+    // 2. TEXT LAYER & BOX PROPERTY INSPECTOR (FROM Text_Properties_To_Effects.jsx)
+    // Reference: https://github.com/work2survive/AE_JS_builder/blob/main/samples/Text_Properties_To_Effects.jsx
+    // =========================================================================
+
+    function isTextLayer(layer) {
+        if (!layer) return false;
+        try {
+            if (typeof TextLayer !== "undefined" && layer instanceof TextLayer) return true;
+        } catch (e) {}
+        try {
+            if (layer.property("ADBE Text Properties") !== null) return true;
+            if (layer.property("Source Text") !== null) return true;
+        } catch (e) {}
+        return false;
+    }
+
+    function getTextDocument(layer) {
         if (!layer) return null;
         try {
             var prop = layer.property("ADBE Text Properties") || layer.property("Text");
@@ -449,10 +509,14 @@
         return null;
     }
 
+    function getTextLayerDocument(layer) {
+        return getTextDocument(layer);
+    }
+
     function getTextLayerString(layer) {
         if (!layer) return "";
         try {
-            var doc = getTextLayerDocument(layer);
+            var doc = getTextDocument(layer);
             if (doc) {
                 if (typeof doc.text === "string") return doc.text;
                 if (typeof doc === "string") return doc;
@@ -462,6 +526,334 @@
             if (typeof layer.text === "string") return layer.text;
         } catch(e2) {}
         return "";
+    }
+
+    function getSourceRect(layer) {
+        if (!layer || typeof layer.sourceRectAtTime !== "function") return null;
+        try {
+            var t = (typeof layer.time !== "undefined") ? layer.time : 0;
+            return layer.sourceRectAtTime(t, false);
+        } catch (e) {
+            return null;
+        }
+    }
+
+    function getJustificationName(textDoc, textLayer) {
+        if (textDoc && typeof textDoc.justification !== "undefined") {
+            var j = textDoc.justification;
+            if (typeof ParagraphJustification !== "undefined") {
+                if (j === ParagraphJustification.CENTER_JUSTIFY ||
+                    j === ParagraphJustification.FULL_JUSTIFY_LASTLINE_CENTER) {
+                    return "center";
+                }
+                if (j === ParagraphJustification.RIGHT_JUSTIFY ||
+                    j === ParagraphJustification.FULL_JUSTIFY_LASTLINE_RIGHT) {
+                    return "right";
+                }
+                if (j === ParagraphJustification.LEFT_JUSTIFY ||
+                    j === ParagraphJustification.FULL_JUSTIFY_LASTLINE_LEFT ||
+                    j === ParagraphJustification.FULL_JUSTIFY_LASTLINE_FULL) {
+                    return "left";
+                }
+            }
+            // AE ExtendScript numeric constants (7414 = Center, 7413 = Right, 7412 = Left)
+            if (j == 7414 || j == 7417) return "center";
+            if (j == 7413 || j == 7416) return "right";
+            if (j == 7412 || j == 7415 || j == 7418) return "left";
+            if (j === 1 || j === "center") return "center";
+            if (j === 2 || j === "right") return "right";
+        }
+        if (textLayer && textLayer.justification) {
+            var lj = String(textLayer.justification).toLowerCase();
+            if (lj.indexOf("center") !== -1) return "center";
+            if (lj.indexOf("right") !== -1) return "right";
+        }
+        return "left";
+    }
+
+    /**
+     * Measures and stores in memory words, word widths, lines, line widths, and typography metrics.
+     * Architectural reference: Text_Properties_To_Effects.jsx
+     * (https://github.com/work2survive/AE_JS_builder/blob/main/samples/Text_Properties_To_Effects.jsx)
+     */
+    function measureAndStoreTextMetrics(comp, layer) {
+        if (!comp || !layer || !isTextLayer(layer)) return null;
+
+        var textDoc = getTextDocument(layer);
+        if (!textDoc) return null;
+
+        var fullText = String(textDoc.text || "");
+        if (fullText.length === 0) {
+            var emptyStore = {
+                layerName: layer.name,
+                layerIndex: layer.index,
+                fullText: "",
+                words: [],
+                wordWidths: [],
+                lines: [],
+                lineWidths: [],
+                spaceWidth: 0,
+                fontSize: textDoc.fontSize || 34,
+                font: textDoc.font || "Georgia",
+                boxWidth: 0,
+                boxHeight: 0,
+                totalWords: 0,
+                totalLines: 0,
+                maxLineWidth: 0,
+                maxWordWidth: 0,
+                timestamp: (new Date()).getTime()
+            };
+            $.global.AE_TEXT_BOX_MEMORY = emptyStore;
+            try { layer._textMetrics = emptyStore; } catch (e) {}
+            return emptyStore;
+        }
+
+        var words = fullText.match(/\S+/g) || [];
+        var wordWidths = [];
+        var lines = [];
+        var lineWidths = [];
+        var spaceWidth = 0;
+
+        var isBox = false;
+        var boxWidth = 0;
+        var boxHeight = 0;
+        try {
+            if (textDoc.boxText && textDoc.boxTextSize) {
+                isBox = true;
+                boxWidth = textDoc.boxTextSize[0];
+                boxHeight = textDoc.boxTextSize[1];
+            }
+        } catch (eBox) {}
+
+        var tempLayer = null;
+        try {
+            tempLayer = comp.layers.addText("");
+            tempLayer.enabled = false;
+            var tempDoc = tempLayer.property("Source Text").value;
+            tempDoc.fontSize = textDoc.fontSize || 34;
+            if (textDoc.font) {
+                try { tempDoc.font = textDoc.font; } catch (eFont) {}
+            }
+            tempDoc.tracking = textDoc.tracking || 0;
+            tempDoc.applyStroke = textDoc.applyStroke || false;
+            tempDoc.strokeWidth = textDoc.strokeWidth || 0;
+            tempDoc.applyFill = true;
+            tempDoc.fillColor = [1, 1, 1];
+            tempLayer.property("Source Text").setValue(tempDoc);
+
+            // 1. Measure width in pixels of each word
+            for (var w = 0; w < words.length; w++) {
+                tempDoc.text = words[w];
+                tempLayer.property("Source Text").setValue(tempDoc);
+                var rW = tempLayer.sourceRectAtTime(0, false);
+                var ww = rW ? (Math.round(rW.width * 100) / 100) : 0;
+                wordWidths.push(ww);
+            }
+
+            // 2. Measure space width in pixels
+            tempDoc.text = "A A";
+            tempLayer.property("Source Text").setValue(tempDoc);
+            var rPair = tempLayer.sourceRectAtTime(0, false);
+            tempDoc.text = "AA";
+            tempLayer.property("Source Text").setValue(tempDoc);
+            var rSingle = tempLayer.sourceRectAtTime(0, false);
+            if (rPair && rSingle) {
+                spaceWidth = Math.max(0, Math.round((rPair.width - rSingle.width) * 100) / 100);
+            }
+            if (spaceWidth <= 0) {
+                spaceWidth = Math.round(((textDoc.fontSize || 34) * 0.28) * 100) / 100;
+            }
+
+            // 3. Measure lines and width in pixels of each text line
+            var paragraphs = fullText.split(/\r\n|\r|\n/);
+            for (var p = 0; p < paragraphs.length; p++) {
+                var para = paragraphs[p];
+                if (!isBox || boxWidth <= 0) {
+                    tempDoc.text = para;
+                    tempLayer.property("Source Text").setValue(tempDoc);
+                    var rL = tempLayer.sourceRectAtTime(0, false);
+                    var lw = rL ? (Math.round(rL.width * 100) / 100) : 0;
+                    lines.push(para);
+                    lineWidths.push(lw);
+                } else {
+                    var pWords = para.match(/\S+/g) || [];
+                    if (pWords.length === 0) {
+                        lines.push("");
+                        lineWidths.push(0);
+                        continue;
+                    }
+                    var curLine = pWords[0];
+                    tempDoc.text = curLine;
+                    tempLayer.property("Source Text").setValue(tempDoc);
+                    var curW = tempLayer.sourceRectAtTime(0, false).width;
+
+                    for (var pw = 1; pw < pWords.length; pw++) {
+                        var testLine = curLine + " " + pWords[pw];
+                        tempDoc.text = testLine;
+                        tempLayer.property("Source Text").setValue(tempDoc);
+                        var testW = tempLayer.sourceRectAtTime(0, false).width;
+
+                        if (testW > boxWidth && curLine.length > 0) {
+                            lines.push(curLine);
+                            lineWidths.push(Math.round(curW * 100) / 100);
+                            curLine = pWords[pw];
+                            tempDoc.text = curLine;
+                            tempLayer.property("Source Text").setValue(tempDoc);
+                            curW = tempLayer.sourceRectAtTime(0, false).width;
+                        } else {
+                            curLine = testLine;
+                            curW = testW;
+                        }
+                    }
+                    lines.push(curLine);
+                    lineWidths.push(Math.round(curW * 100) / 100);
+                }
+            }
+        } catch (measErr) {
+            var fn = textDoc.font || "Georgia";
+            var fsz = textDoc.fontSize || 34;
+            if (wordWidths.length === 0) {
+                for (var fw = 0; fw < words.length; fw++) {
+                    wordWidths.push(measureTextExact(words[fw], fsz, fn));
+                }
+            }
+            if (lines.length === 0) {
+                var rawParas = fullText.split(/\r\n|\r|\n/);
+                if (!isBox || boxWidth <= 0) {
+                    for (var rpi = 0; rpi < rawParas.length; rpi++) {
+                        lines.push(rawParas[rpi]);
+                        lineWidths.push(measureTextExact(rawParas[rpi], fsz, fn));
+                    }
+                } else {
+                    for (var rpi2 = 0; rpi2 < rawParas.length; rpi2++) {
+                        var pwList = rawParas[rpi2].match(/\S+/g) || [];
+                        if (pwList.length === 0) { lines.push(""); lineWidths.push(0); continue; }
+                        var cLine = pwList[0];
+                        for (var pwi = 1; pwi < pwList.length; pwi++) {
+                            var tLine = cLine + " " + pwList[pwi];
+                            if (measureTextExact(tLine, fsz, fn) > boxWidth && cLine.length > 0) {
+                                lines.push(cLine);
+                                lineWidths.push(measureTextExact(cLine, fsz, fn));
+                                cLine = pwList[pwi];
+                            } else {
+                                cLine = tLine;
+                            }
+                        }
+                        lines.push(cLine);
+                        lineWidths.push(measureTextExact(cLine, fsz, fn));
+                    }
+                }
+            }
+        } finally {
+            if (tempLayer) {
+                try { tempLayer.remove(); } catch (remErr) {}
+            }
+        }
+
+        var maxLW = 0;
+        for (var ml = 0; ml < lineWidths.length; ml++) {
+            if (lineWidths[ml] > maxLW) maxLW = lineWidths[ml];
+        }
+
+        var maxWW = 0;
+        for (var mw = 0; mw < wordWidths.length; mw++) {
+            if (wordWidths[mw] > maxWW) maxWW = wordWidths[mw];
+        }
+
+        var memoryStore = {
+            layerName: layer.name,
+            layerIndex: layer.index,
+            fullText: fullText,
+            words: words,
+            wordWidths: wordWidths,
+            lines: lines,
+            lineWidths: lineWidths,
+            spaceWidth: spaceWidth,
+            fontSize: textDoc.fontSize || 34,
+            font: textDoc.font || "Georgia",
+            boxWidth: boxWidth,
+            boxHeight: boxHeight,
+            totalWords: words.length,
+            totalLines: lines.length,
+            maxLineWidth: maxLW,
+            maxWordWidth: maxWW,
+            timestamp: (new Date()).getTime()
+        };
+
+        $.global.AE_TEXT_BOX_MEMORY = memoryStore;
+        try { layer._textMetrics = memoryStore; } catch (eMem) {}
+        return memoryStore;
+    }
+
+    /**
+     * Comprehensive Text & Paragraph Box Properties Extractor.
+     * Architectural reference: Text_Properties_To_Effects.jsx
+     * (https://github.com/work2survive/AE_JS_builder/blob/main/samples/Text_Properties_To_Effects.jsx)
+     */
+    function getTextBoxProperties(comp, layer) {
+        if (!comp || !layer || !isTextLayer(layer)) return null;
+
+        var textDoc = getTextDocument(layer);
+        var sRect = getSourceRect(layer);
+        var fullText = textDoc ? String(textDoc.text || "") : "";
+
+        var isBox = false;
+        var boxWidth = 0;
+        var boxHeight = 0;
+        try {
+            if (textDoc && textDoc.boxText && textDoc.boxTextSize) {
+                isBox = true;
+                boxWidth = textDoc.boxTextSize[0];
+                boxHeight = textDoc.boxTextSize[1];
+            }
+        } catch (eBox) {}
+
+        if (!sRect || sRect.width === 0 || sRect.height === 0) {
+            sRect = { left: 0, top: 0, width: (boxWidth > 0 ? boxWidth : 950), height: (textDoc ? textDoc.fontSize * 1.5 : 50) };
+        }
+        if (boxWidth <= 0) boxWidth = sRect.width;
+        if (boxHeight <= 0) boxHeight = sRect.height;
+
+        var fontSize = (textDoc && textDoc.fontSize) ? textDoc.fontSize : 34;
+        var font = (textDoc && textDoc.font) ? textDoc.font : "Georgia";
+        var leading = (textDoc && textDoc.leading && !textDoc.autoLeading) ? textDoc.leading : (fontSize * 1.2);
+        var tracking = (textDoc && textDoc.tracking) ? textDoc.tracking : 0;
+        var baselineShift = (textDoc && textDoc.baselineShift) ? textDoc.baselineShift : 0;
+        var strokeWidth = (textDoc && textDoc.applyStroke && textDoc.strokeWidth) ? textDoc.strokeWidth : 0;
+
+        var justification = getJustificationName(textDoc, layer);
+        var alignIndex = (justification === "center") ? 1 : ((justification === "right") ? 2 : 0);
+        var alignRatio = (justification === "center") ? 0.5 : ((justification === "right") ? 1.0 : 0.0);
+
+        var indentLeft = sRect.left;
+        var indentRightSpare = (isBox && sRect) ? Math.max(0, boxWidth - (sRect.left + sRect.width)) : 0;
+        var baselineOffset = sRect.top;
+
+        var metrics = measureAndStoreTextMetrics(comp, layer);
+
+        return {
+            isText: true,
+            layerName: layer.name,
+            textDoc: textDoc,
+            fullText: fullText,
+            isBox: isBox,
+            boxWidth: boxWidth,
+            boxHeight: boxHeight,
+            sRect: sRect,
+            fontSize: fontSize,
+            font: font,
+            leading: leading,
+            tracking: tracking,
+            baselineShift: baselineShift,
+            strokeWidth: strokeWidth,
+            justification: justification,
+            alignIndex: alignIndex,
+            alignRatio: alignRatio,
+            indentLeft: indentLeft,
+            indentRightSpare: indentRightSpare,
+            baselineOffset: baselineOffset,
+            metrics: metrics
+        };
     }
 
     function addOrUpdateEffectSlider(layer, effectName, defaultVal) {
@@ -536,52 +928,27 @@
         var offX = (typeof offsetX === "number") ? offsetX : 0;
         var offY = (typeof offsetY === "number") ? offsetY : 0;
 
-        var textDoc = getTextLayerDocument(textLayer);
-        var textStr = getTextLayerString(textLayer) || LOREM_IPSUM_RAW;
-
-        var cleanTextStr = textStr.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
-        var lowerText = cleanTextStr.toLowerCase();
-
-        var fs = 34;
-        if (textDoc && textDoc.fontSize) fs = textDoc.fontSize;
-        else if (textLayer.fontSize) fs = textLayer.fontSize;
-
-        var fontName = "Georgia";
-        if (textDoc && textDoc.font) fontName = textDoc.font;
-        else if (textLayer.fontFamily) fontName = textLayer.fontFamily;
-
-        var leading = 0;
-        if (textDoc && textDoc.leading) leading = textDoc.leading;
-        else if (textLayer.leading) leading = textLayer.leading;
-
-        var just = "left";
-        if (textDoc && textDoc.justification !== undefined) {
-            var j = textDoc.justification;
-            if (j === 2 || j === "center" || (typeof ParagraphJustification !== "undefined" && j === ParagraphJustification.CENTER_JUSTIFY)) just = "center";
-            else if (j === 1 || j === "right" || (typeof ParagraphJustification !== "undefined" && j === ParagraphJustification.RIGHT_JUSTIFY)) just = "right";
-        } else if (textLayer.justification) {
-            just = textLayer.justification;
-        }
-
-        var sRect = null;
-        try {
-            sRect = textLayer.sourceRectAtTime(0, false);
-        } catch(eRect) {}
-        if (!sRect || sRect.width === 0 || sRect.height === 0) {
-            sRect = { left: 0, top: 0, width: 1000, height: fs * 1.5 };
-        }
-
-        // Set up temporary hidden Point Text layer for 100% exact After Effects measurement
         var comp = textLayer.containingComp || (app.project && app.project.activeItem);
+        var props = getTextBoxProperties(comp, textLayer);
+        if (!props || !props.metrics) return 0;
+
+        var lines = props.metrics.lines;
+        var lineWidths = props.metrics.lineWidths;
+        var totalLines = Math.max(1, lines.length);
+        var sRect = props.sRect;
+        var just = props.justification;
+        var fs = props.fontSize;
+
+        // Temporary measurement helper for exact After Effects sub-string widths
         var measureLayer = null;
         if (comp && typeof comp.layers.addText === "function") {
             try {
                 measureLayer = comp.layers.addText("");
                 measureLayer.enabled = false;
-                if (textDoc && measureLayer.sourceText) {
-                    measureLayer.sourceText.setValue(textDoc);
+                if (props.textDoc && measureLayer.sourceText) {
+                    measureLayer.sourceText.setValue(props.textDoc);
                 }
-            } catch(eMeas) {
+            } catch (eM) {
                 measureLayer = null;
             }
         }
@@ -594,173 +961,160 @@
                     doc.text = str;
                     measureLayer.sourceText.setValue(doc);
                     return measureLayer.sourceRectAtTime(0, false).width;
-                } catch(e) {}
+                } catch (e) {}
             }
-            return measureTextExact(str, fs, fontName);
+            return measureTextExact(str, fs, props.font);
         }
-
-        // Decompose text into visual lines (handles both Point Text and Paragraph/Box Text)
-        var visualLines = [];
-        var explicitParagraphs = cleanTextStr.split("\n");
-        var isBoxText = (textDoc && textDoc.boxText);
-        var isMultiLine = (sRect.height > fs * 1.5 && explicitParagraphs.length <= 1);
-        var wrapW = (textDoc && textDoc.boxTextSize && textDoc.boxTextSize[0] > 0)
-            ? textDoc.boxTextSize[0]
-            : (sRect ? sRect.width : 0);
-
-        if ((isBoxText || isMultiLine) && wrapW > 0) {
-            for (var p = 0; p < explicitParagraphs.length; p++) {
-                var para = explicitParagraphs[p];
-                if (!para || trimStr(para).length === 0) {
-                    visualLines.push("");
-                    continue;
-                }
-                var paraW = measureString(para);
-                if (paraW <= wrapW) {
-                    visualLines.push(para);
-                    continue;
-                }
-                var words = para.split(/\s+/);
-                var curLine = "";
-                for (var w = 0; w < words.length; w++) {
-                    var wd = words[w];
-                    if (!wd) continue;
-                    var testLine = (curLine.length === 0) ? wd : (curLine + " " + wd);
-                    var testW = measureString(testLine);
-                    if (testW > wrapW && curLine.length > 0) {
-                        visualLines.push(curLine);
-                        curLine = wd;
-                    } else {
-                        curLine = testLine;
-                    }
-                }
-                if (curLine.length > 0) {
-                    visualLines.push(curLine);
-                }
-            }
-        } else {
-            visualLines = explicitParagraphs;
-        }
-
-        // Map character positions of each visual line
-        var lineStartIndices = [];
-        var curIdx = 0;
-        for (var l = 0; l < visualLines.length; l++) {
-            lineStartIndices.push(curIdx);
-            curIdx += visualLines[l].length + 1;
-        }
-
-        var totalLines = Math.max(1, visualLines.length);
-        var linePitch = (leading > 0) ? leading : ((totalLines > 1) ? (sRect.height / totalLines) : (fs * 1.35));
-        var topOrigin = sRect.top;
-        var leftOrigin = sRect.left;
-        var totalBoxW = sRect.width;
 
         var totalCreated = 0;
 
-        for (var t = 0; t < terms.length; t++) {
-            var term = terms[t];
-            if (!term) continue;
-            var lowerTerm = term.toLowerCase();
-
-            var matchIndices = [];
-            var sIdx = 0;
-            while (sIdx < cleanTextStr.length) {
-                var found = lowerText.indexOf(lowerTerm, sIdx);
-                if (found === -1) break;
-                matchIndices.push(found);
-                sIdx = found + Math.max(1, lowerTerm.length);
+        function createVectorHighlightGroup(segText, pW, mW, curLineW, vl) {
+            var lineStartX = sRect.left;
+            if (just === "center") {
+                lineStartX = sRect.left + (sRect.width - curLineW) / 2;
+            } else if (just === "right") {
+                lineStartX = sRect.left + sRect.width - curLineW;
             }
 
-            var countMatches = Math.max(1, matchIndices.length);
+            var wordCenterX = lineStartX + pW + (mW / 2);
+            var wordCenterY = (totalLines === 1)
+                ? (sRect.top + sRect.height / 2)
+                : ((sRect.top + fs * 0.5) + vl * ((sRect.height - fs) / (totalLines - 1)));
 
-            for (var m = 0; m < countMatches; m++) {
-                if (m >= matchIndices.length) continue;
-                var charStart = matchIndices[m];
-                var matchEnd = charStart + term.length;
+            var baseW = Math.max(0, mW);
+            var baseH = Math.max(0, fs);
+            var initW = Math.max(0, baseW + paddingX * 2);
+            var initH = Math.max(0, baseH + thicknessY);
+            var initX = wordCenterX + offX;
+            var initY = wordCenterY + offY;
 
-                // Decompose match across all intersecting visual lines
-                for (var vl = 0; vl < visualLines.length; vl++) {
-                    var lStart = lineStartIndices[vl];
-                    var lEnd = lStart + visualLines[vl].length;
-                    var oStart = Math.max(charStart, lStart);
-                    var oEnd = Math.min(matchEnd, lEnd);
-                    if (oStart >= oEnd) continue;
+            totalCreated++;
+            var grp = contents.addProperty("ADBE Vector Group");
+            grp.name = "Highlight " + totalCreated + " - " + segText.substr(0, 20);
+            var grpContents = grp.property("ADBE Vectors Group") || grp.property("Contents");
 
-                    var colStart = oStart - lStart;
-                    var segText = visualLines[vl].substr(colStart, oEnd - oStart);
-                    if (trimStr(segText).length === 0) continue;
+            var rect = grpContents.addProperty("ADBE Vector Shape - Rect");
+            rect.name = "Box Path";
 
-                    totalCreated++;
-                    var grp = contents.addProperty("ADBE Vector Group");
-                    grp.name = "Highlight " + totalCreated + " - " + segText.substr(0, 20);
-                    var grpContents = grp.property("ADBE Vectors Group") || grp.property("Contents");
+            var propSize = rect.property("ADBE Vector Rect Size") || rect.property("Size");
+            if (propSize) {
+                propSize.setValue([initW, initH]);
+                propSize.expression = generateRectSizeExpression(baseW, baseH);
+            }
+            var propPos = rect.property("ADBE Vector Rect Position") || rect.property("Position");
+            if (propPos) {
+                propPos.setValue([initX, initY]);
+                propPos.expression = generateRectPositionExpression(wordCenterX, wordCenterY, targetTextLayerName);
+            }
+            var propRound = rect.property("ADBE Vector Rect Roundness") || rect.property("Roundness");
+            if (propRound) {
+                propRound.setValue(roundness);
+                propRound.expression = 'try { Math.max(0, thisLayer.effect("Roundness")(1).value); } catch(e) { value; }';
+            }
 
-                    var lineStr = visualLines[vl];
+            var fill = grpContents.addProperty("ADBE Vector Graphic - Fill");
+            fill.name = "Highlight Fill";
+
+            var propCol = fill.property("ADBE Vector Fill Color") || fill.property("Color");
+            if (propCol) {
+                propCol.setValue(highlightColor);
+                propCol.expression = 'try { thisLayer.effect("Highlight Color")(1).value; } catch(e) { value; }';
+            }
+            var propOp = fill.property("ADBE Vector Fill Opacity") || fill.property("Opacity");
+            if (propOp) {
+                propOp.setValue(highlightOpacity);
+                propOp.expression = 'try { thisLayer.effect("Highlight Opacity")(1); } catch(e) { value; }';
+            }
+        }
+
+        for (var t = 0; t < terms.length; t++) {
+            var rawTerm = terms[t];
+            if (!rawTerm) continue;
+            var term = trimStr(rawTerm);
+            if (term.length === 0) continue;
+            var lowerTerm = term.toLowerCase();
+
+            var matchedSingleLine = false;
+
+            // 1. Direct search within each visual line
+            for (var vl = 0; vl < lines.length; vl++) {
+                var lineStr = lines[vl];
+                if (!lineStr || lineStr.length === 0) continue;
+                var lowerLine = lineStr.toLowerCase();
+                var searchIdx = 0;
+
+                while (searchIdx < lineStr.length) {
+                    var found = lowerLine.indexOf(lowerTerm, searchIdx);
+                    if (found === -1) break;
+
+                    var colStart = found;
+                    var segText = lineStr.substr(colStart, term.length);
                     var prefix = lineStr.substr(0, colStart);
 
                     var pW = measureString(prefix);
                     var mW = measureString(segText);
-                    var totW = measureString(lineStr);
+                    var curLineW = lineWidths[vl] || measureString(lineStr);
 
-                    var lineStartX = leftOrigin;
-                    if (just === "center") {
-                        lineStartX = leftOrigin + (totalBoxW - totW) / 2;
-                    } else if (just === "right") {
-                        lineStartX = leftOrigin + totalBoxW - totW;
+                    createVectorHighlightGroup(segText, pW, mW, curLineW, vl);
+
+                    matchedSingleLine = true;
+                    searchIdx = found + Math.max(1, term.length);
+                }
+            }
+
+            // 2. If term contains spaces and didn't match on a single line, check across line wraps
+            if (!matchedSingleLine && term.indexOf(" ") !== -1) {
+                var termWords = term.split(/\s+/);
+                var allWords = [];
+                var lineWordRanges = [];
+                var curWIdx = 0;
+
+                for (var rvl = 0; rvl < lines.length; rvl++) {
+                    var lWords = lines[rvl].match(/\S+/g) || [];
+                    lineWordRanges.push({ start: curWIdx, end: curWIdx + lWords.length, vl: rvl, words: lWords });
+                    for (var lwi = 0; lwi < lWords.length; lwi++) {
+                        allWords.push(lWords[lwi]);
+                    }
+                    curWIdx += lWords.length;
+                }
+
+                var termLen = termWords.length;
+                for (var wStart = 0; wStart <= allWords.length - termLen; wStart++) {
+                    var matchSequence = true;
+                    for (var twi = 0; twi < termLen; twi++) {
+                        if (allWords[wStart + twi].toLowerCase() !== termWords[twi].toLowerCase()) {
+                            matchSequence = false;
+                            break;
+                        }
                     }
 
-                    var wordCenterX = lineStartX + pW + (mW / 2);
-                    var wordCenterY = topOrigin + (vl + 0.5) * linePitch;
-
-                    var baseW = Math.max(0, mW);
-                    var baseH = Math.max(0, fs);
-                    var initW = Math.max(0, baseW + paddingX * 2);
-                    var initH = Math.max(0, baseH + thicknessY);
-                    var initX = wordCenterX + offX;
-                    var initY = wordCenterY + offY;
-
-                    // Add Rect and fully configure it
-                    var rect = grpContents.addProperty("ADBE Vector Shape - Rect");
-                    rect.name = "Box Path";
-
-                    var propSize = rect.property("ADBE Vector Rect Size") || rect.property("Size");
-                    if (propSize) {
-                        propSize.setValue([initW, initH]);
-                        propSize.expression = generateRectSizeExpression(baseW, baseH);
-                    }
-                    var propPos = rect.property("ADBE Vector Rect Position") || rect.property("Position");
-                    if (propPos) {
-                        propPos.setValue([initX, initY]);
-                        propPos.expression = generateRectPositionExpression(wordCenterX, wordCenterY, targetTextLayerName);
-                    }
-                    var propRound = rect.property("ADBE Vector Rect Roundness") || rect.property("Roundness");
-                    if (propRound) {
-                        propRound.setValue(roundness);
-                        propRound.expression = 'try { Math.max(0, thisLayer.effect("Roundness")(1).value); } catch(e) { value; }';
-                    }
-
-                    // Add Fill graphic
-                    var fill = grpContents.addProperty("ADBE Vector Graphic - Fill");
-                    fill.name = "Highlight Fill";
-
-                    var propCol = fill.property("ADBE Vector Fill Color") || fill.property("Color");
-                    if (propCol) {
-                        propCol.setValue(highlightColor);
-                        propCol.expression = 'try { thisLayer.effect("Highlight Color")(1).value; } catch(e) { value; }';
-                    }
-                    var propOp = fill.property("ADBE Vector Fill Opacity") || fill.property("Opacity");
-                    if (propOp) {
-                        propOp.setValue(highlightOpacity);
-                        propOp.expression = 'try { thisLayer.effect("Highlight Opacity")(1); } catch(e) { value; }';
+                    if (matchSequence) {
+                        var wEnd = wStart + termLen;
+                        for (var lri = 0; lri < lineWordRanges.length; lri++) {
+                            var rng = lineWordRanges[lri];
+                            var oStart = Math.max(wStart, rng.start);
+                            var oEnd = Math.min(wEnd, rng.end);
+                            if (oStart < oEnd) {
+                                var subWords = allWords.slice(oStart, oEnd);
+                                var phraseSeg = subWords.join(" ");
+                                var targetLine = lines[rng.vl];
+                                var fIdx = targetLine.toLowerCase().indexOf(phraseSeg.toLowerCase());
+                                if (fIdx !== -1) {
+                                    var preStr = targetLine.substr(0, fIdx);
+                                    var pW2 = measureString(preStr);
+                                    var mW2 = measureString(targetLine.substr(fIdx, phraseSeg.length));
+                                    var curLW2 = lineWidths[rng.vl] || measureString(targetLine);
+                                    createVectorHighlightGroup(phraseSeg, pW2, mW2, curLW2, rng.vl);
+                                }
+                            }
+                        }
                     }
                 }
             }
         }
 
-        // Clean up temporary measurement layer
         if (measureLayer) {
-            try { measureLayer.remove(); } catch(eClean) {}
+            try { measureLayer.remove(); } catch (eClean) {}
         }
 
         return totalCreated;
@@ -1407,7 +1761,18 @@
                                 doc.fillColor = COLOR_TEXT_DARK;
                                 doc.applyFill = true;
                                 doc.applyStroke = false;
-                                doc.justification = (activeAlign === "center") ? 2 : ((activeAlign === "right") ? 1 : 0);
+                                if (typeof ParagraphJustification !== "undefined") {
+                                    doc.justification = (activeAlign === "center")
+                                        ? ParagraphJustification.CENTER_JUSTIFY
+                                        : ((activeAlign === "right") ? ParagraphJustification.RIGHT_JUSTIFY : ParagraphJustification.LEFT_JUSTIFY);
+                                } else {
+                                    doc.justification = (activeAlign === "center") ? 7414 : ((activeAlign === "right") ? 7413 : 7412);
+                                }
+                                try {
+                                    if (typeof doc.setBoxTextSize === "function") {
+                                        doc.setBoxTextSize([dummyBoxWidth, 450]);
+                                    }
+                                } catch (eBox) {}
                                 textDocProp.setValue(doc);
                             } else {
                                 textLayer.fontSize = 34;
