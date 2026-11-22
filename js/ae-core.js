@@ -1632,6 +1632,14 @@
             this.boxText = !val;
         }
 
+        get isParagraphText() {
+            return Boolean(this.boxText);
+        }
+
+        get isPointText() {
+            return !this.boxText;
+        }
+
         setBoxTextSize(size) {
             if (Array.isArray(size) && size.length >= 2) {
                 this.boxTextSize = [Number(size[0]), Number(size[1])];
@@ -2017,6 +2025,28 @@
             this.sourceText.parentProperty = this.text;
             this.text.properties.push(this.sourceText);
             this.text.sourceText = this.sourceText;
+            Object.defineProperties(this.sourceText, {
+                style: {
+                    get: () => textDoc,
+                    configurable: true
+                },
+                boxText: {
+                    get: () => Boolean(this.boxText || (textDoc && textDoc.boxText)),
+                    configurable: true
+                },
+                pointText: {
+                    get: () => !Boolean(this.boxText || (textDoc && textDoc.boxText)),
+                    configurable: true
+                },
+                isParagraphText: {
+                    get: () => Boolean(this.boxText || (textDoc && textDoc.boxText)),
+                    configurable: true
+                },
+                isPointText: {
+                    get: () => !Boolean(this.boxText || (textDoc && textDoc.boxText)),
+                    configurable: true
+                }
+            });
 
             // Direct typography state on layer
             this.fontSize = 24;

@@ -1,7 +1,7 @@
 // Co-authored & architected with Google DeepMind Antigravity.
 // =============================================================================
 // ADOBE AFTER EFFECTS EXTENDSCRIPT & SCRIPTUI PANEL:
-// TEXT & BOX PROPERTIES TO EFFECTS (INSPECTOR & RIGGER) v1.2.2
+// TEXT & BOX PROPERTIES TO EFFECTS (INSPECTOR & RIGGER) v1.2.3
 // =============================================================================
 //
 // PURPOSE:
@@ -30,7 +30,7 @@
     "use strict";
 
     var SCRIPT_NAME = "Text & Box Properties to Effects";
-    var SCRIPT_VERSION = "v1.2.2";
+    var SCRIPT_VERSION = "v1.2.3";
 
     // Global in-memory cache initialization
     var $global;
@@ -56,6 +56,9 @@
     if (typeof $memGlobal.AE_TEXT_BOX_MEMORY === "undefined") {
         $memGlobal.AE_TEXT_BOX_MEMORY = {
             layerName: "",
+            textType: 0,
+            isBoxText: 0,
+            textTypeName: "Point Text",
             words: [],
             wordWidths: [],
             lines: [],
@@ -225,17 +228,37 @@
             }
         },
         {
+            id: "text_type",
+            category: "box",
+            label: "Text Type: Point (0) / Box (1) (Slider)",
+            effectName: "Text Type (0:Point, 1:Box)",
+            matchName: "ADBE Slider Control",
+            type: "slider",
+            defaultChecked: true,
+            tooltip: "Slider value: 0 if Point Text, 1 if Box Text",
+            expression: "try {\n    var st = text.sourceText;\n    if (typeof st.isParagraphText !== 'undefined') {\n        st.isParagraphText ? 1 : 0;\n    } else if (typeof st.isPointText !== 'undefined') {\n        st.isPointText ? 0 : 1;\n    } else if (st.style && typeof st.style.boxText !== 'undefined') {\n        st.style.boxText ? 1 : 0;\n    } else if (typeof st.boxText !== 'undefined') {\n        st.boxText ? 1 : 0;\n    } else if (st.style && st.style.boxTextSize && st.style.boxTextSize[0] > 0) {\n        1;\n    } else if (st.value && typeof st.value.boxText !== 'undefined') {\n        st.value.boxText ? 1 : 0;\n    } else {\n        0;\n    }\n} catch (err) {\n    0;\n}",
+            evalStatic: function (layer, textDoc, rect) {
+                if (!textDoc) return 0;
+                if (typeof textDoc.boxText !== "undefined") return textDoc.boxText ? 1 : 0;
+                if (typeof textDoc.pointText !== "undefined") return textDoc.pointText ? 0 : 1;
+                return 0;
+            }
+        },
+        {
             id: "box_is_box",
             category: "box",
-            label: "Is Paragraph Box Text (0/1)",
+            label: "Is Paragraph Box Text (0/1) (Checkbox)",
             effectName: "Is Paragraph Box Text",
             matchName: "ADBE Checkbox Control",
             type: "checkbox",
             defaultChecked: true,
-            tooltip: "1 if layer is Paragraph (Box) text; 0 if Point text",
-            expression: "try {\n    (text.sourceText.style && text.sourceText.style.boxText) ? 1 : 0;\n} catch (err) {\n    0;\n}",
+            tooltip: "Checkbox value: 0 (unchecked) if Point Text, 1 (checked) if Box Text",
+            expression: "try {\n    var st = text.sourceText;\n    if (typeof st.isParagraphText !== 'undefined') {\n        st.isParagraphText ? 1 : 0;\n    } else if (typeof st.isPointText !== 'undefined') {\n        st.isPointText ? 0 : 1;\n    } else if (st.style && typeof st.style.boxText !== 'undefined') {\n        st.style.boxText ? 1 : 0;\n    } else if (typeof st.boxText !== 'undefined') {\n        st.boxText ? 1 : 0;\n    } else if (st.style && st.style.boxTextSize && st.style.boxTextSize[0] > 0) {\n        1;\n    } else if (st.value && typeof st.value.boxText !== 'undefined') {\n        st.value.boxText ? 1 : 0;\n    } else {\n        0;\n    }\n} catch (err) {\n    0;\n}",
             evalStatic: function (layer, textDoc, rect) {
-                return (textDoc && textDoc.boxText) ? 1 : 0;
+                if (!textDoc) return 0;
+                if (typeof textDoc.boxText !== "undefined") return textDoc.boxText ? 1 : 0;
+                if (typeof textDoc.pointText !== "undefined") return textDoc.pointText ? 0 : 1;
+                return 0;
             }
         },
         {
@@ -578,10 +601,14 @@
 
         var fullText = String(textDoc.text || "");
         if (fullText.length === 0) {
+            var emptyIsBox = (textDoc && (textDoc.boxText === true || (typeof textDoc.pointText !== "undefined" && !textDoc.pointText))) ? 1 : 0;
             var emptyStore = {
                 layerName: layer.name,
                 layerIndex: layer.index,
                 fullText: "",
+                textType: emptyIsBox,
+                isBoxText: emptyIsBox,
+                textTypeName: emptyIsBox ? "Box Text" : "Point Text",
                 words: [],
                 wordWidths: [],
                 lines: [],
@@ -616,6 +643,8 @@
                 isBox = true;
                 boxWidth = textDoc.boxTextSize[0];
                 boxHeight = textDoc.boxTextSize[1];
+            } else if (textDoc.boxText || (typeof textDoc.pointText !== "undefined" && !textDoc.pointText)) {
+                isBox = true;
             }
         } catch (eBox) {}
 
@@ -733,10 +762,14 @@
             if (wordWidths[mw] > maxWW) maxWW = wordWidths[mw];
         }
 
+        var isBoxVal = isBox ? 1 : 0;
         var memoryStore = {
             layerName: layer.name,
             layerIndex: layer.index,
             fullText: fullText,
+            textType: isBoxVal,
+            isBoxText: isBoxVal,
+            textTypeName: isBox ? "Box Text" : "Point Text",
             words: words,
             wordWidths: wordWidths,
             lines: lines,
@@ -1152,7 +1185,7 @@
         pnlSR.alignChildren = ["fill", "top"];
         pnlSR.spacing = 3;
 
-        var boxProps = ["sr_width", "sr_height", "box_width", "box_height", "sr_size", "box_size", "sr_left", "sr_top"];
+        var boxProps = ["text_type", "box_is_box", "sr_width", "sr_height", "box_width", "box_height", "sr_size", "box_size", "sr_left", "sr_top"];
         for (var bi = 0; bi < boxProps.length; bi++) {
             var bDef = PROPERTY_DEFS_MAP[boxProps[bi]];
             if (bDef) addCheckboxItem(pnlSR, bDef);
@@ -1538,8 +1571,10 @@
             sldLineAmount.value = lCount;
             txtLineAmount.text = String(lCount);
 
+            var typeStr = (mem.textTypeName || (mem.isBoxText ? "Box Text" : "Point Text")) + " (" + (mem.isBoxText || 0) + ")";
             lblMemHeader.text = "Layer: '" + (mem.layerName || "Unnamed") +
-                "' | Words: " + wCount +
+                "' | " + typeStr +
+                " | Words: " + wCount +
                 " | Lines: " + lCount +
                 " | Max Line: " + mem.maxLineWidth + " px";
 
@@ -1559,6 +1594,9 @@
                 var jsonLines = [
                     "{",
                     "  \"layerName\": \"" + (mem.layerName || "") + "\",",
+                    "  \"textType\": " + (mem.textType || 0) + ",",
+                    "  \"isBoxText\": " + (mem.isBoxText || 0) + ",",
+                    "  \"textTypeName\": \"" + (mem.textTypeName || (mem.isBoxText ? "Box Text" : "Point Text")) + "\",",
                     "  \"totalWords\": " + wCount + ",",
                     "  \"totalLines\": " + lCount + ",",
                     "  \"words\": " + (function() {
@@ -1612,7 +1650,9 @@
 
         btnPresetCommon.onClick = function () {
             setCheckboxes(function (def) {
-                return (def.id === "sr_width" ||
+                return (def.id === "text_type" ||
+                        def.id === "box_is_box" ||
+                        def.id === "sr_width" ||
                         def.id === "sr_height" ||
                         def.id === "box_width" ||
                         def.id === "box_height" ||
@@ -1622,7 +1662,7 @@
                         def.id === "cnt_words" ||
                         def.id === "cnt_lines");
             });
-            setStatus("Checked common dimensions, alignment, indent & counters.");
+            setStatus("Checked common dimensions, text type, alignment, indent & counters.");
         };
 
         btnReadTimeline.onClick = function () {
@@ -1828,6 +1868,7 @@
             $.writeln("AE IN-MEMORY TEXT BOX METRICS REPORT");
             $.writeln("=================================================================");
             $.writeln("Layer Name:   " + mem.layerName);
+            $.writeln("Text Type:    " + (mem.textTypeName || (mem.isBoxText ? "Box Text" : "Point Text")) + " (" + (mem.isBoxText || 0) + ")");
             $.writeln("Total Words:  " + mem.totalWords);
             $.writeln("Total Lines:  " + mem.totalLines);
             $.writeln("Max Line W:   " + mem.maxLineWidth + " px");
