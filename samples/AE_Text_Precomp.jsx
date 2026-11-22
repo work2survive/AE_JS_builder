@@ -1,33 +1,64 @@
 // Co-authored & architected with Google DeepMind Antigravity.
 // =============================================================================
-// ADOBE AFTER EFFECTS EXTENDSCRIPT & SCRIPTUI PANEL: AE TEXT PRECOMP
+// ADOBE AFTER EFFECTS EXTENDSCRIPT & SCRIPTUI PANEL: AE TEXT PRECOMP v1.1
 // =============================================================================
 //
 // PURPOSE:
 //   Precomposes a selected text box (paragraph or point text) into a neatly-sized
-//   composition so it is comfortable to manipulate, scale, position, and animate.
+//   composition with customizable padding, dynamic top anchor point rigger, and
+//   a procedural 2D rounded rectangle background card featuring 4 independent
+//   corner radii (based on AE_Extruded_Round_corners).
 //
-// FEATURES:
-//   - Precomp Width sizing: Enter custom width or auto-detect from selected text layer.
-//   - "Automatic precomp height": Expands precomp height to fit the textbox vertical size.
-//   - "Automatic anchor point": Moves anchor point to the top of the text box,
-//     placing it automatically on Left, Center, or Right depending on paragraph alignment.
-//   - If no text layer is selected: Automatically creates a dummy text layer using
-//     the size parameters, a system font (ArialMT), and 100 words of Lorem Ipsum.
-//   - Zero Visual Shift: Mathematically calculates compensation so the text layer
-//     does not jump on screen when precomposed and repositioned.
-//   - Compatible with Adobe After Effects CS6 through CC 2026+ and the AE_JS_builder emulator.
+// KEY FEATURES:
+//   1. Padding & Textbox Reduction:
+//      - Padding option that reduces the textbox width to fit inside the precomp.
+//      - When "automatic precomp height" is active, precomp height expands to fit
+//        the wrapped textbox vertical size plus top and bottom padding.
+//      - Anchor point automatically accounts for padding, resting cleanly at the
+//        top of the text box (Top-Left, Top-Center, or Top-Right based on alignment).
+//   2. Procedural Rounded Background Card (AE_Extruded_Round_corners):
+//      - Creates an individual 4-corner rounded rectangle shape layer behind the text.
+//      - Interactive UI asks which corners will react to the padding to round.
+//      - 8-vertex Bézier path with W3C CSS proportional overlap protection.
+//      - Master Effect Controls (Radius Top-Left, Top-Right, Bottom-Right, Bottom-Left,
+//        Width, Height) with live parametric expressions on the Path property.
+//   3. Integrated Color Picker & Opacity:
+//      - Interactive swatch button + hex input (#RRGGBB) compatible with AE's native
+//        color picker, Windows OS color picker, and the AE_JS_builder web emulator.
+//      - Opacity slider with live value sync.
+//   4. Dummy Text Generation:
+//      - If no text layer is selected, generates a 100-word Lorem Ipsum layer using
+//        a system font (ArialMT) and formatted to the padded textbox dimensions.
+//   5. Zero Visual Shift:
+//      - Mathematically compensates position so that the text does not jump on screen.
 // =============================================================================
 
 (function(thisObj) {
     "use strict";
 
+    var SCRIPT_NAME = "AE Text Precomp";
+    var SCRIPT_VERSION = "v1.1";
+
     // -------------------------------------------------------------------------
-    // ES3 Helpers & Polyfills
+    // 1. ES3 Helpers & Polyfills
     // -------------------------------------------------------------------------
     function trimStr(str) {
         if (!str) return "";
         return String(str).replace(/^[\s\uFEFF\xA0]+|[\s\uFEFF\xA0]+$/g, "");
+    }
+
+    function hexToRgb(hex) {
+        hex = String(hex).replace("#", "");
+        if (hex.length === 3) {
+            hex = hex.charAt(0) + hex.charAt(0) + hex.charAt(1) + hex.charAt(1) + hex.charAt(2) + hex.charAt(2);
+        }
+        var num = parseInt(hex, 16);
+        return [
+            ((num >> 16) & 255) / 255, // Red (0.0 to 1.0)
+            ((num >> 8) & 255) / 255,  // Green (0.0 to 1.0)
+            (num & 255) / 255,         // Blue (0.0 to 1.0)
+            1.0                        // Alpha
+        ];
     }
 
     // 100 Words of Lorem Ipsum
@@ -64,7 +95,76 @@
     }
 
     // -------------------------------------------------------------------------
-    // Text Layer Detection & Metrics
+    // 2. Bézier Rounded Rectangle Path Computation (AE_Extruded_Round_corners)
+    // -------------------------------------------------------------------------
+    function computeRoundRectPathData(w, h, rTL, rTR, rBR, rBL) {
+        // W3C CSS Backgrounds and Borders Module Level 3 (§5.5 Corner Overlapping)
+        var topSum    = rTL + rTR;
+        var bottomSum = rBL + rBR;
+        var leftSum   = rTL + rBL;
+        var rightSum  = rTR + rBR;
+
+        var f = 1.0;
+        if (topSum > w && topSum > 0)       f = Math.min(f, w / topSum);
+        if (bottomSum > w && bottomSum > 0) f = Math.min(f, w / bottomSum);
+        if (leftSum > h && leftSum > 0)     f = Math.min(f, h / leftSum);
+        if (rightSum > h && rightSum > 0)   f = Math.min(f, h / rightSum);
+
+        rTL *= f;
+        rTR *= f;
+        rBR *= f;
+        rBL *= f;
+
+        var halfW = w / 2;
+        var halfH = h / 2;
+        var xMin = -halfW;
+        var xMax =  halfW;
+        var yMin = -halfH;
+        var yMax =  halfH;
+
+        var K = 0.5522847498307936; // 4 * (Math.sqrt(2) - 1) / 3
+        var points = [
+            [xMin + rTL, yMin],
+            [xMax - rTR, yMin],
+            [xMax, yMin + rTR],
+            [xMax, yMax - rBR],
+            [xMax - rBR, yMax],
+            [xMin + rBL, yMax],
+            [xMin, yMax - rBL],
+            [xMin, yMin + rTL]
+        ];
+
+        var inTangents = [
+            [-rTL * K, 0],
+            [0, 0],
+            [0, -rTR * K],
+            [0, 0],
+            [rBR * K, 0],
+            [0, 0],
+            [0, rBL * K],
+            [0, 0]
+        ];
+
+        var outTangents = [
+            [0, 0],
+            [rTR * K, 0],
+            [0, 0],
+            [0, rBR * K],
+            [0, 0],
+            [-rBL * K, 0],
+            [0, 0],
+            [0, -rTL * K]
+        ];
+
+        return {
+            points: points,
+            inTangents: inTangents,
+            outTangents: outTangents
+        };
+    }
+
+    // -------------------------------------------------------------------------
+    // 3. Text Layer Detection & Metrics
     // -------------------------------------------------------------------------
     function isTextLayer(layer) {
         if (!layer) return false;
@@ -136,7 +236,6 @@
             } catch (eDoc) {}
         }
 
-        // Justification evaluation
         if (typeof ParagraphJustification !== "undefined") {
             if (justification === ParagraphJustification.CENTER_JUSTIFY ||
                 justification === ParagraphJustification.FULL_JUSTIFY_LASTCENTER) {
@@ -177,9 +276,9 @@
     }
 
     // -------------------------------------------------------------------------
-    // Create Dummy 100-Word Lorem Ipsum Text Layer
+    // 4. Create Dummy 100-Word Lorem Ipsum Text Layer
     // -------------------------------------------------------------------------
-    function createDummyTextLayer(comp, targetW, targetH, autoHeight) {
+    function createDummyTextLayer(comp, targetW, targetH, autoHeight, pad) {
         if (!comp) {
             comp = app.project.activeItem;
             if (!comp || !(comp instanceof CompItem)) {
@@ -188,8 +287,10 @@
             }
         }
 
-        var w = targetW || 800;
-        var h = (autoHeight || !targetH) ? 420 : targetH;
+        var padVal = (typeof pad === "number") ? pad : 30;
+        var totalW = targetW || 800;
+        var textW = Math.max(20, totalW - (padVal * 2));
+        var textH = (autoHeight || !targetH) ? 360 : Math.max(20, targetH - (padVal * 2));
 
         var dummyLayer = comp.layers.addText(LOREM_IPSUM_100);
         dummyLayer.name = "Lorem Ipsum Text Box";
@@ -219,10 +320,10 @@
 
             try {
                 if (typeof doc.setBoxTextSize === "function") {
-                    doc.setBoxTextSize([w, h]);
+                    doc.setBoxTextSize([textW, textH]);
                 } else if (typeof doc.boxText !== "undefined") {
                     doc.boxText = true;
-                    doc.boxTextSize = [w, h];
+                    doc.boxTextSize = [textW, textH];
                 }
             } catch (eBox) {}
 
@@ -234,8 +335,8 @@
         // If box text is not supported by host engine, word wrap to fit width
         try {
             var r = dummyLayer.sourceRectAtTime(0, false);
-            if (!r || r.width > (w * 1.4)) {
-                var wrapped = wrapTextToWidth(LOREM_IPSUM_100, w, 28);
+            if (!r || r.width > (textW * 1.4)) {
+                var wrapped = wrapTextToWidth(LOREM_IPSUM_100, textW, 28);
                 if (doc) {
                     doc.text = wrapped;
                     textProp.setValue(doc);
@@ -246,7 +347,7 @@
         // Select dummy layer
         var totalL = (typeof comp.numLayers !== "undefined") ? comp.numLayers : comp.layers.length;
         for (var i = 1; i <= totalL; i++) {
-            var l = comp.layer(i);
+            var l = (typeof comp.layer === "function") ? comp.layer(i) : comp.layers[i - 1];
             if (l) l.selected = false;
         }
         dummyLayer.selected = true;
@@ -255,7 +356,115 @@
     }
 
     // -------------------------------------------------------------------------
-    // Core Precompose Engine
+    // 5. Create Background Card Layer (Procedural Bézier Rounded Rectangle)
+    // -------------------------------------------------------------------------
+    function createBackgroundShapeLayer(comp, precompW, precompH, radii, hexColor, opacity) {
+        var bgLayer = comp.layers.addShape();
+        bgLayer.name = "Background Card";
+
+        // Place at center of precomposition
+        bgLayer.transform.position.setValue([precompW / 2, precompH / 2, 0]);
+        bgLayer.transform.anchorPoint.setValue([0, 0, 0]);
+
+        var rootVectors = bgLayer.property("Contents") || bgLayer.property("ADBE Root Vectors Group");
+        var group = rootVectors.addProperty("ADBE Vector Group");
+        group.name = "Rounded Card";
+
+        var groupContents = group.property("Contents") || group.property("ADBE Vectors Group");
+        var pathProp = groupContents.addProperty("ADBE Vector Shape - Path");
+        pathProp.name = "Rounded Path";
+
+        var fill = groupContents.addProperty("ADBE Vector Graphic - Fill");
+        var rgb = hexToRgb(hexColor || "#1E222D");
+        fill.property("Color").setValue([rgb[0], rgb[1], rgb[2]]);
+        if (fill.property("Opacity")) {
+            fill.property("Opacity").setValue(opacity !== undefined ? opacity : 100);
+        }
+
+        // Static shape computation
+        var pathData = computeRoundRectPathData(precompW, precompH, radii.rTL, radii.rTR, radii.rBR, radii.rBL);
+        var aeShape = null;
+        try {
+            aeShape = new Shape();
+            aeShape.vertices = pathData.points;
+            aeShape.inTangents = pathData.inTangents;
+            aeShape.outTangents = pathData.outTangents;
+            aeShape.closed = true;
+            pathProp.property("Path").setValue(aeShape);
+        } catch (eShape) {}
+
+        // Master Effect Controls driving the 4 corners independently
+        var fxGroup = bgLayer.property("ADBE Effect Parade") || bgLayer.property("Effects");
+        if (fxGroup) {
+            try {
+                var fxW = fxGroup.addProperty("ADBE Slider Control");
+                fxW.name = "Card Width";
+                fxW.property(1).setValue(precompW);
+
+                var fxH = fxGroup.addProperty("ADBE Slider Control");
+                fxH.name = "Card Height";
+                fxH.property(1).setValue(precompH);
+
+                var fxTL = fxGroup.addProperty("ADBE Slider Control");
+                fxTL.name = "Radius Top-Left";
+                fxTL.property(1).setValue(radii.rTL);
+
+                var fxTR = fxGroup.addProperty("ADBE Slider Control");
+                fxTR.name = "Radius Top-Right";
+                fxTR.property(1).setValue(radii.rTR);
+
+                var fxBR = fxGroup.addProperty("ADBE Slider Control");
+                fxBR.name = "Radius Bottom-Right";
+                fxBR.property(1).setValue(radii.rBR);
+
+                var fxBL = fxGroup.addProperty("ADBE Slider Control");
+                fxBL.name = "Radius Bottom-Left";
+                fxBL.property(1).setValue(radii.rBL);
+
+                // Parametric Bézier path expression
+                var exprLines = [
+                    "// Parametric Rounded Rectangle Path (Individual Corners)",
+                    "var w = Math.max(0, effect('Card Width')(1).value);",
+                    "var h = Math.max(0, effect('Card Height')(1).value);",
+                    "var rTL = Math.max(0, effect('Radius Top-Left')(1).value);",
+                    "var rTR = Math.max(0, effect('Radius Top-Right')(1).value);",
+                    "var rBR = Math.max(0, effect('Radius Bottom-Right')(1).value);",
+                    "var rBL = Math.max(0, effect('Radius Bottom-Left')(1).value);",
+                    "var topSum = rTL + rTR; var botSum = rBL + rBR; var leftSum = rTL + rBL; var rgtSum = rTR + rBR;",
+                    "var f = 1.0;",
+                    "if (topSum > w && topSum > 0) f = Math.min(f, w / topSum);",
+                    "if (botSum > w && botSum > 0) f = Math.min(f, w / botSum);",
+                    "if (leftSum > h && leftSum > 0) f = Math.min(f, h / leftSum);",
+                    "if (rgtSum > h && rgtSum > 0) f = Math.min(f, h / rgtSum);",
+                    "rTL *= f; rTR *= f; rBR *= f; rBL *= f;",
+                    "var halfW = w / 2; var halfH = h / 2;",
+                    "var xMin = -halfW; var xMax = halfW; var yMin = -halfH; var yMax = halfH;",
+                    "var K = 0.5522847498307936;",
+                    "var pts = [",
+                    "    [xMin + rTL, yMin], [xMax - rTR, yMin],",
+                    "    [xMax, yMin + rTR], [xMax, yMax - rBR],",
+                    "    [xMax - rBR, yMax], [xMin + rBL, yMax],",
+                    "    [xMin, yMax - rBL], [xMin, yMin + rTL]",
+                    "];",
+                    "var inT = [",
+                    "    [-rTL * K, 0], [0, 0], [0, -rTR * K], [0, 0],",
+                    "    [rBR * K, 0], [0, 0], [0, rBL * K], [0, 0]",
+                    "];",
+                    "var outT = [",
+                    "    [0, 0], [rTR * K, 0], [0, 0], [0, rBR * K],",
+                    "    [0, 0], [-rBL * K, 0], [0, 0], [0, -rTL * K]",
+                    "];",
+                    "createPath(pts, inT, outT, true);"
+                ];
+                pathProp.property("Path").expression = exprLines.join("\n");
+            } catch (eExpr) {}
+        }
+
+        return bgLayer;
+    }
+
+    // -------------------------------------------------------------------------
+    // 6. Core Precompose Engine
     // -------------------------------------------------------------------------
     function precompTextLayer(options) {
         var comp = app.project.activeItem;
@@ -266,9 +475,10 @@
 
         var textLayer = getSelectedTextLayer(comp);
         var createdDummy = false;
+        var padding = (typeof options.padding === "number") ? Math.max(0, options.padding) : 30;
 
         if (!textLayer) {
-            textLayer = createDummyTextLayer(comp, options.width, options.height, options.autoHeight);
+            textLayer = createDummyTextLayer(comp, options.width, options.height, options.autoHeight, padding);
             createdDummy = true;
         }
 
@@ -297,26 +507,50 @@
             align = options.forceAlign;
         }
 
-        // Width & Height calculation
-        var targetW = options.width || metrics.detectedWidth || 800;
-        var targetH = options.height || 400;
+        // Width calculations:
+        // Precomp Width = specified width or detected width
+        // Textbox Width = Precomp Width reduced by padding on both sides
+        var precompW = Math.max(40, Math.round(options.width || metrics.detectedWidth || 800));
+        var textboxW = Math.max(20, precompW - (padding * 2));
 
-        var finalW = Math.max(20, Math.round(targetW));
-        var finalH = 0;
+        // Adjust original layer's boxTextSize to the reduced textbox width if it is a paragraph box
+        if (metrics.isBoxText) {
+            try {
+                var srcProp = textLayer.property("Source Text");
+                var sDoc = srcProp ? srcProp.value : null;
+                if (sDoc) {
+                    if (typeof sDoc.setBoxTextSize === "function") {
+                        sDoc.setBoxTextSize([textboxW, metrics.boxHeight || 300]);
+                        srcProp.setValue(sDoc);
+                    } else if (sDoc.boxTextSize) {
+                        sDoc.boxTextSize = [textboxW, metrics.boxHeight || 300];
+                        srcProp.setValue(sDoc);
+                    }
+                }
+            } catch (eResizeBox) {}
+        }
+
+        // Re-query metrics after resizing textbox to get exact wrapped height
+        metrics = getTextLayerMetrics(comp, textLayer);
+
+        var precompH = 0;
+        var textboxH = 0;
 
         if (options.autoHeight) {
-            // Expand precomp height to fit the textbox vertical size
-            var textH = metrics.detectedHeight;
+            // Expand precomp height to fit the textbox vertical size plus padding
+            var rawH = metrics.detectedHeight;
             if (metrics.rect && metrics.rect.height) {
-                textH = Math.max(textH, Math.ceil(metrics.rect.height));
+                rawH = Math.max(rawH, Math.ceil(metrics.rect.height));
             }
-            finalH = Math.max(20, Math.round(textH));
+            textboxH = Math.max(20, Math.round(rawH));
+            precompH = Math.max(20, Math.round(textboxH + (padding * 2)));
         } else {
-            finalH = Math.max(20, Math.round(targetH));
+            precompH = Math.max(20, Math.round(options.height || 400));
+            textboxH = Math.max(20, precompH - (padding * 2));
         }
 
         // Calculate Anchor Point on the text box
-        // Automatic Anchor Point: Top of the text box, positioned at Left, Center, or Right based on alignment
+        // Automatic Anchor Point: Top of the text box (Top-Left, Top-Center, or Top-Right)
         var ax = 0;
         var ay = 0;
 
@@ -326,9 +560,9 @@
                 if (align === "left") {
                     ax = 0;
                 } else if (align === "center") {
-                    ax = metrics.boxWidth / 2;
+                    ax = textboxW / 2;
                 } else if (align === "right") {
-                    ax = metrics.boxWidth;
+                    ax = textboxW;
                 }
             } else {
                 ay = metrics.rect.top;
@@ -383,8 +617,8 @@
         }
 
         // Set Precomposition Dimensions
-        newComp.width = finalW;
-        newComp.height = finalH;
+        newComp.width = precompW;
+        newComp.height = precompH;
 
         // Find the resulting precomp layer in the parent comp
         var precompLayer = null;
@@ -403,37 +637,39 @@
         // Inside newComp: configure inner text layer
         var innerTextLayer = (typeof newComp.layer === "function") ? newComp.layer(1) : newComp.layers[0];
         if (innerTextLayer) {
-            // Update boxText size if paragraph box
+            // Update boxText size to the reduced textbox width
             if (metrics.isBoxText) {
                 try {
                     var inProp = innerTextLayer.property("Source Text");
                     var inDoc = inProp ? inProp.value : null;
                     if (inDoc) {
                         if (typeof inDoc.setBoxTextSize === "function") {
-                            inDoc.setBoxTextSize([finalW, finalH]);
+                            inDoc.setBoxTextSize([textboxW, textboxH]);
                             inProp.setValue(inDoc);
                         } else if (inDoc.boxTextSize) {
-                            inDoc.boxTextSize = [finalW, finalH];
+                            inDoc.boxTextSize = [textboxW, textboxH];
                             inProp.setValue(inDoc);
                         }
                     }
                 } catch (eInBox) {}
             }
 
-            // Position and Anchor Point inside newComp
+            // Position and Anchor Point inside newComp:
+            // Text is offset by padding inward from edges
             if (options.autoAnchor) {
                 innerTextLayer.transform.anchorPoint.setValue([ax, ay]);
 
-                var innerX = 0;
+                var innerX = padding;
                 if (align === "center") {
-                    innerX = finalW / 2;
+                    innerX = precompW / 2;
                 } else if (align === "right") {
-                    innerX = finalW;
+                    innerX = precompW - padding;
                 }
-                innerTextLayer.transform.position.setValue([innerX, 0, 0]);
+                var innerY = padding;
+                innerTextLayer.transform.position.setValue([innerX, innerY, 0]);
             } else {
                 innerTextLayer.transform.anchorPoint.setValue([ax, ay]);
-                innerTextLayer.transform.position.setValue([finalW / 2, finalH / 2, 0]);
+                innerTextLayer.transform.position.setValue([precompW / 2, precompH / 2, 0]);
             }
 
             innerTextLayer.transform.scale.setValue([100, 100, 100]);
@@ -443,23 +679,51 @@
             } catch (eZeroRot) {}
         }
 
+        // Inside newComp: Add Background Card if requested
+        if (options.addBackground) {
+            var radii = {
+                rTL: options.corners.TL ? padding : 0,
+                rTR: options.corners.TR ? padding : 0,
+                rBR: options.corners.BR ? padding : 0,
+                rBL: options.corners.BL ? padding : 0
+            };
+            var bgLayer = createBackgroundShapeLayer(
+                newComp,
+                precompW,
+                precompH,
+                radii,
+                options.bgColor,
+                options.bgOpacity
+            );
+
+            // Move background shape layer behind the text layer
+            try {
+                if (typeof bgLayer.moveAfter === "function" && innerTextLayer) {
+                    bgLayer.moveAfter(innerTextLayer);
+                } else if (typeof bgLayer.moveToEnd === "function") {
+                    bgLayer.moveToEnd();
+                }
+            } catch (eMove) {}
+        }
+
         // In parent comp: configure precompLayer
         if (precompLayer) {
             var precompAnchorX = 0;
             var precompAnchorY = 0;
 
             if (options.autoAnchor) {
-                precompAnchorY = 0;
+                // Precomp anchor point matches top of the text box (offset by padding)
+                precompAnchorY = padding;
                 if (align === "left") {
-                    precompAnchorX = 0;
+                    precompAnchorX = padding;
                 } else if (align === "center") {
-                    precompAnchorX = finalW / 2;
+                    precompAnchorX = precompW / 2;
                 } else if (align === "right") {
-                    precompAnchorX = finalW;
+                    precompAnchorX = precompW - padding;
                 }
             } else {
-                precompAnchorX = finalW / 2;
-                precompAnchorY = finalH / 2;
+                precompAnchorX = precompW / 2;
+                precompAnchorY = precompH / 2;
             }
 
             precompLayer.transform.anchorPoint.setValue([precompAnchorX, precompAnchorY, 0]);
@@ -484,8 +748,10 @@
             success: true,
             newComp: newComp,
             precompLayer: precompLayer,
-            width: finalW,
-            height: finalH,
+            width: precompW,
+            height: precompH,
+            textboxWidth: textboxW,
+            padding: padding,
             align: align,
             createdDummy: createdDummy,
             name: precompName
@@ -493,13 +759,113 @@
     }
 
     // -------------------------------------------------------------------------
-    // ScriptUI Interface
+    // 7. ScriptUI Color Picker (AE_Extruded_Round_corners pattern)
+    // -------------------------------------------------------------------------
+    function createColorPicker(parent, defaultHex) {
+        var grp = parent.add("group");
+        grp.orientation = "row";
+        grp.spacing = 6;
+        grp.alignChildren = ["left", "center"];
+
+        var btnSwatch = grp.add("button", undefined, "");
+        btnSwatch.preferredSize = [36, 22];
+        btnSwatch.helpTip = "Click to pick color";
+
+        var txtHex = grp.add("edittext", undefined, defaultHex.toUpperCase());
+        txtHex.preferredSize = [70, 22];
+        txtHex.characters = 7;
+        txtHex.helpTip = "Direct hex color input (e.g. #1E222D)";
+
+        var picker = {
+            group: grp,
+            button: btnSwatch,
+            edittext: txtHex,
+            _color: defaultHex,
+            value: defaultHex,
+            onChange: null
+        };
+
+        btnSwatch.onDraw = function() {
+            try {
+                var g = this.graphics;
+                var rgb = hexToRgb(picker._color);
+                var brush = g.newBrush(g.BrushType.SOLID_COLOR, [rgb[0], rgb[1], rgb[2], 1.0]);
+                var pen = g.newPen(g.PenType.SOLID_COLOR, [0.7, 0.7, 0.7, 1.0], 1);
+                g.newPath();
+                g.rectPath(0, 0, this.size ? this.size[0] : 36, this.size ? this.size[1] : 22);
+                g.fillPath(brush);
+                g.strokePath(pen);
+            } catch (e) {}
+        };
+
+        function setColor(newHex, triggerChange) {
+            if (!newHex) return;
+            if (newHex.indexOf("#") !== 0) newHex = "#" + newHex;
+            picker._color = newHex;
+            picker.value = newHex;
+            txtHex.text = newHex.toUpperCase();
+
+            try {
+                if (btnSwatch.notify) btnSwatch.notify("onDraw");
+            } catch (e) {}
+
+            if (btnSwatch.domElement) {
+                btnSwatch.domElement.style.backgroundColor = newHex;
+                btnSwatch.domElement.style.background = newHex;
+                btnSwatch.domElement.style.border = "1px solid #777";
+            }
+
+            if (triggerChange && typeof picker.onChange === "function") {
+                picker.onChange();
+            }
+        }
+
+        btnSwatch.onClick = function() {
+            var curHex = picker._color || "#1E222D";
+            if (typeof window !== "undefined" && typeof window.openWindowsColorPicker === "function") {
+                window.openWindowsColorPicker(curHex, function(selectedHex) {
+                    setColor(selectedHex, true);
+                });
+                return;
+            }
+
+            var hexNum = parseInt(curHex.replace("#", ""), 16);
+            var result = -1;
+            if (typeof $.colorPicker === "function") {
+                result = $.colorPicker(hexNum, function(selectedHex) {
+                    setColor(selectedHex, true);
+                });
+            }
+            if (result !== -1 && result !== undefined && result !== null) {
+                var hexStr = Number(result).toString(16);
+                while (hexStr.length < 6) hexStr = "0" + hexStr;
+                setColor("#" + hexStr, true);
+            }
+        };
+
+        txtHex.onChange = function() {
+            var val = txtHex.text.replace(/^\s+|\s+$/g, "");
+            if (val.indexOf("#") !== 0) val = "#" + val;
+            if (/^#[0-9A-Fa-f]{6}$/.test(val)) {
+                setColor(val, true);
+            } else {
+                txtHex.text = picker._color.toUpperCase();
+            }
+        };
+
+        picker.setColor = setColor;
+        setColor(defaultHex, false);
+        return picker;
+    }
+
+    // -------------------------------------------------------------------------
+    // 8. ScriptUI Window & Interface Panels
     // -------------------------------------------------------------------------
     var win = (thisObj instanceof Panel)
         ? thisObj
-        : new Window("palette", "AE Text Precomp", undefined, { resizeable: true });
+        : new Window("palette", SCRIPT_NAME + " " + SCRIPT_VERSION, undefined, { resizeable: true });
     if (!(thisObj instanceof Panel)) {
-        win.text = "AE Text Precomp";
+        win.text = SCRIPT_NAME + " " + SCRIPT_VERSION;
     }
 
     win.orientation = "column";
@@ -508,13 +874,13 @@
     win.margins = 12;
 
     // --- Header ---
-    var pnlHeader = win.add("panel", undefined, "AE Text Precomp");
+    var pnlHeader = win.add("panel", undefined, SCRIPT_NAME + " " + SCRIPT_VERSION);
     pnlHeader.orientation = "column";
     pnlHeader.alignChildren = ["fill", "top"];
     pnlHeader.spacing = 3;
     pnlHeader.margins = [10, 8, 10, 8];
 
-    var lblSubTitle = pnlHeader.add("statictext", undefined, "Smart Text Box Precomposer & Dynamic Anchor Point Rigger");
+    var lblSubTitle = pnlHeader.add("statictext", undefined, "Text Box Precomposer with Padding, Auto Anchor & Rounded Background");
     lblSubTitle.graphics.foregroundColor = win.graphics.newPen(win.graphics.PenType.SOLID_COLOR, [0.35, 0.65, 0.95, 1], 1);
 
     // --- Detection & Status Panel ---
@@ -535,8 +901,8 @@
     var btnAutoDetect = pnlDetect.add("button", undefined, "Auto-Detect Selected Text Size");
     btnAutoDetect.helpTip = "Detects dimensions and justification from the currently selected text layer.";
 
-    // --- Precomp Dimensions Panel ---
-    var pnlDims = win.add("panel", undefined, "Precomp Dimensions");
+    // --- Dimensions & Padding Panel ---
+    var pnlDims = win.add("panel", undefined, "Precomp Dimensions & Padding");
     pnlDims.orientation = "column";
     pnlDims.alignChildren = ["fill", "top"];
     pnlDims.spacing = 8;
@@ -547,7 +913,7 @@
     grpWidth.orientation = "row";
     grpWidth.alignment = ["fill", "top"];
     var lblWidth = grpWidth.add("statictext", undefined, "Precomp Width (px):");
-    lblWidth.preferredSize = [130, -1];
+    lblWidth.preferredSize = [135, -1];
     var txtWidth = grpWidth.add("edittext", undefined, "800");
     txtWidth.alignment = ["fill", "center"];
 
@@ -556,32 +922,74 @@
     grpQuickW.orientation = "row";
     grpQuickW.alignment = ["fill", "top"];
     var lblPresets = grpQuickW.add("statictext", undefined, "Quick Widths:");
-    lblPresets.preferredSize = [130, -1];
+    lblPresets.preferredSize = [135, -1];
     var btnW600 = grpQuickW.add("button", undefined, "600");
-    btnW600.preferredSize = [50, 22];
+    btnW600.preferredSize = [48, 22];
     var btnW800 = grpQuickW.add("button", undefined, "800");
-    btnW800.preferredSize = [50, 22];
+    btnW800.preferredSize = [48, 22];
     var btnW1080 = grpQuickW.add("button", undefined, "1080");
-    btnW1080.preferredSize = [50, 22];
+    btnW1080.preferredSize = [48, 22];
     var btnW1920 = grpQuickW.add("button", undefined, "1920");
-    btnW1920.preferredSize = [50, 22];
+    btnW1920.preferredSize = [48, 22];
 
     btnW600.onClick = function() { txtWidth.text = "600"; };
     btnW800.onClick = function() { txtWidth.text = "800"; };
     btnW1080.onClick = function() { txtWidth.text = "1080"; };
     btnW1920.onClick = function() { txtWidth.text = "1920"; };
 
+    // Padding Row
+    var grpPad = pnlDims.add("group");
+    grpPad.orientation = "row";
+    grpPad.alignment = ["fill", "top"];
+    var lblPad = grpPad.add("statictext", undefined, "Padding (px):");
+    lblPad.preferredSize = [135, -1];
+    var sldPad = grpPad.add("slider", undefined, 30, 0, 120);
+    sldPad.minvalue = 0;
+    sldPad.maxvalue = 120;
+    sldPad.value = 30;
+    sldPad.alignment = ["fill", "center"];
+    var txtPad = grpPad.add("edittext", undefined, "30");
+    txtPad.characters = 4;
+
+    sldPad.onChanging = sldPad.onChange = function() {
+        txtPad.text = String(Math.round(sldPad.value));
+    };
+    txtPad.onChange = function() {
+        var v = parseFloat(txtPad.text) || 0;
+        sldPad.value = Math.max(0, Math.min(120, v));
+    };
+
+    // Quick Padding Buttons
+    var grpQuickPad = pnlDims.add("group");
+    grpQuickPad.orientation = "row";
+    grpQuickPad.alignment = ["fill", "top"];
+    var lblQuickP = grpQuickPad.add("statictext", undefined, "Quick Padding:");
+    lblQuickP.preferredSize = [135, -1];
+    var btnP0 = grpQuickPad.add("button", undefined, "0");
+    btnP0.preferredSize = [48, 22];
+    var btnP16 = grpQuickPad.add("button", undefined, "16");
+    btnP16.preferredSize = [48, 22];
+    var btnP30 = grpQuickPad.add("button", undefined, "30");
+    btnP30.preferredSize = [48, 22];
+    var btnP48 = grpQuickPad.add("button", undefined, "48");
+    btnP48.preferredSize = [48, 22];
+
+    btnP0.onClick = function() { sldPad.value = 0; txtPad.text = "0"; };
+    btnP16.onClick = function() { sldPad.value = 16; txtPad.text = "16"; };
+    btnP30.onClick = function() { sldPad.value = 30; txtPad.text = "30"; };
+    btnP48.onClick = function() { sldPad.value = 48; txtPad.text = "48"; };
+
     // Automatic Precomp Height Checkbox
     var chkAutoHeight = pnlDims.add("checkbox", undefined, "automatic precomp height");
     chkAutoHeight.value = true;
-    chkAutoHeight.helpTip = "Expands the height of the precomp to fit the textbox vertical size automatically.";
+    chkAutoHeight.helpTip = "Expands the height of the precomp to fit the textbox vertical size plus padding.";
 
     // Manual Height Row
     var grpHeight = pnlDims.add("group");
     grpHeight.orientation = "row";
     grpHeight.alignment = ["fill", "top"];
     var lblHeight = grpHeight.add("statictext", undefined, "Manual Height (px):");
-    lblHeight.preferredSize = [130, -1];
+    lblHeight.preferredSize = [135, -1];
     var txtHeight = grpHeight.add("edittext", undefined, "400");
     txtHeight.alignment = ["fill", "center"];
     txtHeight.enabled = false;
@@ -599,13 +1007,13 @@
 
     var chkAutoAnchor = pnlAnchor.add("checkbox", undefined, "automatic anchor point");
     chkAutoAnchor.value = true;
-    chkAutoAnchor.helpTip = "Moves anchor point to the top of the text box (Top-Left, Top-Center, or Top-Right depending on alignment).";
+    chkAutoAnchor.helpTip = "Moves anchor point to the top of the text box (Top-Left, Top-Center, or Top-Right depending on alignment), offset by padding.";
 
     var grpAlign = pnlAnchor.add("group");
     grpAlign.orientation = "row";
     grpAlign.alignment = ["fill", "top"];
     var lblAlign = grpAlign.add("statictext", undefined, "Anchor Alignment:");
-    lblAlign.preferredSize = [130, -1];
+    lblAlign.preferredSize = [135, -1];
     var dropAlign = grpAlign.add("dropdownlist", undefined, [
         "Auto-detect from Alignment",
         "Force Top-Left",
@@ -614,6 +1022,110 @@
     ]);
     dropAlign.selection = 0;
     dropAlign.alignment = ["fill", "center"];
+
+    // --- Background Card & Rounded Corners Panel ---
+    var pnlBg = win.add("panel", undefined, "Background Card (Custom Rounded Corners)");
+    pnlBg.orientation = "column";
+    pnlBg.alignChildren = ["fill", "top"];
+    pnlBg.spacing = 8;
+    pnlBg.margins = 10;
+
+    var chkAddBg = pnlBg.add("checkbox", undefined, "Add Background Card (Bézier Shape Layer)");
+    chkAddBg.value = true;
+    chkAddBg.helpTip = "Creates a shape layer behind the text with 4 independent corner radii (AE_Extruded_Round_corners).";
+
+    // Corners Selection Section
+    var grpCornerTitle = pnlBg.add("group");
+    grpCornerTitle.orientation = "row";
+    grpCornerTitle.alignment = ["fill", "top"];
+    var lblWhichCorners = grpCornerTitle.add("statictext", undefined, "Corners reacting to padding:");
+    lblWhichCorners.preferredSize = [180, -1];
+
+    // 2x2 Grid of Corners
+    var grpCornerGrid = pnlBg.add("group");
+    grpCornerGrid.orientation = "column";
+    grpCornerGrid.alignChildren = ["fill", "top"];
+    grpCornerGrid.spacing = 4;
+    grpCornerGrid.margins = [10, 0, 0, 0];
+
+    var grpCornersRow1 = grpCornerGrid.add("group");
+    grpCornersRow1.orientation = "row";
+    grpCornersRow1.spacing = 20;
+    var chkTL = grpCornersRow1.add("checkbox", undefined, "Top-Left (TL)");
+    chkTL.value = true;
+    var chkTR = grpCornersRow1.add("checkbox", undefined, "Top-Right (TR)");
+    chkTR.value = true;
+
+    var grpCornersRow2 = grpCornerGrid.add("group");
+    grpCornersRow2.orientation = "row";
+    grpCornersRow2.spacing = 20;
+    var chkBL = grpCornersRow2.add("checkbox", undefined, "Bottom-Left (BL)");
+    chkBL.value = true;
+    var chkBR = grpCornersRow2.add("checkbox", undefined, "Bottom-Right (BR)");
+    chkBR.value = true;
+
+    // Quick Corner Presets
+    var grpQuickCorners = pnlBg.add("group");
+    grpQuickCorners.orientation = "row";
+    grpQuickCorners.alignment = ["fill", "top"];
+    var btnAllCorners = grpQuickCorners.add("button", undefined, "All 4");
+    btnAllCorners.preferredSize = [60, 20];
+    var btnTopCorners = grpQuickCorners.add("button", undefined, "Top Only");
+    btnTopCorners.preferredSize = [65, 20];
+    var btnChatBubble = grpQuickCorners.add("button", undefined, "Chat Bubble");
+    btnChatBubble.preferredSize = [75, 20];
+    var btnNoCorners = grpQuickCorners.add("button", undefined, "Sharp (0)");
+    btnNoCorners.preferredSize = [65, 20];
+
+    btnAllCorners.onClick = function() { chkTL.value = true; chkTR.value = true; chkBL.value = true; chkBR.value = true; };
+    btnTopCorners.onClick = function() { chkTL.value = true; chkTR.value = true; chkBL.value = false; chkBR.value = false; };
+    btnChatBubble.onClick = function() { chkTL.value = true; chkTR.value = true; chkBR.value = true; chkBL.value = false; };
+    btnNoCorners.onClick = function() { chkTL.value = false; chkTR.value = false; chkBL.value = false; chkBR.value = false; };
+
+    // Background Color & Opacity
+    var grpBgColor = pnlBg.add("group");
+    grpBgColor.orientation = "row";
+    grpBgColor.alignment = ["fill", "top"];
+    var lblBgCol = grpBgColor.add("statictext", undefined, "Background Color:");
+    lblBgCol.preferredSize = [135, -1];
+    var cpBgColor = createColorPicker(grpBgColor, "#1E222D");
+
+    var grpBgOp = pnlBg.add("group");
+    grpBgOp.orientation = "row";
+    grpBgOp.alignment = ["fill", "top"];
+    var lblBgOp = grpBgOp.add("statictext", undefined, "Opacity (%):");
+    lblBgOp.preferredSize = [135, -1];
+    var sldBgOp = grpBgOp.add("slider", undefined, 100, 0, 100);
+    sldBgOp.minvalue = 0;
+    sldBgOp.maxvalue = 100;
+    sldBgOp.value = 100;
+    sldBgOp.alignment = ["fill", "center"];
+    var txtBgOp = grpBgOp.add("edittext", undefined, "100");
+    txtBgOp.characters = 4;
+
+    sldBgOp.onChanging = sldBgOp.onChange = function() {
+        txtBgOp.text = String(Math.round(sldBgOp.value));
+    };
+    txtBgOp.onChange = function() {
+        var v = parseFloat(txtBgOp.text) || 0;
+        sldBgOp.value = Math.max(0, Math.min(100, v));
+    };
+
+    chkAddBg.onClick = function() {
+        var on = chkAddBg.value;
+        chkTL.enabled = on;
+        chkTR.enabled = on;
+        chkBL.enabled = on;
+        chkBR.enabled = on;
+        btnAllCorners.enabled = on;
+        btnTopCorners.enabled = on;
+        btnChatBubble.enabled = on;
+        btnNoCorners.enabled = on;
+        cpBgColor.button.enabled = on;
+        cpBgColor.edittext.enabled = on;
+        sldBgOp.enabled = on;
+        txtBgOp.enabled = on;
+    };
 
     // --- Action Buttons ---
     var pnlActions = win.add("panel", undefined, "Actions");
@@ -624,7 +1136,7 @@
 
     var btnPrecomp = pnlActions.add("button", undefined, "Precomp Selected Text Box");
     btnPrecomp.preferredSize = [-1, 32];
-    btnPrecomp.helpTip = "Precompose selected text box or creates 100-word dummy layer if none is selected.";
+    btnPrecomp.helpTip = "Precompose selected text box with padding, auto anchor & rounded background.";
 
     var btnDummyOnly = pnlActions.add("button", undefined, "Create 100-Word Dummy Layer Only");
     btnDummyOnly.helpTip = "Creates a 100-word Lorem Ipsum text layer in the active composition without precomposing.";
@@ -652,7 +1164,7 @@
     };
 
     // -------------------------------------------------------------------------
-    // UI Event Handlers & State Sync
+    // 9. UI Event Handlers & State Sync
     // -------------------------------------------------------------------------
     function syncLayerDetection() {
         var comp = app.project.activeItem;
@@ -680,8 +1192,11 @@
     btnAutoDetect.onClick = function() {
         var metrics = syncLayerDetection();
         if (metrics) {
-            txtWidth.text = String(metrics.detectedWidth);
-            txtHeight.text = String(metrics.detectedHeight);
+            var padVal = parseFloat(txtPad.text) || 30;
+            // Proposed precomp width = text width + padding on both sides
+            var proposedPrecompW = metrics.detectedWidth + (padVal * 2);
+            txtWidth.text = String(proposedPrecompW);
+            txtHeight.text = String(metrics.detectedHeight + (padVal * 2));
 
             if (metrics.align === "center") {
                 dropAlign.selection = 2; // Top-Center
@@ -691,7 +1206,7 @@
                 dropAlign.selection = 1; // Top-Left
             }
 
-            lblFeedback.text = "Auto-detected: " + metrics.detectedWidth + "x" + metrics.detectedHeight + "px (" + metrics.align + ")";
+            lblFeedback.text = "Auto-detected: Text " + metrics.detectedWidth + "x" + metrics.detectedHeight + "px -> Precomp " + proposedPrecompW + "px (" + metrics.align + ")";
         } else {
             alert("Please select a text layer in your active composition first.");
         }
@@ -704,8 +1219,9 @@
             var w = parseFloat(txtWidth.text) || 800;
             var h = parseFloat(txtHeight.text) || 400;
             var autoH = chkAutoHeight.value;
+            var padVal = parseFloat(txtPad.text) || 30;
 
-            var dummy = createDummyTextLayer(comp, w, h, autoH);
+            var dummy = createDummyTextLayer(comp, w, h, autoH, padVal);
             syncLayerDetection();
             lblFeedback.text = "Created dummy layer: '" + dummy.name + "' with 100 words of Lorem Ipsum.";
         } catch (err) {
@@ -722,6 +1238,7 @@
             var h = parseFloat(txtHeight.text) || 400;
             var autoH = chkAutoHeight.value;
             var autoAnc = chkAutoAnchor.value;
+            var padVal = parseFloat(txtPad.text) || 0;
 
             var forceAlign = "auto";
             if (dropAlign.selection) {
@@ -731,16 +1248,31 @@
                 else if (selIdx === 3) forceAlign = "right";
             }
 
+            var addBg = chkAddBg.value;
+            var corners = {
+                TL: chkTL.value,
+                TR: chkTR.value,
+                BR: chkBR.value,
+                BL: chkBL.value
+            };
+            var bgColor = cpBgColor._color || "#1E222D";
+            var bgOpacity = parseFloat(txtBgOp.text) || 100;
+
             var res = precompTextLayer({
                 width: w,
                 height: h,
+                padding: padVal,
                 autoHeight: autoH,
                 autoAnchor: autoAnc,
-                forceAlign: forceAlign
+                forceAlign: forceAlign,
+                addBackground: addBg,
+                corners: corners,
+                bgColor: bgColor,
+                bgOpacity: bgOpacity
             });
 
             syncLayerDetection();
-            var msg = "Precomposed into '" + res.name + "' [" + res.width + "x" + res.height + "px]";
+            var msg = "Precomposed '" + res.name + "' [" + res.width + "x" + res.height + "px, Padding: " + res.padding + "px, Textbox: " + res.textboxWidth + "px]";
             if (res.createdDummy) {
                 msg += " (Generated 100-word dummy layer)";
             }
