@@ -1,4 +1,4 @@
-# AE Text Precomp (v1.4.2)
+# AE Text Precomp (v1.4.3)
 
 [![Live Browser Simulator](https://img.shields.io/badge/Live%20Demo-AE%20ScriptUI%20Simulator-2c8cff?style=for-the-badge&logo=javascript)](https://work2survive.github.io/AE_JS_builder/?jsx=AE_Text_Precomp.jsx&autobuild=true)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](LICENSE)
@@ -15,16 +15,17 @@
 
 Whenever an anchor point is placed or changed by this script, the precomposition's position is automatically and mathematically compensated using the layer's complete rotation, scale, and parent transform matrix so that the text box on screen never moves a single pixel from its original position.
 
-In **v1.4.2**, AE Text Precomp delivers **kinetic word and line splitting**: seamlessly divide any paragraph or point text into individual, perfectly styled and positioned layers for every single word or line inside the precomp, ready for kinetic typography animations.
+In **v1.4.3**, AE Text Precomp delivers **kinetic word and line splitting**: seamlessly divide any paragraph or point text into individual, perfectly styled and positioned layers for every single word or line inside the precomp, ready for kinetic typography animations.
 
 ---
 
-## 🌟 What's New in v1.4.2
+## 🌟 What's New in v1.4.3
 
-1. **Typographic Baseline Locking for "Divide by Words"**:
-   - All words on each line are anchored to a unified typographic baseline ($Y = 0$, `lineBaselineY = padding + firstLineCap + li * lineStep`). Eliminates all vertical jumping between lowercase words, capitals, and ascenders.
-2. **Sub-Pixel Whitespace & Kerning Precision (Pipe Sandwich Engine)**:
-   - Evaluates inter-word spacing using delimiter sandwiches (`"|" + str + "|"` minus `"||"`), preventing After Effects from discarding trailing whitespace and eliminating word collisions ("Sedut" -> "Sed ut").
+1. **Deterministic Inter-Word Spacing via Space Character Width**:
+   - In "Divide by Words", spacing between consecutive words is strictly and uniformly calculated using the exact measured font space character width (`spaceWidth`).
+   - Eliminates all inconsistent spacing, oversized gaps, and accidental word collisions (`curX += wordW + spaceWidth`).
+2. **Unified Typographic Baseline Locking**:
+   - All words on each line are anchored to a shared typographic baseline ($Y = 0$, `lineBaselineY = padding + firstLineCap + li * lineStep`), eliminating vertical jumping between lowercase words, capitals, and ascenders.
 3. **Compensated Precomp Placement**:
    - Accounts for any anchor point movement when moving layers to the precomp, moving the precomp counter to the axis movement to place it exactly where the text layer was originally.
 4. **"Divide by Words" & "Divide by Lines" Actions**:
@@ -91,7 +92,7 @@ If no text layer is selected when clicking precompose (or when clicking **Create
 
 ```text
 ┌──────────────────────────────────────────────────┐
-│ 📦 AE TEXT PRECOMP v1.4.2                        │
+│ 📦 AE TEXT PRECOMP v1.4.3                        │
 ├──────────────────────────────────────────────────┤
 │ Selected Text Layer Status:                      │
 │ 'Title Layer' (Paragraph Box, LEFT | 42 words)  │

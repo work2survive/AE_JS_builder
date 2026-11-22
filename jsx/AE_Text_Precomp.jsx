@@ -1,6 +1,6 @@
 // Co-authored & architected with Google DeepMind Antigravity.
 // =============================================================================
-// ADOBE AFTER EFFECTS EXTENDSCRIPT & SCRIPTUI PANEL: AE TEXT PRECOMP v1.4.2
+// ADOBE AFTER EFFECTS EXTENDSCRIPT & SCRIPTUI PANEL: AE TEXT PRECOMP v1.4.3
 // =============================================================================
 //
 // PURPOSE:
@@ -60,7 +60,7 @@
     "use strict";
 
     var SCRIPT_NAME = "AE Text Precomp";
-    var SCRIPT_VERSION = "v1.4.2";
+    var SCRIPT_VERSION = "v1.4.3";
     var TEXT_PROP_REF_URL = "https://github.com/work2survive/AE_JS_builder/blob/main/samples/Text_Properties_To_Effects.jsx";
     var EXTRUDED_CORNERS_REF_URL = "https://github.com/work2survive/AE_Extruded_Round_corners";
 
@@ -1178,33 +1178,41 @@
                     measureLayer = null;
                 }
 
-                // Pre-measure delimiter pair "||" to accurately measure strings with trailing/leading spaces
-                var pipesW = 0;
+                // Calculate space character width for consistent inter-word spacing
+                var spaceWidth = 0;
                 if (measureLayer) {
                     try {
-                        var dInitP = measureLayer.property("Source Text").value;
-                        dInitP.text = "||";
-                        measureLayer.property("Source Text").setValue(dInitP);
-                        var rP = measureLayer.sourceRectAtTime(0, false);
-                        if (rP && typeof rP.width === "number") pipesW = rP.width;
-                    } catch (ePipes) {}
+                        var dSp = measureLayer.property("Source Text").value;
+                        dSp.text = "A A";
+                        measureLayer.property("Source Text").setValue(dSp);
+                        var rSp1 = measureLayer.sourceRectAtTime(0, false);
+
+                        dSp.text = "AA";
+                        measureLayer.property("Source Text").setValue(dSp);
+                        var rSp2 = measureLayer.sourceRectAtTime(0, false);
+
+                        if (rSp1 && rSp2 && typeof rSp1.width === "number" && typeof rSp2.width === "number") {
+                            var diffSp = rSp1.width - rSp2.width;
+                            if (diffSp > 0) spaceWidth = Math.round(diffSp * 100) / 100;
+                        }
+                    } catch (eSpace) {}
+                }
+                if (!spaceWidth || spaceWidth <= 0) {
+                    spaceWidth = Math.round((fs * 0.28) * 100) / 100;
                 }
 
-                function measureExact(str) {
-                    if (!str || str.length === 0) return 0;
+                function measureSingleWord(w) {
+                    if (!w || w.length === 0) return 0;
                     if (measureLayer) {
                         try {
-                            var d = measureLayer.property("Source Text").value;
-                            d.text = "|" + str + "|";
-                            measureLayer.property("Source Text").setValue(d);
+                            var dW = measureLayer.property("Source Text").value;
+                            dW.text = w;
+                            measureLayer.property("Source Text").setValue(dW);
                             var r = measureLayer.sourceRectAtTime(0, false);
-                            if (r && typeof r.width === "number") {
-                                var measured = r.width - pipesW;
-                                if (measured > 0) return measured;
-                            }
-                        } catch (eM) {}
+                            if (r && typeof r.width === "number" && r.width > 0) return r.width;
+                        } catch (eMW) {}
                     }
-                    return measureTextExact(str, fs, fn);
+                    return measureTextExact(w, fs, fn);
                 }
 
                 var fullText = "";
@@ -1233,19 +1241,21 @@
                             visualLines.push("");
                             continue;
                         }
-                        var curLine = pWords[0];
+                        var curLineWords = [pWords[0]];
+                        var curLineW = measureSingleWord(pWords[0]);
                         for (var pw = 1; pw < pWords.length; pw++) {
-                            var testLine = curLine + " " + pWords[pw];
-                            var testW = measureExact(testLine);
-                            if (testW > textboxW && curLine.length > 0) {
-                                visualLines.push(curLine);
-                                curLine = pWords[pw];
+                            var wW = measureSingleWord(pWords[pw]);
+                            if ((curLineW + spaceWidth + wW) > textboxW && curLineWords.length > 0) {
+                                visualLines.push(curLineWords.join(" "));
+                                curLineWords = [pWords[pw]];
+                                curLineW = wW;
                             } else {
-                                curLine = testLine;
+                                curLineWords.push(pWords[pw]);
+                                curLineW += spaceWidth + wW;
                             }
                         }
-                        if (curLine.length > 0) {
-                            visualLines.push(curLine);
+                        if (curLineWords.length > 0) {
+                            visualLines.push(curLineWords.join(" "));
                         }
                     }
                 }
@@ -1272,11 +1282,20 @@
                         var lineStr = visualLines[li];
                         if (trimStr(lineStr).length === 0) continue;
 
+                        var lWords = lineStr.match(/\S+/g) || [];
+                        var lineW = 0;
+                        for (var lw = 0; lw < lWords.length; lw++) {
+                            lineW += measureSingleWord(lWords[lw]);
+                        }
+                        lineW += Math.max(0, lWords.length - 1) * spaceWidth;
+
                         var lineLayer = newComp.layers.addText(lineStr);
                         applyTextDocStyling(lineLayer, origDoc, lineStr);
                         lineLayer.name = "Line " + (li + 1) + ": " + (lineStr.length > 25 ? (lineStr.substr(0, 25) + "...") : lineStr);
 
-                        var lineW = measureExact(lineStr);
+                        var rLine = lineLayer.sourceRectAtTime(0, false);
+                        var rLeftLine = (rLine && typeof rLine.left === "number") ? rLine.left : 0;
+
                         var lineLeftX = padding;
                         if (align === "center") {
                             lineLeftX = padding + (textboxW - lineW) / 2;
@@ -1286,11 +1305,11 @@
                         var lineBaselineY = firstBaselineY + (li * lineStep);
 
                         try {
-                            lineLayer.transform.anchorPoint.setValue([0, 0]);
+                            lineLayer.transform.anchorPoint.setValue([rLeftLine, 0]);
                             lineLayer.transform.position.setValue([lineLeftX, lineBaselineY]);
                         } catch (eLPos) {
                             try {
-                                lineLayer.transform.anchorPoint.setValue([0, 0, 0]);
+                                lineLayer.transform.anchorPoint.setValue([rLeftLine, 0, 0]);
                                 lineLayer.transform.position.setValue([lineLeftX, lineBaselineY, 0]);
                             } catch (eLPos2) {}
                         }
@@ -1301,7 +1320,34 @@
                         if (trimStr(lineStr2).length === 0) continue;
 
                         var lineWords = lineStr2.match(/\S+/g) || [];
-                        var lineTotalW = measureExact(lineStr2);
+                        if (lineWords.length === 0) continue;
+
+                        // Create word layers and measure their exact bounding boxes
+                        var lineLayers = [];
+                        var wordsWidths = [];
+                        var wordsLefts = [];
+                        var lineTotalW = 0;
+
+                        for (var wi = 0; wi < lineWords.length; wi++) {
+                            var wordText = lineWords[wi];
+                            var wordLayer = newComp.layers.addText(wordText);
+                            applyTextDocStyling(wordLayer, origDoc, wordText);
+                            totalWordCount++;
+                            wordLayer.name = "Word " + totalWordCount + ": " + wordText;
+
+                            var rWord = wordLayer.sourceRectAtTime(0, false);
+                            var wWidth = (rWord && typeof rWord.width === "number" && rWord.width > 0)
+                                ? rWord.width
+                                : measureSingleWord(wordText);
+                            var wLeft = (rWord && typeof rWord.left === "number") ? rWord.left : 0;
+
+                            lineLayers.push(wordLayer);
+                            wordsWidths.push(wWidth);
+                            wordsLefts.push(wLeft);
+                            lineTotalW += wWidth;
+                        }
+
+                        lineTotalW += (lineWords.length - 1) * spaceWidth;
 
                         var lineStartX = padding;
                         if (align === "center") {
@@ -1311,31 +1357,23 @@
                         }
                         var lineBaselineY2 = firstBaselineY + (li2 * lineStep);
 
-                        var searchCursor = 0;
-                        for (var wi = 0; wi < lineWords.length; wi++) {
-                            var wordText = lineWords[wi];
-                            var wordPos = lineStr2.indexOf(wordText, searchCursor);
-                            if (wordPos < 0) wordPos = searchCursor;
-                            var textBefore = lineStr2.substring(0, wordPos);
-                            var advanceX = measureExact(textBefore);
-
-                            var wordLeftX = lineStartX + advanceX;
-
-                            var wordLayer = newComp.layers.addText(wordText);
-                            applyTextDocStyling(wordLayer, origDoc, wordText);
-                            totalWordCount++;
-                            wordLayer.name = "Word " + totalWordCount + ": " + wordText;
+                        var curX = lineStartX;
+                        for (var wi2 = 0; wi2 < lineLayers.length; wi2++) {
+                            var wLyr = lineLayers[wi2];
+                            var ww = wordsWidths[wi2];
+                            var wl = wordsLefts[wi2];
 
                             try {
-                                wordLayer.transform.anchorPoint.setValue([0, 0]);
-                                wordLayer.transform.position.setValue([wordLeftX, lineBaselineY2]);
+                                wLyr.transform.anchorPoint.setValue([wl, 0]);
+                                wLyr.transform.position.setValue([curX, lineBaselineY2]);
                             } catch (eWPos) {
                                 try {
-                                    wordLayer.transform.anchorPoint.setValue([0, 0, 0]);
-                                    wordLayer.transform.position.setValue([wordLeftX, lineBaselineY2, 0]);
+                                    wLyr.transform.anchorPoint.setValue([wl, 0, 0]);
+                                    wLyr.transform.position.setValue([curX, lineBaselineY2, 0]);
                                 } catch (eWPos2) {}
                             }
-                            searchCursor = wordPos + wordText.length;
+
+                            curX += ww + spaceWidth;
                         }
                     }
                 }
