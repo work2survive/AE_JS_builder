@@ -486,10 +486,12 @@ body.body-viewport-panning {
 .ae-timeline-panel-title {
     display: inline-flex;
     align-items: center;
-    padding: 0 2px; /* Matches .ae-viewport-panel-title so both titles align horizontally */
+    padding: 0 4px 0 2px;
     white-space: nowrap;
     flex-shrink: 0;
-    line-height: 1.2;
+    line-height: 22px;
+    height: 22px;
+    user-select: none;
 }
 
 .ae-cam-info {
@@ -1174,43 +1176,22 @@ body.body-viewport-panning {
     border-bottom: 1px solid var(--border-color);
     display: flex;
     align-items: center;
-    justify-content: space-between;
     padding: 0 10px;
     font-size: 11px;
     color: var(--text-muted);
-    min-width: 0;
     flex-shrink: 0;
     overflow: hidden;
-    gap: 8px;
+    gap: 6px;
     box-sizing: border-box;
 }
 
-.ae-timeline-header-left {
-    display: flex;
+.ae-comp-breadcrumbs {
+    display: inline-flex;
     align-items: center;
     gap: 6px;
-    flex: 1;
-    min-width: 0;
-    overflow: hidden;
-    height: 100%;
-}
-
-.ae-header-sep {
-    display: inline-block;
-    width: 1px;
-    height: 14px;
-    background: #373b44;
+    margin: 0;
+    padding: 0;
     flex-shrink: 0;
-    margin: 0 2px;
-}
-
-.ae-timeline-header-right {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    flex-shrink: 0;
-    margin-left: auto;
-    height: 22px;
 }
 
 .ae-layers-tree {
@@ -1307,59 +1288,54 @@ body.body-viewport-panning {
 
 /* Composition Breadcrumbs in Timeline Header */
 .ae-comp-breadcrumbs {
-    display: flex;
+    display: inline-flex;
     align-items: center;
-    gap: 4px;
-    flex: 1;
-    min-width: 0;
-    overflow-x: auto;
-    overflow-y: hidden;
-    scrollbar-width: none;
-    -ms-overflow-style: none;
-    white-space: nowrap;
-    height: 22px;
-}
-.ae-comp-breadcrumbs::-webkit-scrollbar {
-    display: none;
+    gap: 6px;
+    margin: 0;
+    padding: 0;
+    flex-shrink: 0;
 }
 
 .ae-comp-breadcrumb-item {
+    height: 22px;
+    max-height: 22px;
+    min-height: 22px;
+    background: #252525;
+    border: 1px solid var(--border-light);
+    color: var(--text-muted);
+    border-radius: 3px;
+    padding: 0 8px;
+    margin: 0;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 4px;
-    background: #25282e;
-    color: #cbd5e1;
-    font-size: 11px;
-    padding: 0 7px;
-    height: 22px;
-    border-radius: 3px;
-    border: 1px solid #3c4048;
+    gap: 5px;
     cursor: pointer;
-    font-family: inherit;
-    font-weight: 500;
+    box-sizing: border-box;
+    flex-shrink: 0;
     line-height: 1;
+    font-family: inherit;
+    font-size: 11px;
+    font-weight: 500;
     white-space: nowrap;
     max-width: 140px;
-    flex-shrink: 0;
-    box-sizing: border-box;
-    margin: 0;
+    vertical-align: middle;
     transition: all 0.15s ease;
 }
 
 .ae-comp-breadcrumb-item span.ae-comp-name {
     display: inline-block;
-    max-width: 112px;
+    max-width: 110px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
     vertical-align: middle;
+    line-height: 1;
 }
 
 .ae-comp-breadcrumb-item:hover {
-    background: #313640;
-    border-color: #64b5f6;
-    color: #fff;
+    color: #ffffff;
+    background: #383838;
 }
 
 .ae-comp-breadcrumb-item.active {
@@ -1500,9 +1476,11 @@ body.body-viewport-panning {
 .ae-global-shy-btn {
     width: 22px;
     height: 22px;
+    max-height: 22px;
+    min-height: 22px;
     background: #252525;
     border: 1px solid var(--border-light);
-    color: #888888;
+    color: var(--text-muted);
     border-radius: 3px;
     padding: 0;
     margin: 0;
@@ -1513,12 +1491,13 @@ body.body-viewport-panning {
     box-sizing: border-box;
     flex-shrink: 0;
     line-height: 1;
+    vertical-align: middle;
     transition: all 0.15s ease;
 }
 .ae-global-shy-btn svg.ae-shy-icon {
     display: block;
-    width: 16px;
-    height: 16px;
+    width: 14px;
+    height: 14px;
     margin: 0;
 }
 .ae-global-shy-btn:hover {
@@ -1529,7 +1508,6 @@ body.body-viewport-panning {
     background: #1c3b66;
     border-color: var(--ae-blue);
     color: #64b5f6;
-    box-shadow: 0 0 4px rgba(44, 140, 255, 0.4);
 }
 
 .ae-switch-shy {
@@ -1625,6 +1603,8 @@ body.body-viewport-panning {
 .ae-global-expr-btn {
     width: 22px;
     height: 22px;
+    max-height: 22px;
+    min-height: 22px;
     background: #252525;
     border: 1px solid var(--border-light);
     color: var(--text-muted);
@@ -1638,6 +1618,7 @@ body.body-viewport-panning {
     box-sizing: border-box;
     flex-shrink: 0;
     line-height: 1;
+    vertical-align: middle;
     transition: all 0.15s ease;
 }
 .ae-global-expr-btn:hover {
@@ -1648,7 +1629,6 @@ body.body-viewport-panning {
     background: #4a3b10;
     border-color: var(--ae-gold);
     color: #ffd166;
-    box-shadow: 0 0 4px rgba(255, 209, 102, 0.4);
 }
 .ae-expr-icon {
     font-weight: 900;
