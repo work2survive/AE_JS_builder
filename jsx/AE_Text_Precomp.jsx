@@ -629,71 +629,7 @@
             } catch (eTf3D) {}
         }
 
-        var rootVectors = bgLayer.property("ADBE Root Vectors Group") || bgLayer.property("Contents") || (bgLayer.property && bgLayer.property(1));
-        var group = rootVectors.addProperty("ADBE Vector Group");
-        group.name = "Rounded Card";
-
-        var groupContents = group.property("ADBE Vectors Group") || group.property("Contents") || (group.property && group.property(2)) || (group.property && group.property(1));
-
-        // In Adobe After Effects, a Bézier path is added as "ADBE Vector Shape - Group"
-        var shapeGroup = null;
-        try {
-            shapeGroup = groupContents.addProperty("ADBE Vector Shape - Group");
-        } catch (eG1) {
-            try {
-                shapeGroup = groupContents.addProperty("Path");
-            } catch (eG2) {
-                try {
-                    shapeGroup = groupContents.addProperty("ADBE Vector Shape - Path");
-                } catch (eG3) {}
-            }
-        }
-
-        if (shapeGroup) {
-            try { shapeGroup.name = "Rounded Path"; } catch (eName) {}
-        }
-
-        var fill = null;
-        try {
-            fill = groupContents.addProperty("ADBE Vector Graphic - Fill");
-        } catch (eF1) {
-            try { fill = groupContents.addProperty("Fill"); } catch (eF2) {}
-        }
-
-        if (fill) {
-            var rgb = hexToRgb(hexColor || "#1E222D");
-            try {
-                fill.property("Color").setValue([rgb[0], rgb[1], rgb[2]]);
-            } catch (eCol) {
-                try { fill.property("ADBE Vector Fill Color").setValue([rgb[0], rgb[1], rgb[2]]); } catch (eCol2) {}
-            }
-            if (fill.property("Opacity")) {
-                try { fill.property("Opacity").setValue(opacity !== undefined ? opacity : 100); } catch (eOp) {}
-            }
-        }
-
-        // Static shape computation
-        var pathData = computeRoundRectPathData(precompW, precompH, radii.rTL, radii.rTR, radii.rBR, radii.rBL);
-        var pathProp = null;
-        if (shapeGroup) {
-            pathProp = shapeGroup.property("ADBE Vector Shape") ||
-                       shapeGroup.property("Path") ||
-                       shapeGroup.path ||
-                       (shapeGroup.numProperties >= 2 ? shapeGroup.property(2) : shapeGroup.property(1));
-        }
-
-        if (pathProp) {
-            try {
-                var aeShape = new Shape();
-                aeShape.vertices = pathData.points;
-                aeShape.inTangents = pathData.inTangents;
-                aeShape.outTangents = pathData.outTangents;
-                aeShape.closed = true;
-                pathProp.setValue(aeShape);
-            } catch (eShape) {}
-        }
-
-        // Master Effect Controls driving the 4 corners independently
+        // 1. Add Master Effect Controls first to prevent invalidating shape references later
         var fxGroup = bgLayer.property("ADBE Effect Parade") || bgLayer.property("Effects");
         if (fxGroup) {
             try {
@@ -720,48 +656,129 @@
                 var fxBL = fxGroup.addProperty("ADBE Slider Control");
                 fxBL.name = "Radius Bottom-Left";
                 fxBL.property(1).setValue(radii.rBL);
-
-                // Parametric Bézier path expression
-                var exprLines = [
-                    "// Parametric Rounded Rectangle Path (Individual Corners)",
-                    "var w = Math.max(0, effect('Card Width')(1).value);",
-                    "var h = Math.max(0, effect('Card Height')(1).value);",
-                    "var rTL = Math.max(0, effect('Radius Top-Left')(1).value);",
-                    "var rTR = Math.max(0, effect('Radius Top-Right')(1).value);",
-                    "var rBR = Math.max(0, effect('Radius Bottom-Right')(1).value);",
-                    "var rBL = Math.max(0, effect('Radius Bottom-Left')(1).value);",
-                    "var topSum = rTL + rTR; var botSum = rBL + rBR; var leftSum = rTL + rBL; var rgtSum = rTR + rBR;",
-                    "var f = 1.0;",
-                    "if (topSum > w && topSum > 0) f = Math.min(f, w / topSum);",
-                    "if (botSum > w && botSum > 0) f = Math.min(f, w / botSum);",
-                    "if (leftSum > h && leftSum > 0) f = Math.min(f, h / leftSum);",
-                    "if (rgtSum > h && rgtSum > 0) f = Math.min(f, h / rgtSum);",
-                    "rTL *= f; rTR *= f; rBR *= f; rBL *= f;",
-                    "var halfW = w / 2; var halfH = h / 2;",
-                    "var xMin = -halfW; var xMax = halfW; var yMin = -halfH; var yMax = halfH;",
-                    "var K = 0.5522847498307936;",
-                    "var pts = [",
-                    "    [xMin + rTL, yMin], [xMax - rTR, yMin],",
-                    "    [xMax, yMin + rTR], [xMax, yMax - rBR],",
-                    "    [xMax - rBR, yMax], [xMin + rBL, yMax],",
-                    "    [xMin, yMax - rBL], [xMin, yMin + rTL]",
-                    "];",
-                    "var inT = [",
-                    "    [-rTL * K, 0], [0, 0], [0, -rTR * K], [0, 0],",
-                    "    [rBR * K, 0], [0, 0], [0, rBL * K], [0, 0]",
-                    "];",
-                    "var outT = [",
-                    "    [0, 0], [rTR * K, 0], [0, 0], [0, rBR * K],",
-                    "    [0, 0], [-rBL * K, 0], [0, 0], [0, -rTL * K]",
-                    "];",
-                    "createPath(pts, inT, outT, true);"
-                ];
-                if (pathProp) {
-                    try {
-                        pathProp.expression = exprLines.join("\n");
-                    } catch (eExpr) {}
-                }
             } catch (eFx) {}
+        }
+
+        // 2. Add Shape Group with Path and Fill
+        var rootVectors = bgLayer.property("ADBE Root Vectors Group") || bgLayer.property("Contents") || (bgLayer.property && bgLayer.property(1));
+        var group = rootVectors.addProperty("ADBE Vector Group");
+        try { group.name = "Rounded Card"; } catch (eGrpName) {}
+
+        var groupContents = group.property("ADBE Vectors Group") || group.property("Contents") || (group.property && group.property(2)) || (group.property && group.property(1));
+
+        try {
+            groupContents.addProperty("ADBE Vector Shape - Group");
+        } catch (eG1) {
+            try { groupContents.addProperty("Path"); } catch (eG2) {}
+        }
+
+        try {
+            groupContents.addProperty("ADBE Vector Graphic - Fill");
+        } catch (eF1) {
+            try { groupContents.addProperty("Fill"); } catch (eF2) {}
+        }
+
+        // Re-query groupContents fresh after all additions to prevent stale references in AE C++ DOM
+        groupContents = group.property("ADBE Vectors Group") || group.property("Contents") || (group.property && group.property(2)) || (group.property && group.property(1));
+
+        // 3. Configure Path
+        var shapeGroup = null;
+        try {
+            shapeGroup = groupContents.property("ADBE Vector Shape - Group") ||
+                         groupContents.property("Rounded Path") ||
+                         groupContents.property("Path 1") ||
+                         groupContents.property(1);
+        } catch (eSG) {}
+
+        var pathProp = null;
+        if (shapeGroup) {
+            try { shapeGroup.name = "Rounded Path"; } catch (eName) {}
+            try {
+                pathProp = shapeGroup.property("ADBE Vector Shape") ||
+                           shapeGroup.property("Path") ||
+                           shapeGroup.path ||
+                           (shapeGroup.numProperties >= 2 ? shapeGroup.property(2) : shapeGroup.property(1));
+            } catch (ePP) {}
+        }
+
+        // Static shape computation
+        var pathData = computeRoundRectPathData(precompW, precompH, radii.rTL, radii.rTR, radii.rBR, radii.rBL);
+        if (pathProp) {
+            try {
+                var aeShape = new Shape();
+                aeShape.vertices = pathData.points;
+                aeShape.inTangents = pathData.inTangents;
+                aeShape.outTangents = pathData.outTangents;
+                aeShape.closed = true;
+                pathProp.setValue(aeShape);
+            } catch (eShape) {}
+
+            var exprLines = [
+                "// Parametric Rounded Rectangle Path (Individual Corners)",
+                "try {",
+                "    var w = Math.max(0, effect('Card Width')(1).value);",
+                "    var h = Math.max(0, effect('Card Height')(1).value);",
+                "    var rTL = Math.max(0, effect('Radius Top-Left')(1).value);",
+                "    var rTR = Math.max(0, effect('Radius Top-Right')(1).value);",
+                "    var rBR = Math.max(0, effect('Radius Bottom-Right')(1).value);",
+                "    var rBL = Math.max(0, effect('Radius Bottom-Left')(1).value);",
+                "    var topSum = rTL + rTR; var botSum = rBL + rBR; var leftSum = rTL + rBL; var rgtSum = rTR + rBR;",
+                "    var f = 1.0;",
+                "    if (topSum > w && topSum > 0) f = Math.min(f, w / topSum);",
+                "    if (botSum > w && botSum > 0) f = Math.min(f, w / botSum);",
+                "    if (leftSum > h && leftSum > 0) f = Math.min(f, h / leftSum);",
+                "    if (rgtSum > h && rgtSum > 0) f = Math.min(f, h / rgtSum);",
+                "    rTL *= f; rTR *= f; rBR *= f; rBL *= f;",
+                "    var halfW = w / 2; var halfH = h / 2;",
+                "    var xMin = -halfW; var xMax = halfW; var yMin = -halfH; var yMax = halfH;",
+                "    var K = 0.5522847498307936;",
+                "    var pts = [",
+                "        [xMin + rTL, yMin], [xMax - rTR, yMin],",
+                "        [xMax, yMin + rTR], [xMax, yMax - rBR],",
+                "        [xMax - rBR, yMax], [xMin + rBL, yMax],",
+                "        [xMin, yMax - rBL], [xMin, yMin + rTL]",
+                "    ];",
+                "    var inT = [",
+                "        [-rTL * K, 0], [0, 0], [0, -rTR * K], [0, 0],",
+                "        [rBR * K, 0], [0, 0], [0, rBL * K], [0, 0]",
+                "    ];",
+                "    var outT = [",
+                "        [0, 0], [rTR * K, 0], [0, 0], [0, rBR * K],",
+                "        [0, 0], [-rBL * K, 0], [0, 0], [0, -rTL * K]",
+                "    ];",
+                "    createPath(pts, inT, outT, true);",
+                "} catch (err) {",
+                "    value;",
+                "}"
+            ];
+            try {
+                pathProp.expression = exprLines.join("\n");
+            } catch (eExpr) {}
+        }
+
+        // 4. Configure Fill
+        var fill = null;
+        try {
+            fill = groupContents.property("ADBE Vector Graphic - Fill") ||
+                   groupContents.property("Fill 1") ||
+                   groupContents.property("Fill") ||
+                   (groupContents.numProperties >= 2 ? groupContents.property(2) : null);
+        } catch (eFG) {}
+
+        if (fill) {
+            var rgb = hexToRgb(hexColor || "#1E222D");
+            try {
+                fill.property("Color").setValue([rgb[0], rgb[1], rgb[2]]);
+            } catch (eCol) {
+                try { fill.property("ADBE Vector Fill Color").setValue([rgb[0], rgb[1], rgb[2]]); } catch (eCol2) {}
+            }
+            try {
+                if (fill.property("Opacity")) {
+                    fill.property("Opacity").setValue(opacity !== undefined ? opacity : 100);
+                } else if (fill.property("ADBE Vector Fill Opacity")) {
+                    fill.property("ADBE Vector Fill Opacity").setValue(opacity !== undefined ? opacity : 100);
+                }
+            } catch (eOp) {}
         }
 
         return bgLayer;
