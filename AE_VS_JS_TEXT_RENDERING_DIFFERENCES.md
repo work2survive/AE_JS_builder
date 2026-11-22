@@ -73,6 +73,45 @@ X + W - \text{rightIndent} & \text{if Right Justified}
 
 $$\text{Position}_Y = Y + \text{FirstBaselineOffset} \quad (\approx Y + \text{fontSize} \times \text{ascentRatio} + \text{headroom})$$
 
+### 3.3 Paragraph (Box) Text Justification & `boxTextPos` Rules
+
+Unlike Point Text, Paragraph (Box) Text behaves fundamentally differently with regard to justification and anchor point mechanics:
+
+1. **Justification is Internal to the Box**:
+   - In Box Text, the bounding box $[0, 0 \text{ to } W, H]$ is fixed in layer space.
+   - Setting `doc.justification = CENTER_JUSTIFY` or `RIGHT_JUSTIFY` formats the lines **inside** the box bounds $[0, W]$.
+   - **Crucial Rule**: The layer position and anchor point must **NOT** be offset by $\frac{W}{2}$ or $W$ for Center/Right justification! Doing so causes double-displacement and pushes the text box far out of alignment.
+
+2. **The `TextDocument.boxTextPos` Coordinate Mapping**:
+   - In native After Effects, a Paragraph Text layer created via `comp.layers.addBoxText([w, h])` defaults its anchor point to the first line's baseline, **not** to the box's top-left corner!
+   - `doc.boxTextPos` returns $[x, y]$, which represents the layer coordinates of the paragraph box top-left corner relative to the layer's anchor point (e.g., approximately $[0, -\text{baseline}]$).
+   - If a script naively overwrites `layer.transform.anchorPoint = [0, 0, 0]`, it destroys AE's internal vertical baseline offset, displacing the text box upwards by $80\text{--}100\text{px}$ across the top of its intended container!
+
+3. **The Universal Box Text Positioning Formula**:
+   In After Effects, the composition coordinate $P_{\text{comp}}$ for any local layer point $P_{\text{layer}}$ is:
+   $$P_{\text{comp}} = \text{Position} - \text{AnchorPoint} + P_{\text{layer}}$$
+   The top-left corner of the box in local layer coordinates is $P_{\text{box}} = \text{doc.boxTextPos}$.
+   To place the top-left of the paragraph box precisely at target composition coordinates $[X, Y]$:
+   
+   ```javascript
+   // 1. Commit all text formatting first so AE calculates exact typography metrics:
+   textDocProp.setValue(doc);
+
+   // 2. Read the box top-left coordinate in layer space:
+   var bPos = [0, 0];
+   try {
+       if (doc.boxTextPos) bPos = doc.boxTextPos;
+   } catch (e) {}
+
+   // 3. Pin layer anchor point to boxTextPos:
+   textLayer.transform.anchorPoint.setValue([bPos[0], bPos[1], 0]);
+
+   // 4. Pin layer position directly to the container top-left:
+   textLayer.transform.position.setValue([X, Y, 0]);
+   ```
+   
+   Because $\text{Position} - \text{AnchorPoint} + \text{boxTextPos} = [X, Y] - \text{bPos} + \text{bPos} = [X, Y]$, the container box top-left is mathematically guaranteed to land at $[X, Y]$ across all After Effects versions, fonts, leadings, and justification modes!
+
 ---
 
 ## 4. `sourceRectAtTime()` Coordinates & Emulation

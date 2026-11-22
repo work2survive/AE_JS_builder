@@ -517,50 +517,7 @@
                     }
                     textLayer.name = cellPrefix + "_Text";
 
-                    var textPosX = cellX;
-                    var textPosY = cellY + 20;
-                    var anchorX = 0;
-
-                    if (rowSpec.isBox) {
-                        // In AE Box Text:
-                        // Left Justify: anchorPoint is [0, 0] -> position is [cellX, cellY + 20]
-                        // Center Justify: anchorPoint is [BOX_WIDTH / 2, 0] -> position is [cellX + BOX_WIDTH / 2, cellY + 20]
-                        // Right Justify: anchorPoint is [BOX_WIDTH, 0] -> position is [cellX + BOX_WIDTH, cellY + 20]
-                        if (rowSpec.justName === "Center") {
-                            textPosX = cellX + BOX_WIDTH / 2;
-                            anchorX = BOX_WIDTH / 2;
-                        } else if (rowSpec.justName === "Right") {
-                            textPosX = cellX + BOX_WIDTH;
-                            anchorX = BOX_WIDTH;
-                        } else {
-                            textPosX = cellX;
-                            anchorX = 0;
-                        }
-                        textPosY = cellY + 20;
-                    } else {
-                        // In AE Point Text:
-                        // Left Justify: anchorPoint is [0, 0] -> position is [cellX + leftIndent, baselineY]
-                        // Center Justify: anchorPoint is [0, 0] -> position is [cellX + centerOffset, baselineY]
-                        // Right Justify: anchorPoint is [0, 0] -> position is [cellX + BOX_WIDTH - rightIndent, baselineY]
-                        if (rowSpec.justName === "Center") {
-                            textPosX = cellX + (BOX_WIDTH + cellLeftIndent - cellRightIndent) / 2;
-                            anchorX = 0;
-                        } else if (rowSpec.justName === "Right") {
-                            textPosX = cellX + BOX_WIDTH - cellRightIndent;
-                            anchorX = 0;
-                        } else {
-                            textPosX = cellX + cellLeftIndent;
-                            anchorX = 0;
-                        }
-                        textPosY = cellY + 34; // First baseline offset, leaving clean headroom below badge
-                    }
-
-                    textLayer.transform.position.setValue([textPosX, textPosY, 0]);
-                    try {
-                        textLayer.transform.anchorPoint.setValue([anchorX, 0, 0]);
-                    } catch (eAnc) {}
-
-                    // Apply comprehensive text document attributes
+                    // 1. First apply all text document attributes (fonts, sizes, justification, box dimensions, indents)
                     setupCalibratedTextDocument(textLayer, {
                         text: CALIBRATION_TEXT,
                         isBox: rowSpec.isBox,
@@ -584,6 +541,86 @@
                         strokeWidth: cellStrokeWidth,
                         strokeColor: cellStrokeColor
                     });
+
+                    // 2. Query applied TextDocument to get native geometry metrics
+                    var docProp = (textLayer.property("ADBE Text Properties") || textLayer.property("Text"));
+                    var textDocProp = docProp ? (docProp.property("ADBE Text Document") || textLayer.property("Source Text")) : textLayer.property("Source Text");
+                    var currentDoc = textDocProp ? textDocProp.value : null;
+
+                    var isNativeBoxLayer = false;
+                    try {
+                        isNativeBoxLayer = (currentDoc && currentDoc.boxText === true) || (textLayer.boxText === true);
+                    } catch (eBoxCheck) {
+                        isNativeBoxLayer = false;
+                    }
+
+                    if (rowSpec.isBox && isNativeBoxLayer) {
+                        // -------------------------------------------------------------
+                        // Paragraph (Box) Text Placement (Rows 1, 2, 4)
+                        // -------------------------------------------------------------
+                        // In Adobe After Effects Box Text:
+                        // - Justification (Left, Center, Right) formats text INSIDE the box [0..BOX_WIDTH].
+                        // - It does NOT displace the box or the layer anchor point!
+                        // - currentDoc.boxTextPos returns the layer-space coordinates of the box top-left
+                        //   corner relative to the layer's default anchor point (typically [0, -baseline]).
+                        // - By setting layer.anchorPoint to boxTextPos:
+                        //     anchorPoint = [bPos[0], bPos[1], 0]
+                        //   the layer transform origin is pinned exactly to the box's top-left corner.
+                        // - Setting position to [cellX, cellY + 20, 0] ensures the top-left of the box
+                        //   sits perfectly at [cellX, cellY + 20] in composition coordinates, matching the
+                        //   gray card bounds exactly across all AE versions and justification modes.
+                        var bPos = [0, 0];
+                        try {
+                            if (currentDoc && currentDoc.boxTextPos) {
+                                bPos = currentDoc.boxTextPos;
+                            }
+                        } catch (eBPos) {}
+
+                        try {
+                            textLayer.transform.anchorPoint.setValue([bPos[0], bPos[1], 0]);
+                        } catch (eAnc) {}
+                        textLayer.transform.position.setValue([cellX, cellY + 20, 0]);
+
+                    } else if (rowSpec.isBox && !isNativeBoxLayer) {
+                        // -------------------------------------------------------------
+                        // Fallback: Box Text on legacy AE versions without addBoxText
+                        // (Soft-wrapped Point Text)
+                        // -------------------------------------------------------------
+                        var textPosX = cellX + cellLeftIndent;
+                        if (rowSpec.justName === "Center") {
+                            textPosX = cellX + (BOX_WIDTH + cellLeftIndent - cellRightIndent) / 2;
+                        } else if (rowSpec.justName === "Right") {
+                            textPosX = cellX + BOX_WIDTH - cellRightIndent;
+                        }
+                        var textPosY = cellY + 34;
+
+                        try {
+                            textLayer.transform.anchorPoint.setValue([0, 0, 0]);
+                        } catch (eAnc) {}
+                        textLayer.transform.position.setValue([textPosX, textPosY, 0]);
+
+                    } else {
+                        // -------------------------------------------------------------
+                        // Point Text Placement (Rows 0 and 3)
+                        // -------------------------------------------------------------
+                        // In AE Point Text, anchor point [0, 0] is on the baseline of the first line.
+                        // Horizontal coordinate shifts with justification:
+                        // - Left Justify: line starts at textPosX (x = cellX + leftIndent)
+                        // - Center Justify: line centers around textPosX (x = cellX + (BOX_WIDTH + leftIndent - rightIndent)/2)
+                        // - Right Justify: line ends at textPosX (x = cellX + BOX_WIDTH - rightIndent)
+                        var textPosX = cellX + cellLeftIndent;
+                        if (rowSpec.justName === "Center") {
+                            textPosX = cellX + (BOX_WIDTH + cellLeftIndent - cellRightIndent) / 2;
+                        } else if (rowSpec.justName === "Right") {
+                            textPosX = cellX + BOX_WIDTH - cellRightIndent;
+                        }
+                        var textPosY = cellY + 34; // Baseline offset leaving clean headroom below badge
+
+                        try {
+                            textLayer.transform.anchorPoint.setValue([0, 0, 0]);
+                        } catch (eAnc) {}
+                        textLayer.transform.position.setValue([textPosX, textPosY, 0]);
+                    }
 
                     // D. Dynamic sourceRectAtTime Bounding Outline (Cyan)
                     if (showOutlines) {
