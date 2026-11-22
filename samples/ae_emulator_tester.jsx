@@ -1271,7 +1271,18 @@
 
                 // Sample multi-line paragraph text for metrics and effect generation
                 var sampleText = "Antigravity Dynamic Text Engine\nMeasuring words, line metrics, and bounding dimensions\nStoring live arrays directly in ExtendScript global memory";
-                var tpLayer = comp.layers.addText(sampleText);
+                var tpLayer;
+                var boxW = Math.round(520 * sF);
+                var boxH = Math.round(75 * sF);
+                if (typeof comp.layers.addBoxText === "function") {
+                    try {
+                        tpLayer = comp.layers.addBoxText([boxW, boxH], sampleText);
+                    } catch (eBox) {
+                        tpLayer = comp.layers.addText(sampleText);
+                    }
+                } else {
+                    tpLayer = comp.layers.addText(sampleText);
+                }
                 tpLayer.name = "TEST_13_Paragraph_Box_Text";
                 tpLayer.transform.position.setValue([tpColX, tpY + Math.round(28 * sF), 0]);
                 setupTextDocument(tpLayer, sampleText, "Segoe UI", Math.round(13 * sF), [1.0, 1.0, 1.0], "left");

@@ -108,8 +108,9 @@
     var ROW_SPECS = [
         {
             row: 0,
-            title: "Row 0: Left Justify • Indent 0px • Regular",
-            shortTitle: "Left (0px Indent)",
+            title: "Row 0: Point Text • Left Justify • Indent 0px • Regular",
+            shortTitle: "Point • Left (0px)",
+            isBox: false,
             justification: (typeof ParagraphJustification !== "undefined" && ParagraphJustification.LEFT_JUSTIFY !== undefined)
                 ? ParagraphJustification.LEFT_JUSTIFY : 7412,
             justName: "Left",
@@ -124,8 +125,9 @@
         },
         {
             row: 1,
-            title: "Row 1: Center Justify • Margins 8px • Tracking +10",
-            shortTitle: "Center (8px Margins)",
+            title: "Row 1: Box Text • Center Justify • Margins 8px • Tracking +10",
+            shortTitle: "Box • Center (8px Margins)",
+            isBox: true,
             justification: (typeof ParagraphJustification !== "undefined" && ParagraphJustification.CENTER_JUSTIFY !== undefined)
                 ? ParagraphJustification.CENTER_JUSTIFY : 7414,
             justName: "Center",
@@ -140,8 +142,9 @@
         },
         {
             row: 2,
-            title: "Row 2: Right Justify • Right Indent 14px",
-            shortTitle: "Right (14px Right Ind)",
+            title: "Row 2: Box Text • Right Justify • Right Indent 14px",
+            shortTitle: "Box • Right (14px Right Ind)",
+            isBox: true,
             justification: (typeof ParagraphJustification !== "undefined" && ParagraphJustification.RIGHT_JUSTIFY !== undefined)
                 ? ParagraphJustification.RIGHT_JUSTIFY : 7413,
             justName: "Right",
@@ -156,8 +159,9 @@
         },
         {
             row: 3,
-            title: "Row 3: Paragraph Indent (+24px) / Hanging Indent (-18px)",
-            shortTitle: "Paragraph & Hanging Indents",
+            title: "Row 3: Point Text • Paragraph Indent (+24px) / Hanging Indent (-18px)",
+            shortTitle: "Point • Paragraph & Hanging Indents",
+            isBox: false,
             justification: (typeof ParagraphJustification !== "undefined" && ParagraphJustification.LEFT_JUSTIFY !== undefined)
                 ? ParagraphJustification.LEFT_JUSTIFY : 7412,
             justName: "Left",
@@ -172,8 +176,9 @@
         },
         {
             row: 4,
-            title: "Row 4: Advanced Synthesis (Bold, Italic, Outline, AllCaps)",
-            shortTitle: "Styles & Typo Synthesis",
+            title: "Row 4: Box Text • Advanced Synthesis (Bold, Italic, Outline, AllCaps)",
+            shortTitle: "Box • Styles & Typo Synthesis",
+            isBox: true,
             justification: (typeof ParagraphJustification !== "undefined" && ParagraphJustification.LEFT_JUSTIFY !== undefined)
                 ? ParagraphJustification.LEFT_JUSTIFY : 7412,
             justName: "Style Mix",
@@ -487,42 +492,69 @@
                     addShapeRectangle(cardLayer, "Origin Crosshair", 4, 4, -BOX_WIDTH / 2, -BOX_HEIGHT / 2, rowSpec.badgeColor, null, 0);
 
                     // B. Cell Header Badge (Small indicator text)
+                    var typeLabel = rowSpec.isBox ? "Box" : "Point";
                     var badgeLayer = comp.layers.addText("[" + cellKey + "] " + fontInfo.label);
                     badgeLayer.name = cellPrefix + "_Badge";
                     badgeLayer.transform.position.setValue([cellX + 4, cellY + 12, 0]);
-                    setupSimpleText(badgeLayer, "[" + cellKey + "] " + fontInfo.label + " | " + rowSpec.justName, "Segoe UI", 9.0, rowSpec.badgeColor, "left");
+                    setupSimpleText(badgeLayer, "[" + cellKey + "] " + fontInfo.label + " | " + rowSpec.justName + " (" + typeLabel + ")", "Segoe UI", 8.5, rowSpec.badgeColor, "left");
 
-                    // C. Paragraph Box Text Layer (The core calibration subject)
+                    // C. Text Layer (Point Text or Paragraph Box Text based on row specification)
                     var textBoxHeight = BOX_HEIGHT - 20; // Room for top badge
                     var textLayer;
-                    if (typeof comp.layers.addBoxText === "function") {
-                        try {
-                            textLayer = comp.layers.addBoxText([BOX_WIDTH, textBoxHeight], CALIBRATION_TEXT);
-                        } catch (eBox) {
+                    if (rowSpec.isBox) {
+                        if (typeof comp.layers.addBoxText === "function") {
+                            try {
+                                textLayer = comp.layers.addBoxText([BOX_WIDTH, textBoxHeight], CALIBRATION_TEXT);
+                            } catch (eBox) {
+                                textLayer = comp.layers.addText(CALIBRATION_TEXT);
+                            }
+                        } else {
                             textLayer = comp.layers.addText(CALIBRATION_TEXT);
                         }
                     } else {
+                        // Native Point Text
                         textLayer = comp.layers.addText(CALIBRATION_TEXT);
                     }
                     textLayer.name = cellPrefix + "_Text";
 
-                    // In AE Box Text:
-                    // Left Justify: anchorPoint is [0, 0] -> position is [cellX, cellY + 20]
-                    // Center Justify: anchorPoint is [BOX_WIDTH / 2, 0] -> position is [cellX + BOX_WIDTH / 2, cellY + 20]
-                    // Right Justify: anchorPoint is [BOX_WIDTH, 0] -> position is [cellX + BOX_WIDTH, cellY + 20]
                     var textPosX = cellX;
-                    var anchorX = 0;
-                    if (rowSpec.justName === "Center") {
-                        textPosX = cellX + BOX_WIDTH / 2;
-                        anchorX = BOX_WIDTH / 2;
-                    } else if (rowSpec.justName === "Right") {
-                        textPosX = cellX + BOX_WIDTH;
-                        anchorX = BOX_WIDTH;
-                    } else {
-                        textPosX = cellX;
-                        anchorX = 0;
-                    }
                     var textPosY = cellY + 20;
+                    var anchorX = 0;
+
+                    if (rowSpec.isBox) {
+                        // In AE Box Text:
+                        // Left Justify: anchorPoint is [0, 0] -> position is [cellX, cellY + 20]
+                        // Center Justify: anchorPoint is [BOX_WIDTH / 2, 0] -> position is [cellX + BOX_WIDTH / 2, cellY + 20]
+                        // Right Justify: anchorPoint is [BOX_WIDTH, 0] -> position is [cellX + BOX_WIDTH, cellY + 20]
+                        if (rowSpec.justName === "Center") {
+                            textPosX = cellX + BOX_WIDTH / 2;
+                            anchorX = BOX_WIDTH / 2;
+                        } else if (rowSpec.justName === "Right") {
+                            textPosX = cellX + BOX_WIDTH;
+                            anchorX = BOX_WIDTH;
+                        } else {
+                            textPosX = cellX;
+                            anchorX = 0;
+                        }
+                        textPosY = cellY + 20;
+                    } else {
+                        // In AE Point Text:
+                        // Left Justify: anchorPoint is [0, 0] -> position is [cellX + leftIndent, baselineY]
+                        // Center Justify: anchorPoint is [0, 0] -> position is [cellX + centerOffset, baselineY]
+                        // Right Justify: anchorPoint is [0, 0] -> position is [cellX + BOX_WIDTH - rightIndent, baselineY]
+                        if (rowSpec.justName === "Center") {
+                            textPosX = cellX + (BOX_WIDTH + cellLeftIndent - cellRightIndent) / 2;
+                            anchorX = 0;
+                        } else if (rowSpec.justName === "Right") {
+                            textPosX = cellX + BOX_WIDTH - cellRightIndent;
+                            anchorX = 0;
+                        } else {
+                            textPosX = cellX + cellLeftIndent;
+                            anchorX = 0;
+                        }
+                        textPosY = cellY + 34; // First baseline offset, leaving clean headroom below badge
+                    }
+
                     textLayer.transform.position.setValue([textPosX, textPosY, 0]);
                     try {
                         textLayer.transform.anchorPoint.setValue([anchorX, 0, 0]);
@@ -531,6 +563,7 @@
                     // Apply comprehensive text document attributes
                     setupCalibratedTextDocument(textLayer, {
                         text: CALIBRATION_TEXT,
+                        isBox: rowSpec.isBox,
                         fontName: fontInfo.name,
                         postScript: fontInfo.postScript,
                         fontSize: cellFontSize,
@@ -563,6 +596,7 @@
                         col: c,
                         row: row,
                         font: fontInfo.name,
+                        type: rowSpec.isBox ? "Box Text" : "Point Text",
                         alignment: rowSpec.justName,
                         firstLineIndent: cellFirstLineIndent,
                         leftIndent: cellLeftIndent,
@@ -684,10 +718,14 @@
             // Detect if this is a box text (paragraph) layer or point text layer
             // Note: In After Effects ExtendScript, doc.pointText and doc.boxText are strictly READ-ONLY!
             var isBox = false;
-            try {
-                isBox = (doc.boxText === true || textLayer.boxText === true);
-            } catch (eB) {
-                isBox = false;
+            if (typeof params.isBox === "boolean") {
+                isBox = params.isBox;
+            } else {
+                try {
+                    isBox = (doc.boxText === true || textLayer.boxText === true);
+                } catch (eB) {
+                    isBox = false;
+                }
             }
 
             if (isBox) {

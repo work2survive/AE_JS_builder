@@ -1048,10 +1048,18 @@
         textLayer1.property("Source Text").setValue(txtDoc1);
         textLayer1.property("Transform").property("Position").setValue([960, 380]);
 
-        var textLayer2 = comp.layers.addText(
-            "This is an After Effects paragraph text box. It wraps words automatically inside a rectangular boundary.\n" +
-            "With this panel, its live box width, height, first-line indent, and alignment are instantly exposed as Effects!"
-        );
+        var boxStr = "This is an After Effects paragraph text box. It wraps words automatically inside a rectangular boundary.\n" +
+            "With this panel, its live box width, height, first-line indent, and alignment are instantly exposed as Effects!";
+        var textLayer2;
+        if (typeof comp.layers.addBoxText === "function") {
+            try {
+                textLayer2 = comp.layers.addBoxText([720, 200], boxStr);
+            } catch (eBox) {
+                textLayer2 = comp.layers.addText(boxStr);
+            }
+        } else {
+            textLayer2 = comp.layers.addText(boxStr);
+        }
         textLayer2.name = "Demo 2 - Paragraph Box Text";
         var txtDoc2 = textLayer2.property("Source Text").value;
         txtDoc2.fontSize = 28;

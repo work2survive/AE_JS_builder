@@ -39,29 +39,71 @@
     var cbFill = cbGrp.property("Contents").addProperty("ADBE Vector Graphic - Fill");
     cbFill.property("Color").setValue([0.16, 0.20, 0.28]);
 
-    var title = cardComp.layers.addText("Nested Precomp Title");
-    title.name = "Header Text";
-    title.transform.position.setValue([cardComp.width / 2, 100, 0]);
+    // Point Text Title
+    var title = cardComp.layers.addText("Nested Precomp Title (Point Text)");
+    title.name = "Header Text (Point Text)";
+    title.transform.position.setValue([cardComp.width / 2, 85, 0]);
+    var titleDoc = title.property("Source Text").value;
+    if (titleDoc) {
+        titleDoc.fontSize = 26;
+        titleDoc.font = "Arial-BoldMT";
+        titleDoc.fillColor = [1.0, 1.0, 1.0];
+        try { titleDoc.justification = (typeof ParagraphJustification !== "undefined" && ParagraphJustification.CENTER_JUSTIFY !== undefined) ? ParagraphJustification.CENTER_JUSTIFY : 7414; } catch (eJ0) {}
+        title.property("Source Text").setValue(titleDoc);
+    }
+
+    // Paragraph Box Text Description
+    var descText = "This sample demonstrates nested precompositions combining both Point Text and Paragraph Box Text. Titles and badges use Point Text, while this card description utilizes After Effects Box Text with automatic line wrapping.";
+    var descLayer;
+    if (typeof cardComp.layers.addBoxText === "function") {
+        try {
+            descLayer = cardComp.layers.addBoxText([660, 80], descText);
+        } catch (eB) {
+            descLayer = cardComp.layers.addText(descText);
+        }
+    } else {
+        descLayer = cardComp.layers.addText(descText);
+    }
+    descLayer.name = "Card Description (Box Text)";
+    descLayer.transform.position.setValue([cardComp.width / 2, 145, 0]);
+    try { descLayer.transform.anchorPoint.setValue([330, 0, 0]); } catch (eAnc) {}
+    var descDoc = descLayer.property("Source Text").value;
+    if (descDoc) {
+        descDoc.fontSize = 15;
+        descDoc.font = "ArialMT";
+        descDoc.fillColor = [0.75, 0.82, 0.92];
+        try { descDoc.justification = (typeof ParagraphJustification !== "undefined" && ParagraphJustification.CENTER_JUSTIFY !== undefined) ? ParagraphJustification.CENTER_JUSTIFY : 7414; } catch (eJ1) {}
+        descLayer.property("Source Text").setValue(descDoc);
+    }
 
     // 3. Create Level-2 Nested Precomposition: "Badge Subcomp"
-    var badgeComp = app.project.items.addComp("Badge Subcomp", 300, 80, 1, 10, 30);
+    var badgeComp = app.project.items.addComp("Badge Subcomp", 340, 80, 1, 10, 30);
     var badgeLayer = cardComp.layers.add(badgeComp);
     badgeLayer.name = "Badge Subcomp Layer";
-    badgeLayer.transform.position.setValue([cardComp.width / 2, 280, 0]);
+    badgeLayer.transform.position.setValue([cardComp.width / 2, 290, 0]);
 
     // Add elements inside the Level-2 Badge Subcomp
     var badgeShape = badgeComp.layers.addShape();
     badgeShape.name = "Badge_Pill";
     var bpGrp = badgeShape.property("Contents").addProperty("ADBE Vector Group");
     var bpRect = bpGrp.property("Contents").addProperty("ADBE Vector Shape - Rect");
-    bpRect.property("Size").setValue([280, 60]);
+    bpRect.property("Size").setValue([320, 60]);
     bpRect.property("Roundness").setValue(30);
     var bpFill = bpGrp.property("Contents").addProperty("ADBE Vector Graphic - Fill");
     bpFill.property("Color").setValue([0.23, 0.51, 0.96]);
 
-    var badgeText = badgeComp.layers.addText("LEVEL 2 NESTED");
-    badgeText.name = "Badge Label";
+    // Point Text Badge Label
+    var badgeText = badgeComp.layers.addText("LEVEL 2 NESTED (POINT TEXT)");
+    badgeText.name = "Badge Label (Point Text)";
     badgeText.transform.position.setValue([badgeComp.width / 2, badgeComp.height / 2, 0]);
+    var bDoc = badgeText.property("Source Text").value;
+    if (bDoc) {
+        bDoc.fontSize = 13;
+        bDoc.font = "ArialMT";
+        bDoc.fillColor = [1.0, 1.0, 1.0];
+        try { bDoc.justification = (typeof ParagraphJustification !== "undefined" && ParagraphJustification.CENTER_JUSTIFY !== undefined) ? ParagraphJustification.CENTER_JUSTIFY : 7414; } catch (eJ2) {}
+        badgeText.property("Source Text").setValue(bDoc);
+    }
 
     if (mainComp && typeof mainComp.openInViewer === "function") {
         mainComp.openInViewer();
