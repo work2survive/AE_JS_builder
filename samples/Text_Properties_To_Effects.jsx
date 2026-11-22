@@ -33,18 +33,28 @@
     var SCRIPT_VERSION = "v1.2";
 
     // Global in-memory cache initialization
-    var globalObj = (typeof $ !== "undefined" && typeof $.global !== "undefined")
-        ? $.global
-        : (typeof globalThis !== "undefined" ? globalThis : (typeof window !== "undefined" ? window : this));
-
-    if (typeof $ === "undefined") {
-        $ = { global: globalObj, writeln: function (msg) { if (typeof console !== "undefined") console.log(msg); } };
-    } else if (typeof $.global === "undefined") {
-        $.global = globalObj;
+    var $global;
+    try {
+        $global = (typeof $ !== "undefined" && typeof $.global !== "undefined")
+            ? $.global
+            : (typeof globalThis !== "undefined" ? globalThis : (typeof window !== "undefined" ? window : this));
+    } catch (eG) {
+        $global = this;
     }
 
-    if (typeof $.global.AE_TEXT_BOX_MEMORY === "undefined") {
-        $.global.AE_TEXT_BOX_MEMORY = {
+    if (typeof $ === "undefined") {
+        try {
+            $global.$ = { global: $global, writeln: function (msg) { if (typeof console !== "undefined") console.log(msg); } };
+        } catch (eDol) {}
+    } else {
+        try {
+            if (typeof $.global === "undefined") $.global = $global;
+        } catch (eDol2) {}
+    }
+
+    var $memGlobal = (typeof $ !== "undefined" && typeof $.global !== "undefined") ? $.global : $global;
+    if (typeof $memGlobal.AE_TEXT_BOX_MEMORY === "undefined") {
+        $memGlobal.AE_TEXT_BOX_MEMORY = {
             layerName: "",
             words: [],
             wordWidths: [],
@@ -1054,9 +1064,9 @@
         win.alignChildren = ["fill", "top"];
         win.spacing = 8;
         win.margins = 10;
-        win.preferredSize = [420, 680];
+        win.preferredSize = [440, 480];
 
-        win.textMemoryStore = $.global.AE_TEXT_BOX_MEMORY;
+        win.textMemoryStore = $memGlobal.AE_TEXT_BOX_MEMORY;
 
         // ---------------------------------------------------------------------
         // Header
@@ -1128,16 +1138,16 @@
         }
 
         // =====================================================================
-        // TAB 1: ⚡ TIMELINE EFFECTS (SHOW / HIDE CHECKBOXES)
+        // TAB 1: 📐 BOX & DIMENSIONS
         // =====================================================================
-        var tabTimeline = tpanel.add("tab", undefined, "⚡ Timeline Effects");
-        tabTimeline.orientation = "column";
-        tabTimeline.alignChildren = ["fill", "top"];
-        tabTimeline.spacing = 6;
-        tabTimeline.margins = 8;
+        var tabBox = tpanel.add("tab", undefined, "📐 Box");
+        tabBox.orientation = "column";
+        tabBox.alignChildren = ["fill", "top"];
+        tabBox.spacing = 6;
+        tabBox.margins = 8;
 
-        // Subpanel 1: Box & Dimensions Properties
-        var pnlSR = tabTimeline.add("panel", undefined, "📐 Box & Dimensions (Show/Hide in Timeline)");
+        // Box & Dimensions Properties Panel
+        var pnlSR = tabBox.add("panel", undefined, "📐 Box & Dimensions (Show/Hide in Timeline)");
         pnlSR.orientation = "column";
         pnlSR.alignChildren = ["fill", "top"];
         pnlSR.spacing = 3;
@@ -1148,8 +1158,17 @@
             if (bDef) addCheckboxItem(pnlSR, bDef);
         }
 
-        // Subpanel 2: Alignment, Indent & Styling
-        var pnlAlign = tabTimeline.add("panel", undefined, "📝 Alignment, Indent & Style (Show/Hide in Timeline)");
+        // =====================================================================
+        // TAB 2: 📝 ALIGNMENT, INDENT & STYLE
+        // =====================================================================
+        var tabAlign = tpanel.add("tab", undefined, "📝 Alignment");
+        tabAlign.orientation = "column";
+        tabAlign.alignChildren = ["fill", "top"];
+        tabAlign.spacing = 6;
+        tabAlign.margins = 8;
+
+        // Alignment, Indent & Styling Panel
+        var pnlAlign = tabAlign.add("panel", undefined, "📝 Alignment, Indent & Style (Show/Hide in Timeline)");
         pnlAlign.orientation = "column";
         pnlAlign.alignChildren = ["fill", "top"];
         pnlAlign.spacing = 3;
@@ -1160,8 +1179,17 @@
             if (aDef) addCheckboxItem(pnlAlign, aDef);
         }
 
-        // Subpanel 3: Word & Line Count Sliders (Controls on Timeline Layer)
-        var pnlCounters = tabTimeline.add("panel", undefined, "🔢 Word & Line Counters (Timeline Sliders & Live Readouts)");
+        // =====================================================================
+        // TAB 3: 🔢 WORD & LINE COUNTERS
+        // =====================================================================
+        var tabCounters = tpanel.add("tab", undefined, "🔢 Counters");
+        tabCounters.orientation = "column";
+        tabCounters.alignChildren = ["fill", "top"];
+        tabCounters.spacing = 6;
+        tabCounters.margins = 8;
+
+        // Word & Line Count Sliders Panel
+        var pnlCounters = tabCounters.add("panel", undefined, "🔢 Word & Line Counters (Timeline Sliders & Live Readouts)");
         pnlCounters.orientation = "column";
         pnlCounters.alignChildren = ["fill", "top"];
         pnlCounters.spacing = 5;
@@ -1219,9 +1247,9 @@
         if (PROPERTY_DEFS_MAP["cnt_chars"]) addCheckboxItem(grpExtraCounters, PROPERTY_DEFS_MAP["cnt_chars"]);
 
         // =====================================================================
-        // TAB 2: 💾 IN-MEMORY WORDS & LINES STORE
+        // TAB 4: 💾 IN-MEMORY WORDS & LINES STORE
         // =====================================================================
-        var tabMemory = tpanel.add("tab", undefined, "💾 Memory Store");
+        var tabMemory = tpanel.add("tab", undefined, "💾 Store");
         tabMemory.orientation = "column";
         tabMemory.alignChildren = ["fill", "top"];
         tabMemory.spacing = 6;
@@ -1268,9 +1296,9 @@
         btnPrintConsole.helpTip = "Prints formatted word and line width tables to ExtendScript console";
 
         // =====================================================================
-        // TAB 3: ⚙️ RIGGING & EXECUTION OPTIONS
+        // TAB 5: ⚙️ RIGGING & EXECUTION OPTIONS
         // =====================================================================
-        var tabOptions = tpanel.add("tab", undefined, "⚙️ Options & Rigging");
+        var tabOptions = tpanel.add("tab", undefined, "⚙️ Options");
         tabOptions.orientation = "column";
         tabOptions.alignChildren = ["fill", "top"];
         tabOptions.spacing = 6;
@@ -1319,7 +1347,7 @@
         var btnRemove = grpOptionBtns.add("button", undefined, "🗑️ Remove All Effects");
         btnRemove.helpTip = "Removes any previously added property effects from selected layers";
 
-        tpanel.selection = 0; // Tab 1 active by default
+        tpanel.selection = 0; // Tab 1 (Box) active by default
 
         // ---------------------------------------------------------------------
         // Action & Status Bar
@@ -1329,9 +1357,9 @@
         grpActions.alignChildren = ["fill", "center"];
         grpActions.spacing = 6;
 
-        var btnApply = grpActions.add("button", undefined, "⚡ Apply All Checked Effects");
-        btnApply.preferredSize = [-1, 32];
-        btnApply.helpTip = "Applies all currently checked property effects to selected text layers";
+        var btnApply = grpActions.add("button", undefined, "🚀 Build / Apply Checked Effects");
+        btnApply.preferredSize = [-1, 34];
+        btnApply.helpTip = "Builds and applies all currently checked property effects to selected text layers";
 
         var lblStatus = win.add("statictext", undefined, "Ready. Check/uncheck any property to show/hide that effect in the timeline.");
         lblStatus.alignment = ["fill", "bottom"];
@@ -1756,7 +1784,7 @@
             try {
                 var mem = measureAndStoreTextMetrics(comp, comp.selectedLayers[0]);
                 refreshMemoryDisplay();
-                tpanel.selection = 1; // Switch to Memory Store tab
+                tpanel.selection = 3; // Switch to Store tab (Tab index 3)
                 setStatus("Measured " + mem.totalWords + " words and " + mem.totalLines + " lines into memory!");
             } catch (measErr) {
                 setStatus("Error: " + measErr.toString(), true);
@@ -1881,11 +1909,18 @@
     // =========================================================================
     var panel = buildUI(thisObj);
     if (panel) {
-        if (typeof panel.center === "function") {
-            try { panel.center(); } catch (eCenter) {}
-        }
-        if (typeof panel.show === "function") {
-            try { panel.show(); } catch (eShow) {}
+        try {
+            if (typeof $ !== "undefined" && typeof $.global !== "undefined") {
+                $.global.aeTextPropertiesPal = panel;
+            }
+        } catch (eG) {}
+
+        if (panel instanceof Window) {
+            panel.center();
+            panel.show();
+        } else if (panel && panel.layout) {
+            panel.layout.layout(true);
+            panel.layout.resize();
         }
     }
 
