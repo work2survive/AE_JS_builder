@@ -1,6 +1,6 @@
 // Co-authored & architected with Google DeepMind Antigravity.
 // =============================================================================
-// ADOBE AFTER EFFECTS EXTENDSCRIPT & SCRIPTUI PANEL: AE TEXT HIGHLIGHT v1.4.0
+// ADOBE AFTER EFFECTS EXTENDSCRIPT & SCRIPTUI PANEL: AE TEXT HIGHLIGHT v1.4.2
 // =============================================================================
 //
 // PURPOSE:
@@ -46,7 +46,7 @@
     "use strict";
 
     var SCRIPT_TITLE    = "AE Text Highlight";
-    var SCRIPT_VERSION  = "v1.4.1";
+    var SCRIPT_VERSION  = "v1.4.2";
     var GITHUB_REPO_URL = "https://github.com/work2survive/AE-Text-Highlight";
 
     // Global in-memory cache initialization (matching Text_Properties_To_Effects.jsx)
@@ -312,28 +312,29 @@
         var isVerdana   = (fontLower2.indexOf("verdana") !== -1);
         var isImpact    = (fontLower2.indexOf("impact") !== -1);
         var isTimes     = (fontLower2.indexOf("times") !== -1);
-        var isGeorgia   = (fontLower2.indexOf("georgia") !== -1 || fontLower2.indexOf("serif") !== -1);
+        var isCambria   = (fontLower2.indexOf("cambria") !== -1);
+        var isGeorgia   = (fontLower2.indexOf("georgia") !== -1 || (!isCambria && !isTimes && fontLower2.indexOf("serif") !== -1));
 
         var total = 0;
         for (var i = 0; i < str.length; i++) {
             var ch = str.charAt(i);
             var code = ch.charCodeAt(0);
             if (code === 32) {
-                total += isTrebuchet ? (fs * 0.30) : (isVerdana ? (fs * 0.35) : (isImpact ? (fs * 0.18) : (isGeorgia ? (fs * 0.24) : (isTimes ? (fs * 0.25) : (fs * 0.28)))));
-            } else if ("ijl|!.,:;'I`".indexOf(ch) !== -1) {
-                total += isTrebuchet ? (fs * 0.29) : (isVerdana ? (fs * 0.27) : (isImpact ? (fs * 0.27) : (isGeorgia ? (fs * 0.29) : (isTimes ? (fs * 0.28) : (fs * 0.22)))));
+                total += isTrebuchet ? (fs * 0.30) : (isVerdana ? (fs * 0.35) : (isImpact ? (fs * 0.18) : (isGeorgia ? (fs * 0.24) : (isCambria ? (fs * 0.26) : (isTimes ? (fs * 0.25) : (fs * 0.28))))));
+            } else if ("ijl|!.,:'I`".indexOf(ch) !== -1) {
+                total += isTrebuchet ? (fs * 0.29) : (isVerdana ? (fs * 0.27) : (isImpact ? (fs * 0.27) : (isGeorgia ? (fs * 0.29) : (isCambria ? (fs * 0.27) : (isTimes ? (fs * 0.28) : (fs * 0.22))))));
             } else if ("frt[](){}".indexOf(ch) !== -1) {
-                total += isTrebuchet ? (fs * 0.35) : (isVerdana ? (fs * 0.38) : (isImpact ? (fs * 0.32) : (isGeorgia ? (fs * 0.38) : (isTimes ? (fs * 0.34) : (fs * 0.33)))));
+                total += isTrebuchet ? (fs * 0.35) : (isVerdana ? (fs * 0.38) : (isImpact ? (fs * 0.32) : (isGeorgia ? (fs * 0.38) : (isCambria ? (fs * 0.35) : (isTimes ? (fs * 0.34) : (fs * 0.33))))));
             } else if ("wmWM@#%&".indexOf(ch) !== -1) {
-                total += isTrebuchet ? (fs * 0.78) : (isVerdana ? (fs * 0.90) : (isImpact ? (fs * 0.75) : (isGeorgia ? (fs * 0.90) : (isTimes ? (fs * 0.85) : (fs * 0.83)))));
+                total += isTrebuchet ? (fs * 0.78) : (isVerdana ? (fs * 0.90) : (isImpact ? (fs * 0.75) : (isGeorgia ? (fs * 0.90) : (isCambria ? (fs * 0.86) : (isTimes ? (fs * 0.85) : (fs * 0.83))))));
             } else if (ch >= 'A' && ch <= 'Z') {
-                total += isTrebuchet ? (fs * 0.60) : (isVerdana ? (fs * 0.68) : (isImpact ? (fs * 0.52) : (isGeorgia ? (fs * 0.67) : (isTimes ? (fs * 0.70) : (fs * 0.67)))));
+                total += isTrebuchet ? (fs * 0.60) : (isVerdana ? (fs * 0.68) : (isImpact ? (fs * 0.52) : (isGeorgia ? (fs * 0.67) : (isCambria ? (fs * 0.68) : (isTimes ? (fs * 0.70) : (fs * 0.67))))));
             } else if (ch >= '0' && ch <= '9') {
-                total += isTrebuchet ? (fs * 0.54) : (isVerdana ? (fs * 0.60) : (isImpact ? (fs * 0.51) : (isGeorgia ? (fs * 0.52) : (isTimes ? (fs * 0.50) : (fs * 0.56)))));
+                total += isTrebuchet ? (fs * 0.54) : (isVerdana ? (fs * 0.60) : (isImpact ? (fs * 0.51) : (isGeorgia ? (fs * 0.52) : (isCambria ? (fs * 0.53) : (isTimes ? (fs * 0.50) : (fs * 0.56))))));
             } else if (code > 255) {
                 total += fs * 1.0;
             } else {
-                total += isTrebuchet ? (fs * 0.54) : (isVerdana ? (fs * 0.60) : (isImpact ? (fs * 0.51) : (isGeorgia ? (fs * 0.50) : (isTimes ? (fs * 0.44) : (fs * 0.56)))));
+                total += isTrebuchet ? (fs * 0.54) : (isVerdana ? (fs * 0.60) : (isImpact ? (fs * 0.51) : (isGeorgia ? (fs * 0.50) : (isCambria ? (fs * 0.51) : (isTimes ? (fs * 0.44) : (fs * 0.56))))));
             }
         }
         return total;
@@ -634,35 +635,63 @@
         var tempLayer = null;
         try {
             tempLayer = comp.layers.addText("");
-            tempLayer.enabled = false;
-            var tempDoc = tempLayer.property("Source Text").value;
-            tempDoc.fontSize = textDoc.fontSize || 34;
-            if (textDoc.font) {
-                try { tempDoc.font = textDoc.font; } catch (eFont) {}
+            tempLayer.enabled = true;
+            tempLayer.transform.position.setValue([-9999, -9999, 0]);
+            tempLayer.startTime = 0;
+            tempLayer.inPoint = 0;
+            tempLayer.outPoint = (comp && comp.duration && comp.duration > 0) ? comp.duration : 1000;
+            var sampleTime = tempLayer.inPoint;
+
+            var tempDocProp = tempLayer.property("Source Text");
+            if (!tempDocProp) {
+                try { tempDocProp = tempLayer.property("ADBE Text Properties").property("ADBE Text Document"); } catch (eTP) {}
             }
-            tempDoc.tracking = textDoc.tracking || 0;
-            tempDoc.applyStroke = textDoc.applyStroke || false;
-            tempDoc.strokeWidth = textDoc.strokeWidth || 0;
-            tempDoc.applyFill = true;
-            tempDoc.fillColor = [1, 1, 1];
-            tempLayer.property("Source Text").setValue(tempDoc);
+            if (!tempDocProp && tempLayer.sourceText) tempDocProp = tempLayer.sourceText;
+
+            var tempDoc = tempDocProp ? tempDocProp.value : null;
+            if (tempDoc) {
+                tempDoc.fontSize = textDoc.fontSize || 34;
+                if (textDoc.font) {
+                    try { tempDoc.font = textDoc.font; } catch (eFont) {}
+                }
+                tempDoc.tracking = textDoc.tracking || 0;
+                tempDoc.applyStroke = textDoc.applyStroke || false;
+                tempDoc.strokeWidth = textDoc.strokeWidth || 0;
+                tempDoc.applyFill = true;
+                tempDoc.fillColor = [1, 1, 1];
+                try { tempDoc.boxText = false; } catch (eBT) {}
+                try {
+                    if (typeof ParagraphJustification !== "undefined") {
+                        tempDoc.justification = ParagraphJustification.LEFT_JUSTIFY;
+                    } else {
+                        tempDoc.justification = 7412;
+                    }
+                } catch (eJ) {}
+                try { tempDocProp.setValue(tempDoc); } catch (eDocSet) {}
+            }
+
+            function sampleTempRect(str) {
+                if (tempDocProp) {
+                    if (tempDoc) {
+                        tempDoc.text = str;
+                        tempDocProp.setValue(tempDoc);
+                    } else {
+                        tempDocProp.setValue(str);
+                    }
+                }
+                return tempLayer.sourceRectAtTime(sampleTime, false);
+            }
 
             // 1. Measure width in pixels of each word
             for (var w = 0; w < words.length; w++) {
-                tempDoc.text = words[w];
-                tempLayer.property("Source Text").setValue(tempDoc);
-                var rW = tempLayer.sourceRectAtTime(0, false);
+                var rW = sampleTempRect(words[w]);
                 var ww = rW ? (Math.round(rW.width * 100) / 100) : 0;
                 wordWidths.push(ww);
             }
 
             // 2. Measure space width in pixels
-            tempDoc.text = "A A";
-            tempLayer.property("Source Text").setValue(tempDoc);
-            var rPair = tempLayer.sourceRectAtTime(0, false);
-            tempDoc.text = "AA";
-            tempLayer.property("Source Text").setValue(tempDoc);
-            var rSingle = tempLayer.sourceRectAtTime(0, false);
+            var rPair = sampleTempRect("A A");
+            var rSingle = sampleTempRect("AA");
             if (rPair && rSingle) {
                 spaceWidth = Math.max(0, Math.round((rPair.width - rSingle.width) * 100) / 100);
             }
@@ -675,9 +704,7 @@
             for (var p = 0; p < paragraphs.length; p++) {
                 var para = paragraphs[p];
                 if (!isBox || boxWidth <= 0) {
-                    tempDoc.text = para;
-                    tempLayer.property("Source Text").setValue(tempDoc);
-                    var rL = tempLayer.sourceRectAtTime(0, false);
+                    var rL = sampleTempRect(para);
                     var lw = rL ? (Math.round(rL.width * 100) / 100) : 0;
                     lines.push(para);
                     lineWidths.push(lw);
@@ -689,23 +716,20 @@
                         continue;
                     }
                     var curLine = pWords[0];
-                    tempDoc.text = curLine;
-                    tempLayer.property("Source Text").setValue(tempDoc);
-                    var curW = tempLayer.sourceRectAtTime(0, false).width;
+                    var rCur = sampleTempRect(curLine);
+                    var curW = rCur ? rCur.width : 0;
 
                     for (var pw = 1; pw < pWords.length; pw++) {
                         var testLine = curLine + " " + pWords[pw];
-                        tempDoc.text = testLine;
-                        tempLayer.property("Source Text").setValue(tempDoc);
-                        var testW = tempLayer.sourceRectAtTime(0, false).width;
+                        var rTest = sampleTempRect(testLine);
+                        var testW = rTest ? rTest.width : 0;
 
                         if (testW > boxWidth && curLine.length > 0) {
                             lines.push(curLine);
                             lineWidths.push(Math.round(curW * 100) / 100);
                             curLine = pWords[pw];
-                            tempDoc.text = curLine;
-                            tempLayer.property("Source Text").setValue(tempDoc);
-                            curW = tempLayer.sourceRectAtTime(0, false).width;
+                            var rNext = sampleTempRect(curLine);
+                            curW = rNext ? rNext.width : 0;
                         } else {
                             curLine = testLine;
                             curW = testW;
@@ -945,13 +969,22 @@
         var just = props.justification;
         var fs = props.fontSize;
 
-        // Temporary measurement helper for exact After Effects sub-string widths
+        // Temporary measurement helper for exact After Effects sub-string bounds
         var measureLayer = null;
         var measureTextProp = null;
+        var sampleTime = 0;
+        var pipeRight = 0;
+
         if (comp && typeof comp.layers.addText === "function") {
             try {
                 measureLayer = comp.layers.addText("");
-                measureLayer.enabled = false;
+                measureLayer.enabled = true; // Offscreen enabled layer for native sourceRectAtTime
+                measureLayer.transform.position.setValue([-9999, -9999, 0]);
+                measureLayer.startTime = 0;
+                measureLayer.inPoint = 0;
+                measureLayer.outPoint = (comp.duration && comp.duration > 0) ? comp.duration : 1000;
+                sampleTime = measureLayer.inPoint;
+
                 try {
                     measureTextProp = measureLayer.property("Source Text");
                 } catch (eP1) {}
@@ -974,10 +1007,33 @@
                         mDoc.strokeWidth = props.strokeWidth || 0;
                         mDoc.applyFill = true;
                         mDoc.fillColor = [1, 1, 1];
+                        try { mDoc.boxText = false; } catch (eBT) {}
+                        try {
+                            if (typeof ParagraphJustification !== "undefined") {
+                                mDoc.justification = ParagraphJustification.LEFT_JUSTIFY;
+                            } else {
+                                mDoc.justification = 7412;
+                            }
+                        } catch (eJ) {}
                         try { measureTextProp.setValue(mDoc); } catch (eMSet) {}
                     } else if (props.textDoc) {
                         try { measureTextProp.setValue(props.textDoc); } catch (eMSet2) {}
                     }
+
+                    // Measure single delimiter anchor for sub-pixel cursor position
+                    try {
+                        var dPipe = measureTextProp.value;
+                        if (dPipe) {
+                            dPipe.text = "|";
+                            measureTextProp.setValue(dPipe);
+                        } else {
+                            measureTextProp.setValue("|");
+                        }
+                        var rP = measureLayer.sourceRectAtTime(sampleTime, false);
+                        if (rP && typeof rP.width === "number" && !isNaN(rP.width)) {
+                            pipeRight = rP.left + rP.width;
+                        }
+                    } catch (ePipe) {}
                 }
             } catch (eM) {
                 measureLayer = null;
@@ -985,57 +1041,100 @@
             }
         }
 
-        var spaceWidth = (props.metrics && props.metrics.spaceWidth > 0) ? props.metrics.spaceWidth : (fs * 0.28);
-
-        function measureString(str) {
-            if (!str || str.length === 0) return 0;
-            var trailingSpacesMatch = str.match(/\s+$/);
-            var numTrailing = trailingSpacesMatch ? trailingSpacesMatch[0].length : 0;
-            var leadingSpacesMatch = str.match(/^\s+/);
-            var numLeading = leadingSpacesMatch ? leadingSpacesMatch[0].length : 0;
-            var trimmed = trimStr(str);
-            if (trimmed.length === 0) {
-                return str.length * spaceWidth;
-            }
-
-            var baseW = 0;
+        function measureRectNative(str) {
+            if (!str || str.length === 0) return { left: 0, top: 0, width: 0, height: 0 };
             if (measureLayer && measureTextProp) {
                 try {
                     var doc = measureTextProp.value;
                     if (doc) {
-                        doc.text = trimmed;
+                        doc.text = str;
                         measureTextProp.setValue(doc);
                     } else {
-                        measureTextProp.setValue(trimmed);
+                        measureTextProp.setValue(str);
                     }
-                    var r = measureLayer.sourceRectAtTime(0, false);
-                    if (r && typeof r.width === "number" && !isNaN(r.width) && r.width > 0) {
-                        baseW = r.width;
+                    var r = measureLayer.sourceRectAtTime(sampleTime, false);
+                    if (r && typeof r.width === "number" && !isNaN(r.width) && r.width >= 0) {
+                        return { left: r.left, top: r.top, width: r.width, height: r.height };
                     }
                 } catch (e) {}
             }
-            if (baseW <= 0) {
-                baseW = measureTextExact(trimmed, fs, props.font);
+            var w = measureTextExact(str, fs, props.font);
+            return { left: 0, top: 0, width: w, height: fs };
+        }
+
+        // Sub-pixel segment bounds engine: delimiter-anchored advance measurement
+        function getSegmentBounds(lineStr, colStart, segLen) {
+            var segText = lineStr.substr(colStart, segLen);
+            var prefix = lineStr.substring(0, colStart);
+            var prefixAndSeg = lineStr.substring(0, colStart + segLen);
+
+            var rAll = measureRectNative(prefixAndSeg);
+            var endX = rAll.left + rAll.width;
+            var startX = 0;
+
+            if (colStart === 0) {
+                startX = rAll.left;
+            } else {
+                var rPrePipe = measureRectNative(prefix + "|");
+                var preAdvance = (rPrePipe.left + rPrePipe.width) - pipeRight;
+                var rSeg = measureRectNative(segText);
+                startX = preAdvance + rSeg.left;
             }
-            return baseW + (numLeading + numTrailing) * spaceWidth;
+
+            // Fallback safety if measurements produced invalid geometry
+            if (endX <= startX || endX <= 0) {
+                var pWFallback = measureTextExact(prefix, fs, props.font);
+                var mWFallback = measureTextExact(segText, fs, props.font);
+                startX = pWFallback;
+                endX = pWFallback + mWFallback;
+            }
+
+            var segWidth = Math.max(0, endX - startX);
+            var segMidX = (startX + endX) / 2;
+
+            return {
+                segText: segText,
+                startX: startX,
+                endX: endX,
+                width: segWidth,
+                midX: segMidX
+            };
+        }
+
+        function getLineWidth(lineStr) {
+            if (!lineStr || lineStr.length === 0) return 0;
+            var r = measureRectNative(lineStr);
+            return (r && r.width > 0) ? r.width : measureTextExact(lineStr, fs, props.font);
         }
 
         var totalCreated = 0;
 
-        function createVectorHighlightGroup(segText, pW, mW, curLineW, vl) {
-            var lineStartX = sRect.left;
-            if (just === "center") {
-                lineStartX = sRect.left + (sRect.width - curLineW) / 2;
-            } else if (just === "right") {
-                lineStartX = sRect.left + sRect.width - curLineW;
+        function createVectorHighlightGroup(segText, bounds, curLineW, vl) {
+            var lineStartX = 0;
+            if (props.isBox) {
+                if (just === "center") {
+                    lineStartX = (props.boxWidth - curLineW) / 2;
+                } else if (just === "right") {
+                    lineStartX = props.boxWidth - curLineW;
+                } else {
+                    lineStartX = 0;
+                }
+            } else {
+                if (just === "center") {
+                    lineStartX = -curLineW / 2;
+                } else if (just === "right") {
+                    lineStartX = -curLineW;
+                } else {
+                    lineStartX = 0;
+                }
             }
 
-            var wordCenterX = lineStartX + pW + (mW / 2);
+            var wordCenterX = lineStartX + bounds.midX;
             var wordCenterY = (totalLines === 1)
                 ? (sRect.top + sRect.height / 2)
                 : ((sRect.top + fs * 0.5) + vl * ((sRect.height - fs) / (totalLines - 1)));
 
-            var baseW = Math.max(0, mW);
+            var baseW = Math.max(0, bounds.width);
             var baseH = Math.max(0, fs);
             var initW = Math.max(0, baseW + paddingX * 2);
             var initH = Math.max(0, baseH + thicknessY);
@@ -1081,101 +1180,91 @@
             }
         }
 
-        for (var t = 0; t < terms.length; t++) {
-            var rawTerm = terms[t];
-            if (!rawTerm) continue;
-            var term = trimStr(rawTerm);
-            if (term.length === 0) continue;
-            var lowerTerm = term.toLowerCase();
+        try {
+            for (var t = 0; t < terms.length; t++) {
+                var rawTerm = terms[t];
+                if (!rawTerm) continue;
+                var term = trimStr(rawTerm);
+                if (term.length === 0) continue;
+                var lowerTerm = term.toLowerCase();
 
-            var matchedSingleLine = false;
+                var matchedSingleLine = false;
 
-            // 1. Direct search within each visual line
-            for (var vl = 0; vl < lines.length; vl++) {
-                var lineStr = lines[vl];
-                if (!lineStr || lineStr.length === 0) continue;
-                var lowerLine = lineStr.toLowerCase();
-                var searchIdx = 0;
+                // 1. Direct search within each visual line
+                for (var vl = 0; vl < lines.length; vl++) {
+                    var lineStr = lines[vl];
+                    if (!lineStr || lineStr.length === 0) continue;
+                    var lowerLine = lineStr.toLowerCase();
+                    var searchIdx = 0;
 
-                while (searchIdx < lineStr.length) {
-                    var found = lowerLine.indexOf(lowerTerm, searchIdx);
-                    if (found === -1) break;
+                    while (searchIdx < lineStr.length) {
+                        var found = lowerLine.indexOf(lowerTerm, searchIdx);
+                        if (found === -1) break;
 
-                    var colStart = found;
-                    var segText = lineStr.substr(colStart, term.length);
-                    var mW = measureString(segText);
-                    var pW = 0;
-                    if (colStart > 0) {
-                        var combined = lineStr.substr(0, colStart + term.length);
-                        pW = Math.max(0, measureString(combined) - mW);
+                        var bounds = getSegmentBounds(lineStr, found, term.length);
+                        var curLineW = lineWidths[vl] || getLineWidth(lineStr);
+
+                        createVectorHighlightGroup(bounds.segText, bounds, curLineW, vl);
+
+                        matchedSingleLine = true;
+                        searchIdx = found + Math.max(1, term.length);
                     }
-                    var curLineW = lineWidths[vl] || measureString(lineStr);
-
-                    createVectorHighlightGroup(segText, pW, mW, curLineW, vl);
-
-                    matchedSingleLine = true;
-                    searchIdx = found + Math.max(1, term.length);
-                }
-            }
-
-            // 2. If term contains spaces and didn't match on a single line, check across line wraps
-            if (!matchedSingleLine && term.indexOf(" ") !== -1) {
-                var termWords = term.split(/\s+/);
-                var allWords = [];
-                var lineWordRanges = [];
-                var curWIdx = 0;
-
-                for (var rvl = 0; rvl < lines.length; rvl++) {
-                    var lWords = lines[rvl].match(/\S+/g) || [];
-                    lineWordRanges.push({ start: curWIdx, end: curWIdx + lWords.length, vl: rvl, words: lWords });
-                    for (var lwi = 0; lwi < lWords.length; lwi++) {
-                        allWords.push(lWords[lwi]);
-                    }
-                    curWIdx += lWords.length;
                 }
 
-                var termLen = termWords.length;
-                for (var wStart = 0; wStart <= allWords.length - termLen; wStart++) {
-                    var matchSequence = true;
-                    for (var twi = 0; twi < termLen; twi++) {
-                        if (allWords[wStart + twi].toLowerCase() !== termWords[twi].toLowerCase()) {
-                            matchSequence = false;
-                            break;
+                // 2. If term contains spaces and didn't match on a single line, check across line wraps
+                if (!matchedSingleLine && term.indexOf(" ") !== -1) {
+                    var termWords = term.split(/\s+/);
+                    var allWords = [];
+                    var lineWordRanges = [];
+                    var curWIdx = 0;
+
+                    for (var rvl = 0; rvl < lines.length; rvl++) {
+                        var lWords = lines[rvl].match(/\S+/g) || [];
+                        lineWordRanges.push({ start: curWIdx, end: curWIdx + lWords.length, vl: rvl, words: lWords });
+                        for (var lwi = 0; lwi < lWords.length; lwi++) {
+                            allWords.push(lWords[lwi]);
                         }
+                        curWIdx += lWords.length;
                     }
 
-                    if (matchSequence) {
-                        var wEnd = wStart + termLen;
-                        for (var lri = 0; lri < lineWordRanges.length; lri++) {
-                            var rng = lineWordRanges[lri];
-                            var oStart = Math.max(wStart, rng.start);
-                            var oEnd = Math.min(wEnd, rng.end);
-                            if (oStart < oEnd) {
-                                var subWords = allWords.slice(oStart, oEnd);
-                                var phraseSeg = subWords.join(" ");
-                                var targetLine = lines[rng.vl];
-                                var fIdx = targetLine.toLowerCase().indexOf(phraseSeg.toLowerCase());
-                                if (fIdx !== -1) {
-                                    var mW2 = measureString(phraseSeg);
-                                    var pW2 = 0;
-                                    if (fIdx > 0) {
-                                        var combined2 = targetLine.substr(0, fIdx + phraseSeg.length);
-                                        pW2 = Math.max(0, measureString(combined2) - mW2);
+                    var termLen = termWords.length;
+                    for (var wStart = 0; wStart <= allWords.length - termLen; wStart++) {
+                        var matchSequence = true;
+                        for (var twi = 0; twi < termLen; twi++) {
+                            if (allWords[wStart + twi].toLowerCase() !== termWords[twi].toLowerCase()) {
+                                matchSequence = false;
+                                break;
+                            }
+                        }
+
+                        if (matchSequence) {
+                            var wEnd = wStart + termLen;
+                            for (var lri = 0; lri < lineWordRanges.length; lri++) {
+                                var rng = lineWordRanges[lri];
+                                var oStart = Math.max(wStart, rng.start);
+                                var oEnd = Math.min(wEnd, rng.end);
+                                if (oStart < oEnd) {
+                                    var subWords = allWords.slice(oStart, oEnd);
+                                    var phraseSeg = subWords.join(" ");
+                                    var targetLine = lines[rng.vl];
+                                    var fIdx = targetLine.toLowerCase().indexOf(phraseSeg.toLowerCase());
+                                    if (fIdx !== -1) {
+                                        var bounds2 = getSegmentBounds(targetLine, fIdx, phraseSeg.length);
+                                        var curLW2 = lineWidths[rng.vl] || getLineWidth(targetLine);
+                                        createVectorHighlightGroup(bounds2.segText, bounds2, curLW2, rng.vl);
                                     }
-                                    var curLW2 = lineWidths[rng.vl] || measureString(targetLine);
-                                    createVectorHighlightGroup(phraseSeg, pW2, mW2, curLW2, rng.vl);
                                 }
                             }
                         }
                     }
                 }
             }
-        }
-
-        if (measureLayer) {
-            try { measureLayer.remove(); } catch (eClean) {}
-            measureLayer = null;
-            measureTextProp = null;
+        } finally {
+            if (measureLayer) {
+                try { measureLayer.remove(); } catch (eClean) {}
+                measureLayer = null;
+                measureTextProp = null;
+            }
         }
 
         return totalCreated;
