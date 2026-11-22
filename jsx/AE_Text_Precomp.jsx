@@ -1,13 +1,14 @@
 // Co-authored & architected with Google DeepMind Antigravity.
 // =============================================================================
-// ADOBE AFTER EFFECTS EXTENDSCRIPT & SCRIPTUI PANEL: AE TEXT PRECOMP v1.3.1
+// ADOBE AFTER EFFECTS EXTENDSCRIPT & SCRIPTUI PANEL: AE TEXT PRECOMP v1.4.0
 // =============================================================================
 //
 // PURPOSE:
 //   Precomposes a selected text box (paragraph or point text) into a neatly-sized
-//   composition with customizable padding, dynamic top anchor point rigger, and
+//   composition with customizable padding, dynamic top anchor point rigger,
 //   a procedural 2D rounded rectangle background card featuring 4 independent
-//   corner radii (based on AE_Extruded_Round_corners).
+//   corner radii (based on AE_Extruded_Round_corners), and kinetic division actions:
+//   "Divide by Words" and "Divide by Lines".
 //
 // REPOSITORY:
 //   https://github.com/work2survive/AE-text-precomp
@@ -21,31 +22,37 @@
 //     https://work2survive.github.io/AE_JS_builder/?jsx=AE_Text_Precomp.jsx&autobuild=true
 //
 // KEY FEATURES:
-//   1. Zero-Shift Text Box Positioning:
+//   1. "Divide by Words" Action:
+//      - Creates an individual text layer for each word placed at its exact matching
+//        visual position with sub-pixel typographic kerning, then encapsulates inside precomp.
+//   2. "Divide by Lines" Action:
+//      - Creates an individual text layer for each line placed at its exact matching
+//        position with proper leading and justification, then encapsulates inside precomp.
+//   3. Zero-Shift Text Box Positioning:
 //      - The exact visual position of the original text box on screen is preserved
 //        pixel-for-pixel when precomposed, regardless of anchor point placement.
 //      - Whenever an anchor point is changed, position is automatically compensated
 //        using the layer's rotation and scale transformation matrix.
-//   2. Padding & Textbox Width Reduction:
+//   4. Padding & Textbox Width Reduction:
 //      - Reduces the textbox width by (2 * padding) to accommodate padding inside the precomp.
 //      - When "automatic precomp height" is active, precomp height expands to fit
 //        the wrapped textbox vertical size plus top and bottom padding.
 //      - Anchor point automatically accounts for padding, resting cleanly at the
 //        top of the text box (Top-Left, Top-Center, or Top-Right based on alignment).
-//   3. Coherent Text Properties Extraction Engine:
+//   5. Coherent Text Properties Extraction Engine:
 //      - Follows Text_Properties_To_Effects.jsx for robust typography metrics,
 //        paragraph justification, box text detection, sourceRect bounds, and
 //        in-memory $.global.AE_TEXT_BOX_MEMORY caching.
-//   4. Procedural Rounded Background Card (AE_Extruded_Round_corners):
+//   6. Procedural Rounded Background Card (AE_Extruded_Round_corners):
 //      - Creates an individual 4-corner rounded rectangle shape layer behind the text.
 //      - Interactive UI asks which corners will react to the padding to round.
 //      - 8-vertex Bézier path with W3C CSS proportional overlap protection.
 //      - Master Effect Controls (Radius Top-Left, Top-Right, Bottom-Right, Bottom-Left,
 //        Card Width, Card Height) with live parametric expressions on the Path property.
-//   5. Integrated Interactive Color Picker:
+//   7. Integrated Interactive Color Picker:
 //      - Custom swatch button + hex input (#RRGGBB) compatible with AE native
 //        $.colorPicker, Windows OS color picker, and AE_JS_builder web emulator.
-//   6. 100-Word Lorem Ipsum Dummy Layer:
+//   8. 100-Word Lorem Ipsum Dummy Layer:
 //      - If no text layer is selected, creates a 100-word dummy layer with a system font (ArialMT).
 // =============================================================================
 
@@ -53,7 +60,7 @@
     "use strict";
 
     var SCRIPT_NAME = "AE Text Precomp";
-    var SCRIPT_VERSION = "v1.3.1";
+    var SCRIPT_VERSION = "v1.4.0";
     var TEXT_PROP_REF_URL = "https://github.com/work2survive/AE_JS_builder/blob/main/samples/Text_Properties_To_Effects.jsx";
     var EXTRUDED_CORNERS_REF_URL = "https://github.com/work2survive/AE_Extruded_Round_corners";
 
@@ -143,6 +150,110 @@
             lines.push(currentLine);
         }
         return lines.join("\n");
+    }
+
+    // High-precision measurement engine matching the browser SVG engine and AE calibrated tables
+    function measureTextExact(str, fontSize, fontName) {
+        if (!str) return 0;
+        var fs = Number(fontSize) || 28;
+        var cleanFont = trimStr(String(fontName || "Arial").replace(/['"]/g, ""));
+
+        // 1. If in browser / simulator environment, use Canvas 2D font metric
+        if (typeof document !== "undefined") {
+            try {
+                var c = document.getElementById("__ae_precomp_measure_canvas");
+                if (!c) {
+                    c = document.createElement("canvas");
+                    c.id = "__ae_precomp_measure_canvas";
+                    c.style.display = "none";
+                    document.body.appendChild(c);
+                }
+                var ctx = c.getContext("2d");
+                var fontLower = cleanFont.toLowerCase();
+                var fontStack = cleanFont;
+                if (fontLower.indexOf("courier") !== -1 || fontLower.indexOf("mono") !== -1) {
+                    fontStack = "'" + cleanFont + "', 'Courier New', monospace";
+                } else if (fontLower.indexOf("times") !== -1 || fontLower.indexOf("georgia") !== -1 || fontLower.indexOf("serif") !== -1) {
+                    fontStack = "'" + cleanFont + "', Georgia, 'Times New Roman', serif";
+                } else {
+                    fontStack = "'" + cleanFont + "', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
+                }
+                ctx.font = fs + "px " + fontStack;
+                var m = ctx.measureText(str).width;
+                if (m && !isNaN(m) && m > 0) return m;
+            } catch (e) {}
+        }
+
+        // 2. Calibrated typographic metric table for ExtendScript desktop fallback
+        var fontLower2 = cleanFont.toLowerCase();
+        if (fontLower2.indexOf("courier") !== -1 || fontLower2.indexOf("mono") !== -1) {
+            return str.length * fs * 0.60;
+        }
+
+        var isTrebuchet = (fontLower2.indexOf("trebuchet") !== -1);
+        var isVerdana   = (fontLower2.indexOf("verdana") !== -1);
+        var isImpact    = (fontLower2.indexOf("impact") !== -1);
+        var isTimes     = (fontLower2.indexOf("times") !== -1);
+        var isGeorgia   = (fontLower2.indexOf("georgia") !== -1 || fontLower2.indexOf("serif") !== -1);
+
+        var total = 0;
+        for (var i = 0; i < str.length; i++) {
+            var ch = str.charAt(i);
+            var code = ch.charCodeAt(0);
+            if (code === 32) {
+                total += isTrebuchet ? (fs * 0.30) : (isVerdana ? (fs * 0.35) : (isImpact ? (fs * 0.18) : (isGeorgia ? (fs * 0.24) : (isTimes ? (fs * 0.25) : (fs * 0.28)))));
+            } else if ("ijl|!.,:;'I`".indexOf(ch) !== -1) {
+                total += isTrebuchet ? (fs * 0.29) : (isVerdana ? (fs * 0.27) : (isImpact ? (fs * 0.27) : (isGeorgia ? (fs * 0.29) : (isTimes ? (fs * 0.28) : (fs * 0.22)))));
+            } else if ("frt[](){}".indexOf(ch) !== -1) {
+                total += isTrebuchet ? (fs * 0.35) : (isVerdana ? (fs * 0.38) : (isImpact ? (fs * 0.32) : (isGeorgia ? (fs * 0.38) : (isTimes ? (fs * 0.34) : (fs * 0.33)))));
+            } else if ("wmWM@#%&".indexOf(ch) !== -1) {
+                total += isTrebuchet ? (fs * 0.78) : (isVerdana ? (fs * 0.90) : (isImpact ? (fs * 0.75) : (isGeorgia ? (fs * 0.90) : (isTimes ? (fs * 0.85) : (fs * 0.83)))));
+            } else if (ch >= 'A' && ch <= 'Z') {
+                total += isTrebuchet ? (fs * 0.60) : (isVerdana ? (fs * 0.68) : (isImpact ? (fs * 0.52) : (isGeorgia ? (fs * 0.67) : (isTimes ? (fs * 0.70) : (fs * 0.67)))));
+            } else if (ch >= '0' && ch <= '9') {
+                total += isTrebuchet ? (fs * 0.54) : (isVerdana ? (fs * 0.60) : (isImpact ? (fs * 0.51) : (isGeorgia ? (fs * 0.52) : (isTimes ? (fs * 0.50) : (fs * 0.56)))));
+            } else if (code > 255) {
+                total += fs * 1.0;
+            } else {
+                total += isTrebuchet ? (fs * 0.54) : (isVerdana ? (fs * 0.60) : (isImpact ? (fs * 0.51) : (isGeorgia ? (fs * 0.50) : (isTimes ? (fs * 0.44) : (fs * 0.56)))));
+            }
+        }
+        return total;
+    }
+
+    function applyTextDocStyling(targetLayer, sampleDoc, textContent) {
+        if (!targetLayer) return;
+        try {
+            var prop = targetLayer.property("Source Text");
+            if (!prop) return;
+            var doc = prop.value;
+            doc.text = textContent;
+            if (sampleDoc) {
+                if (sampleDoc.font) {
+                    try { doc.font = sampleDoc.font; } catch (eF) {}
+                }
+                if (sampleDoc.fontSize) doc.fontSize = sampleDoc.fontSize;
+                if (sampleDoc.applyFill && sampleDoc.fillColor) {
+                    doc.applyFill = true;
+                    doc.fillColor = sampleDoc.fillColor;
+                }
+                if (sampleDoc.applyStroke && sampleDoc.strokeColor) {
+                    doc.applyStroke = true;
+                    doc.strokeColor = sampleDoc.strokeColor;
+                    doc.strokeWidth = sampleDoc.strokeWidth || 1;
+                }
+                if (typeof sampleDoc.tracking !== "undefined") {
+                    doc.tracking = sampleDoc.tracking;
+                }
+                if (typeof sampleDoc.baselineShift !== "undefined") {
+                    doc.baselineShift = sampleDoc.baselineShift;
+                }
+                if (typeof sampleDoc.allCaps !== "undefined") {
+                    doc.allCaps = sampleDoc.allCaps;
+                }
+            }
+            prop.setValue(doc);
+        } catch (eStyle) {}
     }
 
     // -------------------------------------------------------------------------
@@ -1006,94 +1117,268 @@
             innerTextLayer = (typeof newComp.layer === "function") ? newComp.layer(1) : newComp.layers[0];
         } catch (eGetInner) {}
 
-        var innerRefX = 0;
+        var innerRefX = padding;
+        if (align === "center") {
+            innerRefX = precompW / 2;
+        } else if (align === "right") {
+            innerRefX = precompW - padding;
+        }
         var innerRefY = padding;
 
+        var divideMode = options.divideMode || "none";
+        var totalWordCount = 0;
+        var totalLineCount = 1;
+
         if (innerTextLayer) {
-            // Update boxText size to the reduced textbox width
-            if (metrics.isBoxText) {
+            var origDoc = getTextDocument(innerTextLayer);
+            var fs = (origDoc && origDoc.fontSize) ? origDoc.fontSize : (metrics.fontSize || 28);
+            var fn = (origDoc && origDoc.font) ? origDoc.font : (metrics.font || "ArialMT");
+            var lineStep = (origDoc && origDoc.autoLeading) ? (fs * 1.2) : ((origDoc && origDoc.leading) ? origDoc.leading : (fs * 1.2));
+            if (!lineStep || lineStep <= 0) lineStep = fs * 1.2;
+
+            if (divideMode === "words" || divideMode === "lines") {
+                // Temporary hidden text layer to measure exact sub-string widths in newComp
+                var measureLayer = null;
                 try {
-                    var inProp = innerTextLayer.property("Source Text");
-                    var inDoc = inProp ? inProp.value : null;
-                    if (inDoc) {
-                        if (typeof inDoc.setBoxTextSize === "function") {
-                            inDoc.setBoxTextSize([textboxW, textboxH]);
-                            inProp.setValue(inDoc);
-                        } else if (inDoc.boxTextSize) {
-                            inDoc.boxTextSize = [textboxW, textboxH];
-                            inProp.setValue(inDoc);
+                    measureLayer = newComp.layers.addText("");
+                    measureLayer.enabled = false;
+                    var mDoc = measureLayer.property("Source Text").value;
+                    mDoc.fontSize = fs;
+                    if (fn) {
+                        try { mDoc.font = fn; } catch (eFMeas) {}
+                    }
+                    if (origDoc && typeof origDoc.tracking !== "undefined") {
+                        mDoc.tracking = origDoc.tracking;
+                    }
+                    measureLayer.property("Source Text").setValue(mDoc);
+                } catch (eML) {
+                    measureLayer = null;
+                }
+
+                function measureExact(str) {
+                    if (!str || str.length === 0) return 0;
+                    if (measureLayer) {
+                        try {
+                            var d = measureLayer.property("Source Text").value;
+                            d.text = str;
+                            measureLayer.property("Source Text").setValue(d);
+                            var r = measureLayer.sourceRectAtTime(0, false);
+                            if (r && typeof r.width === "number" && r.width > 0) return r.width;
+                        } catch (eM) {}
+                    }
+                    return measureTextExact(str, fs, fn);
+                }
+
+                var fullText = getTextLayerString(innerTextLayer);
+                if (!fullText || fullText.length === 0) {
+                    fullText = metrics.fullText || (metrics.memoryStore ? metrics.memoryStore.fullText : "");
+                }
+
+                var visualLines = [];
+                var rawParas = String(fullText).split(/\r\n|\r|\n/);
+                for (var p = 0; p < rawParas.length; p++) {
+                    var para = rawParas[p];
+                    if (!metrics.isBoxText || textboxW <= 0) {
+                        visualLines.push(para);
+                    } else {
+                        var pWords = para.match(/\S+/g) || [];
+                        if (pWords.length === 0) {
+                            visualLines.push("");
+                            continue;
+                        }
+                        var curLine = pWords[0];
+                        for (var pw = 1; pw < pWords.length; pw++) {
+                            var testLine = curLine + " " + pWords[pw];
+                            var testW = measureExact(testLine);
+                            if (testW > textboxW && curLine.length > 0) {
+                                visualLines.push(curLine);
+                                curLine = pWords[pw];
+                            } else {
+                                curLine = testLine;
+                            }
+                        }
+                        if (curLine.length > 0) {
+                            visualLines.push(curLine);
                         }
                     }
-                } catch (eInBox) {}
-            }
-
-            var isInner3D = false;
-            try { isInner3D = !!innerTextLayer.threeDLayer; } catch (eInner3D) {}
-
-            var innerAnchorX = 0;
-            var innerAnchorY = 0;
-            var innerPosX = 0;
-            var innerPosY = padding;
-
-            if (metrics.isBoxText) {
-                innerAnchorY = 0;
-                if (align === "left") {
-                    innerAnchorX = 0;
-                    innerPosX = padding;
-                } else if (align === "center") {
-                    innerAnchorX = textboxW / 2;
-                    innerPosX = precompW / 2;
-                } else if (align === "right") {
-                    innerAnchorX = textboxW;
-                    innerPosX = precompW - padding;
                 }
+                if (visualLines.length === 0) visualLines.push(fullText || "");
+                totalLineCount = visualLines.length;
+
+                if (divideMode === "lines") {
+                    for (var li = 0; li < visualLines.length; li++) {
+                        var lineStr = visualLines[li];
+                        if (trimStr(lineStr).length === 0) continue;
+
+                        var lineLayer = newComp.layers.addText(lineStr);
+                        applyTextDocStyling(lineLayer, origDoc, lineStr);
+                        lineLayer.name = "Line " + (li + 1) + ": " + (lineStr.length > 25 ? (lineStr.substr(0, 25) + "...") : lineStr);
+
+                        var rLine = lineLayer.sourceRectAtTime(0, false);
+                        if (!rLine || typeof rLine.width === "undefined") {
+                            rLine = { left: 0, top: -fs * 0.75, width: measureExact(lineStr), height: fs };
+                        }
+
+                        var lineLeftX = padding;
+                        if (align === "center") {
+                            lineLeftX = padding + (textboxW - rLine.width) / 2;
+                        } else if (align === "right") {
+                            lineLeftX = padding + (textboxW - rLine.width);
+                        }
+                        var lineTopY = padding + (li * lineStep);
+
+                        try {
+                            lineLayer.transform.anchorPoint.setValue([rLine.left, rLine.top]);
+                            lineLayer.transform.position.setValue([lineLeftX, lineTopY]);
+                        } catch (eLPos) {
+                            try {
+                                lineLayer.transform.anchorPoint.setValue([rLine.left, rLine.top, 0]);
+                                lineLayer.transform.position.setValue([lineLeftX, lineTopY, 0]);
+                            } catch (eLPos2) {}
+                        }
+                    }
+                } else if (divideMode === "words") {
+                    for (var li2 = 0; li2 < visualLines.length; li2++) {
+                        var lineStr2 = visualLines[li2];
+                        if (trimStr(lineStr2).length === 0) continue;
+
+                        var lineWords = lineStr2.match(/\S+/g) || [];
+                        var lineTotalW = measureExact(lineStr2);
+
+                        var lineStartX = padding;
+                        if (align === "center") {
+                            lineStartX = padding + (textboxW - lineTotalW) / 2;
+                        } else if (align === "right") {
+                            lineStartX = padding + (textboxW - lineTotalW);
+                        }
+                        var lineTopY2 = padding + (li2 * lineStep);
+
+                        var searchCursor = 0;
+                        for (var wi = 0; wi < lineWords.length; wi++) {
+                            var wordText = lineWords[wi];
+                            var wordPos = lineStr2.indexOf(wordText, searchCursor);
+                            if (wordPos < 0) wordPos = searchCursor;
+                            var textBefore = lineStr2.substring(0, wordPos);
+                            var advanceX = measureExact(textBefore);
+
+                            var wordLeftX = lineStartX + advanceX;
+
+                            var wordLayer = newComp.layers.addText(wordText);
+                            applyTextDocStyling(wordLayer, origDoc, wordText);
+                            totalWordCount++;
+                            wordLayer.name = "Word " + totalWordCount + ": " + wordText;
+
+                            var rWord = wordLayer.sourceRectAtTime(0, false);
+                            if (!rWord || typeof rWord.width === "undefined") {
+                                rWord = { left: 0, top: -fs * 0.75, width: measureExact(wordText), height: fs };
+                            }
+
+                            try {
+                                wordLayer.transform.anchorPoint.setValue([rWord.left, rWord.top]);
+                                wordLayer.transform.position.setValue([wordLeftX, lineTopY2]);
+                            } catch (eWPos) {
+                                try {
+                                    wordLayer.transform.anchorPoint.setValue([rWord.left, rWord.top, 0]);
+                                    wordLayer.transform.position.setValue([wordLeftX, lineTopY2, 0]);
+                                } catch (eWPos2) {}
+                            }
+                            searchCursor = wordPos + wordText.length;
+                        }
+                    }
+                }
+
+                if (measureLayer) {
+                    try { measureLayer.remove(); } catch (eRemM) {}
+                }
+
+                // Remove the undivided single text layer
+                try { innerTextLayer.remove(); } catch (eRemInner) {}
+                innerTextLayer = null;
+
             } else {
-                // Point text
-                innerAnchorY = metrics.rect ? metrics.rect.top : 0;
-                if (align === "left") {
-                    innerAnchorX = metrics.rect ? metrics.rect.left : 0;
-                    innerPosX = padding;
-                } else if (align === "center") {
-                    innerAnchorX = metrics.rect ? (metrics.rect.left + (metrics.rect.width / 2)) : 0;
-                    innerPosX = precompW / 2;
-                } else if (align === "right") {
-                    innerAnchorX = metrics.rect ? (metrics.rect.left + metrics.rect.width) : 0;
-                    innerPosX = precompW - padding;
+                // Standard single layer precomp
+                // Update boxText size to the reduced textbox width
+                if (metrics.isBoxText) {
+                    try {
+                        var inProp = innerTextLayer.property("Source Text");
+                        var inDoc = inProp ? inProp.value : null;
+                        if (inDoc) {
+                            if (typeof inDoc.setBoxTextSize === "function") {
+                                inDoc.setBoxTextSize([textboxW, textboxH]);
+                                inProp.setValue(inDoc);
+                            } else if (inDoc.boxTextSize) {
+                                inDoc.boxTextSize = [textboxW, textboxH];
+                                inProp.setValue(inDoc);
+                            }
+                        }
+                    } catch (eInBox) {}
                 }
-            }
 
-            innerRefX = innerPosX;
-            innerRefY = innerPosY;
+                var isInner3D = false;
+                try { isInner3D = !!innerTextLayer.threeDLayer; } catch (eInner3D) {}
 
-            try {
-                if (isInner3D) {
-                    innerTextLayer.transform.anchorPoint.setValue([innerAnchorX, innerAnchorY, 0]);
-                    innerTextLayer.transform.position.setValue([innerPosX, innerPosY, 0]);
+                var innerAnchorX = 0;
+                var innerAnchorY = 0;
+                var innerPosX = 0;
+                var innerPosY = padding;
+
+                if (metrics.isBoxText) {
+                    innerAnchorY = 0;
+                    if (align === "left") {
+                        innerAnchorX = 0;
+                        innerPosX = padding;
+                    } else if (align === "center") {
+                        innerAnchorX = textboxW / 2;
+                        innerPosX = precompW / 2;
+                    } else if (align === "right") {
+                        innerAnchorX = textboxW;
+                        innerPosX = precompW - padding;
+                    }
                 } else {
-                    innerTextLayer.transform.anchorPoint.setValue([innerAnchorX, innerAnchorY]);
-                    innerTextLayer.transform.position.setValue([innerPosX, innerPosY]);
+                    // Point text
+                    innerAnchorY = metrics.rect ? metrics.rect.top : 0;
+                    if (align === "left") {
+                        innerAnchorX = metrics.rect ? metrics.rect.left : 0;
+                        innerPosX = padding;
+                    } else if (align === "center") {
+                        innerAnchorX = metrics.rect ? (metrics.rect.left + (metrics.rect.width / 2)) : 0;
+                        innerPosX = precompW / 2;
+                    } else if (align === "right") {
+                        innerAnchorX = metrics.rect ? (metrics.rect.left + metrics.rect.width) : 0;
+                        innerPosX = precompW - padding;
+                    }
                 }
-            } catch (eInPos) {
+
                 try {
-                    innerTextLayer.transform.anchorPoint.setValue([innerAnchorX, innerAnchorY]);
-                    innerTextLayer.transform.position.setValue([innerPosX, innerPosY]);
-                } catch (eInPos2) {}
-            }
-
-            try {
-                if (isInner3D) {
-                    innerTextLayer.transform.scale.setValue([100, 100, 100]);
-                } else {
-                    innerTextLayer.transform.scale.setValue([100, 100]);
+                    if (isInner3D) {
+                        innerTextLayer.transform.anchorPoint.setValue([innerAnchorX, innerAnchorY, 0]);
+                        innerTextLayer.transform.position.setValue([innerPosX, innerPosY, 0]);
+                    } else {
+                        innerTextLayer.transform.anchorPoint.setValue([innerAnchorX, innerAnchorY]);
+                        innerTextLayer.transform.position.setValue([innerPosX, innerPosY]);
+                    }
+                } catch (eInPos) {
+                    try {
+                        innerTextLayer.transform.anchorPoint.setValue([innerAnchorX, innerAnchorY]);
+                        innerTextLayer.transform.position.setValue([innerPosX, innerPosY]);
+                    } catch (eInPos2) {}
                 }
-            } catch (eInScale) {
-                try { innerTextLayer.transform.scale.setValue([100, 100]); } catch (eInScale2) {}
-            }
 
-            try {
-                if (innerTextLayer.transform.rotation) innerTextLayer.transform.rotation.setValue(0);
-                if (innerTextLayer.transform.zRotation) innerTextLayer.transform.zRotation.setValue(0);
-            } catch (eZeroRot) {}
+                try {
+                    if (isInner3D) {
+                        innerTextLayer.transform.scale.setValue([100, 100, 100]);
+                    } else {
+                        innerTextLayer.transform.scale.setValue([100, 100]);
+                    }
+                } catch (eInScale) {
+                    try { innerTextLayer.transform.scale.setValue([100, 100]); } catch (eInScale2) {}
+                }
+
+                try {
+                    if (innerTextLayer.transform.rotation) innerTextLayer.transform.rotation.setValue(0);
+                    if (innerTextLayer.transform.zRotation) innerTextLayer.transform.zRotation.setValue(0);
+                } catch (eZeroRot) {}
+            }
         }
 
         // Inside newComp: Add Background Card if requested
@@ -1199,6 +1484,9 @@
             align: align,
             createdDummy: createdDummy,
             name: precompName,
+            divideMode: divideMode,
+            wordCount: totalWordCount,
+            lineCount: totalLineCount,
             metrics: metrics
         };
     }
@@ -1615,9 +1903,25 @@
 
     var btnPrecomp = pnlActions.add("button", undefined, "Precomp Selected Text Box");
     btnPrecomp.preferredSize = [-1, 32];
-    btnPrecomp.helpTip = "Precompose selected text box with padding, auto anchor & rounded background.";
+    btnPrecomp.helpTip = "Precompose selected text box as a single layer with padding, auto anchor & rounded background.";
+
+    var grpDivide = pnlActions.add("group");
+    grpDivide.orientation = "row";
+    grpDivide.alignment = ["fill", "top"];
+    grpDivide.spacing = 8;
+
+    var btnDivideWords = grpDivide.add("button", undefined, "Divide by Words");
+    btnDivideWords.alignment = ["fill", "center"];
+    btnDivideWords.preferredSize = [-1, 30];
+    btnDivideWords.helpTip = "Creates a text layer for each word in matching position, then precomposes.";
+
+    var btnDivideLines = grpDivide.add("button", undefined, "Divide by Lines");
+    btnDivideLines.alignment = ["fill", "center"];
+    btnDivideLines.preferredSize = [-1, 30];
+    btnDivideLines.helpTip = "Creates a text layer for each line in matching position, then precomposes.";
 
     var btnDummyOnly = pnlActions.add("button", undefined, "Create 100-Word Dummy Layer Only");
+    btnDummyOnly.preferredSize = [-1, 24];
     btnDummyOnly.helpTip = "Creates a 100-word Lorem Ipsum text layer in the active composition without precomposing.";
 
     var lblFeedback = win.add("statictext", undefined, "Ready.");
@@ -1710,8 +2014,12 @@
         }
     };
 
-    btnPrecomp.onClick = function() {
-        if (app.beginUndoGroup) app.beginUndoGroup("AE Text Precomp");
+    function executePrecomp(divideMode) {
+        var actionName = "AE Text Precomp";
+        if (divideMode === "words") actionName = "AE Text Precomp (Divide by Words)";
+        else if (divideMode === "lines") actionName = "AE Text Precomp (Divide by Lines)";
+
+        if (app.beginUndoGroup) app.beginUndoGroup(actionName);
         try {
             var w = parseFloat(txtWidth.text) || 800;
             var h = parseFloat(txtHeight.text) || 400;
@@ -1748,14 +2056,22 @@
                 addBackground: addBg,
                 corners: corners,
                 bgColor: bgColor,
-                bgOpacity: bgOpacity
+                bgOpacity: bgOpacity,
+                divideMode: divideMode || "none"
             });
 
             try {
                 syncLayerDetection();
             } catch (eSync) {}
 
-            var msg = "Precomposed '" + res.name + "' [" + res.width + "x" + res.height + "px, Padding: " + res.padding + "px, Textbox: " + res.textboxWidth + "px]";
+            var msg = "";
+            if (divideMode === "words") {
+                msg = "Precomposed '" + res.name + "' divided into " + (res.wordCount || 0) + " word layers [" + res.width + "x" + res.height + "px]";
+            } else if (divideMode === "lines") {
+                msg = "Precomposed '" + res.name + "' divided into " + (res.lineCount || 0) + " line layers [" + res.width + "x" + res.height + "px]";
+            } else {
+                msg = "Precomposed '" + res.name + "' [" + res.width + "x" + res.height + "px, Padding: " + res.padding + "px, Textbox: " + res.textboxWidth + "px]";
+            }
             if (res.createdDummy) {
                 msg += " (Generated 100-word dummy layer)";
             }
@@ -1765,6 +2081,18 @@
         } finally {
             if (app.endUndoGroup) app.endUndoGroup();
         }
+    }
+
+    btnPrecomp.onClick = function() {
+        executePrecomp("none");
+    };
+
+    btnDivideWords.onClick = function() {
+        executePrecomp("words");
+    };
+
+    btnDivideLines.onClick = function() {
+        executePrecomp("lines");
     };
 
     // Initial check

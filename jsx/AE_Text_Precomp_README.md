@@ -1,4 +1,4 @@
-# AE Text Precomp (v1.3.1)
+# AE Text Precomp (v1.4.0)
 
 [![Live Browser Simulator](https://img.shields.io/badge/Live%20Demo-AE%20ScriptUI%20Simulator-2c8cff?style=for-the-badge&logo=javascript)](https://work2survive.github.io/AE_JS_builder/?jsx=AE_Text_Precomp.jsx&autobuild=true)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](LICENSE)
@@ -15,25 +15,29 @@
 
 Whenever an anchor point is placed or changed by this script, the precomposition's position is automatically and mathematically compensated using the layer's complete rotation, scale, and parent transform matrix so that the text box on screen never moves a single pixel from its original position.
 
+In **v1.4.0**, AE Text Precomp introduces **kinetic word and line splitting**: seamlessly divide any paragraph or point text into individual, perfectly styled and positioned layers for every single word or line inside the precomp, ready for kinetic typography animations.
+
 ---
 
-## 🌟 What's New in v1.3.1
+## 🌟 What's New in v1.4.0
 
-1. **Pixel-Perfect Zero-Shift Positioning**:
-   - The original text box reference point is sampled *before* precomposing.
-   - Any difference between the chosen anchor point (Top-Left, Top-Center, Top-Right, or Center) and the internal text box location is completely counteracted by position compensation:
-     $$P_{\text{precomp}} = P_{\text{ref}} + R(\theta) \cdot S \cdot (A_{\text{precomp}} - C_{\text{ref}})$$
-   - Parent layers, 3D rotations, and non-uniform scales are fully preserved without displacement.
-2. **Separated Dimensions & Padding UI**:
-   - Cleanly separated into two dedicated sections: **Dimensions** (Width, Height, Auto-Height) and **Padding** (Padding slider/input, Auto-Detect Width).
-   - Added **"Auto detect width from selected layer"** checkbox as the primary option in the Padding section to dynamically inherit the active text box width.
-3. **Dedicated Background Tab**:
-   - Isolated all background card options into a dedicated **"Background"** tab, keeping the main Precomp tab lightweight and uncluttered.
-   - Independent corner reaction selectors (**Top-Left, Top-Right, Bottom-Right, Bottom-Left**) with 1-click presets (*All Corners*, *Top Only*, *Chat Bubble*, *No Corners*).
-3. **Crash-Proof AE DOM Re-Traversal**:
-   - Hardened `createBackgroundShapeLayer` and `precompTextLayer` against Adobe After Effects internal C++ DOM handle invalidation. All property groups are queried fresh from `bgLayer` with full `try/catch` fail-safe boundaries.
-4. **Enhanced Color Swatch**:
-   - Interactive color swatch button + hex input synchronized across native After Effects `$.colorPicker`, Windows OS color dialogs, and the web simulator.
+1. **"Divide by Words" Action Button**:
+   - Splits paragraph or point text into individual text layers for each word at its exact matching spatial position.
+   - Calculates sub-pixel word offsets along each typographic line using prefix measurement (`measureExact(textBefore)`) to perfectly preserve typographic kerning and letter tracking.
+   - Grounds each word's anchor point to its local glyph bounding box `[rWord.left, rWord.top]`, ensuring clean per-word scaling and rotation.
+   - Names each layer `Word N: "<word>"` inside the precomposition.
+
+2. **"Divide by Lines" Action Button**:
+   - Splits multiline text into individual text layers for each visual line matching the original layout and justification (Left, Center, Right).
+   - Accurately computes line leading (auto or fixed) and baseline steps.
+   - Names each layer `Line N: "<line text>"`.
+
+3. **Complete Typographic Style Inheritance**:
+   - Divided layers inherit all native character formatting: font family, font size, fill color, stroke color, stroke width, tracking, baseline shift, and capitalization.
+   - The optional procedural rounded background card is automatically sent behind all divided layers (`bgLayer.moveToEnd()`).
+
+4. **Zero-Shift Guarantee**:
+   - The overall precomposition container is placed at the exact screen coordinates of the original text box, guaranteeing zero visual jump.
 
 ---
 
@@ -51,7 +55,7 @@ Based on paragraph justification, the precomp anchor point is automatically alig
 - **Right Justified**: $[ \text{Precomp Width} - \text{Padding}, \text{Padding} ]$
 
 ### 3. Smart Textbox Width Compensation
-Inside the precomposition, the paragraph box size is automatically reduced:
+Inside the precomposition, unified paragraph text box size is automatically reduced:
 $$\text{Textbox Width} = \text{Precomp Width} - (2 \times \text{Padding})$$
 This ensures paragraph text flows naturally without clipping against the precomp edges.
 
@@ -59,7 +63,12 @@ This ensures paragraph text flows naturally without clipping against the precomp
 When **"Automatic precomp height (fit to wrapped text bounds)"** is enabled:
 $$\text{Precomp Height} = \text{Text Bounds Height} + (2 \times \text{Padding})$$
 
-### 5. Procedural 2D Rounded Background Card
+### 5. Kinetic Word & Line Text Division
+- Automatically analyzes wrapping, soft breaks, and line breaks in paragraph and point text.
+- Generates dedicated text layers for each word or line with individual transform controls.
+- Text layers are immediately ready for kinetic motion graphics, staggered animations, per-word 3D transforms, or expression animators inside the precomp.
+
+### 6. Procedural 2D Rounded Background Card
 - Derived from [`AE_Extruded_Round_corners`](https://github.com/work2survive/AE_Extruded_Round_corners).
 - Generates an 8-vertex cubic Bézier shape path with Master Slider Controls added to the shape layer:
   - `Card Width`, `Card Height`
@@ -67,7 +76,7 @@ $$\text{Precomp Height} = \text{Text Bounds Height} + (2 \times \text{Padding})$
 - Automatically enforces W3C proportional corner scaling if radii exceed box dimensions:
   $$f = \min\left(1.0, \frac{W}{r_{\text{TL}} + r_{\text{TR}}}, \frac{W}{r_{\text{BL}} + r_{\text{BR}}}, \frac{H}{r_{\text{TL}} + r_{\text{BL}}}, \frac{H}{r_{\text{TR}} + r_{\text{BR}}}\right)$$
 
-### 6. 100-Word Lorem Ipsum Dummy Layer
+### 7. 100-Word Lorem Ipsum Dummy Layer
 If no text layer is selected when clicking precompose (or when clicking **Create 100-Word Dummy Layer Only**), the script generates a 100-word paragraph text layer using standard system fonts (`ArialMT`) formatted to the target dimensions.
 
 ---
@@ -76,7 +85,7 @@ If no text layer is selected when clicking precompose (or when clicking **Create
 
 ```text
 ┌──────────────────────────────────────────────────┐
-│ 📦 AE TEXT PRECOMP v1.3.0                        │
+│ 📦 AE TEXT PRECOMP v1.4.0                        │
 ├──────────────────────────────────────────────────┤
 │ Selected Text Layer Status:                      │
 │ 'Title Layer' (Paragraph Box, LEFT | 42 words)  │
@@ -97,6 +106,7 @@ If no text layer is selected when clicking precompose (or when clicking **Create
 │ └──────────────────────────────────────────────┘ │
 ├──────────────────────────────────────────────────┤
 │ [  Precomp Selected Text Box                  ]  │
+│ [ Divide by Words ]      [ Divide by Lines ]     │
 │ [  Create 100-Word Dummy Layer Only           ]  │
 │ Ready.                                           │
 │ GitHub: work2survive/AE-text-precomp             │
@@ -128,11 +138,10 @@ If no text layer is selected when clicking precompose (or when clicking **Create
 3. **Configure Settings**:
    - In the **Precomp** tab, adjust width, height, and padding.
    - In the **Background** tab, toggle the background card, choose which corners react to padding, and pick a fill color.
-4. **Precompose**: Click **Precomp Selected Text Box**.
-   - A new precomposition is created.
-   - Text is adjusted inside without clipping.
-   - Background card is generated underneath.
-   - Zero visual jump occurs in your main composition.
+4. **Choose Execution Mode**:
+   - **Precomp Selected Text Box**: Precomposes the unified text box with zero visual shift.
+   - **Divide by Words**: Splits the text into individual, styled, and kerned text layers for every word, then precomposes.
+   - **Divide by Lines**: Splits the text into individual text layers for each line in matching positions, then precomposes.
 
 ---
 
