@@ -72,6 +72,12 @@
                             <button id="btn-viewport-theme" class="ae-viewport-theme-btn" title="Viewport Background: Dark (Click for Bright)">
                                 <svg class="ae-icon-moon" viewBox="0 0 24 24" width="13" height="13" fill="currentColor" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block; vertical-align:middle;"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
                             </button>
+                            <button id="btn-viewport-screenshot" class="ae-viewport-screenshot-btn" title="Download Viewport Screenshot (PNG)">
+                                <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block; vertical-align:middle;">
+                                    <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/>
+                                    <circle cx="12" cy="13" r="3"/>
+                                </svg>
+                            </button>
                         </div>
                     </div>
                     <div class="ae-world-scene" id="ae-world-scene">
@@ -266,6 +272,12 @@
                 themeBtn.onclick = () => this.toggleViewportTheme();
             }
 
+            // Viewport screenshot download button
+            const snapBtn = document.getElementById('btn-viewport-screenshot');
+            if (snapBtn) {
+                snapBtn.onclick = () => this.captureViewportScreenshot();
+            }
+
             // Composition Resolution dropdown
             const resSelect = document.getElementById('ae-viewport-resolution');
             if (resSelect) {
@@ -431,6 +443,62 @@
                     localStorage.setItem('ae_viewport_theme', nextTheme);
                 }
             } catch (e) {}
+        }
+
+        async captureViewportScreenshot() {
+            const btn = document.getElementById('btn-viewport-screenshot');
+            try {
+                const vp = this.container ? this.container.querySelector('.ae-viewport') : document.querySelector('.ae-viewport');
+                if (!vp) return;
+
+                if (btn) {
+                    btn.style.pointerEvents = 'none';
+                    btn.style.opacity = '0.5';
+                }
+
+                const isBright = this.container && this.container.classList.contains('ae-theme-bright');
+                const bg = isBright ? '#dcdce0' : '#1a1a1a';
+
+                let dataUrl = '';
+                if (typeof htmlToImage !== 'undefined' && htmlToImage.toPng) {
+                    dataUrl = await htmlToImage.toPng(vp, {
+                        backgroundColor: bg,
+                        filter: (node) => !(node.classList && node.classList.contains('ae-viewport-overlay')),
+                        pixelRatio: Math.max(1, window.devicePixelRatio || 1)
+                    });
+                } else {
+                    throw new Error('Screenshot engine not loaded');
+                }
+
+                if (dataUrl) {
+                    const compName = (this.comp && this.comp.name) ? this.comp.name.replace(/[^a-zA-Z0-9_-]/g, '_') : 'viewport';
+                    const now = new Date();
+                    const pad = (n) => String(n).padStart(2, '0');
+                    const timestamp = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
+                    const filename = `${compName}_${timestamp}.png`;
+
+                    const link = document.createElement('a');
+                    link.download = filename;
+                    link.href = dataUrl;
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+
+                    if (typeof appendConsole === 'function') {
+                        appendConsole(`Viewport screenshot downloaded: ${filename}`);
+                    }
+                }
+            } catch (err) {
+                console.error('[Screenshot Error]', err);
+                if (typeof appendConsole === 'function') {
+                    appendConsole(`Screenshot download failed: ${err.message}`, true);
+                }
+            } finally {
+                if (btn) {
+                    btn.style.pointerEvents = 'auto';
+                    btn.style.opacity = '1';
+                }
+            }
         }
 
         updateCameraTransform() {
