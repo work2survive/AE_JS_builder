@@ -1014,13 +1014,23 @@
         var origBoxW = (metrics.detectedWidth && metrics.detectedWidth > 0) ? metrics.detectedWidth : ((metrics.isBoxText && metrics.boxWidth > 0) ? metrics.boxWidth : 400);
 
         var origRefX = 0;
-        var origRefY = metrics.isBoxText ? 0 : -ascenderHeightInit;
-        if (align === "center") {
-            origRefX = origBoxW / 2;
-        } else if (align === "right") {
-            origRefX = origBoxW;
+        var origRefY = -ascenderHeightInit;
+        if (metrics.isBoxText) {
+            if (align === "center") {
+                origRefX = origBoxW / 2;
+            } else if (align === "right") {
+                origRefX = origBoxW;
+            } else {
+                origRefX = 0;
+            }
         } else {
-            origRefX = 0;
+            if (align === "center") {
+                origRefX = metrics.rect ? (metrics.rect.left + (metrics.rect.width / 2)) : 0;
+            } else if (align === "right") {
+                origRefX = metrics.rect ? (metrics.rect.left + metrics.rect.width) : 0;
+            } else {
+                origRefX = metrics.rect ? metrics.rect.left : 0;
+            }
         }
 
         var sx = (origScale && origScale.length > 0) ? (origScale[0] / 100.0) : 1.0;
@@ -1452,12 +1462,11 @@
                 try { isInner3D = !!innerTextLayer.threeDLayer; } catch (eInner3D) {}
 
                 var innerAnchorX = 0;
-                var innerAnchorY = 0;
+                var innerAnchorY = -ascenderHeightInit;
                 var innerPosX = 0;
                 var innerPosY = padding;
 
                 if (metrics.isBoxText) {
-                    innerAnchorY = 0;
                     if (align === "left") {
                         innerAnchorX = 0;
                         innerPosX = padding;
@@ -1470,7 +1479,6 @@
                     }
                 } else {
                     // Point text
-                    innerAnchorY = metrics.rect ? metrics.rect.top : 0;
                     if (align === "left") {
                         innerAnchorX = metrics.rect ? metrics.rect.left : 0;
                         innerPosX = padding;

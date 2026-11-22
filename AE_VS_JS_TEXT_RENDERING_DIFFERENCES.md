@@ -316,20 +316,34 @@ When precomposing a text layer and modifying its anchor point (e.g. "automatic a
 In native AE, moving a layer's anchor point from $[A_x, A_y]$ to $[A'_x, A'_y]$ displaces the layer on screen by $(A' - A)$ rotated and scaled. When a user creates a precomp with an automatic anchor point, they expect the text box to remain **pinned to its exact screen position**.
 
 ### 13.2 Mathematical Compensation Algorithm
-1. **Before modifying or precomposing**, record the exact composition coordinates of the text's local reference point:
-   $$P_{\text{comp}} = \text{textLayer.toComp}(P_{\text{local\_ref}})$$
-   - Point Text: $P_{\text{local\_ref}} = [0, -\text{ascenderHeight}]$ (Top-Left of text).
-   - Box Text: $P_{\text{local\_ref}} = [0, 0]$ (Top-Left of box).
-2. Inside `newComp`, place the text so that its local reference point sits at $[ \text{padding}, \text{padding} ]$.
-3. In the parent composition:
-   - If `autoAnchor` is active, set the precomp's anchor point to $[ \text{padding}, \text{padding} ]$.
-   - Position `precompLayer` at $P_{\text{comp}}$:
+1. **The Ground Truth of Layer Coordinates in After Effects**:
+   In native After Effects ExtendScript, for **both** Point Text and Paragraph (Box) Text layers:
+   - The layer's vertical origin ($y = 0$) in local layer space is anchored to the **first line's alphabetic baseline**.
+   - In Paragraph (Box) Text, `textDoc.boxTextPos` returns approximately `[0, -25]` (or `[0, -0.78 * fontSize]`), confirming that the top of the box resides at $-\text{ascenderHeight}$ relative to the layer anchor point.
+   - If a script evaluates `layer.toComp([0, 0])` on Box Text, it captures the **baseline** coordinate rather than the top of the box, leading to a downward displacement of exactly $\approx 0.78 \times \text{fontSize}$ (approx 26px to 41px).
+
+2. **Unified Reference Point Formulation**:
+   - For both Point Text and Paragraph Box Text:
+     $$P_{\text{local\_ref}} = [ X_{\text{ref}}, -\text{ascenderHeight} ]$$
+     where $\text{ascenderHeight} = 0.78 \times \text{fontSize}$ (or font ascent).
+   - Capture composition coordinates before precomposing:
+     $$P_{\text{comp}} = \text{textLayer.toComp}(P_{\text{local\_ref}})$$
+3. **Placement Inside `newComp`**:
+   - For standard single-layer precomposition:
+     $$\text{innerTextLayer.transform.anchorPoint} = [ X_{\text{ref}}, -\text{ascenderHeight} ]$$
+     $$\text{innerTextLayer.transform.position} = [ X_{\text{target}}, \text{padding} ]$$
+   - For kinetic word and line layers:
+     $$\text{firstBaselineY} = \text{padding} + \text{ascenderHeight}$$
+   - This ensures the visual top edge of the text sits strictly at $y = \text{padding}$.
+4. **Placement in Parent Composition**:
+   - Set precomposition anchor point to:
+     $$\text{precompAnchor} = [ \text{innerRefX}, \text{padding} ]$$
+   - Position `precompLayer` at:
      $$\text{precompLayer.position} = \begin{cases} 
      \text{origParent.fromComp}(P_{\text{comp}}) & \text{if parented} \\
      P_{\text{comp}} & \text{if unparented}
      \end{cases}$$
-   - If `autoAnchor` is inactive (centered at $[W/2, H/2]$), offset position by $\Delta A = [W/2 - \text{padding}, H/2 - \text{padding}]$ rotated by layer rotation and scaled by layer scale.
-- **Result**: The text on screen does not move a single pixel.
+- **Result**: When $\text{padding} = 0$, the text inside the precomposition aligns over the original text with **zero vertical or horizontal displacement (0.00px error)**.
 
 ---
 
