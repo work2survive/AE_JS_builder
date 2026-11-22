@@ -1261,10 +1261,25 @@
 
         renderTextContent(layer, time) {
             let txt = '';
+            let textDoc = null;
             if (layer.sourceText) {
-                txt = String(layer.sourceText.getValueAtTime(time) || '');
+                const val = (typeof layer.sourceText.getValueAtTime === 'function')
+                    ? layer.sourceText.getValueAtTime(time)
+                    : layer.sourceText.value;
+                if (val && typeof val === 'object') {
+                    txt = (val.text !== undefined) ? String(val.text) : '';
+                    textDoc = val;
+                } else {
+                    txt = String(val || '');
+                }
                 if (!txt && layer.sourceText._baseValue && (!this.isPlaying || time < 0.05)) {
-                    txt = String(layer.sourceText._baseValue);
+                    const bv = layer.sourceText._baseValue;
+                    if (bv && typeof bv === 'object') {
+                        txt = (bv.text !== undefined) ? String(bv.text) : '';
+                        if (!textDoc) textDoc = bv;
+                    } else {
+                        txt = String(bv || '');
+                    }
                 }
             }
             if (!txt && layer.text && typeof layer.text === 'string') {
@@ -1272,12 +1287,52 @@
             }
             if (!txt) return '';
 
-            const fs = layer.fontSize || 24;
-            const lines = txt.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
+            const calib = (typeof AETextCalibration !== 'undefined') ? AETextCalibration : null;
+            const fs = layer.fontSize || (textDoc && textDoc.fontSize) || 24;
+            const requestedFont = layer.fontFamily || layer.font || (textDoc && textDoc.font) || 'system-ui';
+            const profile = calib ? calib.getFontProfile(requestedFont) : { ascentRatio: 0.78, descentRatio: 0.22, leadingRatio: 1.20, charWidthRatio: 0.52 };
+
+            // Paragraph box detection
+            const isBox = (textDoc && textDoc.boxText) || (layer.boxText === true) || Boolean(layer.boxTextSize);
+            const boxSize = (textDoc && textDoc.boxTextSize) || layer.boxTextSize || null;
+            const boxWidth = boxSize ? boxSize[0] : 0;
+            const boxHeight = boxSize ? boxSize[1] : 0;
+
+            const rawJust = (textDoc && textDoc.justification !== undefined) ? textDoc.justification : (layer.justification || 'left');
+            const normJust = (typeof normalizeJustification === 'function')
+                ? normalizeJustification(rawJust)
+                : ((rawJust === 'center' || rawJust === 2 || rawJust === 7414) ? 'center' : ((rawJust === 'right' || rawJust === 1 || rawJust === 7413) ? 'right' : 'left'));
+
+            const tracking = (textDoc && textDoc.tracking !== undefined) ? textDoc.tracking : (layer.tracking || 0);
+            const trackingPx = (tracking / 1000) * fs * (profile.trackingScale || 1.0);
+
+            const firstLineIndent = (textDoc && textDoc.firstLineIndent !== undefined) ? textDoc.firstLineIndent : (layer.firstLineIndent || 0);
+            const leftIndent = (textDoc && textDoc.leftIndent !== undefined) ? textDoc.leftIndent : (layer.leftIndent || 0);
+            const rightIndent = (textDoc && textDoc.rightIndent !== undefined) ? textDoc.rightIndent : (layer.rightIndent || 0);
+            const baselineShift = (textDoc && textDoc.baselineShift !== undefined) ? textDoc.baselineShift : (layer.baselineShift || 0);
+
+            const fauxBold = (textDoc && textDoc.fauxBold) || Boolean(layer.fauxBold) || false;
+            const fauxItalic = (textDoc && textDoc.fauxItalic) || Boolean(layer.fauxItalic) || false;
+            const allCaps = (textDoc && textDoc.allCaps) || Boolean(layer.allCaps) || false;
+
+            const applyStroke = (textDoc && textDoc.applyStroke) || Boolean(layer.applyStroke) || false;
+            const strokeWidth = (textDoc && textDoc.strokeWidth !== undefined) ? textDoc.strokeWidth : (layer.strokeWidth || 1);
+            let strokeColor = '#000000';
+            if (applyStroke) {
+                const rawSc = (textDoc && textDoc.strokeColor) || layer.strokeColor || [0, 0, 0];
+                if (Array.isArray(rawSc)) {
+                    const mult = Math.max(rawSc[0] || 0, rawSc[1] || 0, rawSc[2] || 0) <= 1.0 ? 255 : 1;
+                    strokeColor = `rgb(${Math.round((rawSc[0] || 0) * mult)}, ${Math.round((rawSc[1] || 0) * mult)}, ${Math.round((rawSc[2] || 0) * mult)})`;
+                } else {
+                    strokeColor = String(rawSc);
+                }
+            }
+
+            // Fill color
             let fill = '#ffffff';
             let rawCol = null;
             if (layer.effect && typeof layer.effect === 'function') {
-                const effCol = layer.effect('Status Color') || layer.effect('Status Fill Color') || layer.effect('Color') || layer.effect('Fill');
+                const effCol = layer.effect('Status Color') || layer.effect('Status Fill Color') || layer.effect('Color') || layer.effect('Fill') || layer.effect('Text Fill Color');
                 if (effCol) {
                     const colProp = effCol.property('Color') || effCol.property(1);
                     if (colProp && typeof colProp.getValueAtTime === 'function') {
@@ -1285,37 +1340,22 @@
                     }
                 }
             }
+            if (!rawCol && textDoc && textDoc.fillColor) {
+                rawCol = textDoc.fillColor;
+            }
             if (!rawCol && layer.fontColor) {
                 rawCol = (typeof layer.fontColor.getValueAtTime === 'function') ? layer.fontColor.getValueAtTime(time) : layer.fontColor;
             }
             if (rawCol) {
                 if (Array.isArray(rawCol)) {
-                    const maxVal = Math.max(rawCol[0] || 0, rawCol[1] || 0, rawCol[2] || 0);
-                    const mult = (maxVal <= 1.0) ? 255 : 1;
-                    fill = `rgb(${Math.round(rawCol[0] * mult)}, ${Math.round(rawCol[1] * mult)}, ${Math.round(rawCol[2] * mult)})`;
+                    const mult = Math.max(rawCol[0] || 0, rawCol[1] || 0, rawCol[2] || 0) <= 1.0 ? 255 : 1;
+                    fill = `rgb(${Math.round((rawCol[0] || 0) * mult)}, ${Math.round((rawCol[1] || 0) * mult)}, ${Math.round((rawCol[2] || 0) * mult)})`;
                 } else {
                     fill = String(rawCol);
                 }
             }
 
-            const textAnchor = (layer.justification === 'right' || layer.justification === 1) ? 'end' : ((layer.justification === 'center' || layer.justification === 2) ? 'middle' : 'start');
-            const escapeXml = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-            const lineStep = (layer.leading !== undefined && layer.leading > 0)
-                ? layer.leading
-                : (fs * 1.35 * ((layer.leadingPercent || 100) / 100));
-
-            // Clean separation: textFont for words/symbols, emojiFont specifically for emojis
-            const defaultEmojiStack = "'Noto Color Emoji', 'Segoe UI Emoji', 'Apple Color Emoji', sans-serif";
-            const emojiFont = layer.emojiFontFamily || defaultEmojiStack;
-
-            let requestedFont = layer.fontFamily || layer.font;
-            if (!requestedFont && layer.sourceText) {
-                const stVal = layer.sourceText.getValueAtTime(time);
-                if (stVal && typeof stVal === 'object' && stVal.font) requestedFont = stVal.font;
-                if (!requestedFont && layer.sourceText._baseValue && typeof layer.sourceText._baseValue === 'object') {
-                    requestedFont = layer.sourceText._baseValue.font;
-                }
-            }
+            // Font stack mapping
             let textFont = "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
             if (requestedFont) {
                 const rawFontStr = String(requestedFont).replace(/"/g, "'").trim();
@@ -1344,35 +1384,104 @@
                 }
             }
 
-            // Regular expression matching Unicode emoji sequences, pictographs, variation selectors & ZWJ
+            const defaultEmojiStack = "'Noto Color Emoji', 'Segoe UI Emoji', 'Apple Color Emoji', sans-serif";
+            const emojiFont = layer.emojiFontFamily || defaultEmojiStack;
             const emojiRegex = /(\p{Extended_Pictographic}(?:[\uFE00-\uFE0F]|[\u{1F3FB}-\u{1F3FF}]|\u200D\p{Extended_Pictographic})*|[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]+)/gu;
+            const escapeXml = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
-            const tspans = lines.map((l, li) => {
-                if (!l) {
-                    return `<tspan x="0" dy="${li === 0 ? 0 : lineStep}">&#160;</tspan>`;
+            const leadingVal = (textDoc && textDoc.leading !== undefined) ? textDoc.leading : (layer.leading || 0);
+            const autoLeading = (textDoc && textDoc.autoLeading !== undefined) ? textDoc.autoLeading : (leadingVal <= 0);
+            const effectiveLeading = (!autoLeading && leadingVal > 0)
+                ? leadingVal
+                : (fs * (profile.leadingRatio || 1.20) * ((layer.leadingPercent || 100) / 100));
+
+            let linesData = [];
+            let firstBaselineY = 0;
+
+            if (isBox && boxWidth > 0 && calib) {
+                // Calibrated wrapped lines for paragraph box text
+                linesData = calib.wrapParagraph(txt, boxWidth, fs, requestedFont, { firstLineIndent, leftIndent, rightIndent }, tracking);
+                firstBaselineY = (fs * profile.ascentRatio) + (profile.yOffset || 0) + (calib.firstBaselineOffset || 0) - baselineShift;
+            } else {
+                // Point text lines
+                const rawLines = txt.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
+                linesData = rawLines.map((l, i) => ({
+                    text: l,
+                    isFirstLine: i === 0,
+                    lineWidth: calib ? calib.measureLineWidth(l, fs, requestedFont, tracking) : 0,
+                    indentX: 0
+                }));
+                firstBaselineY = -baselineShift + (profile.yOffset || 0);
+            }
+
+            // Build calibrated tspans
+            const tspans = linesData.map((lineObj, li) => {
+                const lineText = lineObj.text;
+                const lineY = firstBaselineY + (li * effectiveLeading);
+
+                let lineX = 0;
+                let textAnchor = 'start';
+
+                if (isBox && boxWidth > 0) {
+                    if (normJust === 'center') {
+                        lineX = (boxWidth + leftIndent - rightIndent) / 2;
+                        textAnchor = 'middle';
+                    } else if (normJust === 'right') {
+                        lineX = boxWidth - rightIndent;
+                        textAnchor = 'end';
+                    } else {
+                        lineX = lineObj.indentX !== undefined ? lineObj.indentX : (leftIndent + (lineObj.isFirstLine ? firstLineIndent : 0));
+                        textAnchor = 'start';
+                    }
+                } else {
+                    if (normJust === 'center') {
+                        lineX = 0;
+                        textAnchor = 'middle';
+                    } else if (normJust === 'right') {
+                        lineX = 0;
+                        textAnchor = 'end';
+                    } else {
+                        lineX = 0;
+                        textAnchor = 'start';
+                    }
                 }
+
+                if (!lineText) {
+                    return `<tspan x="${lineX}" y="${lineY}" text-anchor="${textAnchor}">&#160;</tspan>`;
+                }
+
                 const parts = [];
                 let lastIndex = 0;
                 let match;
                 emojiRegex.lastIndex = 0;
-                while ((match = emojiRegex.exec(l)) !== null) {
+                while ((match = emojiRegex.exec(lineText)) !== null) {
                     if (match.index > lastIndex) {
-                        parts.push(`<tspan font-family="${textFont}">${escapeXml(l.substring(lastIndex, match.index))}</tspan>`);
+                        parts.push(`<tspan font-family="${textFont}">${escapeXml(lineText.substring(lastIndex, match.index))}</tspan>`);
                     }
                     parts.push(`<tspan font-family="${emojiFont}" font-size="${Math.round(fs * 1.05)}px">${escapeXml(match[0])}</tspan>`);
                     lastIndex = emojiRegex.lastIndex;
                 }
-                if (lastIndex < l.length) {
-                    parts.push(`<tspan font-family="${textFont}">${escapeXml(l.substring(lastIndex))}</tspan>`);
+                if (lastIndex < lineText.length) {
+                    parts.push(`<tspan font-family="${textFont}">${escapeXml(lineText.substring(lastIndex))}</tspan>`);
                 }
                 if (parts.length === 0) {
-                    parts.push(`<tspan font-family="${textFont}">${escapeXml(l)}</tspan>`);
+                    parts.push(`<tspan font-family="${textFont}">${escapeXml(lineText)}</tspan>`);
                 }
-                return `<tspan x="0" dy="${li === 0 ? 0 : lineStep}">${parts.join('')}</tspan>`;
+
+                return `<tspan x="${lineX}" y="${lineY}" text-anchor="${textAnchor}">${parts.join('')}</tspan>`;
             }).join('');
 
+            const strokeAttr = applyStroke ? `stroke="${strokeColor}" stroke-width="${strokeWidth}"` : '';
+            const styleAttr = [
+                'user-select:none',
+                `font-weight:${fauxBold ? 'bold' : 'normal'}`,
+                `font-style:${fauxItalic ? 'italic' : 'normal'}`,
+                `text-transform:${allCaps ? 'uppercase' : 'none'}`,
+                trackingPx !== 0 ? `letter-spacing:${trackingPx.toFixed(2)}px` : ''
+            ].filter(Boolean).join('; ');
+
             return `
-                <text x="0" y="0" fill="${fill}" font-size="${fs}px" text-anchor="${textAnchor}" style="user-select:none; font-weight:400;">
+                <text fill="${fill}" font-size="${fs}px" ${strokeAttr} style="${styleAttr}">
                     ${tspans}
                 </text>
             `;

@@ -189,7 +189,15 @@ The simulator includes built-in sample scripts located in [`samples/`](samples/)
      - **Fill Styles & Gradients**: Flat RGB solid colors, semi-transparent fills, multi-stop linear gradients (`ADBE Vector Graphic - G-Fill`), and radial gradients.
    - **Live Demo**: [https://work2survive.github.io/AE_JS_builder/?sample=ae_emulator_tester.jsx&autobuild=true](https://work2survive.github.io/AE_JS_builder/?sample=ae_emulator_tester.jsx&autobuild=true)
 
-2. **Text Roundabout** (`samples/text_roundabout.jsx` - v1.0):
+2. **Text Calibration Matrix (8x5 = 40 Text Boxes)** (`samples/text_calibration.jsx` - v1.0):
+   - Comprehensive text and paragraph box calibration harness creating an 8x5 matrix of 40 distinct text boxes in a 1920x1080 composition to benchmark, calibrate, and compare typography between native After Effects and the Web Emulator:
+     - **8 Column Font Profiles**: Arial / Helvetica, Georgia, Times New Roman, Courier New, Verdana, Trebuchet MS, Impact, Segoe UI.
+     - **5 Row Alignment & Indent Modes**: Left Justified (0px indent), Center Justified (symmetric margins + tracking), Right Justified (14px right margin), Paragraph Indents (+24px) & Hanging Outdents (-18px / 18px left margin), and Advanced Synthesis (Faux Bold, Faux Italic, All Caps, Outline Strokes, Letter Tracking, and Baseline Shift).
+     - **Visual Calibration Guides per Cell**: Background box boundary card (`boxTextSize`), origin crosshair `[0, 0]`, cell badge, and dynamic live `sourceRectAtTime()` cyan bounding outline.
+     - **Global Emulator Calibration Engine**: Backed by the runtime `AETextCalibration` system in `js/ae-core.js` and `js/ae-renderer.js` that standardizes baseline ascent/descent, paragraph word wrapping, indents, and `sourceRectAtTime()` boundaries across all emulated JSX scripts.
+   - **Live Demo**: [https://work2survive.github.io/AE_JS_builder/?sample=text_calibration.jsx&autobuild=true](https://work2survive.github.io/AE_JS_builder/?sample=text_calibration.jsx&autobuild=true)
+
+3. **Text Roundabout** (`samples/text_roundabout.jsx` - v1.0):
    - Parametric 3D circular word carousel spinning around a central master 3D controller null, featuring 6 to 12 configurable random or custom words, -12 to +12 continuous spin speed control, 3D tilt, and orientation modes (carousel, inward, billboard).
    - **Live Demo**: [https://work2survive.github.io/AE_JS_builder/?sample=text_roundabout.jsx&autobuild=true](https://work2survive.github.io/AE_JS_builder/?sample=text_roundabout.jsx&autobuild=true)
 

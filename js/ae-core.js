@@ -1569,25 +1569,86 @@
     }
 
     const ParagraphJustification = {
-        LEFT_JUSTIFY: 0,
-        RIGHT_JUSTIFY: 1,
-        CENTER_JUSTIFY: 2
+        LEFT_JUSTIFY: 7412,
+        RIGHT_JUSTIFY: 7413,
+        CENTER_JUSTIFY: 7414,
+        FULL_JUSTIFY: 7415,
+        JUSTIFY_LAST_LEFT: 7415,
+        JUSTIFY_LAST_RIGHT: 7416,
+        JUSTIFY_LAST_CENTER: 7417,
+        JUSTIFY_ALL: 7418
     };
+
+    function normalizeJustification(j) {
+        if (j === 7414 || j === 2 || j === 'center' || j === 'CENTER_JUSTIFY' || j === ParagraphJustification.CENTER_JUSTIFY) return 'center';
+        if (j === 7413 || j === 1 || j === 'right' || j === 'RIGHT_JUSTIFY' || j === ParagraphJustification.RIGHT_JUSTIFY) return 'right';
+        if (j === 7415 || j === 7416 || j === 7417 || j === 7418 || j === 3 || j === 'justify' || j === 'full' || j === 'FULL_JUSTIFY' || j === ParagraphJustification.FULL_JUSTIFY) return 'justify';
+        return 'left';
+    }
 
     class TextDocument {
         constructor(text = '', fontSize = 24, font = 'system-ui, -apple-system, sans-serif', color = [1, 1, 1], justification = 'left') {
             this.text = String(text || '');
             this.fontSize = fontSize;
             this.font = font;
+            this.fontFamily = font;
+            this.fontStyle = 'Regular';
             this.fillColor = color;
             this.applyFill = true;
             this.applyStroke = false;
             this.strokeColor = [1, 1, 1];
             this.strokeWidth = 1;
-            this.justification = (justification === 2 || justification === 'center') ? ParagraphJustification.CENTER_JUSTIFY
-                : ((justification === 1 || justification === 'right') ? ParagraphJustification.RIGHT_JUSTIFY : ParagraphJustification.LEFT_JUSTIFY);
+            this.strokeOverFill = false;
+            this.justification = (typeof justification === 'number' || typeof justification === 'string')
+                ? justification
+                : ParagraphJustification.LEFT_JUSTIFY;
             this.tracking = 0;
             this.leading = 0;
+            this.autoLeading = true;
+            this.baselineShift = 0;
+            this.firstLineIndent = 0;
+            this.leftIndent = 0;
+            this.rightIndent = 0;
+            this.spaceBefore = 0;
+            this.spaceAfter = 0;
+            this.fauxBold = false;
+            this.fauxItalic = false;
+            this.allCaps = false;
+            this.smallCaps = false;
+            this.superscript = false;
+            this.subscript = false;
+            this.horizontalScale = 1.0;
+            this.verticalScale = 1.0;
+            this.boxText = false;
+            this.boxTextSize = null;
+            this.boxTextPos = [0, 0];
+        }
+
+        get pointText() {
+            return !this.boxText;
+        }
+
+        set pointText(val) {
+            this.boxText = !val;
+        }
+
+        setBoxTextSize(size) {
+            if (Array.isArray(size) && size.length >= 2) {
+                this.boxTextSize = [Number(size[0]), Number(size[1])];
+                this.boxText = true;
+            } else {
+                this.boxTextSize = null;
+                this.boxText = false;
+            }
+        }
+
+        get font() {
+            return this.fontFamily || this._font || 'system-ui, -apple-system, sans-serif';
+        }
+
+        set font(val) {
+            this._font = val;
+            this.fontFamily = val;
         }
 
         toString() {
@@ -1598,6 +1659,348 @@
             return String(this.text || '');
         }
     }
+
+    // -------------------------------------------------------------
+    // After Effects Typography & Box Text Calibration System
+    // Standardizes baseline, ascent/descent, word wrapping, and
+    // sourceRectAtTime boundaries to match native Adobe After Effects.
+    // -------------------------------------------------------------
+    const AETextCalibration = {
+        ascentRatio: 0.78,
+        descentRatio: 0.22,
+        capHeightRatio: 0.70,
+        leadingRatio: 1.20,
+        trackingScale: 1.0,        // 1000 tracking units = 1 em
+        firstBaselineOffset: 0.0,  // Fine-tuning baseline offset in px
+        globalXOffset: 0.0,
+        globalYOffset: 0.0,
+
+        fontProfiles: {
+            'arial': {
+                ascentRatio: 0.78,
+                descentRatio: 0.22,
+                charWidthRatio: 0.52,
+                trackingScale: 1.0,
+                xOffset: 0,
+                yOffset: 0,
+                monospace: false
+            },
+            'georgia': {
+                ascentRatio: 0.81,
+                descentRatio: 0.24,
+                charWidthRatio: 0.50,
+                trackingScale: 1.0,
+                xOffset: 0,
+                yOffset: 0,
+                monospace: false
+            },
+            'times': {
+                ascentRatio: 0.77,
+                descentRatio: 0.23,
+                charWidthRatio: 0.46,
+                trackingScale: 1.0,
+                xOffset: 0,
+                yOffset: 0,
+                monospace: false
+            },
+            'courier': {
+                ascentRatio: 0.82,
+                descentRatio: 0.22,
+                charWidthRatio: 0.60,
+                trackingScale: 1.0,
+                xOffset: 0,
+                yOffset: 0,
+                monospace: true
+            },
+            'verdana': {
+                ascentRatio: 0.82,
+                descentRatio: 0.22,
+                charWidthRatio: 0.58,
+                trackingScale: 1.0,
+                xOffset: 0,
+                yOffset: 0,
+                monospace: false
+            },
+            'trebuchet': {
+                ascentRatio: 0.79,
+                descentRatio: 0.22,
+                charWidthRatio: 0.54,
+                trackingScale: 1.0,
+                xOffset: 0,
+                yOffset: 0,
+                monospace: false
+            },
+            'impact': {
+                ascentRatio: 0.85,
+                descentRatio: 0.18,
+                charWidthRatio: 0.47,
+                trackingScale: 1.0,
+                xOffset: 0,
+                yOffset: 0,
+                monospace: false
+            },
+            'tahoma': {
+                ascentRatio: 0.81,
+                descentRatio: 0.21,
+                charWidthRatio: 0.53,
+                trackingScale: 1.0,
+                xOffset: 0,
+                yOffset: 0,
+                monospace: false
+            },
+            'myriad': {
+                ascentRatio: 0.78,
+                descentRatio: 0.22,
+                charWidthRatio: 0.51,
+                trackingScale: 1.0,
+                xOffset: 0,
+                yOffset: 0,
+                monospace: false
+            },
+            'default': {
+                ascentRatio: 0.78,
+                descentRatio: 0.22,
+                charWidthRatio: 0.51,
+                trackingScale: 1.0,
+                xOffset: 0,
+                yOffset: 0,
+                monospace: false
+            }
+        },
+
+        getFontProfile(fontName) {
+            if (!fontName) return this.fontProfiles['default'];
+            const fn = String(fontName).toLowerCase();
+            for (const [key, profile] of Object.entries(this.fontProfiles)) {
+                if (key !== 'default' && fn.includes(key)) return profile;
+            }
+            return this.fontProfiles['default'];
+        },
+
+        measureCharWidth(char, fontSize, profile) {
+            const fs = fontSize || 24;
+            if (!char) return 0;
+            if (profile && profile.monospace) return fs * profile.charWidthRatio;
+            const code = char.charCodeAt(0);
+            if (code >= 0xD800 && code <= 0xDBFF) return fs * 1.15;
+            if (code > 255) return fs * 1.05;
+            if ("ijl|!.,:;'I `".indexOf(char) !== -1) return fs * 0.28;
+            if ("wmWM@#%&".indexOf(char) !== -1) return fs * 0.82;
+            if ("ABCDEFGHJKLMNOPQRSTUVWXYZ".indexOf(char) !== -1) return fs * 0.64;
+            const baseRatio = (profile && profile.charWidthRatio) || 0.51;
+            return fs * baseRatio;
+        },
+
+        measureLineWidth(str, fontSize, fontName, tracking = 0) {
+            if (!str) return 0;
+            const profile = this.getFontProfile(fontName);
+            const fs = fontSize || 24;
+            let total = 0;
+            for (let i = 0; i < str.length; i++) {
+                total += this.measureCharWidth(str[i], fs, profile);
+            }
+            if (tracking && str.length > 1) {
+                const trackDelta = ((tracking / 1000) * fs * (profile.trackingScale || 1.0));
+                total += (str.length - 1) * trackDelta;
+            }
+            return Math.max(0, total);
+        },
+
+        wrapParagraph(text, boxWidth, fontSize, fontName, indents = {}, tracking = 0) {
+            const str = String(text || '').replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+            const paras = str.split('\n');
+            const firstLineIndent = indents.firstLineIndent || 0;
+            const leftIndent = indents.leftIndent || 0;
+            const rightIndent = indents.rightIndent || 0;
+            const availBaseWidth = Math.max(20, boxWidth - leftIndent - rightIndent);
+            const lines = [];
+
+            for (let p = 0; p < paras.length; p++) {
+                const para = paras[p];
+                const words = para.match(/\S+|\s+/g) || [];
+                if (words.length === 0) {
+                    lines.push({ text: '', isFirstLine: true, lineWidth: 0, indentX: leftIndent + firstLineIndent });
+                    continue;
+                }
+
+                let curLine = '';
+                let isFirstLineOfPara = true;
+                let currentLimit = Math.max(10, availBaseWidth - firstLineIndent);
+
+                for (let w = 0; w < words.length; w++) {
+                    const token = words[w];
+                    const testLine = curLine + token;
+                    const testW = this.measureLineWidth(testLine.trimEnd(), fontSize, fontName, tracking);
+
+                    if (testW > currentLimit && curLine.trim().length > 0) {
+                        const finalLineStr = curLine.trimEnd();
+                        lines.push({
+                            text: finalLineStr,
+                            isFirstLine: isFirstLineOfPara,
+                            lineWidth: this.measureLineWidth(finalLineStr, fontSize, fontName, tracking),
+                            indentX: leftIndent + (isFirstLineOfPara ? firstLineIndent : 0)
+                        });
+                        curLine = token.trimStart();
+                        isFirstLineOfPara = false;
+                        currentLimit = availBaseWidth;
+                    } else {
+                        curLine = testLine;
+                    }
+                }
+
+                if (curLine.length > 0) {
+                    const finalLineStr = curLine.trimEnd();
+                    lines.push({
+                        text: finalLineStr,
+                        isFirstLine: isFirstLineOfPara,
+                        lineWidth: this.measureLineWidth(finalLineStr, fontSize, fontName, tracking),
+                        indentX: leftIndent + (isFirstLineOfPara ? firstLineIndent : 0)
+                    });
+                }
+            }
+
+            return lines;
+        },
+
+        computeSourceRect(layer, time) {
+            let str = '';
+            let textDoc = null;
+            if (layer.sourceText) {
+                const val = (typeof layer.sourceText.getValueAtTime === 'function')
+                    ? layer.sourceText.getValueAtTime(time || 0)
+                    : layer.sourceText.value;
+                if (val && typeof val === 'object') {
+                    str = (val.text !== undefined) ? String(val.text) : '';
+                    textDoc = val;
+                } else {
+                    str = String(val || '');
+                }
+                if (!str && layer.sourceText._baseValue) {
+                    const bv = layer.sourceText._baseValue;
+                    if (bv && typeof bv === 'object') {
+                        str = (bv.text !== undefined) ? String(bv.text) : '';
+                        if (!textDoc) textDoc = bv;
+                    } else {
+                        str = String(bv || '');
+                    }
+                }
+            }
+            if (!str && layer.text && typeof layer.text === 'string') {
+                str = layer.text;
+            }
+
+            const fs = layer.fontSize || (textDoc && textDoc.fontSize) || 24;
+            const fontName = layer.fontFamily || layer.font || (textDoc && textDoc.font) || 'system-ui';
+            const profile = this.getFontProfile(fontName);
+            const tracking = (textDoc && textDoc.tracking !== undefined) ? textDoc.tracking : (layer.tracking || 0);
+            const justification = (textDoc && textDoc.justification !== undefined) ? textDoc.justification : (layer.justification || 'left');
+            const normJust = normalizeJustification(justification);
+            const baselineShift = (textDoc && textDoc.baselineShift !== undefined) ? textDoc.baselineShift : (layer.baselineShift || 0);
+
+            const isBox = (textDoc && textDoc.boxText) || (layer.boxText === true) || Boolean(layer.boxTextSize);
+            const boxSize = (textDoc && textDoc.boxTextSize) || layer.boxTextSize || null;
+            const boxWidth = boxSize ? boxSize[0] : 0;
+            const boxHeight = boxSize ? boxSize[1] : 0;
+
+            const firstLineIndent = (textDoc && textDoc.firstLineIndent !== undefined) ? textDoc.firstLineIndent : (layer.firstLineIndent || 0);
+            const leftIndent = (textDoc && textDoc.leftIndent !== undefined) ? textDoc.leftIndent : (layer.leftIndent || 0);
+            const rightIndent = (textDoc && textDoc.rightIndent !== undefined) ? textDoc.rightIndent : (layer.rightIndent || 0);
+
+            const leadingVal = (textDoc && textDoc.leading !== undefined) ? textDoc.leading : (layer.leading || 0);
+            const autoLeading = (textDoc && textDoc.autoLeading !== undefined) ? textDoc.autoLeading : (leadingVal <= 0);
+            const effectiveLeading = (!autoLeading && leadingVal > 0) ? leadingVal : (fs * (profile.leadingRatio || this.leadingRatio));
+
+            if (!isBox || boxWidth <= 0) {
+                // Point Text
+                const rawLines = str.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
+                let maxW = 0;
+                for (const l of rawLines) {
+                    const lw = this.measureLineWidth(l, fs, fontName, tracking);
+                    if (lw > maxW) maxW = lw;
+                }
+                const lineCount = Math.max(1, rawLines.length);
+                const glyphHeight = fs * (profile.ascentRatio + profile.descentRatio);
+                const totalH = (lineCount - 1) * effectiveLeading + glyphHeight;
+
+                // In AE Point Text: baseline is y=0, glyphs go up into negative space: top = -ascent
+                const top = -(fs * profile.ascentRatio) - baselineShift + (profile.yOffset || 0);
+                let left = 0;
+                if (normJust === 'center') {
+                    left = -maxW / 2;
+                } else if (normJust === 'right') {
+                    left = -maxW;
+                } else {
+                    left = 0;
+                }
+                return {
+                    top: Math.round(top * 100) / 100,
+                    left: Math.round(left * 100) / 100,
+                    width: Math.round(maxW * 100) / 100,
+                    height: Math.round(totalH * 100) / 100
+                };
+            } else {
+                // Paragraph Box Text
+                const lines = this.wrapParagraph(str, boxWidth, fs, fontName, { firstLineIndent, leftIndent, rightIndent }, tracking);
+                let maxW = 0;
+                for (const l of lines) {
+                    if (l.lineWidth > maxW) maxW = l.lineWidth;
+                }
+                const lineCount = Math.max(1, lines.length);
+                const glyphHeight = fs * (profile.ascentRatio + profile.descentRatio);
+                const totalH = (lineCount - 1) * effectiveLeading + glyphHeight;
+
+                // In AE Box Text: top is relative to box top [0, 0]
+                const top = Math.max(0, (profile.yOffset || 0));
+                let left = leftIndent;
+                if (normJust === 'center') {
+                    left = Math.max(0, (boxWidth - maxW) / 2);
+                } else if (normJust === 'right') {
+                    left = Math.max(0, boxWidth - maxW - rightIndent);
+                } else {
+                    left = leftIndent + (lines.length > 0 && lines[0].isFirstLine ? firstLineIndent : 0);
+                }
+                return {
+                    top: Math.round(top * 100) / 100,
+                    left: Math.round(left * 100) / 100,
+                    width: Math.round(maxW * 100) / 100,
+                    height: Math.round(totalH * 100) / 100
+                };
+            }
+        },
+
+        setCalibrationOffset(param, value) {
+            if (typeof param === 'object' && param !== null) {
+                Object.assign(this, param);
+            } else if (typeof param === 'string' && value !== undefined) {
+                this[param] = value;
+            }
+        },
+
+        resetCalibration() {
+            this.ascentRatio = 0.78;
+            this.descentRatio = 0.22;
+            this.capHeightRatio = 0.70;
+            this.leadingRatio = 1.20;
+            this.trackingScale = 1.0;
+            this.firstBaselineOffset = 0.0;
+            this.globalXOffset = 0.0;
+            this.globalYOffset = 0.0;
+        },
+
+        exportCalibration() {
+            return {
+                ascentRatio: this.ascentRatio,
+                descentRatio: this.descentRatio,
+                capHeightRatio: this.capHeightRatio,
+                leadingRatio: this.leadingRatio,
+                trackingScale: this.trackingScale,
+                firstBaselineOffset: this.firstBaselineOffset,
+                globalXOffset: this.globalXOffset,
+                globalYOffset: this.globalYOffset,
+                fontProfiles: JSON.parse(JSON.stringify(this.fontProfiles))
+            };
+        }
+    };
 
     class TextLayer extends Layer {
         constructor(name = 'Text Layer', containingComp = null, initialText = '') {
@@ -1615,19 +2018,48 @@
             this.text.properties.push(this.sourceText);
             this.text.sourceText = this.sourceText;
 
+            // Direct typography state on layer
+            this.fontSize = 24;
+            this.fontColor = [1, 1, 1];
+            this.fontFamily = 'system-ui, -apple-system, sans-serif';
+            this.emojiFontFamily = "'Noto Color Emoji', 'Segoe UI Emoji', 'Apple Color Emoji', sans-serif";
+            this.justification = 'left';
+            this.tracking = 0;
+            this.leading = 0;
+            this.autoLeading = true;
+            this.baselineShift = 0;
+            this.firstLineIndent = 0;
+            this.leftIndent = 0;
+            this.rightIndent = 0;
+            this.fauxBold = false;
+            this.fauxItalic = false;
+            this.allCaps = false;
+            this.applyStroke = false;
+            this.strokeWidth = 1;
+            this.strokeColor = [1, 1, 1];
+            this.boxText = false;
+            this.boxTextSize = null;
+
             // Hook setValue to sync layer properties when TextDocument or string is assigned
             const origSetValue = this.sourceText.setValue.bind(this.sourceText);
             this.sourceText.setValue = (val) => {
                 if (val && typeof val === 'object') {
-                    if (val.text !== undefined) {
-                        textDoc.text = String(val.text);
-                    }
+                    if (val.text !== undefined) textDoc.text = String(val.text);
                     if (val.fontSize !== undefined) {
                         textDoc.fontSize = val.fontSize;
                         this.fontSize = val.fontSize;
                     }
-                    if (val.font !== undefined) {
+                    if (val.font !== undefined && val.font !== 'system-ui, -apple-system, sans-serif') {
                         textDoc.font = val.font;
+                        textDoc.fontFamily = val.font;
+                        this.fontFamily = val.font;
+                    } else if (val.fontFamily !== undefined) {
+                        textDoc.fontFamily = val.fontFamily;
+                        textDoc.font = val.fontFamily;
+                        this.fontFamily = val.fontFamily;
+                    } else if (val.font !== undefined) {
+                        textDoc.font = val.font;
+                        textDoc.fontFamily = val.font;
                         this.fontFamily = val.font;
                     }
                     if (val.fillColor !== undefined) {
@@ -1636,12 +2068,70 @@
                     }
                     if (val.justification !== undefined) {
                         textDoc.justification = val.justification;
-                        if (val.justification === 2 || val.justification === ParagraphJustification.CENTER_JUSTIFY || val.justification === 'center') {
-                            this.justification = 'center';
-                        } else if (val.justification === 1 || val.justification === ParagraphJustification.RIGHT_JUSTIFY || val.justification === 'right') {
-                            this.justification = 'right';
-                        } else {
-                            this.justification = 'left';
+                        this.justification = normalizeJustification(val.justification);
+                    }
+                    if (val.tracking !== undefined) {
+                        textDoc.tracking = val.tracking;
+                        this.tracking = val.tracking;
+                    }
+                    if (val.leading !== undefined) {
+                        textDoc.leading = val.leading;
+                        this.leading = val.leading;
+                    }
+                    if (val.autoLeading !== undefined) {
+                        textDoc.autoLeading = val.autoLeading;
+                        this.autoLeading = val.autoLeading;
+                    }
+                    if (val.baselineShift !== undefined) {
+                        textDoc.baselineShift = val.baselineShift;
+                        this.baselineShift = val.baselineShift;
+                    }
+                    if (val.firstLineIndent !== undefined) {
+                        textDoc.firstLineIndent = val.firstLineIndent;
+                        this.firstLineIndent = val.firstLineIndent;
+                    }
+                    if (val.leftIndent !== undefined) {
+                        textDoc.leftIndent = val.leftIndent;
+                        this.leftIndent = val.leftIndent;
+                    }
+                    if (val.rightIndent !== undefined) {
+                        textDoc.rightIndent = val.rightIndent;
+                        this.rightIndent = val.rightIndent;
+                    }
+                    if (val.fauxBold !== undefined) {
+                        textDoc.fauxBold = val.fauxBold;
+                        this.fauxBold = val.fauxBold;
+                    }
+                    if (val.fauxItalic !== undefined) {
+                        textDoc.fauxItalic = val.fauxItalic;
+                        this.fauxItalic = val.fauxItalic;
+                    }
+                    if (val.allCaps !== undefined) {
+                        textDoc.allCaps = val.allCaps;
+                        this.allCaps = val.allCaps;
+                    }
+                    if (val.applyStroke !== undefined) {
+                        textDoc.applyStroke = val.applyStroke;
+                        this.applyStroke = val.applyStroke;
+                    }
+                    if (val.strokeWidth !== undefined) {
+                        textDoc.strokeWidth = val.strokeWidth;
+                        this.strokeWidth = val.strokeWidth;
+                    }
+                    if (val.strokeColor !== undefined) {
+                        textDoc.strokeColor = val.strokeColor;
+                        this.strokeColor = val.strokeColor;
+                    }
+                    if (val.boxText !== undefined) {
+                        textDoc.boxText = Boolean(val.boxText);
+                        this.boxText = Boolean(val.boxText);
+                    }
+                    if (val.boxTextSize !== undefined) {
+                        textDoc.boxTextSize = val.boxTextSize;
+                        this.boxTextSize = val.boxTextSize;
+                        if (val.boxTextSize) {
+                            textDoc.boxText = true;
+                            this.boxText = true;
                         }
                     }
                     this.sourceText._baseValue = textDoc;
@@ -1656,11 +2146,6 @@
             };
 
             this.properties.unshift(this.text);
-            this.fontSize = 24;
-            this.fontColor = [1, 1, 1];
-            this.fontFamily = 'system-ui, -apple-system, sans-serif';
-            this.emojiFontFamily = "'Noto Color Emoji', 'Segoe UI Emoji', 'Apple Color Emoji', sans-serif";
-            this.justification = 'left'; // 'left' | 'center' | 'right'
         }
 
         get font() {
@@ -1674,6 +2159,24 @@
             }
         }
 
+        setBoxTextSize(size) {
+            if (Array.isArray(size) && size.length >= 2) {
+                this.boxTextSize = [Number(size[0]), Number(size[1])];
+                this.boxText = true;
+                if (this.sourceText && this.sourceText._baseValue && typeof this.sourceText._baseValue === 'object') {
+                    this.sourceText._baseValue.setBoxTextSize(size);
+                }
+            } else {
+                this.boxTextSize = null;
+                this.boxText = false;
+                if (this.sourceText && this.sourceText._baseValue && typeof this.sourceText._baseValue === 'object') {
+                    this.sourceText._baseValue.setBoxTextSize(null);
+                }
+            }
+            const comp = this.containingComp || app?.project?.activeItem;
+            if (comp && comp._onChanged) comp._onChanged();
+        }
+
         property(nameOrIndex) {
             if (nameOrIndex === 'Text' || nameOrIndex === 'ADBE Text Properties') return this.text;
             if (nameOrIndex === 'Source Text' || nameOrIndex === 'ADBE Text Document') return this.sourceText;
@@ -1681,51 +2184,7 @@
         }
 
         sourceRectAtTime(time, includeExtents) {
-            let str = '';
-            if (this.sourceText) {
-                const val = this.sourceText.getValueAtTime(time || 0);
-                str = (val && typeof val === 'object' && val.text !== undefined) ? String(val.text) : String(val || '');
-                if (!str && this.sourceText._baseValue) {
-                    const bv = this.sourceText._baseValue;
-                    str = (bv && typeof bv === 'object' && bv.text !== undefined) ? String(bv.text) : String(bv);
-                }
-            }
-            if (!str && this.text && typeof this.text === 'string') {
-                str = this.text;
-            }
-            const lines = str.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
-            const fs = this.fontSize || 24;
-            const lineH = fs * 1.35;
-            let maxW = 0;
-            for (const line of lines) {
-                let w = 0;
-                let i = 0;
-                while (i < line.length) {
-                    const code = line.charCodeAt(i);
-                    if (code >= 0xD800 && code <= 0xDBFF && (i + 1 < line.length)) {
-                        w += fs * 1.15;
-                        i += 2;
-                        continue;
-                    }
-                    if (code > 255) {
-                        w += fs * 1.15;
-                    } else if ("ijl|!.,:;'I `".indexOf(line.charAt(i)) !== -1) {
-                        w += fs * 0.28;
-                    } else if ("wmWM@#%&".indexOf(line.charAt(i)) !== -1) {
-                        w += fs * 0.80;
-                    } else {
-                        w += fs * 0.52;
-                    }
-                    i++;
-                }
-                if (w > maxW) maxW = w;
-            }
-            return {
-                top: 0,
-                left: 0,
-                width: maxW,
-                height: lines.length * lineH
-            };
+            return AETextCalibration.computeSourceRect(this, time);
         }
     }
 
@@ -2485,6 +2944,8 @@
     global.VectorGraphicGradientStroke = VectorGraphicGradientStroke;
     global.TextDocument = TextDocument;
     global.ParagraphJustification = ParagraphJustification;
+    global.normalizeJustification = normalizeJustification;
+    global.AETextCalibration = AETextCalibration;
     global.EffectGroup = EffectGroup;
     global.EffectCheckboxControl = EffectCheckboxControl;
     global.EffectSliderControl = EffectSliderControl;
