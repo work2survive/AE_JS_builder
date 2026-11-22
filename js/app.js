@@ -318,13 +318,10 @@
                 iconHtml = `<span style="font-weight:700; font-family:sans-serif; color:#ff6b81; font-size:11px;">T</span>`;
             }
 
-            let badgesHtml = '';
             if (isPrecomp) {
                 badgesHtml += `<span class="ae-badge-type static ae-badge-precomp" title="Composition / Precomp layer">[PRECOMP]</span>`;
                 badgesHtml += `<span class="ae-badge-comp-dims" title="Dimensions: ${layer.source.width}×${layer.source.height} px">${layer.source.width}×${layer.source.height}</span>`;
                 badgesHtml += `<button class="ae-btn-open-comp" data-action="open-comp" data-comp-name="${escapeHtml(layer.source.name)}" title="Open '${escapeHtml(layer.source.name)}' in viewer">Open Comp ↗</button>`;
-            } else if (isNotShyable && depth === 0) {
-                badgesHtml += `<span class="ae-badge-ui-locked" title="Contains all UI-defined properties - Always visible, cannot be shied">UI MASTER (CANNOT SHY)</span>`;
             } else if (isInsidePrecomp) {
                 badgesHtml += `<span class="ae-badge-type static ae-badge-nested" title="Layer inside ${escapeHtml(parentComp.name)}">[NESTED]</span>`;
             }
