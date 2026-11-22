@@ -459,13 +459,32 @@
                 const isBright = this.container && this.container.classList.contains('ae-theme-bright');
                 const bg = isBright ? '#dcdce0' : '#1a1a1a';
 
+                const rect = vp.getBoundingClientRect();
+                const width = Math.round(rect.width || vp.clientWidth || 1024);
+                const height = Math.round(rect.height || vp.clientHeight || 512);
+                const pr = Math.max(1, window.devicePixelRatio || 1);
+
+                const opts = {
+                    backgroundColor: bg,
+                    width: width,
+                    height: height,
+                    pixelRatio: pr,
+                    skipFonts: true,
+                    cacheBust: true,
+                    filter: (node) => {
+                        if (!node) return true;
+                        if (node.classList && node.classList.contains('ae-viewport-overlay')) return false;
+                        return true;
+                    }
+                };
+
                 let dataUrl = '';
                 if (typeof htmlToImage !== 'undefined' && htmlToImage.toPng) {
-                    dataUrl = await htmlToImage.toPng(vp, {
-                        backgroundColor: bg,
-                        filter: (node) => !(node.classList && node.classList.contains('ae-viewport-overlay')),
-                        pixelRatio: Math.max(1, window.devicePixelRatio || 1)
-                    });
+                    try {
+                        // Warm-up pass: pre-bakes the CSS 3D transform tree and SVG subtrees in WebKit/Blink
+                        await htmlToImage.toPng(vp, opts);
+                    } catch (eWarm) {}
+                    dataUrl = await htmlToImage.toPng(vp, opts);
                 } else {
                     throw new Error('Screenshot engine not loaded');
                 }
@@ -1653,14 +1672,14 @@
                 } else if (layer instanceof ShapeLayer) {
                     const svgContent = this.renderShapeContents(layer.contents, time);
                     layerEl.innerHTML = `
-                        <svg class="ae-layer-svg" style="overflow: visible;">
+                        <svg class="ae-layer-svg" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" style="overflow: visible;">
                             ${svgContent}
                         </svg>
                     `;
                 } else if (typeof TextLayer !== 'undefined' && layer instanceof TextLayer) {
                     const textSvg = this.renderTextContent(layer, time);
                     layerEl.innerHTML = `
-                        <svg class="ae-layer-svg" style="overflow: visible;">
+                        <svg class="ae-layer-svg" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" style="overflow: visible;">
                             ${textSvg}
                         </svg>
                     `;
@@ -1710,11 +1729,11 @@
                     subLayer.source.time = nestedTime;
                     subContent = this.renderCompLayersHtml(subLayer.source, nestedTime, isStaticPreview, depth + 1);
                 } else if (typeof TextLayer !== 'undefined' && subLayer instanceof TextLayer) {
-                    subContent = `<svg class="ae-layer-svg" style="overflow: visible;">${this.renderTextContent(subLayer, time)}</svg>`;
+                    subContent = `<svg class="ae-layer-svg" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" style="overflow: visible;">${this.renderTextContent(subLayer, time)}</svg>`;
                 } else if (subLayer.sourceText) {
-                    subContent = `<svg class="ae-layer-svg" style="overflow: visible;">${this.renderTextContent(subLayer, time)}</svg>`;
+                    subContent = `<svg class="ae-layer-svg" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" style="overflow: visible;">${this.renderTextContent(subLayer, time)}</svg>`;
                 } else if (subLayer.contents) {
-                    subContent = `<svg class="ae-layer-svg" style="overflow: visible;">${this.renderShapeContents(subLayer.contents, time)}</svg>`;
+                    subContent = `<svg class="ae-layer-svg" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" style="overflow: visible;">${this.renderShapeContents(subLayer.contents, time)}</svg>`;
                 }
 
                 if (subContent) {
