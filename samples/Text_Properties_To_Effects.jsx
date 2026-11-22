@@ -1,7 +1,7 @@
 // Co-authored & architected with Google DeepMind Antigravity.
 // =============================================================================
 // ADOBE AFTER EFFECTS EXTENDSCRIPT & SCRIPTUI PANEL:
-// TEXT & BOX PROPERTIES TO EFFECTS (INSPECTOR & RIGGER) v1.2
+// TEXT & BOX PROPERTIES TO EFFECTS (INSPECTOR & RIGGER) v1.2.2
 // =============================================================================
 //
 // PURPOSE:
@@ -30,7 +30,7 @@
     "use strict";
 
     var SCRIPT_NAME = "Text & Box Properties to Effects";
-    var SCRIPT_VERSION = "v1.2";
+    var SCRIPT_VERSION = "v1.2.2";
 
     // Global in-memory cache initialization
     var $global;
