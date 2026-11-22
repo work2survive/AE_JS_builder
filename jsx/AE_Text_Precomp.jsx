@@ -812,9 +812,14 @@
         }
 
         // Width calculations:
-        // Precomp Width = specified width or detected width
+        // Precomp Width = auto-detected from layer + padding or explicitly specified width
         // Textbox Width = Precomp Width reduced by padding on both sides
-        var precompW = Math.max(40, Math.round(options.width || metrics.detectedWidth || 800));
+        var precompW = 800;
+        if (options.autoDetectWidth && metrics && metrics.detectedWidth) {
+            precompW = Math.max(40, Math.round(metrics.detectedWidth + (padding * 2)));
+        } else {
+            precompW = Math.max(40, Math.round(options.width || (metrics ? metrics.detectedWidth : 800) || 800));
+        }
         var textboxW = Math.max(20, precompW - (padding * 2));
 
         // Adjust original layer's boxTextSize to the reduced textbox width if it is a paragraph box
@@ -1284,11 +1289,8 @@
     var lblStatusText = grpStatus.add("statictext", undefined, "Scanning active selection...");
     lblStatusText.alignment = ["fill", "center"];
 
-    var btnAutoDetect = pnlDetect.add("button", undefined, "Auto-Detect Selected Text Size");
-    btnAutoDetect.helpTip = "Detects dimensions and justification from the currently selected text layer using Text_Properties_To_Effects engine.";
-
-    // --- Dimensions & Padding Panel ---
-    var pnlDims = tabPrecomp.add("panel", undefined, "Precomp Dimensions & Padding");
+    // --- Section 1: Dimensions Panel ---
+    var pnlDims = tabPrecomp.add("panel", undefined, "Dimensions");
     pnlDims.orientation = "column";
     pnlDims.alignChildren = ["fill", "top"];
     pnlDims.spacing = 8;
@@ -1302,28 +1304,6 @@
     lblWidth.preferredSize = [135, -1];
     var txtWidth = grpWidth.add("edittext", undefined, "800");
     txtWidth.alignment = ["fill", "center"];
-
-    // Padding Row
-    var grpPad = pnlDims.add("group");
-    grpPad.orientation = "row";
-    grpPad.alignment = ["fill", "top"];
-    var lblPad = grpPad.add("statictext", undefined, "Padding (px):");
-    lblPad.preferredSize = [135, -1];
-    var sldPad = grpPad.add("slider", undefined, 30, 0, 120);
-    sldPad.minvalue = 0;
-    sldPad.maxvalue = 120;
-    sldPad.value = 30;
-    sldPad.alignment = ["fill", "center"];
-    var txtPad = grpPad.add("edittext", undefined, "30");
-    txtPad.characters = 4;
-
-    sldPad.onChanging = sldPad.onChange = function() {
-        txtPad.text = String(Math.round(sldPad.value));
-    };
-    txtPad.onChange = function() {
-        var v = parseFloat(txtPad.text) || 0;
-        sldPad.value = Math.max(0, Math.min(120, v));
-    };
 
     // Automatic Precomp Height Checkbox
     var chkAutoHeight = pnlDims.add("checkbox", undefined, "automatic precomp height");
@@ -1342,6 +1322,73 @@
 
     chkAutoHeight.onClick = function() {
         txtHeight.enabled = !chkAutoHeight.value;
+    };
+
+    // --- Section 2: Padding Panel ---
+    var pnlPad = tabPrecomp.add("panel", undefined, "Padding");
+    pnlPad.orientation = "column";
+    pnlPad.alignChildren = ["fill", "top"];
+    pnlPad.spacing = 8;
+    pnlPad.margins = 10;
+
+    // First Option: Auto Detect Width From Selected Layer
+    var grpAutoDetect = pnlPad.add("group");
+    grpAutoDetect.orientation = "row";
+    grpAutoDetect.alignment = ["fill", "top"];
+    var chkAutoDetectWidth = grpAutoDetect.add("checkbox", undefined, "auto detect width from selected layer");
+    chkAutoDetectWidth.value = true;
+    chkAutoDetectWidth.alignment = ["fill", "center"];
+    chkAutoDetectWidth.helpTip = "Automatically detects width from selected text layer and computes precomp width plus padding.";
+
+    var btnAutoDetect = grpAutoDetect.add("button", undefined, "Detect Now");
+    btnAutoDetect.preferredSize = [85, 22];
+    btnAutoDetect.alignment = ["right", "center"];
+    btnAutoDetect.helpTip = "Detects dimensions and justification from the currently selected text layer.";
+
+    // Padding Slider & Text Row
+    var grpPadRow = pnlPad.add("group");
+    grpPadRow.orientation = "row";
+    grpPadRow.alignment = ["fill", "top"];
+    var lblPad = grpPadRow.add("statictext", undefined, "Padding (px):");
+    lblPad.preferredSize = [135, -1];
+    var sldPad = grpPadRow.add("slider", undefined, 30, 0, 120);
+    sldPad.minvalue = 0;
+    sldPad.maxvalue = 120;
+    sldPad.value = 30;
+    sldPad.alignment = ["fill", "center"];
+    var txtPad = grpPadRow.add("edittext", undefined, "30");
+    txtPad.characters = 4;
+
+    function syncAutoDetectedWidth() {
+        if (!chkAutoDetectWidth.value) return;
+        var comp = app.project.activeItem;
+        if (!comp || !(comp instanceof CompItem)) return;
+        var textLayer = getSelectedTextLayer(comp);
+        if (textLayer) {
+            var metrics = getTextLayerMetrics(comp, textLayer);
+            if (metrics && metrics.detectedWidth) {
+                var padVal = parseFloat(txtPad.text) || 0;
+                var proposedPrecompW = Math.max(40, Math.round(metrics.detectedWidth + (padVal * 2)));
+                txtWidth.text = String(proposedPrecompW);
+            }
+        }
+    }
+
+    sldPad.onChanging = sldPad.onChange = function() {
+        txtPad.text = String(Math.round(sldPad.value));
+        syncAutoDetectedWidth();
+    };
+    txtPad.onChange = function() {
+        var v = parseFloat(txtPad.text) || 0;
+        sldPad.value = Math.max(0, Math.min(120, v));
+        syncAutoDetectedWidth();
+    };
+
+    chkAutoDetectWidth.onClick = function() {
+        txtWidth.enabled = !chkAutoDetectWidth.value;
+        if (chkAutoDetectWidth.value) {
+            syncAutoDetectedWidth();
+        }
     };
 
     // --- Anchor Point Options Panel ---
@@ -1625,6 +1672,7 @@
                 padding: padVal,
                 autoHeight: autoH,
                 autoAnchor: autoAnc,
+                autoDetectWidth: chkAutoDetectWidth.value,
                 forceAlign: forceAlign,
                 addBackground: addBg,
                 corners: corners,
