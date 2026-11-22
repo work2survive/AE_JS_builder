@@ -1,6 +1,6 @@
 // Co-authored & architected with Google DeepMind Antigravity.
 // =============================================================================
-// ADOBE AFTER EFFECTS EXTENDSCRIPT & SCRIPTUI PANEL: AE TEXT HIGHLIGHT v1.1.1
+// ADOBE AFTER EFFECTS EXTENDSCRIPT & SCRIPTUI PANEL: AE TEXT HIGHLIGHT v1.2.1
 // =============================================================================
 //
 // PURPOSE:
@@ -8,28 +8,13 @@
 //   or full sentences inside any Text Layer, and places procedural vector highlight
 //   blocks directly underneath the text with ZERO cumulative offset.
 //
-// ENHANCEMENTS IN v1.1:
-//   1. Sub-Pixel Precision Text Measurement (Fixes cumulative offset drift):
-//      - Expressions & builder use hardware-accelerated Canvas 2D measurement
-//        stack (`document.createElement('canvas').getContext('2d')`) matching the
-//        browser's exact SVG font rendering engine in the web simulator.
-//      - Zero drift even for words located 80+ characters deep into a line.
-//      - Precision per-font fallback metrics for desktop After Effects ExtendScript.
-//   2. Procedural Dummy Text Generation & Multi-Attribute Randomization:
-//      - If NO Text Layer is selected when executed, it creates a ~100-word
-//        "Lorem ipsum dolor sit amet..." dummy text block.
-//      - Fully randomizes across all required design dimensions:
-//        * Font: Picked randomly from typical desktop fonts:
-//          [Georgia, Arial, Times New Roman, Verdana, Trebuchet MS, Courier New, Impact].
-//        * Alignment: Picked randomly from [Left, Center, Right].
-//        * Text Box Width: Picked randomly (e.g. 700px - 1150px) with automatic
-//          word wrapping so lines fit the chosen width naturally.
-//        * First-Line Indent: Picked randomly (0px, 24px, 48px, 72px).
-//        * Auto-picks 3 random words and 1 full sentence to highlight.
-//   3. Interactive ScriptUI Panel Controls:
-//      - Live controls & readouts for Font, Alignment, Box Width, and Indent.
-//      - "🎲 Randomize Dummy & Layout" button to instantly test new combinations.
-//      - Real-time Effect Controls (Thickness Y, Padding X, Roundness, Color, Opacity).
+// NEW IN v1.2.1:
+//   1. Fixed "currentOffsetX is undefined" Bug (line 838):
+//      - Passed `offsetX` and `offsetY` into `createHighlightGroups` with safe
+//        numerical fallbacks (defaults to 0), resolving the ExtendScript runtime error.
+//   2. Completely Removed All Background Options:
+//      - Removed Background Plate UI panel, color pickers, preset references, and layer creation logic.
+//      - No background solid or shape layer is created; only procedural highlight blocks are generated.
 //
 // REPOSITORY: https://github.com/work2survive/AE-Text-Highlight
 // LIVE DEMO:  https://work2survive.github.io/AE_JS_builder/?jsx=AE_Text_Highlight.jsx&autobuild=true
@@ -38,8 +23,9 @@
 (function(thisObj) {
     "use strict";
 
-    var SCRIPT_TITLE   = "AE Text Highlight";
-    var SCRIPT_VERSION = "v1.1.4";
+    var SCRIPT_TITLE    = "AE Text Highlight";
+    var SCRIPT_VERSION  = "v1.2.1";
+    var GITHUB_REPO_URL = "https://github.com/work2survive/AE-Text-Highlight";
 
     // =========================================================================
     // 0. EXTENDSCRIPT ES3 SAFE POLYFILLS & STRING HELPERS
@@ -128,6 +114,74 @@
     var COLOR_DARK_SLATE = [0.059, 0.090, 0.165]; // #0F172A
     var COLOR_CLEAN_WHITE= [0.973, 0.980, 0.988]; // #F8FAFC
     var COLOR_TEXT_DARK  = [0.067, 0.067, 0.067]; // #111111
+
+    // Curated Styling Presets
+    var PRESETS = {
+        "Hot Pink (Default)": {
+            highlight: COLOR_HOT_PINK,
+            thickness: 0,
+            paddingX: 8,
+            roundness: 6,
+            opacity: 100,
+            offX: 0,
+            offY: 0
+        },
+        "Neon Mint": {
+            highlight: COLOR_MINT_NEON,
+            thickness: 2,
+            paddingX: 10,
+            roundness: 8,
+            opacity: 100,
+            offX: 0,
+            offY: 0
+        },
+        "Golden Glow": {
+            highlight: COLOR_CYBER_GOLD,
+            thickness: 0,
+            paddingX: 6,
+            roundness: 4,
+            opacity: 100,
+            offX: 0,
+            offY: 0
+        },
+        "Electric Cyan": {
+            highlight: COLOR_SKY_CYAN,
+            thickness: 2,
+            paddingX: 8,
+            roundness: 6,
+            opacity: 100,
+            offX: 0,
+            offY: 0
+        },
+        "Lavender Dream": {
+            highlight: COLOR_PURPLE,
+            thickness: 4,
+            paddingX: 12,
+            roundness: 10,
+            opacity: 95,
+            offX: 0,
+            offY: 0
+        },
+        "Slow Living (Demo)": {
+            highlight: COLOR_HOT_PINK,
+            thickness: 0,
+            paddingX: 8,
+            roundness: 6,
+            opacity: 100,
+            offX: 0,
+            offY: 0,
+            targets: SLOW_LIVING_HIGHLIGHTS
+        }
+    };
+
+    var PRESET_NAMES = [
+        "Hot Pink (Default)",
+        "Neon Mint",
+        "Golden Glow",
+        "Electric Cyan",
+        "Lavender Dream",
+        "Slow Living (Demo)"
+    ];
 
     // =========================================================================
     // 2. HELPER UTILITIES: COLOR, STRING, WORD WRAP & PRECISE MEASURE
@@ -671,9 +725,12 @@
     // =========================================================================
     // 4. MAIN BUILD & RIGGING ENGINE
     // =========================================================================
-    function createHighlightGroups(shapeLayer, textLayer, targetTextLayerName, terms, paddingX, thicknessY, roundness, highlightColor, highlightOpacity) {
+    function createHighlightGroups(shapeLayer, textLayer, targetTextLayerName, terms, paddingX, thicknessY, roundness, highlightColor, highlightOpacity, offsetX, offsetY) {
         var contents = shapeLayer.property("ADBE Root Vectors Group") || shapeLayer.property("Contents");
         if (!contents) return 0;
+
+        var offX = (typeof offsetX === "number") ? offsetX : 0;
+        var offY = (typeof offsetY === "number") ? offsetY : 0;
 
         var textDoc = getTextLayerDocument(textLayer);
         var textStr = getTextLayerString(textLayer) || LOREM_IPSUM_RAW;
@@ -729,13 +786,8 @@
                 grp.name = "Highlight " + totalCreated + " - " + term.substr(0, 20);
 
                 var grpContents = grp.property("ADBE Vectors Group") || grp.property("Contents");
-                var rect = grpContents.addProperty("ADBE Vector Shape - Rect");
-                rect.name = "Box Path";
 
-                var fill = grpContents.addProperty("ADBE Vector Graphic - Fill");
-                fill.name = "Box Fill";
-
-                // Sub-pixel initial calculation
+                // Sub-pixel initial calculation FIRST before adding vector children
                 var initW = 100;
                 var initH = fs + thicknessY;
                 var initX = 0;
@@ -771,23 +823,44 @@
 
                     var rawInitX = lineStartX + pW + (mW / 2);
                     var rawInitY = (targetLine * lineH) - (fs * 0.25);
-                    initX = rawInitX + currentOffsetX;
-                    initY = rawInitY + currentOffsetY;
+                    initX = rawInitX + offX;
+                    initY = rawInitY + offY;
                 }
 
-                rect.property("ADBE Vector Rect Size").setValue([initW, initH]);
-                rect.property("ADBE Vector Rect Position").setValue([initX, initY]);
-                rect.property("ADBE Vector Rect Roundness").setValue(roundness);
+                // Add Rect and fully configure it immediately while reference is guaranteed valid
+                var rect = grpContents.addProperty("ADBE Vector Shape - Rect");
+                rect.name = "Box Path";
 
-                fill.property("ADBE Vector Fill Color").setValue(highlightColor);
-                fill.property("ADBE Vector Fill Opacity").setValue(highlightOpacity);
+                var propSize = rect.property("ADBE Vector Rect Size") || rect.property("Size");
+                if (propSize) {
+                    propSize.setValue([initW, initH]);
+                    propSize.expression = generateRectSizeExpression(term, m, targetTextLayerName, fs, fontName);
+                }
+                var propPos = rect.property("ADBE Vector Rect Position") || rect.property("Position");
+                if (propPos) {
+                    propPos.setValue([initX, initY]);
+                    propPos.expression = generateRectPositionExpression(term, m, targetTextLayerName, fs, fontName, just, lineH);
+                }
+                var propRound = rect.property("ADBE Vector Rect Roundness") || rect.property("Roundness");
+                if (propRound) {
+                    propRound.setValue(roundness);
+                    propRound.expression = 'try { Math.max(0, thisLayer.effect("Roundness")(1).value); } catch(e) { value; }';
+                }
 
-                rect.property("ADBE Vector Rect Size").expression = generateRectSizeExpression(term, m, targetTextLayerName, fs, fontName);
-                rect.property("ADBE Vector Rect Position").expression = generateRectPositionExpression(term, m, targetTextLayerName, fs, fontName, just, lineH);
-                rect.property("ADBE Vector Rect Roundness").expression = 'try { Math.max(0, thisLayer.effect("Roundness")(1).value); } catch(e) { value; }';
+                // Now add Fill graphic and configure it immediately
+                var fill = grpContents.addProperty("ADBE Vector Graphic - Fill");
+                fill.name = "Box Fill";
 
-                fill.property("ADBE Vector Fill Color").expression = 'try { thisLayer.effect("Highlight Color")(1); } catch(e) { value; }';
-                fill.property("ADBE Vector Fill Opacity").expression = 'try { thisLayer.effect("Highlight Opacity")(1); } catch(e) { value; }';
+                var propCol = fill.property("ADBE Vector Fill Color") || fill.property("Color");
+                if (propCol) {
+                    propCol.setValue(highlightColor);
+                    propCol.expression = 'try { thisLayer.effect("Highlight Color")(1); } catch(e) { value; }';
+                }
+                var propOp = fill.property("ADBE Vector Fill Opacity") || fill.property("Opacity");
+                if (propOp) {
+                    propOp.setValue(highlightOpacity);
+                    propOp.expression = 'try { thisLayer.effect("Highlight Opacity")(1); } catch(e) { value; }';
+                }
             }
         }
         return totalCreated;
@@ -796,757 +869,821 @@
     // =========================================================================
     // 5. SCRIPTUI USER INTERFACE BUILDER
     // =========================================================================
-    var win = (thisObj instanceof Panel)
-        ? thisObj
-        : new Window("palette", SCRIPT_TITLE + " " + SCRIPT_VERSION, undefined, { resizeable: true });
-    if (!(thisObj instanceof Panel)) {
-        win.text = SCRIPT_TITLE + " " + SCRIPT_VERSION;
-    }
-
-    win.orientation = "column";
-    win.alignChildren = ["fill", "top"];
-    win.spacing = 8;
-    win.margins = 10;
-
-    // Current State Variables
-    var currentHighlightColor = COLOR_HOT_PINK.slice(0);
-    var currentBgColor        = COLOR_SKY_BLUE.slice(0);
-    var currentThickness      = 0;  // Default 0 (tied to font ascender to descender)
-    var currentPaddingX       = 8;  // Default 8px horizontal padding
-    var currentRoundness      = 6;  // Default 6px corner radius
-    var currentOpacity        = 100;
-    var currentOffsetX        = 0;  // Fine-tuning position offset X
-    var currentOffsetY        = 0;  // Fine-tuning position offset Y
-
-    // Dummy Text Randomization State
-    var dummyFont      = "Georgia";
-    var dummyAlignment = "left";
-    var dummyBoxWidth  = 950;
-    var dummyIndent    = 0;
-
-    // -------------------------------------------------------------------------
-    // Panel 1: Target Text Layer Status & Header
-    // -------------------------------------------------------------------------
-    var pnlHeader = win.add("panel", undefined, "Target Text Layer");
-    pnlHeader.orientation = "column";
-    pnlHeader.alignChildren = ["fill", "top"];
-    pnlHeader.spacing = 4;
-    pnlHeader.margins = [10, 8, 10, 8];
-
-    var lblStatus = pnlHeader.add("statictext", undefined, "Checking active selection...");
-    lblStatus.graphics.foregroundColor = lblStatus.graphics.newPen(win.graphics.PenType.SOLID_COLOR, [0.4, 0.75, 1.0, 1.0], 1);
-
-    var grpHeaderBtns = pnlHeader.add("group");
-    grpHeaderBtns.orientation = "row";
-    grpHeaderBtns.alignChildren = ["left", "center"];
-    var btnRefreshLayer = grpHeaderBtns.add("button", undefined, "Detect Selection");
-    btnRefreshLayer.helpTip = "Re-scan the active composition to detect any newly selected Text Layer.";
-
-    // -------------------------------------------------------------------------
-    // Panel 2: Dummy Text & Layout Randomization (When No Text Layer is Selected)
-    // -------------------------------------------------------------------------
-    var pnlRandom = win.add("panel", undefined, "Dummy Text Generator & Randomization (~100 Words)");
-    pnlRandom.orientation = "column";
-    pnlRandom.alignChildren = ["fill", "top"];
-    pnlRandom.spacing = 6;
-    pnlRandom.margins = [10, 8, 10, 8];
-
-    var lblRandomSummary = pnlRandom.add("statictext", undefined, "Font: " + dummyFont + " | Align: " + dummyAlignment + " | Width: " + dummyBoxWidth + "px | Indent: " + dummyIndent + "px");
-    lblRandomSummary.graphics.foregroundColor = lblRandomSummary.graphics.newPen(win.graphics.PenType.SOLID_COLOR, [0.95, 0.75, 0.3, 1.0], 1);
-
-    var grpRandBtns = pnlRandom.add("group");
-    grpRandBtns.orientation = "row";
-    grpRandBtns.alignChildren = ["fill", "center"];
-    grpRandBtns.spacing = 4;
-
-    var btnRandomizeAll = grpRandBtns.add("button", undefined, "🎲 Randomize Dummy & Layout");
-    btnRandomizeAll.helpTip = "Randomizes font, alignment, text box width, indent, and picks 3 random words + 1 sentence.";
-
-    // Font selection row
-    var grpFontRow = pnlRandom.add("group");
-    grpFontRow.orientation = "row";
-    grpFontRow.alignChildren = ["left", "center"];
-    grpFontRow.add("statictext", undefined, "Font:");
-    var ddFont = grpFontRow.add("dropdownlist", undefined, TYPICAL_FONTS);
-    ddFont.selection = 0;
-    ddFont.preferredSize.width = 130;
-
-    grpFontRow.add("statictext", undefined, "Align:");
-    var ddAlign = grpFontRow.add("dropdownlist", undefined, ["Left", "Center", "Right"]);
-    ddAlign.selection = 0;
-    ddAlign.preferredSize.width = 80;
-
-    // Box width & indent row
-    var grpBoxRow = pnlRandom.add("group");
-    grpBoxRow.orientation = "row";
-    grpBoxRow.alignChildren = ["left", "center"];
-    grpBoxRow.add("statictext", undefined, "Box Width:");
-    var sldBoxW = grpBoxRow.add("slider", undefined, 950, 600, 1300);
-    sldBoxW.preferredSize.width = 85;
-    var txtBoxW = grpBoxRow.add("edittext", undefined, "950");
-    txtBoxW.preferredSize.width = 45;
-    grpBoxRow.add("statictext", undefined, "px");
-
-    grpBoxRow.add("statictext", undefined, "Indent:");
-    var sldInd = grpBoxRow.add("slider", undefined, 0, 0, 80);
-    sldInd.preferredSize.width = 50;
-    var txtInd = grpBoxRow.add("edittext", undefined, "0");
-    txtInd.preferredSize.width = 30;
-    grpBoxRow.add("statictext", undefined, "px");
-
-    // -------------------------------------------------------------------------
-    // Panel 3: Words / Sentences to Highlight
-    // -------------------------------------------------------------------------
-    var pnlTargets = win.add("panel", undefined, "Highlight Targets (Words, Phrases, Sentences)");
-    pnlTargets.orientation = "column";
-    pnlTargets.alignChildren = ["fill", "top"];
-    pnlTargets.spacing = 6;
-    pnlTargets.margins = [10, 8, 10, 8];
-
-    pnlTargets.add("statictext", undefined, "Words or sentences to detect & highlight (1 per line or comma-separated):");
-
-    var txtHighlights = pnlTargets.add("edittext", undefined, "", { multiline: true, wantReturn: true });
-    txtHighlights.preferredSize.height = 65;
-    txtHighlights.helpTip = "Type or paste words, chains of characters, or complete sentences to highlight.";
-
-    var grpActionBtns = pnlTargets.add("group");
-    grpActionBtns.orientation = "row";
-    grpActionBtns.alignChildren = ["fill", "center"];
-    grpActionBtns.spacing = 4;
-
-    var btnPickRandom = grpActionBtns.add("button", undefined, "🎲 Re-Pick 3 Words + 1 Sent");
-    btnPickRandom.helpTip = "Re-picks 3 random words and 1 full sentence from the current text.";
-
-    var btnLoadDemo = grpActionBtns.add("button", undefined, "📷 Slow Living (Demo)");
-    btnLoadDemo.helpTip = "Loads the exact Slow Living quote & highlights shown in the reference screenshot.";
-
-    var btnClearTargets = grpActionBtns.add("button", undefined, "✕ Clear");
-    btnClearTargets.helpTip = "Clears the target list.";
-
-    // -------------------------------------------------------------------------
-    // Panel 4: Highlight Appearance & Geometry (Thickness, Roundness, Color)
-    // -------------------------------------------------------------------------
-    var pnlAppearance = win.add("panel", undefined, "Highlight Geometry & Appearance");
-    pnlAppearance.orientation = "column";
-    pnlAppearance.alignChildren = ["fill", "top"];
-    pnlAppearance.spacing = 5;
-    pnlAppearance.margins = [10, 8, 10, 8];
-
-    // Thickness Y (Ascender to Descender)
-    var grpThick = pnlAppearance.add("group");
-    grpThick.orientation = "row";
-    grpThick.alignChildren = ["left", "center"];
-    var lblThick = grpThick.add("statictext", undefined, "Thickness Y:");
-    lblThick.preferredSize.width = 90;
-    var sldThick = grpThick.add("slider", undefined, 0, -20, 60);
-    sldThick.preferredSize.width = 110;
-    var txtThick = grpThick.add("edittext", undefined, "0");
-    txtThick.preferredSize.width = 45;
-    grpThick.add("statictext", undefined, "px (0 = Ascender to Descender)");
-
-    // Horizontal Padding X
-    var grpPadX = pnlAppearance.add("group");
-    grpPadX.orientation = "row";
-    grpPadX.alignChildren = ["left", "center"];
-    var lblPadX = grpPadX.add("statictext", undefined, "Padding X:");
-    lblPadX.preferredSize.width = 90;
-    var sldPadX = grpPadX.add("slider", undefined, 8, 0, 40);
-    sldPadX.preferredSize.width = 110;
-    var txtPadX = grpPadX.add("edittext", undefined, "8");
-    txtPadX.preferredSize.width = 45;
-    grpPadX.add("statictext", undefined, "px");
-
-    // Roundness
-    var grpRound = pnlAppearance.add("group");
-    grpRound.orientation = "row";
-    grpRound.alignChildren = ["left", "center"];
-    var lblRound = grpRound.add("statictext", undefined, "Roundness:");
-    lblRound.preferredSize.width = 90;
-    var sldRound = grpRound.add("slider", undefined, 6, 0, 40);
-    sldRound.preferredSize.width = 110;
-    var txtRound = grpRound.add("edittext", undefined, "6");
-    txtRound.preferredSize.width = 45;
-    grpRound.add("statictext", undefined, "px (0 = Square blocks)");
-
-    // Position Offset (X / Y)
-    var grpOffset = pnlAppearance.add("group");
-    grpOffset.orientation = "row";
-    grpOffset.alignChildren = ["left", "center"];
-    var lblOff = grpOffset.add("statictext", undefined, "Offset X / Y:");
-    lblOff.preferredSize.width = 90;
-
-    var sldOffX = grpOffset.add("slider", undefined, 0, -100, 100);
-    sldOffX.preferredSize.width = 50;
-    var txtOffX = grpOffset.add("edittext", undefined, "0");
-    txtOffX.preferredSize.width = 32;
-
-    var sldOffY = grpOffset.add("slider", undefined, 0, -100, 100);
-    sldOffY.preferredSize.width = 50;
-    var txtOffY = grpOffset.add("edittext", undefined, "0");
-    txtOffY.preferredSize.width = 32;
-    grpOffset.add("statictext", undefined, "px");
-
-    // Color & Opacity Row
-    var grpCol = pnlAppearance.add("group");
-    grpCol.orientation = "row";
-    grpCol.alignChildren = ["left", "center"];
-    grpCol.spacing = 6;
-
-    var lblCol = grpCol.add("statictext", undefined, "Color / Opacity:");
-    lblCol.preferredSize.width = 90;
-
-    var txtHexCol = grpCol.add("edittext", undefined, rgbToHex(currentHighlightColor));
-    txtHexCol.preferredSize.width = 75;
-
-    var sldOp = grpCol.add("slider", undefined, 100, 0, 100);
-    sldOp.preferredSize.width = 70;
-    var txtOp = grpCol.add("edittext", undefined, "100");
-    txtOp.preferredSize.width = 38;
-    grpCol.add("statictext", undefined, "%");
-
-    // Color Swatch Chips
-    var grpSwatches = pnlAppearance.add("group");
-    grpSwatches.orientation = "row";
-    grpSwatches.alignChildren = ["left", "center"];
-    grpSwatches.spacing = 4;
-    grpSwatches.add("statictext", undefined, "Presets:");
-
-    var btnSwPink   = grpSwatches.add("button", undefined, "Pink");
-    var btnSwYellow = grpSwatches.add("button", undefined, "Gold");
-    var btnSwMint   = grpSwatches.add("button", undefined, "Mint");
-    var btnSwCyan   = grpSwatches.add("button", undefined, "Cyan");
-    var btnSwPurple = grpSwatches.add("button", undefined, "Purple");
-
-    // -------------------------------------------------------------------------
-    // Panel 5: Background Layer Settings
-    // -------------------------------------------------------------------------
-    var pnlBg = win.add("panel", undefined, "Background Layer");
-    pnlBg.orientation = "column";
-    pnlBg.alignChildren = ["fill", "top"];
-    pnlBg.spacing = 5;
-    pnlBg.margins = [10, 8, 10, 8];
-
-    var chkCreateBg = pnlBg.add("checkbox", undefined, "Create / Update Background Plate");
-    chkCreateBg.value = true;
-
-    var grpBgCol = pnlBg.add("group");
-    grpBgCol.orientation = "row";
-    grpBgCol.alignChildren = ["left", "center"];
-    grpBgCol.spacing = 6;
-
-    var lblBgCol = grpBgCol.add("statictext", undefined, "Bg Color:");
-    lblBgCol.preferredSize.width = 90;
-
-    var txtBgHex = grpBgCol.add("edittext", undefined, rgbToHex(currentBgColor));
-    txtBgHex.preferredSize.width = 75;
-
-    var btnBgSky   = grpBgCol.add("button", undefined, "Sky Blue");
-    var btnBgSlate = grpBgCol.add("button", undefined, "Slate Dark");
-    var btnBgWhite = grpBgCol.add("button", undefined, "White");
-
-    // -------------------------------------------------------------------------
-    // Main Action Buttons
-    // -------------------------------------------------------------------------
-    var grpMainBtns = win.add("group");
-    grpMainBtns.orientation = "row";
-    grpMainBtns.alignChildren = ["fill", "center"];
-    grpMainBtns.spacing = 8;
-    grpMainBtns.margins = [0, 4, 0, 0];
-
-    var btnBuild = grpMainBtns.add("button", undefined, "► Build Highlights");
-    btnBuild.preferredSize.height = 34;
-
-    var btnUpdate = grpMainBtns.add("button", undefined, "⟳ Update Properties");
-    btnUpdate.preferredSize.height = 34;
-    btnUpdate.helpTip = "Updates colors, thickness, roundness and opacity on existing highlight layer in real time.";
-
-    // -------------------------------------------------------------------------
-    // 6. UI INTERACTION & EVENT HANDLERS
-    // -------------------------------------------------------------------------
-    function updateSelectionStatus() {
-        var comp = app.project.activeItem;
-        if (!comp || !(comp instanceof CompItem)) {
-            lblStatus.text = "○ No active composition (Will auto-create HD comp)";
-            return;
-        }
-        var sel = getSelectedTextLayer(comp);
-        if (sel) {
-            lblStatus.text = "● Target: \"" + sel.name + "\" (Selected Text Layer)";
-        } else {
-            lblStatus.text = "○ No text layer selected (Auto-generate randomized Lorem Ipsum)";
-        }
-    }
-
-    function updateRandomSummaryLabel() {
-        lblRandomSummary.text = "Font: " + dummyFont + " | Align: " + dummyAlignment + " | Width: " + dummyBoxWidth + "px | Indent: " + dummyIndent + "px";
-    }
-
-    function applyRandomization() {
-        dummyFont = TYPICAL_FONTS[Math.floor(Math.random() * TYPICAL_FONTS.length)];
-        dummyAlignment = TYPICAL_ALIGNMENTS[Math.floor(Math.random() * TYPICAL_ALIGNMENTS.length)];
-        dummyBoxWidth = TYPICAL_BOX_WIDTHS[Math.floor(Math.random() * TYPICAL_BOX_WIDTHS.length)];
-        dummyIndent = TYPICAL_INDENTS[Math.floor(Math.random() * TYPICAL_INDENTS.length)];
-
-        // Update UI controls
-        for (var f = 0; f < TYPICAL_FONTS.length; f++) {
-            if (TYPICAL_FONTS[f] === dummyFont) {
-                ddFont.selection = f;
-                break;
-            }
-        }
-        var alignIdx = (dummyAlignment === "center") ? 1 : ((dummyAlignment === "right") ? 2 : 0);
-        ddAlign.selection = alignIdx;
-
-        sldBoxW.value = dummyBoxWidth;
-        txtBoxW.text = String(dummyBoxWidth);
-
-        sldInd.value = dummyIndent;
-        txtInd.text = String(dummyIndent);
-
-        updateRandomSummaryLabel();
-
-        // Wrap text and pick 3 words + 1 sentence
-        var wrapped = wordWrapToBoxWidth(LOREM_IPSUM_RAW, dummyBoxWidth, 34, dummyFont, dummyIndent);
-        var extracted = extractRandomWordsAndSentence(wrapped);
-        txtHighlights.text = extracted.words.concat([extracted.sentence]).join("\n");
-    }
-
-    btnRandomizeAll.onClick = function() {
-        applyRandomization();
-    };
-
-    ddFont.onChange = function() {
-        if (ddFont.selection) {
-            dummyFont = ddFont.selection.text;
-            updateRandomSummaryLabel();
-        }
-    };
-
-    ddAlign.onChange = function() {
-        if (ddAlign.selection) {
-            dummyAlignment = ddAlign.selection.text.toLowerCase();
-            updateRandomSummaryLabel();
-        }
-    };
-
-    sldBoxW.onChanging = sldBoxW.onChange = function() {
-        dummyBoxWidth = Math.round(sldBoxW.value);
-        txtBoxW.text = String(dummyBoxWidth);
-        updateRandomSummaryLabel();
-    };
-    txtBoxW.onChange = function() {
-        var v = parseInt(txtBoxW.text, 10);
-        if (isNaN(v)) v = 950;
-        sldBoxW.value = v;
-        dummyBoxWidth = v;
-        updateRandomSummaryLabel();
-    };
-
-    sldInd.onChanging = sldInd.onChange = function() {
-        dummyIndent = Math.round(sldInd.value);
-        txtInd.text = String(dummyIndent);
-        updateRandomSummaryLabel();
-    };
-    txtInd.onChange = function() {
-        var v = parseInt(txtInd.text, 10);
-        if (isNaN(v)) v = 0;
-        sldInd.value = v;
-        dummyIndent = v;
-        updateRandomSummaryLabel();
-    };
-
-    btnRefreshLayer.onClick = function() {
-        updateSelectionStatus();
-    };
-
-    sldThick.onChanging = sldThick.onChange = function() {
-        var v = Math.round(sldThick.value);
-        txtThick.text = String(v);
-        currentThickness = v;
-    };
-    txtThick.onChange = function() {
-        var v = parseInt(txtThick.text, 10);
-        if (isNaN(v)) v = 0;
-        sldThick.value = v;
-        currentThickness = v;
-    };
-
-    sldPadX.onChanging = sldPadX.onChange = function() {
-        var v = Math.round(sldPadX.value);
-        txtPadX.text = String(v);
-        currentPaddingX = v;
-    };
-    txtPadX.onChange = function() {
-        var v = parseInt(txtPadX.text, 10);
-        if (isNaN(v)) v = 8;
-        sldPadX.value = v;
-        currentPaddingX = v;
-    };
-
-    sldRound.onChanging = sldRound.onChange = function() {
-        var v = Math.round(sldRound.value);
-        txtRound.text = String(v);
-        currentRoundness = v;
-    };
-    txtRound.onChange = function() {
-        var v = parseInt(txtRound.text, 10);
-        if (isNaN(v)) v = 6;
-        sldRound.value = v;
-        currentRoundness = v;
-    };
-
-    sldOffX.onChanging = sldOffX.onChange = function() {
-        var v = Math.round(sldOffX.value);
-        txtOffX.text = String(v);
-        currentOffsetX = v;
-    };
-    txtOffX.onChange = function() {
-        var v = parseInt(txtOffX.text, 10);
-        if (isNaN(v)) v = 0;
-        sldOffX.value = v;
-        currentOffsetX = v;
-    };
-
-    sldOffY.onChanging = sldOffY.onChange = function() {
-        var v = Math.round(sldOffY.value);
-        txtOffY.text = String(v);
-        currentOffsetY = v;
-    };
-    txtOffY.onChange = function() {
-        var v = parseInt(txtOffY.text, 10);
-        if (isNaN(v)) v = 0;
-        sldOffY.value = v;
-        currentOffsetY = v;
-    };
-
-    sldOp.onChanging = sldOp.onChange = function() {
-        var v = Math.round(sldOp.value);
-        txtOp.text = String(v);
-        currentOpacity = v;
-    };
-    txtOp.onChange = function() {
-        var v = parseInt(txtOp.text, 10);
-        if (isNaN(v)) v = 100;
-        v = Math.max(0, Math.min(100, v));
-        sldOp.value = v;
-        currentOpacity = v;
-    };
-
-    txtHexCol.onChange = function() {
-        currentHighlightColor = hexToRgb(txtHexCol.text);
-    };
-
-    btnSwPink.onClick = function() {
-        currentHighlightColor = COLOR_HOT_PINK.slice(0);
-        txtHexCol.text = rgbToHex(currentHighlightColor);
-    };
-    btnSwYellow.onClick = function() {
-        currentHighlightColor = COLOR_CYBER_GOLD.slice(0);
-        txtHexCol.text = rgbToHex(currentHighlightColor);
-    };
-    btnSwMint.onClick = function() {
-        currentHighlightColor = COLOR_MINT_NEON.slice(0);
-        txtHexCol.text = rgbToHex(currentHighlightColor);
-    };
-    btnSwCyan.onClick = function() {
-        currentHighlightColor = COLOR_SKY_CYAN.slice(0);
-        txtHexCol.text = rgbToHex(currentHighlightColor);
-    };
-    btnSwPurple.onClick = function() {
-        currentHighlightColor = COLOR_PURPLE.slice(0);
-        txtHexCol.text = rgbToHex(currentHighlightColor);
-    };
-
-    txtBgHex.onChange = function() {
-        currentBgColor = hexToRgb(txtBgHex.text);
-    };
-    btnBgSky.onClick = function() {
-        currentBgColor = COLOR_SKY_BLUE.slice(0);
-        txtBgHex.text = rgbToHex(currentBgColor);
-    };
-    btnBgSlate.onClick = function() {
-        currentBgColor = COLOR_DARK_SLATE.slice(0);
-        txtBgHex.text = rgbToHex(currentBgColor);
-    };
-    btnBgWhite.onClick = function() {
-        currentBgColor = COLOR_CLEAN_WHITE.slice(0);
-        txtBgHex.text = rgbToHex(currentBgColor);
-    };
-
-    btnPickRandom.onClick = function() {
-        var comp = app.project.activeItem;
-        var textLayer = (comp && comp instanceof CompItem) ? getSelectedTextLayer(comp) : null;
-        var srcText = "";
-        if (textLayer && textLayer.text && textLayer.text.sourceText) {
-            srcText = String(textLayer.text.sourceText.value || "");
-        }
-        if (!srcText) {
-            srcText = wordWrapToBoxWidth(LOREM_IPSUM_RAW, dummyBoxWidth, 34, dummyFont, dummyIndent);
+    function buildUI(thisObj) {
+        var win = (thisObj instanceof Panel)
+            ? thisObj
+            : new Window("palette", SCRIPT_TITLE + " " + SCRIPT_VERSION, undefined, { resizeable: true });
+        if (!(thisObj instanceof Panel)) {
+            win.text = SCRIPT_TITLE + " " + SCRIPT_VERSION;
         }
 
-        var extracted = extractRandomWordsAndSentence(srcText);
-        var combined = extracted.words.concat([extracted.sentence]);
-        txtHighlights.text = combined.join("\n");
-    };
+        win.orientation = "column";
+        win.alignChildren = ["fill", "top"];
+        win.spacing = 8;
+        win.margins = 10;
 
-    btnLoadDemo.onClick = function() {
-        txtHighlights.text = SLOW_LIVING_HIGHLIGHTS.join("\n");
-        currentHighlightColor = COLOR_HOT_PINK.slice(0);
-        txtHexCol.text = rgbToHex(currentHighlightColor);
-        currentBgColor = COLOR_SKY_BLUE.slice(0);
-        txtBgHex.text = rgbToHex(currentBgColor);
-        sldThick.value = 0;
-        txtThick.text = "0";
-        currentThickness = 0;
-        sldPadX.value = 8;
-        txtPadX.text = "8";
-        currentPaddingX = 8;
-        sldRound.value = 6;
-        txtRound.text = "6";
-        currentRoundness = 6;
-    };
+        // Current State Variables
+        var currentHighlightColor = COLOR_HOT_PINK.slice(0);
+        var currentThickness      = 0;  // Default 0 (tied to font ascender to descender)
+        var currentPaddingX       = 8;  // Default 8px horizontal padding
+        var currentRoundness      = 6;  // Default 6px corner radius
+        var currentOpacity        = 100;
+        var currentOffsetX        = 0;  // Fine-tuning position offset X
+        var currentOffsetY        = 0;  // Fine-tuning position offset Y
 
-    btnClearTargets.onClick = function() {
-        txtHighlights.text = "";
-    };
+        // Dummy Text Randomization State
+        var dummyFont      = "Georgia";
+        var dummyAlignment = "left";
+        var dummyBoxWidth  = 950;
+        var dummyIndent    = 0;
 
-    // Initial Randomization Setup
-    applyRandomization();
+        // ---------------------------------------------------------------------
+        // 1. HEADER (Title, Version & Description Note)
+        // ---------------------------------------------------------------------
+        var pnlHeader = win.add("panel", undefined, "");
+        pnlHeader.orientation = "column";
+        pnlHeader.alignChildren = ["fill", "top"];
+        pnlHeader.spacing = 2;
+        pnlHeader.margins = [10, 8, 10, 8];
 
-    // -------------------------------------------------------------------------
-    // 7. BUILD & UPDATE EXECUTION
-    // -------------------------------------------------------------------------
-    btnBuild.onClick = function() {
-        var comp = app.project.activeItem;
-        if (!comp || !(comp instanceof CompItem)) {
-            comp = app.project.items.addComp("AE Text Highlight Comp", 1920, 1080, 1, 10, 30);
-        }
-        if (comp && typeof comp.openInViewer === "function") {
-            try { comp.openInViewer(); } catch(eOpen) {}
-        }
-
-        if (app.beginUndoGroup) app.beginUndoGroup("AE Text Highlight Build");
+        var lblTitle = pnlHeader.add("statictext", undefined, "🖊️ AE TEXT HIGHLIGHT " + SCRIPT_VERSION);
         try {
-            var textLayer = getSelectedTextLayer(comp);
-            var textLayerName = "";
+            lblTitle.graphics.font = ScriptUI.newFont("Verdana", "Bold", 13);
+        } catch(eF) {}
 
-            // Scenario A: No text layer selected -> auto-generate randomized ~100-word dummy text layer
-            if (!textLayer) {
-                var isDemo = (txtHighlights.text.indexOf("Slow living") !== -1 || txtHighlights.text.indexOf("present moment") !== -1);
-                var sampleText = isDemo
-                    ? SLOW_LIVING_QUOTE
-                    : wordWrapToBoxWidth(LOREM_IPSUM_RAW, dummyBoxWidth, 34, dummyFont, dummyIndent);
+        var lblDesc = pnlHeader.add("statictext", undefined, "Procedural Vector Text Highlights with Real-Time Bounding & Sync.");
+        var lblInspired = pnlHeader.add("statictext", undefined, "Detects words & phrases with zero-drift procedural rigging.");
 
-                var activeFont = isDemo ? "Georgia" : dummyFont;
-                var activeAlign = isDemo ? "left" : dummyAlignment;
+        // ---------------------------------------------------------------------
+        // 2. PRESETS BAR
+        // ---------------------------------------------------------------------
+        var grpPreset = win.add("group");
+        grpPreset.orientation = "row";
+        grpPreset.alignChildren = ["left", "center"];
+        grpPreset.spacing = 6;
 
-                textLayerName = isDemo ? "Slow Living Quote" : ("Dummy Text - " + activeFont + " (" + activeAlign + ")");
-                textLayer = comp.layers.addText(sampleText);
-                textLayer.name = textLayerName;
+        grpPreset.add("statictext", undefined, "Preset:");
+        var dropPreset = grpPreset.add("dropdownlist", undefined, PRESET_NAMES);
+        dropPreset.preferredSize = [230, 24];
+        dropPreset.selection = 0;
+        dropPreset.helpTip = "Choose from curated styling presets (Hot Pink, Neon Mint, Golden Glow, etc.)";
 
-                // Setup font styling
-                try {
-                    var textProp = textLayer.property("ADBE Text Properties") || textLayer.property("Text");
-                    var textDocProp = textProp ? (textProp.property("ADBE Text Document") || textProp.property("Source Text")) : textLayer.property("Source Text");
-                    if (textDocProp) {
-                        var doc = textDocProp.value;
-                        if (typeof TextDocument !== "undefined" && doc instanceof TextDocument) {
-                            doc.fontSize = 34;
-                            doc.font = activeFont;
-                            doc.fillColor = COLOR_TEXT_DARK;
-                            doc.applyFill = true;
-                            doc.applyStroke = false;
-                            doc.justification = (activeAlign === "center") ? 2 : ((activeAlign === "right") ? 1 : 0);
-                            textDocProp.setValue(doc);
-                        } else {
-                            textLayer.fontSize = 34;
-                            textLayer.fontFamily = activeFont;
-                            textLayer.fontColor = COLOR_TEXT_DARK;
-                            textLayer.justification = activeAlign;
-                        }
-                    }
-                } catch(eText) {
-                    textLayer.fontSize = 34;
-                    textLayer.fontFamily = activeFont;
-                }
+        var btnReloadPresets = grpPreset.add("button", undefined, "🔄");
+        btnReloadPresets.maximumSize = [28, 24];
+        btnReloadPresets.helpTip = "Reset preset parameters to defaults";
 
-                // Center composition placement based on alignment & box width
-                var posX = 260;
-                if (activeAlign === "center") {
-                    posX = comp.width / 2;
-                } else if (activeAlign === "right") {
-                    posX = comp.width / 2 + (dummyBoxWidth / 2);
-                } else {
-                    posX = Math.max(120, (comp.width - dummyBoxWidth) / 2);
-                }
-                textLayer.transform.position.setValue([posX, 200, 0]);
+        // ---------------------------------------------------------------------
+        // 3. TABBED CONTROLS
+        // ---------------------------------------------------------------------
+        var tpanel = win.add("tabbedpanel");
+        tpanel.alignChildren = ["fill", "top"];
+        tpanel.spacing = 4;
+        tpanel.margins = 4;
+
+        // ==========================================
+        // TAB 1: TEXT BOX (Main Tab)
+        // ==========================================
+        var tabText = tpanel.add("tab", undefined, "📝 Text Box");
+        tabText.orientation = "column";
+        tabText.alignChildren = ["fill", "top"];
+        tabText.spacing = 6;
+        tabText.margins = [8, 8, 8, 8];
+
+        // 1.1 Target Text Layer Status
+        var pnlStatus = tabText.add("panel", undefined, "Target Text Layer");
+        pnlStatus.orientation = "column";
+        pnlStatus.alignChildren = ["fill", "top"];
+        pnlStatus.spacing = 4;
+        pnlStatus.margins = [10, 8, 10, 8];
+
+        var lblStatus = pnlStatus.add("statictext", undefined, "Checking active selection...");
+        try {
+            lblStatus.graphics.foregroundColor = lblStatus.graphics.newPen(win.graphics.PenType.SOLID_COLOR, [0.4, 0.75, 1.0, 1.0], 1);
+        } catch(e) {}
+
+        var grpHeaderBtns = pnlStatus.add("group");
+        grpHeaderBtns.orientation = "row";
+        grpHeaderBtns.alignChildren = ["left", "center"];
+        var btnRefreshLayer = grpHeaderBtns.add("button", undefined, "Detect Selection");
+        btnRefreshLayer.helpTip = "Re-scan active composition to detect any newly selected Text Layer.";
+
+        // 1.2 Dummy Text Generator & Randomization
+        var pnlRandom = tabText.add("panel", undefined, "Dummy Text Generator & Randomization (~100 Words)");
+        pnlRandom.orientation = "column";
+        pnlRandom.alignChildren = ["fill", "top"];
+        pnlRandom.spacing = 6;
+        pnlRandom.margins = [10, 8, 10, 8];
+
+        var lblRandomSummary = pnlRandom.add("statictext", undefined, "Font: " + dummyFont + " | Align: " + dummyAlignment + " | Width: " + dummyBoxWidth + "px | Indent: " + dummyIndent + "px");
+        try {
+            lblRandomSummary.graphics.foregroundColor = lblRandomSummary.graphics.newPen(win.graphics.PenType.SOLID_COLOR, [0.95, 0.75, 0.3, 1.0], 1);
+        } catch(e) {}
+
+        var grpRandBtns = pnlRandom.add("group");
+        grpRandBtns.orientation = "row";
+        grpRandBtns.alignChildren = ["fill", "center"];
+        grpRandBtns.spacing = 4;
+
+        var btnRandomizeAll = grpRandBtns.add("button", undefined, "🎲 Randomize Dummy & Layout");
+        btnRandomizeAll.helpTip = "Randomizes font, alignment, text box width, indent, and picks 3 random words + 1 sentence.";
+
+        // Font selection row
+        var grpFontRow = pnlRandom.add("group");
+        grpFontRow.orientation = "row";
+        grpFontRow.alignChildren = ["left", "center"];
+        grpFontRow.add("statictext", undefined, "Font:");
+        var ddFont = grpFontRow.add("dropdownlist", undefined, TYPICAL_FONTS);
+        ddFont.selection = 0;
+        ddFont.preferredSize.width = 130;
+
+        grpFontRow.add("statictext", undefined, "Align:");
+        var ddAlign = grpFontRow.add("dropdownlist", undefined, ["Left", "Center", "Right"]);
+        ddAlign.selection = 0;
+        ddAlign.preferredSize.width = 80;
+
+        // Box width & indent row
+        var grpBoxRow = pnlRandom.add("group");
+        grpBoxRow.orientation = "row";
+        grpBoxRow.alignChildren = ["left", "center"];
+        grpBoxRow.add("statictext", undefined, "Box Width:");
+        var sldBoxW = grpBoxRow.add("slider", undefined, 950, 600, 1300);
+        sldBoxW.preferredSize.width = 85;
+        var txtBoxW = grpBoxRow.add("edittext", undefined, "950");
+        txtBoxW.preferredSize.width = 45;
+        grpBoxRow.add("statictext", undefined, "px");
+
+        grpBoxRow.add("statictext", undefined, "Indent:");
+        var sldInd = grpBoxRow.add("slider", undefined, 0, 0, 80);
+        sldInd.preferredSize.width = 50;
+        var txtInd = grpBoxRow.add("edittext", undefined, "0");
+        txtInd.preferredSize.width = 30;
+        grpBoxRow.add("statictext", undefined, "px");
+
+        // 1.3 Highlight Targets
+        var pnlTargets = tabText.add("panel", undefined, "Highlight Targets (Words, Phrases, Sentences)");
+        pnlTargets.orientation = "column";
+        pnlTargets.alignChildren = ["fill", "top"];
+        pnlTargets.spacing = 6;
+        pnlTargets.margins = [10, 8, 10, 8];
+
+        pnlTargets.add("statictext", undefined, "Words or sentences to detect & highlight (1 per line or comma-separated):");
+
+        var txtHighlights = pnlTargets.add("edittext", undefined, "", { multiline: true, wantReturn: true });
+        txtHighlights.preferredSize.height = 65;
+        txtHighlights.helpTip = "Type or paste words, chains of characters, or complete sentences to highlight.";
+
+        var grpActionBtns = pnlTargets.add("group");
+        grpActionBtns.orientation = "row";
+        grpActionBtns.alignChildren = ["fill", "center"];
+        grpActionBtns.spacing = 4;
+
+        var btnPickRandom = grpActionBtns.add("button", undefined, "🎲 Re-Pick 3 Words + 1 Sent");
+        btnPickRandom.helpTip = "Re-picks 3 random words and 1 full sentence from the current text.";
+
+        var btnLoadDemo = grpActionBtns.add("button", undefined, "📷 Slow Living (Demo)");
+        btnLoadDemo.helpTip = "Loads the exact Slow Living quote & highlights shown in the reference screenshot.";
+
+        var btnClearTargets = grpActionBtns.add("button", undefined, "✕ Clear");
+        btnClearTargets.helpTip = "Clears the target list.";
+
+        // ==========================================
+        // TAB 2: APPEARANCE
+        // ==========================================
+        var tabApp = tpanel.add("tab", undefined, "🎨 Appearance");
+        tabApp.orientation = "column";
+        tabApp.alignChildren = ["fill", "top"];
+        tabApp.spacing = 6;
+        tabApp.margins = [8, 8, 8, 8];
+
+        // 2.1 Highlight Geometry & Offsets
+        var pnlGeometry = tabApp.add("panel", undefined, "Highlight Geometry & Offsets");
+        pnlGeometry.orientation = "column";
+        pnlGeometry.alignChildren = ["fill", "top"];
+        pnlGeometry.spacing = 5;
+        pnlGeometry.margins = [10, 8, 10, 8];
+
+        // Thickness Y (Ascender to Descender)
+        var grpThick = pnlGeometry.add("group");
+        grpThick.orientation = "row";
+        grpThick.alignChildren = ["left", "center"];
+        var lblThick = grpThick.add("statictext", undefined, "Thickness Y:");
+        lblThick.preferredSize.width = 90;
+        var sldThick = grpThick.add("slider", undefined, 0, -20, 60);
+        sldThick.preferredSize.width = 110;
+        var txtThick = grpThick.add("edittext", undefined, "0");
+        txtThick.preferredSize.width = 45;
+        grpThick.add("statictext", undefined, "px (0 = Ascender to Descender)");
+
+        // Horizontal Padding X
+        var grpPadX = pnlGeometry.add("group");
+        grpPadX.orientation = "row";
+        grpPadX.alignChildren = ["left", "center"];
+        var lblPadX = grpPadX.add("statictext", undefined, "Padding X:");
+        lblPadX.preferredSize.width = 90;
+        var sldPadX = grpPadX.add("slider", undefined, 8, 0, 40);
+        sldPadX.preferredSize.width = 110;
+        var txtPadX = grpPadX.add("edittext", undefined, "8");
+        txtPadX.preferredSize.width = 45;
+        grpPadX.add("statictext", undefined, "px");
+
+        // Roundness
+        var grpRound = pnlGeometry.add("group");
+        grpRound.orientation = "row";
+        grpRound.alignChildren = ["left", "center"];
+        var lblRound = grpRound.add("statictext", undefined, "Roundness:");
+        lblRound.preferredSize.width = 90;
+        var sldRound = grpRound.add("slider", undefined, 6, 0, 40);
+        sldRound.preferredSize.width = 110;
+        var txtRound = grpRound.add("edittext", undefined, "6");
+        txtRound.preferredSize.width = 45;
+        grpRound.add("statictext", undefined, "px (0 = Square blocks)");
+
+        // Position Offset (X / Y)
+        var grpOffset = pnlGeometry.add("group");
+        grpOffset.orientation = "row";
+        grpOffset.alignChildren = ["left", "center"];
+        var lblOff = grpOffset.add("statictext", undefined, "Offset X / Y:");
+        lblOff.preferredSize.width = 90;
+
+        var sldOffX = grpOffset.add("slider", undefined, 0, -100, 100);
+        sldOffX.preferredSize.width = 50;
+        var txtOffX = grpOffset.add("edittext", undefined, "0");
+        txtOffX.preferredSize.width = 32;
+
+        var sldOffY = grpOffset.add("slider", undefined, 0, -100, 100);
+        sldOffY.preferredSize.width = 50;
+        var txtOffY = grpOffset.add("edittext", undefined, "0");
+        txtOffY.preferredSize.width = 32;
+        grpOffset.add("statictext", undefined, "px");
+
+        // 2.2 Highlight Color & Opacity
+        var pnlColor = tabApp.add("panel", undefined, "Highlight Color & Opacity");
+        pnlColor.orientation = "column";
+        pnlColor.alignChildren = ["fill", "top"];
+        pnlColor.spacing = 5;
+        pnlColor.margins = [10, 8, 10, 8];
+
+        var grpCol = pnlColor.add("group");
+        grpCol.orientation = "row";
+        grpCol.alignChildren = ["left", "center"];
+        grpCol.spacing = 6;
+
+        var lblCol = grpCol.add("statictext", undefined, "Color / Opacity:");
+        lblCol.preferredSize.width = 90;
+
+        var txtHexCol = grpCol.add("edittext", undefined, rgbToHex(currentHighlightColor));
+        txtHexCol.preferredSize.width = 75;
+
+        var sldOp = grpCol.add("slider", undefined, 100, 0, 100);
+        sldOp.preferredSize.width = 70;
+        var txtOp = grpCol.add("edittext", undefined, "100");
+        txtOp.preferredSize.width = 38;
+        grpCol.add("statictext", undefined, "%");
+
+        // Color Swatches
+        var grpSwatches = pnlColor.add("group");
+        grpSwatches.orientation = "row";
+        grpSwatches.alignChildren = ["left", "center"];
+        grpSwatches.spacing = 4;
+        grpSwatches.add("statictext", undefined, "Presets:");
+
+        var btnSwPink   = grpSwatches.add("button", undefined, "Pink");
+        var btnSwYellow = grpSwatches.add("button", undefined, "Gold");
+        var btnSwMint   = grpSwatches.add("button", undefined, "Mint");
+        var btnSwCyan   = grpSwatches.add("button", undefined, "Cyan");
+        var btnSwPurple = grpSwatches.add("button", undefined, "Purple");
+
+        // Set Default Active Tab
+        tpanel.selection = 0;
+
+        // ---------------------------------------------------------------------
+        // 4. MAIN ACTION BUTTONS (Full Width, At Bottom)
+        // ---------------------------------------------------------------------
+        var btnBuild = win.add("button", undefined, "🖊️ Create Highlight Layer");
+        btnBuild.preferredSize.height = 36;
+        btnBuild.helpTip = "Generates procedural vector highlight shape layer parented to the text layer.";
+
+        var btnUpdate = win.add("button", undefined, "⟳ Update Selected Highlight Layer");
+        btnUpdate.preferredSize.height = 28;
+        btnUpdate.helpTip = "Updates effects and styling on existing highlight layer in real time.";
+
+        // ---------------------------------------------------------------------
+        // 5. FOOTER LINK
+        // ---------------------------------------------------------------------
+        var grpRepoLink = win.add("group");
+        grpRepoLink.orientation = "row";
+        grpRepoLink.alignment = ["fill", "bottom"];
+        grpRepoLink.alignChildren = ["center", "center"];
+        grpRepoLink.margins = [0, 4, 0, 0];
+
+        var lblRepoLink = grpRepoLink.add("statictext", undefined, "GitHub: work2survive/AE-Text-Highlight");
+        lblRepoLink.helpTip = GITHUB_REPO_URL;
+        lblRepoLink.onClick = function() {
+            var url = GITHUB_REPO_URL;
+            if (typeof window !== "undefined" && window.open) {
+                window.open(url, "_blank");
+            } else if ($.os.indexOf("Windows") !== -1) {
+                system.callSystem('explorer "' + url + '"');
             } else {
-                textLayerName = textLayer.name;
+                system.callSystem('open "' + url + '"');
             }
+        };
 
-            // Always ensure textLayer reference is fresh
-            textLayer = findLayerByName(comp, textLayerName);
-            if (!textLayer) {
-                throw new Error("Unable to locate Text Layer: " + textLayerName);
+        // ---------------------------------------------------------------------
+        // 6. UI INTERACTION & EVENT HANDLERS
+        // ---------------------------------------------------------------------
+        function applyPreset(name) {
+            var p = PRESETS[name];
+            if (!p) return;
+            currentHighlightColor = p.highlight.slice(0);
+            currentThickness = p.thickness;
+            currentPaddingX = p.paddingX;
+            currentRoundness = p.roundness;
+            currentOpacity = p.opacity;
+            currentOffsetX = p.offX || 0;
+            currentOffsetY = p.offY || 0;
+
+            txtHexCol.text = rgbToHex(currentHighlightColor);
+
+            sldThick.value = currentThickness;
+            txtThick.text = String(currentThickness);
+
+            sldPadX.value = currentPaddingX;
+            txtPadX.text = String(currentPaddingX);
+
+            sldRound.value = currentRoundness;
+            txtRound.text = String(currentRoundness);
+
+            sldOp.value = currentOpacity;
+            txtOp.text = String(currentOpacity);
+
+            sldOffX.value = currentOffsetX;
+            txtOffX.text = String(currentOffsetX);
+
+            sldOffY.value = currentOffsetY;
+            txtOffY.text = String(currentOffsetY);
+
+            if (p.targets) {
+                txtHighlights.text = p.targets.join("\n");
             }
-
-            // Scenario C: Create Highlight Shape Layer
-            var shapeLayerName = textLayerName + " - Highlights";
-            var existingShape = findLayerByName(comp, shapeLayerName);
-            if (existingShape) {
-                try { existingShape.remove(); } catch(eRem) {}
-                textLayer = findLayerByName(comp, textLayerName);
-            }
-
-            var shapeLayer = comp.layers.addShape();
-            shapeLayer.name = shapeLayerName;
-
-            // Add Master Expression Controls ON THE SHAPE LAYER
-            addOrUpdateEffectSlider(shapeLayer, "Thickness Y", currentThickness);
-            addOrUpdateEffectSlider(shapeLayer, "Padding X", currentPaddingX);
-            addOrUpdateEffectSlider(shapeLayer, "Roundness", currentRoundness);
-            addOrUpdateEffectSlider(shapeLayer, "Offset X", currentOffsetX);
-            addOrUpdateEffectSlider(shapeLayer, "Offset Y", currentOffsetY);
-            addOrUpdateEffectColor(shapeLayer, "Highlight Color", currentHighlightColor);
-            addOrUpdateEffectSlider(shapeLayer, "Highlight Opacity", currentOpacity);
-
-            // Parse highlight targets
-            var terms = parseHighlightTerms(txtHighlights.text);
-            if (terms.length === 0) {
-                var rawStr = getTextLayerString(textLayer) || LOREM_IPSUM_RAW;
-                var autoTerms = extractRandomWordsAndSentence(rawStr);
-                terms = autoTerms.words.concat([autoTerms.sentence]);
-                txtHighlights.text = terms.join("\n");
-            }
-
-            // Build vector groups & zero-drift procedural expressions
-            createHighlightGroups(
-                shapeLayer,
-                textLayer,
-                textLayerName,
-                terms,
-                currentPaddingX,
-                currentThickness,
-                currentRoundness,
-                currentHighlightColor,
-                currentOpacity
-            );
-
-            // Parent to text layer
-            shapeLayer.parent = textLayer;
-            shapeLayer.transform.position.setValue([0, 0, 0]);
-            shapeLayer.transform.anchorPoint.setValue([0, 0, 0]);
-            shapeLayer.transform.scale.setValue([100, 100, 100]);
-            shapeLayer.transform.rotation.setValue(0);
-
-            // Stacking: Place shape layer directly behind text layer
-            try {
-                if (typeof shapeLayer.moveAfter === "function") {
-                    shapeLayer.moveAfter(textLayer);
-                }
-            } catch(eMove) {}
-
-            // Scenario B: Background Plate (placed at the absolute bottom of comp)
-            if (chkCreateBg.value) {
-                var bgLayer = findLayerByName(comp, "Text Background");
-                if (!bgLayer) {
-                    if (typeof comp.layers.addSolid === "function") {
-                        bgLayer = comp.layers.addSolid(currentBgColor, "Text Background", comp.width, comp.height, 1, comp.duration || 10);
-                    } else {
-                        bgLayer = comp.layers.addShape();
-                        bgLayer.name = "Text Background";
-                        var bgContents = bgLayer.property("Contents") || bgLayer.property("ADBE Root Vectors Group");
-                        var bgGroup = bgContents.addProperty("ADBE Vector Group");
-                        var bgRect = bgGroup.property("Contents").addProperty("ADBE Vector Shape - Rect");
-                        bgRect.property("Size").setValue([comp.width, comp.height]);
-                        var bgFill = bgGroup.property("Contents").addProperty("ADBE Vector Graphic - Fill");
-                        bgFill.property("Color").setValue(currentBgColor);
-                        bgLayer.transform.position.setValue([comp.width / 2, comp.height / 2, 0]);
-                    }
-                } else {
-                    try {
-                        var parade = bgLayer.property("Contents") || bgLayer.property("ADBE Root Vectors Group");
-                        if (parade && parade.property(1)) {
-                            var fillP = parade.property(1).property("Contents").property("ADBE Vector Graphic - Fill");
-                            if (fillP) fillP.property("Color").setValue(currentBgColor);
-                        }
-                    } catch(eBg) {}
-                }
-                try {
-                    if (bgLayer && typeof bgLayer.moveToEnd === "function") {
-                        bgLayer.moveToEnd();
-                    }
-                } catch(eBgMove) {}
-            }
-
-            // Fresh UI selection & status refresh
-            var finalTxt = findLayerByName(comp, textLayerName);
-            if (finalTxt) {
-                try { finalTxt.selected = true; } catch(eSel1) {}
-            }
-            var finalShape = findLayerByName(comp, shapeLayerName);
-            if (finalShape) {
-                try { finalShape.selected = false; } catch(eSel2) {}
-            }
-            updateSelectionStatus();
-
-        } catch(err) {
-            alert("Error building highlights at line " + (err.line || "unknown") + ":\n" + (err.message || err.toString()));
-        } finally {
-            if (app.endUndoGroup) app.endUndoGroup();
         }
-    };
 
-    btnUpdate.onClick = function() {
-        var comp = app.project.activeItem;
-        if (!comp || !(comp instanceof CompItem)) return;
+        dropPreset.onChange = function() {
+            if (dropPreset.selection) {
+                applyPreset(dropPreset.selection.text);
+            }
+        };
 
-        var textLayer = getSelectedTextLayer(comp);
-        if (!textLayer) {
-            for (var i = 1; i <= comp.numLayers; i++) {
-                var l = (typeof comp.layer === "function") ? comp.layer(i) : comp.layers[i - 1];
-                if (l && l.name && l.name.indexOf(" - Highlights") !== -1 && l.parent) {
-                    textLayer = l.parent;
+        btnReloadPresets.onClick = function() {
+            dropPreset.selection = 0;
+            applyPreset(PRESET_NAMES[0]);
+        };
+
+        function updateSelectionStatus() {
+            var comp = app.project.activeItem;
+            if (!comp || !(comp instanceof CompItem)) {
+                lblStatus.text = "○ No active composition (Will auto-create HD comp)";
+                return;
+            }
+            var sel = getSelectedTextLayer(comp);
+            if (sel) {
+                lblStatus.text = "● Target: \"" + sel.name + "\" (Selected Text Layer)";
+            } else {
+                lblStatus.text = "○ No text layer selected (Auto-generate randomized Lorem Ipsum)";
+            }
+        }
+
+        function updateRandomSummaryLabel() {
+            lblRandomSummary.text = "Font: " + dummyFont + " | Align: " + dummyAlignment + " | Width: " + dummyBoxWidth + "px | Indent: " + dummyIndent + "px";
+        }
+
+        function applyRandomization() {
+            dummyFont = TYPICAL_FONTS[Math.floor(Math.random() * TYPICAL_FONTS.length)];
+            dummyAlignment = TYPICAL_ALIGNMENTS[Math.floor(Math.random() * TYPICAL_ALIGNMENTS.length)];
+            dummyBoxWidth = TYPICAL_BOX_WIDTHS[Math.floor(Math.random() * TYPICAL_BOX_WIDTHS.length)];
+            dummyIndent = TYPICAL_INDENTS[Math.floor(Math.random() * TYPICAL_INDENTS.length)];
+
+            for (var f = 0; f < TYPICAL_FONTS.length; f++) {
+                if (TYPICAL_FONTS[f] === dummyFont) {
+                    ddFont.selection = f;
                     break;
                 }
             }
+            var alignIdx = (dummyAlignment === "center") ? 1 : ((dummyAlignment === "right") ? 2 : 0);
+            ddAlign.selection = alignIdx;
+
+            sldBoxW.value = dummyBoxWidth;
+            txtBoxW.text = String(dummyBoxWidth);
+
+            sldInd.value = dummyIndent;
+            txtInd.text = String(dummyIndent);
+
+            updateRandomSummaryLabel();
+
+            var wrapped = wordWrapToBoxWidth(LOREM_IPSUM_RAW, dummyBoxWidth, 34, dummyFont, dummyIndent);
+            var extracted = extractRandomWordsAndSentence(wrapped);
+            txtHighlights.text = extracted.words.concat([extracted.sentence]).join("\n");
         }
-        if (!textLayer) return;
 
-        var shapeLayerName = textLayer.name + " - Highlights";
-        var shapeLayer = findLayerByName(comp, shapeLayerName);
-        if (!shapeLayer) return;
-
-        if (app.beginUndoGroup) app.beginUndoGroup("Update AE Text Highlight Properties");
-        try {
-            addOrUpdateEffectSlider(shapeLayer, "Thickness Y", currentThickness);
-            addOrUpdateEffectSlider(shapeLayer, "Padding X", currentPaddingX);
-            addOrUpdateEffectSlider(shapeLayer, "Roundness", currentRoundness);
-            addOrUpdateEffectSlider(shapeLayer, "Offset X", currentOffsetX);
-            addOrUpdateEffectSlider(shapeLayer, "Offset Y", currentOffsetY);
-            addOrUpdateEffectColor(shapeLayer, "Highlight Color", currentHighlightColor);
-            addOrUpdateEffectSlider(shapeLayer, "Highlight Opacity", currentOpacity);
-        } catch(e) {
-        } finally {
-            if (app.endUndoGroup) app.endUndoGroup();
-        }
-    };
-
-    // -------------------------------------------------------------------------
-    // 8. INITIAL LAYOUT & WINDOW PRESENTATION
-    // -------------------------------------------------------------------------
-    updateSelectionStatus();
-
-    if (win) {
-        win.layout.layout(true);
-        win.layout.resize();
-        win.onResizing = win.onResize = function() {
-            this.layout.resize();
+        btnRandomizeAll.onClick = function() {
+            applyRandomization();
         };
-        if (win instanceof Window) {
-            win.center();
-            win.show();
+
+        ddFont.onChange = function() {
+            if (ddFont.selection) {
+                dummyFont = ddFont.selection.text;
+                updateRandomSummaryLabel();
+            }
+        };
+
+        ddAlign.onChange = function() {
+            if (ddAlign.selection) {
+                dummyAlignment = ddAlign.selection.text.toLowerCase();
+                updateRandomSummaryLabel();
+            }
+        };
+
+        sldBoxW.onChanging = sldBoxW.onChange = function() {
+            dummyBoxWidth = Math.round(sldBoxW.value);
+            txtBoxW.text = String(dummyBoxWidth);
+            updateRandomSummaryLabel();
+        };
+        txtBoxW.onChange = function() {
+            var v = parseInt(txtBoxW.text, 10);
+            if (isNaN(v)) v = 950;
+            sldBoxW.value = v;
+            dummyBoxWidth = v;
+            updateRandomSummaryLabel();
+        };
+
+        sldInd.onChanging = sldInd.onChange = function() {
+            dummyIndent = Math.round(sldInd.value);
+            txtInd.text = String(dummyIndent);
+            updateRandomSummaryLabel();
+        };
+        txtInd.onChange = function() {
+            var v = parseInt(txtInd.text, 10);
+            if (isNaN(v)) v = 0;
+            sldInd.value = v;
+            dummyIndent = v;
+            updateRandomSummaryLabel();
+        };
+
+        btnRefreshLayer.onClick = function() {
+            updateSelectionStatus();
+        };
+
+        sldThick.onChanging = sldThick.onChange = function() {
+            var v = Math.round(sldThick.value);
+            txtThick.text = String(v);
+            currentThickness = v;
+        };
+        txtThick.onChange = function() {
+            var v = parseInt(txtThick.text, 10);
+            if (isNaN(v)) v = 0;
+            sldThick.value = v;
+            currentThickness = v;
+        };
+
+        sldPadX.onChanging = sldPadX.onChange = function() {
+            var v = Math.round(sldPadX.value);
+            txtPadX.text = String(v);
+            currentPaddingX = v;
+        };
+        txtPadX.onChange = function() {
+            var v = parseInt(txtPadX.text, 10);
+            if (isNaN(v)) v = 8;
+            sldPadX.value = v;
+            currentPaddingX = v;
+        };
+
+        sldRound.onChanging = sldRound.onChange = function() {
+            var v = Math.round(sldRound.value);
+            txtRound.text = String(v);
+            currentRoundness = v;
+        };
+        txtRound.onChange = function() {
+            var v = parseInt(txtRound.text, 10);
+            if (isNaN(v)) v = 6;
+            sldRound.value = v;
+            currentRoundness = v;
+        };
+
+        sldOffX.onChanging = sldOffX.onChange = function() {
+            var v = Math.round(sldOffX.value);
+            txtOffX.text = String(v);
+            currentOffsetX = v;
+        };
+        txtOffX.onChange = function() {
+            var v = parseInt(txtOffX.text, 10);
+            if (isNaN(v)) v = 0;
+            sldOffX.value = v;
+            currentOffsetX = v;
+        };
+
+        sldOffY.onChanging = sldOffY.onChange = function() {
+            var v = Math.round(sldOffY.value);
+            txtOffY.text = String(v);
+            currentOffsetY = v;
+        };
+        txtOffY.onChange = function() {
+            var v = parseInt(txtOffY.text, 10);
+            if (isNaN(v)) v = 0;
+            sldOffY.value = v;
+            currentOffsetY = v;
+        };
+
+        sldOp.onChanging = sldOp.onChange = function() {
+            var v = Math.round(sldOp.value);
+            txtOp.text = String(v);
+            currentOpacity = v;
+        };
+        txtOp.onChange = function() {
+            var v = parseInt(txtOp.text, 10);
+            if (isNaN(v)) v = 100;
+            v = Math.max(0, Math.min(100, v));
+            sldOp.value = v;
+            currentOpacity = v;
+        };
+
+        txtHexCol.onChange = function() {
+            currentHighlightColor = hexToRgb(txtHexCol.text);
+        };
+
+        btnSwPink.onClick = function() {
+            currentHighlightColor = COLOR_HOT_PINK.slice(0);
+            txtHexCol.text = rgbToHex(currentHighlightColor);
+        };
+        btnSwYellow.onClick = function() {
+            currentHighlightColor = COLOR_CYBER_GOLD.slice(0);
+            txtHexCol.text = rgbToHex(currentHighlightColor);
+        };
+        btnSwMint.onClick = function() {
+            currentHighlightColor = COLOR_MINT_NEON.slice(0);
+            txtHexCol.text = rgbToHex(currentHighlightColor);
+        };
+        btnSwCyan.onClick = function() {
+            currentHighlightColor = COLOR_SKY_CYAN.slice(0);
+            txtHexCol.text = rgbToHex(currentHighlightColor);
+        };
+        btnSwPurple.onClick = function() {
+            currentHighlightColor = COLOR_PURPLE.slice(0);
+            txtHexCol.text = rgbToHex(currentHighlightColor);
+        };
+
+        btnPickRandom.onClick = function() {
+            var comp = app.project.activeItem;
+            var textLayer = (comp && comp instanceof CompItem) ? getSelectedTextLayer(comp) : null;
+            var srcText = "";
+            if (textLayer && textLayer.text && textLayer.text.sourceText) {
+                srcText = String(textLayer.text.sourceText.value || "");
+            }
+            if (!srcText) {
+                srcText = wordWrapToBoxWidth(LOREM_IPSUM_RAW, dummyBoxWidth, 34, dummyFont, dummyIndent);
+            }
+
+            var extracted = extractRandomWordsAndSentence(srcText);
+            var combined = extracted.words.concat([extracted.sentence]);
+            txtHighlights.text = combined.join("\n");
+        };
+
+        btnLoadDemo.onClick = function() {
+            for (var i = 0; i < PRESET_NAMES.length; i++) {
+                if (PRESET_NAMES[i] === "Slow Living (Demo)") {
+                    dropPreset.selection = i;
+                    applyPreset("Slow Living (Demo)");
+                    break;
+                }
+            }
+        };
+
+        btnClearTargets.onClick = function() {
+            txtHighlights.text = "";
+        };
+
+        // Initial Randomization Setup
+        applyRandomization();
+
+        // ---------------------------------------------------------------------
+        // 7. BUILD & UPDATE EXECUTION
+        // ---------------------------------------------------------------------
+        btnBuild.onClick = function() {
+            var comp = app.project.activeItem;
+            if (!comp || !(comp instanceof CompItem)) {
+                comp = app.project.items.addComp("AE Text Highlight Comp", 1920, 1080, 1, 10, 30);
+            }
+            if (comp && typeof comp.openInViewer === "function") {
+                try { comp.openInViewer(); } catch(eOpen) {}
+            }
+
+            if (app.beginUndoGroup) app.beginUndoGroup("AE Text Highlight Build");
+            try {
+                var textLayer = getSelectedTextLayer(comp);
+                var textLayerName = "";
+
+                // Scenario A: No text layer selected -> auto-generate randomized ~100-word dummy text layer
+                if (!textLayer) {
+                    var isDemo = (txtHighlights.text.indexOf("Slow living") !== -1 || txtHighlights.text.indexOf("present moment") !== -1);
+                    var sampleText = isDemo
+                        ? SLOW_LIVING_QUOTE
+                        : wordWrapToBoxWidth(LOREM_IPSUM_RAW, dummyBoxWidth, 34, dummyFont, dummyIndent);
+
+                    var activeFont = isDemo ? "Georgia" : dummyFont;
+                    var activeAlign = isDemo ? "left" : dummyAlignment;
+
+                    textLayerName = isDemo ? "Slow Living Quote" : ("Dummy Text - " + activeFont + " (" + activeAlign + ")");
+                    textLayer = comp.layers.addText(sampleText);
+                    textLayer.name = textLayerName;
+
+                    // Setup font styling
+                    try {
+                        var textProp = textLayer.property("ADBE Text Properties") || textLayer.property("Text");
+                        var textDocProp = textProp ? (textProp.property("ADBE Text Document") || textProp.property("Source Text")) : textLayer.property("Source Text");
+                        if (textDocProp) {
+                            var doc = textDocProp.value;
+                            if (typeof TextDocument !== "undefined" && doc instanceof TextDocument) {
+                                doc.fontSize = 34;
+                                doc.font = activeFont;
+                                doc.fillColor = COLOR_TEXT_DARK;
+                                doc.applyFill = true;
+                                doc.applyStroke = false;
+                                doc.justification = (activeAlign === "center") ? 2 : ((activeAlign === "right") ? 1 : 0);
+                                textDocProp.setValue(doc);
+                            } else {
+                                textLayer.fontSize = 34;
+                                textLayer.fontFamily = activeFont;
+                                textLayer.fontColor = COLOR_TEXT_DARK;
+                                textLayer.justification = activeAlign;
+                            }
+                        }
+                    } catch(eText) {
+                        textLayer.fontSize = 34;
+                        textLayer.fontFamily = activeFont;
+                    }
+
+                    // Center composition placement based on alignment & box width
+                    var posX = 260;
+                    if (activeAlign === "center") {
+                        posX = comp.width / 2;
+                    } else if (activeAlign === "right") {
+                        posX = comp.width / 2 + (dummyBoxWidth / 2);
+                    } else {
+                        posX = Math.max(120, (comp.width - dummyBoxWidth) / 2);
+                    }
+                    textLayer.transform.position.setValue([posX, 200, 0]);
+                } else {
+                    textLayerName = textLayer.name;
+                }
+
+                // Always ensure textLayer reference is fresh
+                textLayer = findLayerByName(comp, textLayerName);
+                if (!textLayer) {
+                    throw new Error("Unable to locate Text Layer: " + textLayerName);
+                }
+
+                // Scenario C: Create Highlight Shape Layer
+                var shapeLayerName = textLayerName + " - Highlights";
+                var existingShape = findLayerByName(comp, shapeLayerName);
+                if (existingShape) {
+                    try { existingShape.remove(); } catch(eRem) {}
+                    textLayer = findLayerByName(comp, textLayerName);
+                }
+
+                var shapeLayer = comp.layers.addShape();
+                shapeLayer.name = shapeLayerName;
+
+                // Add Master Expression Controls ON THE SHAPE LAYER
+                addOrUpdateEffectSlider(shapeLayer, "Thickness Y", currentThickness);
+                addOrUpdateEffectSlider(shapeLayer, "Padding X", currentPaddingX);
+                addOrUpdateEffectSlider(shapeLayer, "Roundness", currentRoundness);
+                addOrUpdateEffectSlider(shapeLayer, "Offset X", currentOffsetX);
+                addOrUpdateEffectSlider(shapeLayer, "Offset Y", currentOffsetY);
+                addOrUpdateEffectColor(shapeLayer, "Highlight Color", currentHighlightColor);
+                addOrUpdateEffectSlider(shapeLayer, "Highlight Opacity", currentOpacity);
+
+                // Parse highlight targets
+                var terms = parseHighlightTerms(txtHighlights.text);
+                if (terms.length === 0) {
+                    var rawStr = getTextLayerString(textLayer) || LOREM_IPSUM_RAW;
+                    var autoTerms = extractRandomWordsAndSentence(rawStr);
+                    terms = autoTerms.words.concat([autoTerms.sentence]);
+                    txtHighlights.text = terms.join("\n");
+                }
+
+                // Build vector groups & zero-drift procedural expressions
+                createHighlightGroups(
+                    shapeLayer,
+                    textLayer,
+                    textLayerName,
+                    terms,
+                    currentPaddingX,
+                    currentThickness,
+                    currentRoundness,
+                    currentHighlightColor,
+                    currentOpacity,
+                    currentOffsetX,
+                    currentOffsetY
+                );
+
+                // Parent to text layer
+                shapeLayer.parent = textLayer;
+                shapeLayer.transform.position.setValue([0, 0, 0]);
+                shapeLayer.transform.anchorPoint.setValue([0, 0, 0]);
+                shapeLayer.transform.scale.setValue([100, 100, 100]);
+                shapeLayer.transform.rotation.setValue(0);
+
+                // Stacking: Place shape layer directly behind text layer
+                try {
+                    if (typeof shapeLayer.moveAfter === "function") {
+                        shapeLayer.moveAfter(textLayer);
+                    }
+                } catch(eMove) {}
+
+                // Fresh UI selection & status refresh
+                var finalTxt = findLayerByName(comp, textLayerName);
+                if (finalTxt) {
+                    try { finalTxt.selected = true; } catch(eSel1) {}
+                }
+                var finalShape = findLayerByName(comp, shapeLayerName);
+                if (finalShape) {
+                    try { finalShape.selected = false; } catch(eSel2) {}
+                }
+                updateSelectionStatus();
+
+            } catch(err) {
+                alert("Error building highlights at line " + (err.line || "unknown") + ":\n" + (err.message || err.toString()));
+            } finally {
+                if (app.endUndoGroup) app.endUndoGroup();
+            }
+        };
+
+        btnUpdate.onClick = function() {
+            var comp = app.project.activeItem;
+            if (!comp || !(comp instanceof CompItem)) return;
+
+            var shapeLayer = null;
+            var textLayer = getSelectedTextLayer(comp);
+            if (textLayer) {
+                shapeLayer = findLayerByName(comp, textLayer.name + " - Highlights");
+            } else if (comp.selectedLayers && comp.selectedLayers.length > 0) {
+                for (var s = 0; s < comp.selectedLayers.length; s++) {
+                    var sl = comp.selectedLayers[s];
+                    if (sl && sl.name && sl.name.indexOf(" - Highlights") !== -1) {
+                        shapeLayer = sl;
+                        break;
+                    }
+                }
+            }
+            if (!shapeLayer) {
+                for (var i = 1; i <= comp.numLayers; i++) {
+                    var l = (typeof comp.layer === "function") ? comp.layer(i) : comp.layers[i - 1];
+                    if (l && l.name && l.name.indexOf(" - Highlights") !== -1) {
+                        shapeLayer = l;
+                        break;
+                    }
+                }
+            }
+            if (!shapeLayer) {
+                alert("No highlight layer found in active composition.", SCRIPT_TITLE);
+                return;
+            }
+
+            if (app.beginUndoGroup) app.beginUndoGroup("Update Highlight Layer Properties");
+            try {
+                addOrUpdateEffectSlider(shapeLayer, "Thickness Y", currentThickness);
+                addOrUpdateEffectSlider(shapeLayer, "Padding X", currentPaddingX);
+                addOrUpdateEffectSlider(shapeLayer, "Roundness", currentRoundness);
+                addOrUpdateEffectSlider(shapeLayer, "Offset X", currentOffsetX);
+                addOrUpdateEffectSlider(shapeLayer, "Offset Y", currentOffsetY);
+                addOrUpdateEffectColor(shapeLayer, "Highlight Color", currentHighlightColor);
+                addOrUpdateEffectSlider(shapeLayer, "Highlight Opacity", currentOpacity);
+            } catch(e) {
+                alert("Could not update Highlight Layer:\n" + e.toString(), SCRIPT_TITLE);
+            } finally {
+                if (app.endUndoGroup) app.endUndoGroup();
+            }
+        };
+
+        // ---------------------------------------------------------------------
+        // 8. INITIAL LAYOUT & WINDOW PRESENTATION
+        // ---------------------------------------------------------------------
+        updateSelectionStatus();
+
+        if (win) {
+            win.layout.layout(true);
+            win.layout.resize();
+            win.onResizing = win.onResize = function() {
+                this.layout.resize();
+            };
         }
+
+        return win;
+    }
+
+    var scriptPanel = buildUI(thisObj);
+    if (scriptPanel !== null && scriptPanel instanceof Window) {
+        scriptPanel.center();
+        scriptPanel.show();
     }
 
 })(this);
