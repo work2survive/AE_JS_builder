@@ -8,13 +8,13 @@
     'use strict';
 
     // -------------------------------------------------------------
-    // Version Management (v1.2.9)
+    // Version Management (v1.2.10)
     // -------------------------------------------------------------
     function computeDailyVersion() {
-        return '1.2.9';
+        return '1.2.10';
     }
 
-    const APP_VERSION = '1.2.9';
+    const APP_VERSION = '1.2.10';
     global.EMULATOR_VERSION = APP_VERSION;
 
     let renderer = null;
@@ -1995,27 +1995,6 @@
             });
         }
 
-        async function scanFolderListing(folder, map) {
-            let added = false;
-            try {
-                const res = await fetch(`${folder}/`);
-                if (!res.ok) return false;
-                const html = await res.text();
-                const doc = new DOMParser().parseFromString(html, 'text/html');
-                for (const a of Array.from(doc.querySelectorAll('a[href]'))) {
-                    const href = a.getAttribute('href');
-                    if (href && href.endsWith('.jsx')) {
-                        const fname = decodeURIComponent(href.split('/').pop());
-                        if (!map.has(fname)) {
-                            map.set(fname, { filename: fname, path: `${folder}/${fname}`, code: null });
-                            added = true;
-                        }
-                    }
-                }
-            } catch (e) {}
-            return added;
-        }
-
         async function populatePresetsDropdown() {
             // Load manifests immediately
             loadManifestInto(window.JSX_FOLDER_FILES, jsxFiles, 'jsx');
@@ -2037,17 +2016,6 @@
             presetSelect.onchange = () => {
                 loadPresetOrJSX(presetSelect.value, true, true);
             };
-
-            // Background scan if running over HTTP
-            if (window.location.protocol.startsWith('http')) {
-                const addedJsx = await scanFolderListing('jsx', jsxFiles);
-                const addedSamples = await scanFolderListing('samples', sampleFiles);
-                if (addedJsx || addedSamples) {
-                    const curVal = presetSelect.value;
-                    renderPresetOptions();
-                    if (curVal) presetSelect.value = curVal;
-                }
-            }
         }
 
         populatePresetsDropdown().then(async () => {
