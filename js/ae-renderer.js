@@ -36,8 +36,11 @@
             this.startTime = performance.now();
             this.lastFrameTime = performance.now();
 
+            this.viewportTheme = (typeof localStorage !== 'undefined' && localStorage.getItem('ae_viewport_theme')) || window.__aeViewportTheme || 'dark';
+
             this.initDOM();
             this.initEvents();
+            this.applyViewportTheme(this.viewportTheme);
             this.updateCameraTransform();
             this.startLoop();
         }
@@ -66,6 +69,9 @@
                             <button id="btn-cam-front" title="Front View">Front</button>
                             <button id="btn-cam-top" title="Top View">Top</button>
                             <button id="btn-cam-right" title="Right View">Right</button>
+                            <button id="btn-viewport-theme" class="ae-viewport-theme-btn" title="Viewport Background: Dark (Click for Bright)">
+                                <svg class="ae-icon-moon" viewBox="0 0 24 24" width="13" height="13" fill="currentColor" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block; vertical-align:middle;"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
+                            </button>
                         </div>
                     </div>
                     <div class="ae-world-scene" id="ae-world-scene">
@@ -254,6 +260,12 @@
             document.getElementById('btn-cam-top').onclick = () => this.setCameraView('top');
             document.getElementById('btn-cam-right').onclick = () => this.setCameraView('right');
 
+            // Viewport theme toggle (Dark / Bright)
+            const themeBtn = document.getElementById('btn-viewport-theme');
+            if (themeBtn) {
+                themeBtn.onclick = () => this.toggleViewportTheme();
+            }
+
             // Composition Resolution dropdown
             const resSelect = document.getElementById('ae-viewport-resolution');
             if (resSelect) {
@@ -386,6 +398,39 @@
                     break;
             }
             this.updateCameraTransform();
+        }
+
+        getMoonIconSvg() {
+            return `<svg class="ae-icon-moon" viewBox="0 0 24 24" width="13" height="13" fill="currentColor" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block; vertical-align:middle;"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>`;
+        }
+
+        getSunIconSvg() {
+            return `<svg class="ae-icon-sun" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block; vertical-align:middle;"><circle cx="12" cy="12" r="4" fill="currentColor"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>`;
+        }
+
+        applyViewportTheme(theme) {
+            this.viewportTheme = (theme === 'bright') ? 'bright' : 'dark';
+            window.__aeViewportTheme = this.viewportTheme;
+            const isBright = this.viewportTheme === 'bright';
+            if (this.container) {
+                this.container.classList.toggle('ae-theme-bright', isBright);
+            }
+            const themeBtn = document.getElementById('btn-viewport-theme');
+            if (themeBtn) {
+                themeBtn.title = isBright ? 'Viewport Background: Bright (Click for Dark)' : 'Viewport Background: Dark (Click for Bright)';
+                themeBtn.innerHTML = isBright ? this.getSunIconSvg() : this.getMoonIconSvg();
+                themeBtn.classList.toggle('active', isBright);
+            }
+        }
+
+        toggleViewportTheme() {
+            const nextTheme = (this.viewportTheme === 'bright') ? 'dark' : 'bright';
+            this.applyViewportTheme(nextTheme);
+            try {
+                if (typeof localStorage !== 'undefined') {
+                    localStorage.setItem('ae_viewport_theme', nextTheme);
+                }
+            } catch (e) {}
         }
 
         updateCameraTransform() {
