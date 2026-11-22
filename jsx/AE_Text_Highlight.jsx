@@ -24,16 +24,6 @@
 //   - Interactive Color Picker:
 //     https://github.com/work2survive/AE_JS_builder/blob/main/jsx/custom_rounded_rect.jsx
 //
-// NEW IN v1.4.1:
-//   1. Fixed Highlight Horizontal Offset in Desktop After Effects:
-//      - Fixed measureLayer ExtendScript DOM access: replaced measureLayer.sourceText with
-//        measureLayer.property("Source Text") so native After Effects text measurement engine
-//        runs instead of crude fallback table.
-//      - Fixed whitespace truncation: in After Effects sourceRectAtTime() ignores trailing spaces,
-//        causing prefixes to drop the space preceding the target word. Fixed measureString() to
-//        preserve leading/trailing space widths and computed prefix width using combined text
-//        measurement minus target word width (measureString(combined) - mW).
-//
 // NEW IN v1.4.0:
 //   1. "Make Precomp Out of Text Box" Option:
 //      - Added checkbox in Text Box tab powered by the AE_Text_Precomp engine.
