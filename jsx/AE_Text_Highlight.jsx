@@ -39,7 +39,7 @@
     "use strict";
 
     var SCRIPT_TITLE   = "AE Text Highlight";
-    var SCRIPT_VERSION = "v1.1.3";
+    var SCRIPT_VERSION = "v1.1.4";
 
     // =========================================================================
     // 0. EXTENDSCRIPT ES3 SAFE POLYFILLS & STRING HELPERS
@@ -196,36 +196,38 @@
             } catch(e) {}
         }
 
-        // 2. Calibrated font metric engine for ExtendScript desktop fallback
+        // 2. Calibrated typographic metric engine for ExtendScript desktop fallback
         var fontLower2 = cleanFont.toLowerCase();
         if (fontLower2.indexOf("courier") !== -1 || fontLower2.indexOf("mono") !== -1) {
             return str.length * fs * 0.60;
         }
 
-        var isSerif = (fontLower2.indexOf("georgia") !== -1 || fontLower2.indexOf("times") !== -1 || fontLower2.indexOf("serif") !== -1);
-        var isVerdana = (fontLower2.indexOf("verdana") !== -1);
-        var isImpact = (fontLower2.indexOf("impact") !== -1);
+        var isTrebuchet = (fontLower2.indexOf("trebuchet") !== -1);
+        var isVerdana   = (fontLower2.indexOf("verdana") !== -1);
+        var isImpact    = (fontLower2.indexOf("impact") !== -1);
+        var isTimes     = (fontLower2.indexOf("times") !== -1);
+        var isGeorgia   = (fontLower2.indexOf("georgia") !== -1 || fontLower2.indexOf("serif") !== -1);
 
         var total = 0;
         for (var i = 0; i < str.length; i++) {
             var ch = str.charAt(i);
             var code = ch.charCodeAt(0);
             if (code === 32) {
-                total += isSerif ? (fs * 0.25) : (isVerdana ? (fs * 0.35) : (fs * 0.28));
+                total += isTrebuchet ? (fs * 0.30) : (isVerdana ? (fs * 0.35) : (isImpact ? (fs * 0.18) : (isGeorgia ? (fs * 0.24) : (isTimes ? (fs * 0.25) : (fs * 0.28)))));
             } else if ("ijl|!.,:;'I`".indexOf(ch) !== -1) {
-                total += isSerif ? (fs * 0.28) : (fs * 0.24);
+                total += isTrebuchet ? (fs * 0.29) : (isVerdana ? (fs * 0.27) : (isImpact ? (fs * 0.27) : (isGeorgia ? (fs * 0.29) : (isTimes ? (fs * 0.28) : (fs * 0.22)))));
             } else if ("frt[](){}".indexOf(ch) !== -1) {
-                total += isSerif ? (fs * 0.38) : (fs * 0.33);
+                total += isTrebuchet ? (fs * 0.35) : (isVerdana ? (fs * 0.38) : (isImpact ? (fs * 0.32) : (isGeorgia ? (fs * 0.38) : (isTimes ? (fs * 0.34) : (fs * 0.33)))));
             } else if ("wmWM@#%&".indexOf(ch) !== -1) {
-                total += isSerif ? (fs * 0.88) : (isImpact ? (fs * 0.65) : (fs * 0.82));
+                total += isTrebuchet ? (fs * 0.78) : (isVerdana ? (fs * 0.90) : (isImpact ? (fs * 0.75) : (isGeorgia ? (fs * 0.90) : (isTimes ? (fs * 0.85) : (fs * 0.83)))));
             } else if (ch >= 'A' && ch <= 'Z') {
-                total += isSerif ? (fs * 0.68) : (isImpact ? (fs * 0.52) : (fs * 0.65));
+                total += isTrebuchet ? (fs * 0.60) : (isVerdana ? (fs * 0.68) : (isImpact ? (fs * 0.52) : (isGeorgia ? (fs * 0.67) : (isTimes ? (fs * 0.70) : (fs * 0.67)))));
             } else if (ch >= '0' && ch <= '9') {
-                total += isSerif ? (fs * 0.52) : (fs * 0.55);
+                total += isTrebuchet ? (fs * 0.54) : (isVerdana ? (fs * 0.60) : (isImpact ? (fs * 0.51) : (isGeorgia ? (fs * 0.52) : (isTimes ? (fs * 0.50) : (fs * 0.56)))));
             } else if (code > 255) {
                 total += fs * 1.0;
             } else {
-                total += isSerif ? (fs * 0.50) : (isImpact ? (fs * 0.42) : (isVerdana ? (fs * 0.58) : (fs * 0.52)));
+                total += isTrebuchet ? (fs * 0.54) : (isVerdana ? (fs * 0.60) : (isImpact ? (fs * 0.51) : (isGeorgia ? (fs * 0.50) : (isTimes ? (fs * 0.44) : (fs * 0.56)))));
             }
         }
         return total;
@@ -473,27 +475,38 @@
         '    }',
         '    var fLower2 = String(fontName || "").toLowerCase();',
         '    if (fLower2.indexOf("courier") !== -1 || fLower2.indexOf("mono") !== -1) return str.length * fs * 0.60;',
-        '    var isSerif = (fLower2.indexOf("georgia") !== -1 || fLower2.indexOf("times") !== -1 || fLower2.indexOf("serif") !== -1);',
-        '    var isVerdana = (fLower2.indexOf("verdana") !== -1);',
-        '    var isImpact = (fLower2.indexOf("impact") !== -1);',
+        '    var isTrebuchet = (fLower2.indexOf("trebuchet") !== -1);',
+        '    var isVerdana   = (fLower2.indexOf("verdana") !== -1);',
+        '    var isImpact    = (fLower2.indexOf("impact") !== -1);',
+        '    var isTimes     = (fLower2.indexOf("times") !== -1);',
+        '    var isGeorgia   = (fLower2.indexOf("georgia") !== -1 || fLower2.indexOf("serif") !== -1);',
         '    var total = 0;',
         '    for (var i = 0; i < str.length; i++) {',
         '        var ch = str.charAt(i);',
         '        var code = ch.charCodeAt(0);',
-        '        if (code === 32) total += isSerif ? (fs * 0.25) : (isVerdana ? (fs * 0.35) : (fs * 0.28));',
-        '        else if ("ijl|!.,:;\'I`".indexOf(ch) !== -1) total += isSerif ? (fs * 0.28) : (fs * 0.24);',
-        '        else if ("frt[](){}".indexOf(ch) !== -1) total += isSerif ? (fs * 0.38) : (fs * 0.33);',
-        '        else if ("wmWM@#%&".indexOf(ch) !== -1) total += isSerif ? (fs * 0.88) : (isImpact ? (fs * 0.65) : (fs * 0.82));',
-        '        else if (ch >= "A" && ch <= "Z") total += isSerif ? (fs * 0.68) : (isImpact ? (fs * 0.52) : (fs * 0.65));',
-        '        else if (ch >= "0" && ch <= "9") total += isSerif ? (fs * 0.52) : (fs * 0.55);',
-        '        else if (code > 255) total += fs * 1.0;',
-        '        else total += isSerif ? (fs * 0.50) : (isImpact ? (fs * 0.42) : (isVerdana ? (fs * 0.58) : (fs * 0.52)));',
+        '        if (code === 32) {',
+        '            total += isTrebuchet ? (fs * 0.30) : (isVerdana ? (fs * 0.35) : (isImpact ? (fs * 0.18) : (isGeorgia ? (fs * 0.24) : (isTimes ? (fs * 0.25) : (fs * 0.28)))));',
+        '        } else if ("ijl|!.,:;\'I`".indexOf(ch) !== -1) {',
+        '            total += isTrebuchet ? (fs * 0.29) : (isVerdana ? (fs * 0.27) : (isImpact ? (fs * 0.27) : (isGeorgia ? (fs * 0.29) : (isTimes ? (fs * 0.28) : (fs * 0.22)))));',
+        '        } else if ("frt[](){}".indexOf(ch) !== -1) {',
+        '            total += isTrebuchet ? (fs * 0.35) : (isVerdana ? (fs * 0.38) : (isImpact ? (fs * 0.32) : (isGeorgia ? (fs * 0.38) : (isTimes ? (fs * 0.34) : (fs * 0.33)))));',
+        '        } else if ("wmWM@#%&".indexOf(ch) !== -1) {',
+        '            total += isTrebuchet ? (fs * 0.78) : (isVerdana ? (fs * 0.90) : (isImpact ? (fs * 0.75) : (isGeorgia ? (fs * 0.90) : (isTimes ? (fs * 0.85) : (fs * 0.83)))));',
+        '        } else if (ch >= "A" && ch <= "Z") {',
+        '            total += isTrebuchet ? (fs * 0.60) : (isVerdana ? (fs * 0.68) : (isImpact ? (fs * 0.52) : (isGeorgia ? (fs * 0.67) : (isTimes ? (fs * 0.70) : (fs * 0.67)))));',
+        '        } else if (ch >= "0" && ch <= "9") {',
+        '            total += isTrebuchet ? (fs * 0.54) : (isVerdana ? (fs * 0.60) : (isImpact ? (fs * 0.51) : (isGeorgia ? (fs * 0.52) : (isTimes ? (fs * 0.50) : (fs * 0.56)))));',
+        '        } else if (code > 255) {',
+        '            total += fs * 1.0;',
+        '        } else {',
+        '            total += isTrebuchet ? (fs * 0.54) : (isVerdana ? (fs * 0.60) : (isImpact ? (fs * 0.51) : (isGeorgia ? (fs * 0.50) : (isTimes ? (fs * 0.44) : (fs * 0.56)))));',
+        '        }',
         '    }',
         '    return total;',
         '}'
     ].join('\n');
 
-    function generateRectSizeExpression(targetTerm, matchIndex, textLayerName) {
+    function generateRectSizeExpression(targetTerm, matchIndex, textLayerName, defaultFs, defaultFont) {
         var cleanTerm = String(targetTerm).replace(/\\/g, "\\\\").replace(/"/g, '\\"');
         return [
             EXPR_MEASURE_FUNCTION,
@@ -513,15 +526,16 @@
             '    try { padX = thisLayer.effect("Padding X")(1).value; } catch(e) {}',
             '    var thickY = 0;',
             '    try { thickY = thisLayer.effect("Thickness Y")(1).value; } catch(e) {}',
-            '    var fs = 34;',
-            '    try { fs = txtLayer.text.sourceText.style.fontSize; } catch(e) { fs = txtLayer.fontSize || 34; }',
-            '    var fontName = "Georgia";',
-            '    try { fontName = txtLayer.text.sourceText.style.font || txtLayer.fontFamily || "Georgia"; } catch(e) { fontName = txtLayer.fontFamily || "Georgia"; }',
+            '    var fs = ' + Number(defaultFs || 34) + ';',
+            '    try { if (txtLayer.text.sourceText.style && txtLayer.text.sourceText.style.fontSize) fs = txtLayer.text.sourceText.style.fontSize; } catch(e) {}',
+            '    var fontName = "' + String(defaultFont || "Georgia").replace(/"/g, '\\"') + '";',
+            '    try { if (txtLayer.text.sourceText.style && txtLayer.text.sourceText.style.font) fontName = txtLayer.text.sourceText.style.font; } catch(e) {}',
+            '    var cleanStr = str.replace(/\\r\\n/g, "\\n").replace(/\\r/g, "\\n");',
             '    var matches = [];',
             '    var searchIdx = 0;',
-            '    var lowerStr = str.toLowerCase();',
+            '    var lowerStr = cleanStr.toLowerCase();',
             '    var lowerTerm = term.toLowerCase();',
-            '    while (searchIdx < str.length) {',
+            '    while (searchIdx < cleanStr.length) {',
             '        var found = lowerStr.indexOf(lowerTerm, searchIdx);',
             '        if (found === -1) break;',
             '        matches.push(found);',
@@ -532,7 +546,7 @@
             '    } else {',
             '        var charStart = matches[matchIdx];',
             '        var charLen = term.length;',
-            '        var lines = str.replace(/\\r\\n/g, "\\n").replace(/\\r/g, "\\n").split("\\n");',
+            '        var lines = cleanStr.split("\\n");',
             '        var currChar = 0;',
             '        var targetLine = -1;',
             '        var colStart = -1;',
@@ -560,7 +574,7 @@
         ].join('\n');
     }
 
-    function generateRectPositionExpression(targetTerm, matchIndex, textLayerName) {
+    function generateRectPositionExpression(targetTerm, matchIndex, textLayerName, defaultFs, defaultFont, defaultAlign, defaultLeading) {
         var cleanTerm = String(targetTerm).replace(/\\/g, "\\\\").replace(/"/g, '\\"');
         return [
             EXPR_MEASURE_FUNCTION,
@@ -576,26 +590,28 @@
             '    if (typeof str !== "string") str = (str && str.text !== undefined) ? String(str.text) : String(str || "");',
             '    var term = "' + cleanTerm + '";',
             '    var matchIdx = ' + matchIndex + ';',
-            '    var fs = 34;',
-            '    try { fs = txtLayer.text.sourceText.style.fontSize; } catch(e) { fs = txtLayer.fontSize || 34; }',
-            '    var fontName = "Georgia";',
-            '    try { fontName = txtLayer.text.sourceText.style.font || txtLayer.fontFamily || "Georgia"; } catch(e) { fontName = txtLayer.fontFamily || "Georgia"; }',
-            '    var leading = 0;',
-            '    try { leading = txtLayer.text.sourceText.style.leading; } catch(e) { leading = txtLayer.leading || 0; }',
+            '    var fs = ' + Number(defaultFs || 34) + ';',
+            '    try { if (txtLayer.text.sourceText.style && txtLayer.text.sourceText.style.fontSize) fs = txtLayer.text.sourceText.style.fontSize; } catch(e) {}',
+            '    var fontName = "' + String(defaultFont || "Georgia").replace(/"/g, '\\"') + '";',
+            '    try { if (txtLayer.text.sourceText.style && txtLayer.text.sourceText.style.font) fontName = txtLayer.text.sourceText.style.font; } catch(e) {}',
+            '    var leading = ' + Number(defaultLeading || 0) + ';',
+            '    try { if (txtLayer.text.sourceText.style && txtLayer.text.sourceText.style.leading) leading = txtLayer.text.sourceText.style.leading; } catch(e) {}',
             '    var lineH = (leading > 0) ? leading : (fs * 1.35);',
-            '    var just = "left";',
+            '    var just = "' + String(defaultAlign || "left").toLowerCase() + '";',
             '    try {',
-            '        var jVal = txtLayer.text.sourceText.style.justification;',
-            '        if (jVal === 2 || jVal === "center" || (typeof ParagraphJustification !== "undefined" && jVal === ParagraphJustification.CENTER_JUSTIFY)) just = "center";',
-            '        else if (jVal === 1 || jVal === "right" || (typeof ParagraphJustification !== "undefined" && jVal === ParagraphJustification.RIGHT_JUSTIFY)) just = "right";',
-            '    } catch(e) {',
-            '        just = txtLayer.justification || "left";',
-            '    }',
+            '        if (txtLayer.text.sourceText.style && txtLayer.text.sourceText.style.justification !== undefined) {',
+            '            var jVal = txtLayer.text.sourceText.style.justification;',
+            '            if (jVal === 2 || jVal === "center" || (typeof ParagraphJustification !== "undefined" && jVal === ParagraphJustification.CENTER_JUSTIFY)) just = "center";',
+            '            else if (jVal === 1 || jVal === "right" || (typeof ParagraphJustification !== "undefined" && jVal === ParagraphJustification.RIGHT_JUSTIFY)) just = "right";',
+            '            else just = "left";',
+            '        }',
+            '    } catch(e) {}',
+            '    var cleanStr = str.replace(/\\r\\n/g, "\\n").replace(/\\r/g, "\\n");',
             '    var matches = [];',
             '    var searchIdx = 0;',
-            '    var lowerStr = str.toLowerCase();',
+            '    var lowerStr = cleanStr.toLowerCase();',
             '    var lowerTerm = term.toLowerCase();',
-            '    while (searchIdx < str.length) {',
+            '    while (searchIdx < cleanStr.length) {',
             '        var found = lowerStr.indexOf(lowerTerm, searchIdx);',
             '        if (found === -1) break;',
             '        matches.push(found);',
@@ -606,7 +622,7 @@
             '    } else {',
             '        var charStart = matches[matchIdx];',
             '        var charLen = term.length;',
-            '        var lines = str.replace(/\\r\\n/g, "\\n").replace(/\\r/g, "\\n").split("\\n");',
+            '        var lines = cleanStr.split("\\n");',
             '        var currChar = 0;',
             '        var targetLine = -1;',
             '        var colStart = -1;',
@@ -662,8 +678,9 @@
         var textDoc = getTextLayerDocument(textLayer);
         var textStr = getTextLayerString(textLayer) || LOREM_IPSUM_RAW;
 
-        var lowerText = textStr.toLowerCase();
-        var lines = textStr.replace(/\r\n/g, "\n").replace(/\r/g, "\n").split("\n");
+        var cleanTextStr = textStr.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+        var lowerText = cleanTextStr.toLowerCase();
+        var lines = cleanTextStr.split("\n");
 
         var fs = 34;
         if (textDoc && textDoc.fontSize) fs = textDoc.fontSize;
@@ -697,7 +714,7 @@
 
             var matchIndices = [];
             var sIdx = 0;
-            while (sIdx < textStr.length) {
+            while (sIdx < cleanTextStr.length) {
                 var found = lowerText.indexOf(lowerTerm, sIdx);
                 if (found === -1) break;
                 matchIndices.push(found);
@@ -765,8 +782,8 @@
                 fill.property("ADBE Vector Fill Color").setValue(highlightColor);
                 fill.property("ADBE Vector Fill Opacity").setValue(highlightOpacity);
 
-                rect.property("ADBE Vector Rect Size").expression = generateRectSizeExpression(term, m, targetTextLayerName);
-                rect.property("ADBE Vector Rect Position").expression = generateRectPositionExpression(term, m, targetTextLayerName);
+                rect.property("ADBE Vector Rect Size").expression = generateRectSizeExpression(term, m, targetTextLayerName, fs, fontName);
+                rect.property("ADBE Vector Rect Position").expression = generateRectPositionExpression(term, m, targetTextLayerName, fs, fontName, just, lineH);
                 rect.property("ADBE Vector Rect Roundness").expression = 'try { Math.max(0, thisLayer.effect("Roundness")(1).value); } catch(e) { value; }';
 
                 fill.property("ADBE Vector Fill Color").expression = 'try { thisLayer.effect("Highlight Color")(1); } catch(e) { value; }';
