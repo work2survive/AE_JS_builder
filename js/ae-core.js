@@ -1814,8 +1814,57 @@
 
         measureLineWidth(str, fontSize, fontName, tracking = 0) {
             if (!str) return 0;
-            const profile = this.getFontProfile(fontName);
             const fs = fontSize || 24;
+
+            // In browser / DOM environment, use Canvas 2D font metric for 1:1 match with rendered SVG text
+            if (typeof document !== 'undefined') {
+                try {
+                    if (!this._measureCanvas) {
+                        this._measureCanvas = document.createElement('canvas');
+                        this._measureCtx = this._measureCanvas.getContext('2d');
+                    }
+                    if (this._measureCtx) {
+                        const rawFontStr = String(fontName || 'Arial').replace(/"/g, "'").trim();
+                        let textFont = "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
+                        if (rawFontStr.includes(',')) {
+                            textFont = rawFontStr;
+                        } else {
+                            const cleanFont = rawFontStr.replace(/['"]/g, '').trim();
+                            const fontLower = cleanFont.toLowerCase();
+                            if (fontLower.includes('courier') || fontLower.includes('consolas') || fontLower.includes('monospace')) {
+                                textFont = `'${cleanFont}', 'Courier New', Consolas, monospace`;
+                            } else if (fontLower.includes('times') || fontLower.includes('georgia') || fontLower.includes('serif')) {
+                                textFont = `'${cleanFont}', Georgia, 'Times New Roman', serif`;
+                            } else if (fontLower.includes('impact')) {
+                                textFont = `'${cleanFont}', Impact, sans-serif`;
+                            } else if (fontLower.includes('trebuchet')) {
+                                textFont = `'${cleanFont}', 'Trebuchet MS', sans-serif`;
+                            } else if (fontLower.includes('verdana')) {
+                                textFont = `'${cleanFont}', Verdana, sans-serif`;
+                            } else if (fontLower.includes('myriad')) {
+                                textFont = `'${cleanFont}', 'Myriad Pro', 'Segoe UI', -apple-system, Arial, sans-serif`;
+                            } else if (fontLower.includes('helvetica')) {
+                                textFont = `'${cleanFont}', 'Helvetica Neue', Helvetica, Arial, sans-serif`;
+                            } else {
+                                textFont = `'${cleanFont}', 'Segoe UI', Arial, -apple-system, sans-serif`;
+                            }
+                        }
+                        this._measureCtx.font = `${fs}px ${textFont}`;
+                        const m = this._measureCtx.measureText(str).width;
+                        if (m && !isNaN(m) && m > 0) {
+                            let total = m;
+                            if (tracking && str.length > 1) {
+                                const profile = this.getFontProfile(fontName);
+                                const trackDelta = ((tracking / 1000) * fs * (profile.trackingScale || 1.0));
+                                total += (str.length - 1) * trackDelta;
+                            }
+                            return Math.max(0, total);
+                        }
+                    }
+                } catch (e) {}
+            }
+
+            const profile = this.getFontProfile(fontName);
             let total = 0;
             for (let i = 0; i < str.length; i++) {
                 total += this.measureCharWidth(str[i], fs, profile);
