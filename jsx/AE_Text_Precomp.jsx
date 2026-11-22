@@ -1,6 +1,6 @@
 // Co-authored & architected with Google DeepMind Antigravity.
 // =============================================================================
-// ADOBE AFTER EFFECTS EXTENDSCRIPT & SCRIPTUI PANEL: AE TEXT PRECOMP v1.3.0
+// ADOBE AFTER EFFECTS EXTENDSCRIPT & SCRIPTUI PANEL: AE TEXT PRECOMP v1.3.1
 // =============================================================================
 //
 // PURPOSE:
@@ -21,36 +21,39 @@
 //     https://work2survive.github.io/AE_JS_builder/?jsx=AE_Text_Precomp.jsx&autobuild=true
 //
 // KEY FEATURES:
-//   1. Padding & Textbox Width Reduction:
+//   1. Zero-Shift Text Box Positioning:
+//      - The exact visual position of the original text box on screen is preserved
+//        pixel-for-pixel when precomposed, regardless of anchor point placement.
+//      - Whenever an anchor point is changed, position is automatically compensated
+//        using the layer's rotation and scale transformation matrix.
+//   2. Padding & Textbox Width Reduction:
 //      - Reduces the textbox width by (2 * padding) to accommodate padding inside the precomp.
 //      - When "automatic precomp height" is active, precomp height expands to fit
 //        the wrapped textbox vertical size plus top and bottom padding.
 //      - Anchor point automatically accounts for padding, resting cleanly at the
 //        top of the text box (Top-Left, Top-Center, or Top-Right based on alignment).
-//   2. Coherent Text Properties Extraction Engine:
+//   3. Coherent Text Properties Extraction Engine:
 //      - Follows Text_Properties_To_Effects.jsx for robust typography metrics,
 //        paragraph justification, box text detection, sourceRect bounds, and
 //        in-memory $.global.AE_TEXT_BOX_MEMORY caching.
-//   3. Procedural Rounded Background Card (AE_Extruded_Round_corners):
+//   4. Procedural Rounded Background Card (AE_Extruded_Round_corners):
 //      - Creates an individual 4-corner rounded rectangle shape layer behind the text.
 //      - Interactive UI asks which corners will react to the padding to round.
 //      - 8-vertex Bézier path with W3C CSS proportional overlap protection.
 //      - Master Effect Controls (Radius Top-Left, Top-Right, Bottom-Right, Bottom-Left,
 //        Card Width, Card Height) with live parametric expressions on the Path property.
-//   4. Integrated Interactive Color Picker:
+//   5. Integrated Interactive Color Picker:
 //      - Custom swatch button + hex input (#RRGGBB) compatible with AE native
 //        $.colorPicker, Windows OS color picker, and AE_JS_builder web emulator.
-//   5. 100-Word Lorem Ipsum Dummy Layer:
+//   6. 100-Word Lorem Ipsum Dummy Layer:
 //      - If no text layer is selected, creates a 100-word dummy layer with a system font (ArialMT).
-//   6. Zero Visual Shift:
-//      - Mathematically compensates position so that the text does not jump on screen.
 // =============================================================================
 
 (function(thisObj) {
     "use strict";
 
     var SCRIPT_NAME = "AE Text Precomp";
-    var SCRIPT_VERSION = "v1.3.0";
+    var SCRIPT_VERSION = "v1.3.1";
     var TEXT_PROP_REF_URL = "https://github.com/work2survive/AE_JS_builder/blob/main/samples/Text_Properties_To_Effects.jsx";
     var EXTRUDED_CORNERS_REF_URL = "https://github.com/work2survive/AE_Extruded_Round_corners";
 
@@ -861,9 +864,50 @@
             align = options.forceAlign;
         }
 
-        // Width calculations:
-        // Precomp Width = auto-detected from layer + padding or explicitly specified width
-        // Textbox Width = Precomp Width reduced by padding on both sides
+        // ---------------------------------------------------------------------
+        // 1. Capture Original Text Box Reference Point BEFORE any modifications
+        // ---------------------------------------------------------------------
+        var origBoxW = (metrics.isBoxText && metrics.boxWidth > 0) ? metrics.boxWidth : metrics.detectedWidth;
+        var origBoxH = (metrics.isBoxText && metrics.boxHeight > 0) ? metrics.boxHeight : metrics.detectedHeight;
+
+        var origRefX = 0;
+        var origRefY = 0;
+        if (metrics.isBoxText) {
+            origRefY = 0;
+            if (align === "left") {
+                origRefX = 0;
+            } else if (align === "center") {
+                origRefX = origBoxW / 2;
+            } else if (align === "right") {
+                origRefX = origBoxW;
+            }
+        } else {
+            origRefY = metrics.rect ? metrics.rect.top : 0;
+            if (align === "left") {
+                origRefX = metrics.rect ? metrics.rect.left : 0;
+            } else if (align === "center") {
+                origRefX = metrics.rect ? (metrics.rect.left + (metrics.rect.width / 2)) : 0;
+            } else if (align === "right") {
+                origRefX = metrics.rect ? (metrics.rect.left + metrics.rect.width) : 0;
+            }
+        }
+
+        var sx = (origScale && origScale.length > 0) ? (origScale[0] / 100.0) : 1.0;
+        var sy = (origScale && origScale.length > 1) ? (origScale[1] / 100.0) : 1.0;
+        var dxOrig = (origRefX - origAnchor[0]) * sx;
+        var dyOrig = (origRefY - origAnchor[1]) * sy;
+        var rad = (origRot || 0) * Math.PI / 180.0;
+        var cosA = Math.cos(rad);
+        var sinA = Math.sin(rad);
+
+        // Exact coordinate of original text reference point in parent/comp space:
+        var prefX = origPos[0] + (dxOrig * cosA - dyOrig * sinA);
+        var prefY = origPos[1] + (dxOrig * sinA + dyOrig * cosA);
+        var prefZ = (origPos.length > 2) ? origPos[2] : 0;
+
+        // ---------------------------------------------------------------------
+        // 2. Precomp Dimensions & Textbox Sizing
+        // ---------------------------------------------------------------------
         var precompW = 800;
         if (options.autoDetectWidth && metrics && metrics.detectedWidth) {
             precompW = Math.max(40, Math.round(metrics.detectedWidth + (padding * 2)));
@@ -872,31 +916,10 @@
         }
         var textboxW = Math.max(20, precompW - (padding * 2));
 
-        // Adjust original layer's boxTextSize to the reduced textbox width if it is a paragraph box
-        if (metrics.isBoxText) {
-            try {
-                var srcProp = textLayer.property("Source Text");
-                var sDoc = srcProp ? srcProp.value : null;
-                if (sDoc) {
-                    if (typeof sDoc.setBoxTextSize === "function") {
-                        sDoc.setBoxTextSize([textboxW, metrics.boxHeight || 300]);
-                        srcProp.setValue(sDoc);
-                    } else if (sDoc.boxTextSize) {
-                        sDoc.boxTextSize = [textboxW, metrics.boxHeight || 300];
-                        srcProp.setValue(sDoc);
-                    }
-                }
-            } catch (eResizeBox) {}
-        }
-
-        // Re-query metrics after resizing textbox to get exact wrapped height
-        metrics = getTextLayerMetrics(comp, textLayer);
-
         var precompH = 0;
         var textboxH = 0;
 
         if (options.autoHeight) {
-            // Expand precomp height to fit the textbox vertical size plus padding
             var rawH = metrics.detectedHeight;
             if (metrics.rect && metrics.rect.height) {
                 rawH = Math.max(rawH, Math.ceil(metrics.rect.height));
@@ -907,50 +930,6 @@
             precompH = Math.max(20, Math.round(options.height || 400));
             textboxH = Math.max(20, precompH - (padding * 2));
         }
-
-        // Calculate Anchor Point on the text box
-        // Automatic Anchor Point: Top of the text box (Top-Left, Top-Center, or Top-Right)
-        var ax = 0;
-        var ay = 0;
-
-        if (options.autoAnchor) {
-            if (metrics.isBoxText) {
-                ay = 0;
-                if (align === "left") {
-                    ax = 0;
-                } else if (align === "center") {
-                    ax = textboxW / 2;
-                } else if (align === "right") {
-                    ax = textboxW;
-                }
-            } else {
-                ay = metrics.rect.top;
-                if (align === "left") {
-                    ax = metrics.rect.left;
-                } else if (align === "center") {
-                    ax = metrics.rect.left + (metrics.rect.width / 2);
-                } else if (align === "right") {
-                    ax = metrics.rect.left + metrics.rect.width;
-                }
-            }
-        } else {
-            // Standard Center Anchor Point
-            ax = metrics.rect.left + (metrics.rect.width / 2);
-            ay = metrics.rect.top + (metrics.rect.height / 2);
-        }
-
-        // Calculate exact Main Comp coordinates where [ax, ay] is located
-        var sx = origScale[0] / 100.0;
-        var sy = origScale[1] / 100.0;
-        var dx = (ax - origAnchor[0]) * sx;
-        var dy = (ay - origAnchor[1]) * sy;
-        var rad = (origRot || 0) * Math.PI / 180.0;
-        var cosA = Math.cos(rad);
-        var sinA = Math.sin(rad);
-
-        var compPosX = origPos[0] + (dx * cosA - dy * sinA);
-        var compPosY = origPos[1] + (dx * sinA + dy * cosA);
-        var compPosZ = (origPos.length > 2) ? origPos[2] : 0;
 
         // Precomposition Name
         var precompName = trimStr(options.precompName);
@@ -1019,11 +998,16 @@
             try { precompLayer = comp.selectedLayers[0]; } catch (eFind4) {}
         }
 
-        // Inside newComp: configure inner text layer
+        // ---------------------------------------------------------------------
+        // 3. Inside newComp: Configure Inner Text Layer
+        // ---------------------------------------------------------------------
         var innerTextLayer = null;
         try {
             innerTextLayer = (typeof newComp.layer === "function") ? newComp.layer(1) : newComp.layers[0];
         } catch (eGetInner) {}
+
+        var innerRefX = 0;
+        var innerRefY = padding;
 
         if (innerTextLayer) {
             // Update boxText size to the reduced textbox width
@@ -1046,26 +1030,53 @@
             var isInner3D = false;
             try { isInner3D = !!innerTextLayer.threeDLayer; } catch (eInner3D) {}
 
-            var innerX = padding;
-            if (align === "center") {
-                innerX = precompW / 2;
-            } else if (align === "right") {
-                innerX = precompW - padding;
+            var innerAnchorX = 0;
+            var innerAnchorY = 0;
+            var innerPosX = 0;
+            var innerPosY = padding;
+
+            if (metrics.isBoxText) {
+                innerAnchorY = 0;
+                if (align === "left") {
+                    innerAnchorX = 0;
+                    innerPosX = padding;
+                } else if (align === "center") {
+                    innerAnchorX = textboxW / 2;
+                    innerPosX = precompW / 2;
+                } else if (align === "right") {
+                    innerAnchorX = textboxW;
+                    innerPosX = precompW - padding;
+                }
+            } else {
+                // Point text
+                innerAnchorY = metrics.rect ? metrics.rect.top : 0;
+                if (align === "left") {
+                    innerAnchorX = metrics.rect ? metrics.rect.left : 0;
+                    innerPosX = padding;
+                } else if (align === "center") {
+                    innerAnchorX = metrics.rect ? (metrics.rect.left + (metrics.rect.width / 2)) : 0;
+                    innerPosX = precompW / 2;
+                } else if (align === "right") {
+                    innerAnchorX = metrics.rect ? (metrics.rect.left + metrics.rect.width) : 0;
+                    innerPosX = precompW - padding;
+                }
             }
-            var innerY = padding;
+
+            innerRefX = innerPosX;
+            innerRefY = innerPosY;
 
             try {
                 if (isInner3D) {
-                    innerTextLayer.transform.anchorPoint.setValue([ax, ay, 0]);
-                    innerTextLayer.transform.position.setValue([innerX, innerY, 0]);
+                    innerTextLayer.transform.anchorPoint.setValue([innerAnchorX, innerAnchorY, 0]);
+                    innerTextLayer.transform.position.setValue([innerPosX, innerPosY, 0]);
                 } else {
-                    innerTextLayer.transform.anchorPoint.setValue([ax, ay]);
-                    innerTextLayer.transform.position.setValue([innerX, innerY]);
+                    innerTextLayer.transform.anchorPoint.setValue([innerAnchorX, innerAnchorY]);
+                    innerTextLayer.transform.position.setValue([innerPosX, innerPosY]);
                 }
             } catch (eInPos) {
                 try {
-                    innerTextLayer.transform.anchorPoint.setValue([ax, ay]);
-                    innerTextLayer.transform.position.setValue([innerX, innerY]);
+                    innerTextLayer.transform.anchorPoint.setValue([innerAnchorX, innerAnchorY]);
+                    innerTextLayer.transform.position.setValue([innerPosX, innerPosY]);
                 } catch (eInPos2) {}
             }
 
@@ -1116,25 +1127,35 @@
             } catch (eCard) {}
         }
 
-        // In parent comp: configure precompLayer
+        // ---------------------------------------------------------------------
+        // 4. In parent comp: Configure Precomp Layer (Zero-Shift Anchor & Pos)
+        // ---------------------------------------------------------------------
         if (precompLayer) {
+            // Restore parenting FIRST so transforms operate in the exact original coordinate space
+            if (origParent) {
+                try { precompLayer.parent = origParent; } catch (ePar) {}
+            }
+
             var precompAnchorX = 0;
             var precompAnchorY = 0;
 
             if (options.autoAnchor) {
-                // Precomp anchor point matches top of the text box (offset by padding)
-                precompAnchorY = padding;
-                if (align === "left") {
-                    precompAnchorX = padding;
-                } else if (align === "center") {
-                    precompAnchorX = precompW / 2;
-                } else if (align === "right") {
-                    precompAnchorX = precompW - padding;
-                }
+                // Precomp anchor point matches the top of the text box (offset by padding)
+                precompAnchorX = innerRefX;
+                precompAnchorY = innerRefY;
             } else {
+                // Center Anchor Point
                 precompAnchorX = precompW / 2;
                 precompAnchorY = precompH / 2;
             }
+
+            // Zero-Shift compensation: offset precomp position by the difference between
+            // its anchor point and the internal text box reference point.
+            var dAx = (precompAnchorX - innerRefX) * sx;
+            var dAy = (precompAnchorY - innerRefY) * sy;
+            var finalPosX = prefX + (dAx * cosA - dAy * sinA);
+            var finalPosY = prefY + (dAx * sinA + dAy * cosA);
+            var finalPosZ = prefZ;
 
             if (is3D) {
                 try { precompLayer.threeDLayer = true; } catch (e3D) {}
@@ -1143,15 +1164,15 @@
             try {
                 if (is3D) {
                     precompLayer.transform.anchorPoint.setValue([precompAnchorX, precompAnchorY, 0]);
-                    precompLayer.transform.position.setValue([compPosX, compPosY, compPosZ]);
+                    precompLayer.transform.position.setValue([finalPosX, finalPosY, finalPosZ]);
                 } else {
                     precompLayer.transform.anchorPoint.setValue([precompAnchorX, precompAnchorY]);
-                    precompLayer.transform.position.setValue([compPosX, compPosY]);
+                    precompLayer.transform.position.setValue([finalPosX, finalPosY]);
                 }
             } catch (ePrePos) {
                 try {
                     precompLayer.transform.anchorPoint.setValue([precompAnchorX, precompAnchorY]);
-                    precompLayer.transform.position.setValue([compPosX, compPosY]);
+                    precompLayer.transform.position.setValue([finalPosX, finalPosY]);
                 } catch (ePrePos2) {}
             }
 
@@ -1163,10 +1184,6 @@
                 if (precompLayer.transform.rotation) precompLayer.transform.rotation.setValue(origRot);
                 if (precompLayer.transform.zRotation) precompLayer.transform.zRotation.setValue(origRot);
             } catch (eSetRot) {}
-
-            if (origParent) {
-                try { precompLayer.parent = origParent; } catch (ePar) {}
-            }
 
             try { precompLayer.selected = true; } catch (eSel) {}
         }
