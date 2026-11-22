@@ -1207,44 +1207,10 @@ body.body-viewport-panning {
 .ae-timeline-header-right {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 6px;
     flex-shrink: 0;
     margin-left: auto;
-    height: 100%;
-}
-
-.ae-col-switches {
-    display: flex;
-    align-items: center;
-    gap: 5px;
-    flex-shrink: 0;
-}
-
-.ae-switches-label {
-    font-size: 11px;
-    color: var(--text-muted);
-    user-select: none;
-    margin-left: 2px;
-    white-space: nowrap;
-}
-
-.ae-col-properties {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    white-space: nowrap;
-    font-size: 11px;
-    flex-shrink: 0;
-}
-
-.ae-legend-blue {
-    color: #64b5f6;
-    white-space: nowrap;
-}
-
-.ae-legend-red {
-    color: #ff6b6b;
-    white-space: nowrap;
+    height: 22px;
 }
 
 .ae-layers-tree {
@@ -1351,7 +1317,7 @@ body.body-viewport-panning {
     scrollbar-width: none;
     -ms-overflow-style: none;
     white-space: nowrap;
-    height: 24px;
+    height: 22px;
 }
 .ae-comp-breadcrumbs::-webkit-scrollbar {
     display: none;
@@ -1360,12 +1326,13 @@ body.body-viewport-panning {
 .ae-comp-breadcrumb-item {
     display: inline-flex;
     align-items: center;
+    justify-content: center;
     gap: 4px;
     background: #25282e;
     color: #cbd5e1;
-    font-size: 10px;
+    font-size: 11px;
     padding: 0 7px;
-    height: 20px;
+    height: 22px;
     border-radius: 3px;
     border: 1px solid #3c4048;
     cursor: pointer;
@@ -1376,6 +1343,7 @@ body.body-viewport-panning {
     max-width: 140px;
     flex-shrink: 0;
     box-sizing: border-box;
+    margin: 0;
     transition: all 0.15s ease;
 }
 
@@ -1537,11 +1505,21 @@ body.body-viewport-panning {
     color: #888888;
     border-radius: 3px;
     padding: 0;
+    margin: 0;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
+    box-sizing: border-box;
+    flex-shrink: 0;
+    line-height: 1;
     transition: all 0.15s ease;
+}
+.ae-global-shy-btn svg.ae-shy-icon {
+    display: block;
+    width: 16px;
+    height: 16px;
+    margin: 0;
 }
 .ae-global-shy-btn:hover {
     color: #ffffff;
@@ -1652,10 +1630,14 @@ body.body-viewport-panning {
     color: var(--text-muted);
     border-radius: 3px;
     padding: 0;
+    margin: 0;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
+    box-sizing: border-box;
+    flex-shrink: 0;
+    line-height: 1;
     transition: all 0.15s ease;
 }
 .ae-global-expr-btn:hover {
@@ -1673,6 +1655,10 @@ body.body-viewport-panning {
     font-size: 14px;
     line-height: 1;
     font-family: monospace;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0;
 }
 
 /* Per-Property Toggle Expression Switch (=) */
