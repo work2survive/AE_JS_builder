@@ -239,6 +239,10 @@
             this._cachedValue = this._clone(defaultValue);
         }
 
+        get id() {
+            return this._id;
+        }
+
         get expression() {
             return this._expression;
         }
@@ -1166,12 +1170,19 @@
     // -------------------------------------------------------------
     // 7. Layer Base and Shape Layer
     // -------------------------------------------------------------
+    let layerIdCounter = 0;
+    const layerRegistry = new Map();
+
     class Layer extends PropertyGroup {
         constructor(name = 'Layer', containingComp = null) {
             super(name, 'ADBE Layer');
+            this._id = 'layer_' + (++layerIdCounter);
+            layerRegistry.set(this._id, this);
+
             this.containingComp = containingComp;
             this.enabled = true;
             this.parent = null;
+            this.source = null;
             this._threeDLayer = false;
             this._shy = false;
             this._animMode = 'rand'; // 'rand' (default) | 'wiggle' | 'stop' | 'base'
@@ -1189,6 +1200,37 @@
 
             this.properties.push(this.effects);
             this.properties.push(this.transform);
+        }
+
+        get id() {
+            return this._id;
+        }
+
+        get name() {
+            if (this._name) return this._name;
+            if (this.source && this.source.name) return this.source.name;
+            return 'Layer';
+        }
+        set name(val) {
+            this._name = val;
+        }
+
+        get width() {
+            if (this._width !== undefined) return this._width;
+            if (this.source && this.source.width !== undefined) return this.source.width;
+            return this.containingComp ? this.containingComp.width : 1920;
+        }
+        set width(val) {
+            this._width = val;
+        }
+
+        get height() {
+            if (this._height !== undefined) return this._height;
+            if (this.source && this.source.height !== undefined) return this.source.height;
+            return this.containingComp ? this.containingComp.height : 1080;
+        }
+        set height(val) {
+            this._height = val;
         }
 
         property(nameOrIndex) {
@@ -1492,7 +1534,26 @@
         }
     }
 
-    class ShapeLayer extends Layer {
+    Layer.getById = function(id) {
+        if (!id) return null;
+        if (layerRegistry.has(id)) return layerRegistry.get(id);
+        const strId = String(id);
+        if (layerRegistry.has(strId)) return layerRegistry.get(strId);
+        if (!strId.startsWith('layer_')) {
+            const prefixed = 'layer_' + strId;
+            if (layerRegistry.has(prefixed)) return layerRegistry.get(prefixed);
+        }
+        return null;
+    };
+
+    class AVLayer extends Layer {
+        constructor(name = 'AV Layer', containingComp = null) {
+            super(name, containingComp);
+            this.matchName = 'ADBE AV Layer';
+        }
+    }
+
+    class ShapeLayer extends AVLayer {
         constructor(name = 'Shape Layer', containingComp = null) {
             super(name, containingComp);
             this.colorLabel = '#4d88ff'; // AE Shape layer blue
@@ -1731,9 +1792,13 @@
         add(item) {
             // Adds an AVLayer/CompLayer representing an item (CompItem)
             const count = this.length + 1;
-            const layer = new ShapeLayer(item.name || ('Layer ' + count), this.comp);
+            const layer = new AVLayer(item.name || ('Layer ' + count), this.comp);
             layer.source = item;
             layer.threeDLayer = true;
+            if (item instanceof CompItem || (item && item.layers)) {
+                layer.colorLabel = '#9b5de5'; // Lavender comp label
+                layer.transform.anchorPoint.setValue([item.width / 2, item.height / 2, 0]);
+            }
             layer.transform.position.setValue([this.comp.width / 2, this.comp.height / 2, 0]);
             this.unshift(layer);
             this._notify();
@@ -1743,7 +1808,7 @@
         precompose(indices, name, moveAllAttributes = true) {
             const project = app?.project;
             const newComp = new CompItem(name, this.comp.width, this.comp.height, this.comp.pixelAspect, this.comp.duration, this.comp.frameRate);
-            if (project) {
+            if (project && !project.items.includes(newComp)) {
                 project.items.push(newComp);
             }
 
@@ -1755,6 +1820,12 @@
                 if (lyr) layersToMove.push(lyr);
             });
 
+            let insertPos = 0;
+            if (layersToMove.length > 0) {
+                insertPos = this.indexOf(layersToMove[0]);
+                if (insertPos === -1) insertPos = 0;
+            }
+
             layersToMove.forEach(lyr => {
                 const pos = this.indexOf(lyr);
                 if (pos !== -1) {
@@ -1765,15 +1836,15 @@
             });
 
             // Create precomp representation layer in this parent comp
-            const precompLayer = new ShapeLayer(name, this.comp);
+            const precompLayer = new AVLayer(name, this.comp);
             precompLayer.source = newComp;
             precompLayer.threeDLayer = true;
-            precompLayer.label = 1; // Red
-            precompLayer.colorLabel = '#ff3b30';
+            precompLayer.label = 1; // Lavender / Red precomp label
+            precompLayer.colorLabel = '#9b5de5';
             precompLayer.notShyable = true;
             precompLayer.transform.anchorPoint.setValue([newComp.width / 2, newComp.height / 2, 0]);
             precompLayer.transform.position.setValue([this.comp.width / 2, this.comp.height / 2, 0]);
-            this.unshift(precompLayer);
+            this.splice(Math.min(insertPos, this.length), 0, precompLayer);
 
             this._notify();
             if (newComp._onChanged) newComp._onChanged();
@@ -1793,7 +1864,7 @@
         }
 
         _notify() {
-            if (this.comp && this.comp._onChanged) this.comp._onChanged();
+            if (this.comp) this.comp._notify();
         }
     }
 
@@ -1810,6 +1881,42 @@
 
             this.layers = new LayerCollection(this);
             this._onChanged = null;
+        }
+
+        get numLayers() {
+            return this.layers ? this.layers.length : 0;
+        }
+
+        get typeName() {
+            return 'Composition';
+        }
+
+        openInViewer() {
+            if (typeof app !== 'undefined' && app.project) {
+                app.project.activeItem = this;
+                if (typeof window !== 'undefined') {
+                    if (window.aeRenderer) {
+                        window.aeRenderer.comp = this;
+                        window.aeRenderer.render();
+                    }
+                    if (typeof window.renderTimeline === 'function') {
+                        window.renderTimeline();
+                    }
+                }
+            }
+            return this;
+        }
+
+        _notify() {
+            if (this._onChanged) this._onChanged();
+            if (typeof app !== 'undefined' && app.project && app.project.items) {
+                app.project.items.forEach(comp => {
+                    if (comp !== this && comp.layers) {
+                        const hasChild = comp.layers.some(l => l.source === this);
+                        if (hasChild && comp._onChanged) comp._onChanged();
+                    }
+                });
+            }
         }
 
         get activeCamera() {
@@ -1870,6 +1977,10 @@
         constructor() {
             this.items = new ItemCollection(this);
             this.activeItem = null;
+        }
+
+        get numItems() {
+            return this.items.length;
         }
 
         addComp(name, width, height, pixelAspect = 1, duration = 10, frameRate = 30) {
@@ -2349,12 +2460,15 @@
         return null;
     };
     global.getPropertyById = Property.getById;
+    global.getLayerById = Layer.getById;
     global.prepareExpressionBody = prepareExpressionBody;
 
     global.app = app;
     global.$ = $;
     global.Mat4 = Mat4;
     global.Shape = Shape;
+    global.Layer = Layer;
+    global.AVLayer = AVLayer;
     global.ShapeLayer = ShapeLayer;
     global.TextLayer = TextLayer;
     global.CompItem = CompItem;

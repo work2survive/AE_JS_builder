@@ -1427,42 +1427,7 @@
                         } catch (eTR) {}
                     }
                     layer.source.time = subTime;
-                    let subHtml = '';
-                    for (let s = layer.source.layers.length - 1; s >= 0; s--) {
-                        const subLayer = layer.source.layers[s];
-                        if (!subLayer.enabled) continue;
-                        const subMat = subLayer.getWorldMatrix(time, isStaticPreview);
-                        const subCss = Mat4.toCSS(subMat);
-                        let subOpacity = (typeof subLayer.getWorldOpacity === 'function') ? subLayer.getWorldOpacity(time) : 1.0;
-                        if (isStaticPreview && subOpacity === 0) {
-                            const compDur = (subLayer.containingComp && subLayer.containingComp.duration)
-                                ? subLayer.containingComp.duration
-                                : ((layer.source && layer.source.duration) ? layer.source.duration : (this.comp ? this.comp.duration : 10.0));
-                            const endOpacity = (typeof subLayer.getWorldOpacity === 'function') ? subLayer.getWorldOpacity(compDur) : 0;
-                            if (endOpacity > 0) {
-                                subOpacity = endOpacity;
-                            }
-                        }
-
-                        let subContent = '';
-                        if (typeof TextLayer !== 'undefined' && subLayer instanceof TextLayer) {
-                            subContent = this.renderTextContent(subLayer, time);
-                        } else if (subLayer.sourceText) {
-                            subContent = this.renderTextContent(subLayer, time);
-                        } else if (subLayer.contents) {
-                            subContent = this.renderShapeContents(subLayer.contents, time);
-                        }
-
-                        if (subContent) {
-                            const subZ = layer.source.layers.length - s;
-                            subHtml += `
-                                <div class="ae-sublayer" style="position: absolute; left: 0; top: 0; width: 0; height: 0; transform-origin: 0 0 0; backface-visibility: visible; transform: ${subCss}; opacity: ${subOpacity}; z-index: ${subZ}; transform-style: preserve-3d;">
-                                    <svg class="ae-layer-svg" style="overflow: visible;">${subContent}</svg>
-                                </div>
-                            `;
-                        }
-                    }
-                    layerEl.innerHTML = subHtml;
+                    layerEl.innerHTML = this.renderCompLayersHtml(layer.source, subTime, isStaticPreview, 0);
                 } else if (layer instanceof ShapeLayer) {
                     const svgContent = this.renderShapeContents(layer.contents, time);
                     layerEl.innerHTML = `
@@ -1487,6 +1452,59 @@
                     el.remove();
                 }
             });
+        }
+
+        renderCompLayersHtml(compItem, time, isStaticPreview, depth = 0) {
+            if (!compItem || !compItem.layers) return '';
+            if (depth > 6) return ''; // Safeguard against infinite circular nesting
+            let subHtml = '';
+            for (let s = compItem.layers.length - 1; s >= 0; s--) {
+                const subLayer = compItem.layers[s];
+                if (!subLayer.enabled) continue;
+                const subMat = subLayer.getWorldMatrix(time, isStaticPreview);
+                const subCss = Mat4.toCSS(subMat);
+                let subOpacity = (typeof subLayer.getWorldOpacity === 'function') ? subLayer.getWorldOpacity(time) : 1.0;
+                if (isStaticPreview && subOpacity === 0) {
+                    const compDur = (subLayer.containingComp && subLayer.containingComp.duration)
+                        ? subLayer.containingComp.duration
+                        : ((compItem && compItem.duration) ? compItem.duration : 10.0);
+                    const endOpacity = (typeof subLayer.getWorldOpacity === 'function') ? subLayer.getWorldOpacity(compDur) : 0;
+                    if (endOpacity > 0) {
+                        subOpacity = endOpacity;
+                    }
+                }
+
+                let subContent = '';
+                if (subLayer.source && subLayer.source.layers) {
+                    let nestedTime = time;
+                    if (subLayer.timeRemap && subLayer.timeRemapEnabled) {
+                        try {
+                            const trVal = subLayer.timeRemap.getValueAtTime(time);
+                            if (typeof trVal === 'number' && !isNaN(trVal)) {
+                                nestedTime = trVal;
+                            }
+                        } catch (e) {}
+                    }
+                    subLayer.source.time = nestedTime;
+                    subContent = this.renderCompLayersHtml(subLayer.source, nestedTime, isStaticPreview, depth + 1);
+                } else if (typeof TextLayer !== 'undefined' && subLayer instanceof TextLayer) {
+                    subContent = `<svg class="ae-layer-svg" style="overflow: visible;">${this.renderTextContent(subLayer, time)}</svg>`;
+                } else if (subLayer.sourceText) {
+                    subContent = `<svg class="ae-layer-svg" style="overflow: visible;">${this.renderTextContent(subLayer, time)}</svg>`;
+                } else if (subLayer.contents) {
+                    subContent = `<svg class="ae-layer-svg" style="overflow: visible;">${this.renderShapeContents(subLayer.contents, time)}</svg>`;
+                }
+
+                if (subContent) {
+                    const subZ = compItem.layers.length - s;
+                    subHtml += `
+                        <div class="ae-sublayer" style="position: absolute; left: 0; top: 0; width: 0; height: 0; transform-origin: 0 0 0; backface-visibility: visible; transform: ${subCss}; opacity: ${subOpacity}; z-index: ${subZ}; transform-style: preserve-3d;">
+                            ${subContent}
+                        </div>
+                    `;
+                }
+            }
+            return subHtml;
         }
     }
 

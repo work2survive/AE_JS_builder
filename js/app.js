@@ -219,6 +219,25 @@
         return `<span class="ae-expr-badge" title="${safeExpr}" data-action="edit-expression" data-prop-id="${prop._id}"><span class="ae-expr-badge-icon">=</span> ${text}</span>`;
     }
 
+    function openComposition(nameOrComp) {
+        let targetComp = null;
+        if (typeof CompItem !== 'undefined' && nameOrComp instanceof CompItem) {
+            targetComp = nameOrComp;
+        } else if (typeof nameOrComp === 'string') {
+            targetComp = app?.project?.items?.find(it => it.name === nameOrComp && (typeof CompItem === 'undefined' || it instanceof CompItem));
+        }
+        if (!targetComp) return;
+
+        app.project.activeItem = targetComp;
+        if (global.aeRenderer) {
+            global.aeRenderer.comp = targetComp;
+            global.aeRenderer.render();
+        }
+        renderTimeline();
+        appendConsole(`Switched active composition focus to: [${targetComp.name}]`);
+    }
+    window.openComposition = openComposition;
+
     function renderTimeline() {
         const treeEl = document.getElementById('ae-layers-tree');
         if (!treeEl) return;
@@ -227,39 +246,96 @@
         const comp = app.project.activeItem;
         if (!comp) return;
 
+        // Render Composition Navigation Breadcrumbs in Timeline Header
+        const breadcrumbsEl = document.getElementById('ae-comp-breadcrumbs');
+        if (breadcrumbsEl && app && app.project && app.project.items) {
+            const activeComp = app.project.activeItem;
+            const allComps = app.project.items.filter(it => (typeof CompItem === 'undefined') || (it instanceof CompItem) || it.layers);
+            let bHtml = '';
+            if (allComps.length <= 1) {
+                bHtml = `<span class="ae-comp-breadcrumb-item active" title="Active Composition: ${escapeHtml(activeComp?.name || 'Main Comp')}">
+                    <svg class="ae-comp-icon" viewBox="0 0 16 16" width="10" height="10" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2.5" width="12" height="11" rx="1.5"/><path d="M 5.5 2.5 V 13.5 M 10.5 2.5 V 13.5 M 2 6 H 5.5 M 10.5 6 H 14 M 2 10 H 5.5 M 10.5 10 H 14"/></svg>
+                    ${escapeHtml(activeComp?.name || 'Main Comp')}
+                </span>`;
+            } else {
+                allComps.forEach(c => {
+                    const isActive = (c === activeComp);
+                    bHtml += `<button class="ae-comp-breadcrumb-item ${isActive ? 'active' : ''}" data-action="switch-comp" data-comp-name="${escapeHtml(c.name)}" title="${isActive ? 'Active Composition' : 'Switch to ' + escapeHtml(c.name)}">
+                        <svg class="ae-comp-icon" viewBox="0 0 16 16" width="10" height="10" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2.5" width="12" height="11" rx="1.5"/><path d="M 5.5 2.5 V 13.5 M 10.5 2.5 V 13.5 M 2 6 H 5.5 M 10.5 6 H 14 M 2 10 H 5.5 M 10.5 10 H 14"/></svg>
+                        ${escapeHtml(c.name)}
+                    </button>`;
+                });
+            }
+            breadcrumbsEl.innerHTML = bHtml;
+            breadcrumbsEl.querySelectorAll('[data-action="switch-comp"]').forEach(btn => {
+                btn.onclick = (e) => {
+                    e.stopPropagation();
+                    openComposition(btn.dataset.compName);
+                };
+            });
+        }
+
         let shiedLayerCount = 0;
 
-        comp.layers.forEach((layer, idx) => {
+        function renderLayerRow(layer, idx, parentComp, depth = 0, parentPrefix = '', isInsidePrecomp = false) {
+            const isPrecomp = Boolean(layer.source && (layer.source.layers || (typeof CompItem !== 'undefined' && layer.source instanceof CompItem)));
             const hasUIEffects = Boolean(layer.effects && layer.effects.properties && layer.effects.properties.length > 0);
-            const isNotShyable = Boolean(layer.notShyable || layer.name === 'Cube_Master_Controller' || (layer.name && (layer.name.indexOf('cube_maker') === 0 || layer.name.endsWith('_Controller'))) || hasUIEffects);
+            const isNotShyable = Boolean(layer.notShyable || isPrecomp || layer.name === 'Cube_Master_Controller' || (layer.name && (layer.name.indexOf('cube_maker') === 0 || layer.name.endsWith('_Controller'))) || hasUIEffects);
 
-            // In Shy Mode: Hide secondary/geometry layers marked shy, but NEVER hide layers with UI properties
+            // In Shy Mode: Hide secondary/geometry layers marked shy, but NEVER hide layers with UI properties or precomps
             if (globalShyActive && layer.shy && !isNotShyable) {
                 shiedLayerCount++;
-                return;
+                return null;
             }
 
             const row = document.createElement('div');
-            row.className = 'ae-layer-row';
+            row.className = 'ae-layer-row' + (depth > 0 ? ' is-nested' : '') + (isPrecomp ? ' is-precomp-row' : '');
+            row.dataset.layerId = layer._id;
             row.dataset.layerIndex = idx;
+            row.dataset.depth = depth;
 
             const is3D = layer.threeDLayer;
             const parentName = layer.parent ? layer.parent.name : 'None';
 
             const safeLayerName = escapeHtml(layer.name);
             const safeParentName = escapeHtml(parentName);
+            const displayNum = parentPrefix ? `${parentPrefix}.${idx + 1}` : `${idx + 1}`;
+            const textIndentPx = depth * 16;
+            const paddingLeftPx = 8 + depth * 22;
+
+            let iconHtml = '&#9733;';
+            if (isPrecomp) {
+                iconHtml = `<svg class="ae-comp-icon" viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2.5" width="12" height="11" rx="1.5"/><path d="M 5.5 2.5 V 13.5 M 10.5 2.5 V 13.5 M 2 6 H 5.5 M 10.5 6 H 14 M 2 10 H 5.5 M 10.5 10 H 14"/></svg>`;
+            } else if (typeof TextLayer !== 'undefined' && layer instanceof TextLayer) {
+                iconHtml = `<span style="font-weight:700; font-family:sans-serif; color:#ff6b81; font-size:11px;">T</span>`;
+            } else if (layer.sourceText) {
+                iconHtml = `<span style="font-weight:700; font-family:sans-serif; color:#ff6b81; font-size:11px;">T</span>`;
+            }
+
+            let badgesHtml = '';
+            if (isPrecomp) {
+                badgesHtml += `<span class="ae-badge-type static ae-badge-precomp" title="Composition / Precomp layer">[PRECOMP]</span>`;
+                badgesHtml += `<span class="ae-badge-comp-dims" title="Dimensions: ${layer.source.width}×${layer.source.height} px">${layer.source.width}×${layer.source.height}</span>`;
+                badgesHtml += `<button class="ae-btn-open-comp" data-action="open-comp" data-comp-name="${escapeHtml(layer.source.name)}" title="Open '${escapeHtml(layer.source.name)}' in viewer">Open Comp ↗</button>`;
+            } else if (isNotShyable && depth === 0) {
+                badgesHtml += `<span class="ae-badge-ui-locked" title="Contains all UI-defined properties - Always visible, cannot be shied">UI MASTER (CANNOT SHY)</span>`;
+            } else if (isInsidePrecomp) {
+                badgesHtml += `<span class="ae-badge-type static ae-badge-nested" title="Layer inside ${escapeHtml(parentComp.name)}">[NESTED]</span>`;
+            }
 
             row.innerHTML = `
-                <div class="ae-layer-main-bar ${layer === selectedLayer ? 'selected' : ''}">
+                <div class="ae-layer-main-bar ${layer === selectedLayer ? 'selected' : ''}" style="padding-left: ${paddingLeftPx}px;">
                     <span class="ae-twirl open" data-action="toggle-layer">&#9656;</span>
-                    <span class="ae-color-tag" style="background-color: ${layer.colorLabel};"></span>
-                    <span class="ae-layer-num">${idx + 1}</span>
-                    <span class="ae-layer-icon">&#9733;</span>
-                    <span class="ae-layer-title" title="${safeLayerName}">${safeLayerName}</span>
-                    ${isNotShyable ? `<span class="ae-badge-ui-locked" title="Contains all UI-defined properties - Always visible, cannot be shied">UI MASTER (CANNOT SHY)</span>` : ''}
+                    <span class="ae-color-tag" style="background-color: ${layer.colorLabel || (isPrecomp ? '#9b5de5' : '#e07a5f')};"></span>
+                    <span class="ae-layer-num" title="Layer index">${displayNum}</span>
+                    <span class="ae-layer-icon">${iconHtml}</span>
+                    <span class="ae-layer-title ${depth > 0 ? 'is-nested' : ''}" style="text-indent: ${textIndentPx}px;" title="${safeLayerName}">
+                        ${depth > 0 ? `<span class="ae-nesting-indicator" title="Nested in ${escapeHtml(parentComp.name)}">↳ </span>` : ''}${safeLayerName}
+                    </span>
+                    ${badgesHtml}
                     <div class="ae-switches">
                         ${isNotShyable ? `
-                        <div class="ae-switch-shy locked" title="UI Controller: Contains properties defined in the UI - Cannot be shied (Always shown)">
+                        <div class="ae-switch-shy locked" title="UI Controller / Precomp: Always shown">
                             <svg viewBox="0 0 20 20" width="13" height="13" fill="none">
                                 <rect x="5" y="8" width="10" height="9" rx="1.5" stroke="currentColor" stroke-width="1.8"/>
                                 <path d="M 7.5 8 V 5.5 A 2.5 2.5 0 0 1 12.5 5.5 V 8" stroke="currentColor" stroke-width="1.8"/>
@@ -285,7 +361,23 @@
                 </div>
 
                 <div class="ae-layer-details">
-                    <!-- Effects Group (UI Defined Properties - Prioritized on Top) -->
+                    <!-- Nested Composition Section if Precomp -->
+                    ${isPrecomp ? `
+                    <div class="ae-prop-group ae-nested-comp-group">
+                        <div class="ae-prop-group-header">
+                            <span class="ae-twirl open" data-action="toggle-group">&#9656;</span>
+                            <span class="ae-prop-group-title">
+                                <svg class="ae-comp-icon" viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2.5" width="12" height="11" rx="1.5"/><path d="M 5.5 2.5 V 13.5 M 10.5 2.5 V 13.5 M 2 6 H 5.5 M 10.5 6 H 14 M 2 10 H 5.5 M 10.5 10 H 14"/></svg>
+                                Composition: <strong>${escapeHtml(layer.source.name)}</strong>
+                            </span>
+                            <span class="ae-badge-type static" style="margin-left:6px;">[${layer.source.layers ? layer.source.layers.length : 0} LAYERS]</span>
+                            <button class="ae-btn-open-comp-inline" data-action="open-comp" data-comp-name="${escapeHtml(layer.source.name)}" title="Switch viewer & timeline to ${escapeHtml(layer.source.name)}">Open in Viewer ↗</button>
+                        </div>
+                        <div class="ae-prop-items ae-nested-comp-items" style="display: block;"></div>
+                    </div>
+                    ` : ''}
+
+                    <!-- Effects Group -->
                     ${layer.effects && layer.effects.properties.length > 0 ? `
                     <div class="ae-prop-group">
                         <div class="ae-prop-group-header">
@@ -293,13 +385,13 @@
                             <span class="ae-prop-group-title">${isNotShyable ? 'Effects (UI Defined Properties)' : 'Effects'}</span>
                             ${isNotShyable ? `<span class="ae-badge-ui-locked ae-badge-eye" style="margin-left:8px;" title="Always Visible / Cannot Shy: All properties defined in .JSX UI remain visible at all times and cannot be hidden when Shy mode is active"><svg viewBox="0 0 16 12" width="14" height="10" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M 1 6 C 3.2 2.2, 12.8 2.2, 15 6 C 12.8 9.8, 3.2 9.8, 1 6 Z"/><circle cx="8" cy="6" r="2.1" fill="currentColor"/></svg></span>` : ''}
                         </div>
-                        <div class="ae-prop-items" id="layer-effects-${idx}" style="display: block;">
+                        <div class="ae-prop-items" id="layer-effects-${layer._id}" style="display: block;">
                             ${renderEffectsProperties(layer.effects, idx)}
                         </div>
                     </div>
                     ` : ''}
 
-                    <!-- Contents Group (hidden in shy mode if empty/unrelated) -->
+                    <!-- Contents Group -->
                     ${(!globalShyActive || (layer.contents && layer.contents.properties.length > 0)) ? `
                     <div class="ae-prop-group">
                         <div class="ae-prop-group-header">
@@ -308,13 +400,13 @@
                             <span class="ae-badge-type static" style="margin-left:6px;">[STATIC]</span>
                             <span class="ae-prop-group-action" data-action="add-shape-menu">Add: &#9662;</span>
                         </div>
-                        <div class="ae-prop-items" id="layer-contents-${idx}" style="display: ${globalShyActive ? 'none' : 'block'};">
+                        <div class="ae-prop-items" id="layer-contents-${layer._id}" style="display: ${globalShyActive ? 'none' : 'block'};">
                             ${renderVectorContents(layer.contents, idx)}
                         </div>
                     </div>
                     ` : ''}
 
-                    <!-- Text Group (for Text Layers) -->
+                    <!-- Text Group -->
                     ${(typeof TextLayer !== 'undefined' && layer instanceof TextLayer) ? `
                     <div class="ae-prop-group">
                         <div class="ae-prop-group-header">
@@ -327,7 +419,7 @@
                                 <span class="ae-badge-type animatable">[ANIM]</span>
                                 <span class="ae-prop-name">Source Text</span>
                                 <div class="ae-prop-val-container">
-                                    <span style="color:#ffd166; font-family:var(--font-mono); font-size:11px;">"${escapeHtml(String(layer.sourceText.value || ''))}"</span>
+                                    <span style="color:#ffd166; font-family:var(--font-mono); font-size:11px;">"${escapeHtml(String(layer.sourceText ? (layer.sourceText.value || '') : ''))}"</span>
                                 </div>
                             </div>
                         </div>
@@ -348,43 +440,70 @@
                 </div>
             `;
 
-            // Click row to select / toggle selection
-            row.querySelector('.ae-layer-main-bar').onclick = (e) => {
-                if (e.target.closest('.ae-twirl') || e.target.closest('.ae-switch-3d')) return;
-                const bar = row.querySelector('.ae-layer-main-bar');
-                const wasSelected = (selectedLayer === layer && layer.selected);
-                selectedLayer = wasSelected ? null : layer;
-                if (comp && comp.layers && comp.layers._layers) {
-                    comp.layers._layers.forEach(l => {
-                        l.selected = (l === selectedLayer);
+            // If this layer is a Precomp, populate its nested composition container recursively!
+            if (isPrecomp && layer.source && layer.source.layers) {
+                const nestedItemsEl = row.querySelector('.ae-nested-comp-items');
+                if (nestedItemsEl) {
+                    layer.source.layers.forEach((childLayer, childIdx) => {
+                        const childRow = renderLayerRow(childLayer, childIdx, layer.source, depth + 1, displayNum, true);
+                        if (childRow) nestedItemsEl.appendChild(childRow);
                     });
                 }
-                document.querySelectorAll('.ae-layer-main-bar').forEach(el => el.classList.remove('selected'));
-                if (selectedLayer) {
-                    bar.classList.add('selected');
-                }
-                window.dispatchEvent(new CustomEvent('ae-layer-selection-changed', { detail: { layer: selectedLayer } }));
-            };
+            }
+
+            // Click row to select / toggle selection
+            const bar = row.querySelector('.ae-layer-main-bar');
+            if (bar) {
+                bar.onclick = (e) => {
+                    if (e.target.closest('.ae-twirl') || e.target.closest('.ae-switch-3d') || e.target.closest('.ae-switch-shy') || e.target.closest('.ae-btn-open-comp')) return;
+                    const wasSelected = (selectedLayer === layer && layer.selected);
+                    selectedLayer = wasSelected ? null : layer;
+                    if (comp && comp.layers && comp.layers._layers) {
+                        comp.layers._layers.forEach(l => {
+                            l.selected = (l === selectedLayer);
+                        });
+                    }
+                    document.querySelectorAll('.ae-layer-main-bar').forEach(el => el.classList.remove('selected'));
+                    if (selectedLayer) {
+                        bar.classList.add('selected');
+                    }
+                    window.dispatchEvent(new CustomEvent('ae-layer-selection-changed', { detail: { layer: selectedLayer } }));
+                };
+            }
 
             // 3D Switch toggle
-            row.querySelector('[data-action="toggle-3d"]').onclick = () => {
-                layer.threeDLayer = !layer.threeDLayer;
-                renderTimeline();
-            };
+            const switch3d = row.querySelector('[data-action="toggle-3d"]');
+            if (switch3d) {
+                switch3d.onclick = (e) => {
+                    e.stopPropagation();
+                    layer.threeDLayer = !layer.threeDLayer;
+                    renderTimeline();
+                    if (parentComp && parentComp._notify) parentComp._notify();
+                    else if (comp && comp._onChanged) comp._onChanged();
+                };
+            }
 
-            // Layer Shy switch toggle (Blocked on UI controller)
+            // Layer Shy switch toggle
             const shyBtn = row.querySelector('[data-action="toggle-layer-shy"]');
             if (shyBtn) {
                 shyBtn.onclick = (e) => {
                     e.stopPropagation();
-                    if (isNotShyable) {
-                        appendConsole(`Layer [${layer.name}] contains UI-defined properties and cannot be shied.`);
+                    if (isNotShyable && depth === 0) {
+                        appendConsole(`Layer [${layer.name}] contains UI-defined properties or is a Precomp and cannot be shied.`);
                         return;
                     }
                     layer.shy = !layer.shy;
                     renderTimeline();
                 };
             }
+
+            // Open Comp button handlers
+            row.querySelectorAll('[data-action="open-comp"]').forEach(openBtn => {
+                openBtn.onclick = (e) => {
+                    e.stopPropagation();
+                    openComposition(openBtn.dataset.compName);
+                };
+            });
 
             // Sequential Evaluation Mode Switch Handler
             row.querySelectorAll('[data-action="cycle-prop-mode"], [data-action="set-prop-mode"]').forEach(btn => {
@@ -412,7 +531,6 @@
                             prop._frozenValue = null;
                         }
 
-                        // When entering random fixed color mode, generate a new fixed color
                         if (isColor && nextMode === 'rand') {
                             prop._randomFixedColor = prop._makeRandomFixedColor ? prop._makeRandomFixedColor() : null;
                         }
@@ -421,7 +539,8 @@
                         if (window.updateDynamicTimelineProperties && comp) {
                             window.updateDynamicTimelineProperties(comp.time);
                         }
-                        if (comp && comp._onChanged) comp._onChanged();
+                        if (parentComp && parentComp._notify) parentComp._notify();
+                        else if (comp && comp._onChanged) comp._onChanged();
                         const nextCfg = modesList[nextIdx];
                         appendConsole(`Property [${prop.name}] evaluation mode set to [${nextCfg.label.toUpperCase()}] (${nextCfg.letter})`);
                     }
@@ -441,14 +560,19 @@
                     twirl.classList.toggle('open');
                     const container = twirl.closest('.ae-layer-main-bar')
                         ? row.querySelector('.ae-layer-details')
-                        : twirl.closest('.ae-prop-group').querySelector('.ae-prop-items');
+                        : twirl.closest('.ae-prop-group')?.querySelector('.ae-prop-items');
                     if (container) {
                         container.style.display = twirl.classList.contains('open') ? 'block' : 'none';
                     }
                 };
             });
 
-            treeEl.appendChild(row);
+            return row;
+        }
+
+        comp.layers.forEach((layer, idx) => {
+            const row = renderLayerRow(layer, idx, comp, 0, '', false);
+            if (row) treeEl.appendChild(row);
         });
 
         // Show Shy status notice if layers are hidden
@@ -670,12 +794,12 @@
                             ${render4WaySwitch(prop)}
                             <span class="ae-badge-type animatable" title="Animatable in AE timeline">[ANIM]</span>
                             <span class="ae-badge-ui-locked" title="Defined in .JSX UI panel">UI</span>
-                            <span class="ae-prop-stopwatch ${hasWiggle ? 'active' : ''}" title="${safeTitle}" data-action="toggle-wiggle-effect" data-effect-name="${safeEffectName}" data-prop-name="${safePropName}">&#9201;</span>
+                            <span class="ae-prop-stopwatch ${hasWiggle ? 'active' : ''}" title="${safeTitle}" data-action="toggle-wiggle-effect" data-prop-id="${prop._id || prop.id}" data-effect-name="${safeEffectName}" data-prop-name="${safePropName}">&#9201;</span>
                             ${renderPropExprToggle(prop)}
                             <span class="ae-prop-name">${displayName}</span>
                             <div class="ae-prop-val-container">
                                 <label style="display:inline-flex; align-items:center; gap:4px; cursor:pointer;">
-                                    <input type="checkbox" ${isChecked ? 'checked' : ''} data-effect-name="${safeEffectName}" data-prop-name="${safePropName}" class="ae-effect-checkbox" />
+                                    <input type="checkbox" ${isChecked ? 'checked' : ''} data-prop-id="${prop._id || prop.id}" data-effect-name="${safeEffectName}" data-prop-name="${safePropName}" class="ae-effect-checkbox" />
                                     <span class="ae-boolean-val-label" style="font-family:monospace; color:${isChecked ? 'var(--ae-blue)' : '#888'}; font-size:11px;">${isChecked ? '1 (true)' : '0 (false)'}</span>
                                 </label>
                                 ${renderPropExprBadge(prop)}
@@ -690,11 +814,11 @@
                             ${render4WaySwitch(prop)}
                             <span class="ae-badge-type animatable" title="Animatable in AE timeline">[ANIM]</span>
                             <span class="ae-badge-ui-locked" title="Defined in .JSX UI panel">UI</span>
-                            <span class="ae-prop-stopwatch ${hasWiggle ? 'active' : ''}" title="${safeTitle}" data-action="toggle-wiggle-effect" data-effect-name="${safeEffectName}" data-prop-name="${safePropName}">&#9201;</span>
+                            <span class="ae-prop-stopwatch ${hasWiggle ? 'active' : ''}" title="${safeTitle}" data-action="toggle-wiggle-effect" data-prop-id="${prop._id || prop.id}" data-effect-name="${safeEffectName}" data-prop-name="${safePropName}">&#9201;</span>
                             ${renderPropExprToggle(prop)}
                             <span class="ae-prop-name">${displayName}</span>
                             <div class="ae-prop-val-container">
-                                <span class="ae-scrub-val" data-effect-name="${safeEffectName}" data-prop="${safePropName}">${val}${unit}</span>
+                                <span class="ae-scrub-val" data-prop-id="${prop._id || prop.id}" data-effect-name="${safeEffectName}" data-prop="${safePropName}">${val}${unit}</span>
                                 ${renderPropExprBadge(prop)}
                             </div>
                         </div>
@@ -706,12 +830,12 @@
                             ${render4WaySwitch(prop)}
                             <span class="ae-badge-type animatable" title="Animatable in AE timeline">[ANIM]</span>
                             <span class="ae-badge-ui-locked" title="Defined in .JSX UI panel">UI</span>
-                            <span class="ae-prop-stopwatch ${hasWiggle ? 'active' : ''}" title="${safeTitle}" data-action="toggle-wiggle-effect" data-effect-name="${safeEffectName}" data-prop-name="${safePropName}">&#9201;</span>
+                            <span class="ae-prop-stopwatch ${hasWiggle ? 'active' : ''}" title="${safeTitle}" data-action="toggle-wiggle-effect" data-prop-id="${prop._id || prop.id}" data-effect-name="${safeEffectName}" data-prop-name="${safePropName}">&#9201;</span>
                             ${renderPropExprToggle(prop)}
                             <span class="ae-prop-name">${displayName}</span>
                             <div class="ae-prop-val-container">
                                 <label class="ae-color-picker-label" title="Click to pick color">
-                                    <input type="color" value="${info.hex}" class="ae-effect-color-input" data-effect-name="${safeEffectName}" data-prop-name="${safePropName}" />
+                                    <input type="color" value="${info.hex}" class="ae-effect-color-input" data-prop-id="${prop._id || prop.id}" data-effect-name="${safeEffectName}" data-prop-name="${safePropName}" />
                                     <span class="ae-color-swatch-box" style="background-color: ${info.hex};"></span>
                                 </label>
                                 <span class="ae-color-rgb-val" title="RGB Code: ${info.rgbStr}">${info.rgbStr}</span>
@@ -774,14 +898,14 @@
             }
 
             const valSpans = isArray
-                ? values.map((v, i) => `<span class="ae-scrub-val" data-prop="${safePropName}" data-channel="${i}">${Math.round(v * 10) / 10}</span>`).join(', ')
-                : `<span class="ae-scrub-val" data-prop="${safePropName}" data-channel="0">${Math.round(values * 10) / 10}</span>`;
+                ? values.map((v, i) => `<span class="ae-scrub-val" data-prop="${safePropName}" data-prop-id="${prop._id || prop.id}" data-layer-id="${layer._id || layer.id}" data-channel="${i}">${Math.round(v * 10) / 10}</span>`).join(', ')
+                : `<span class="ae-scrub-val" data-prop="${safePropName}" data-prop-id="${prop._id || prop.id}" data-layer-id="${layer._id || layer.id}" data-channel="0">${Math.round(values * 10) / 10}</span>`;
 
             return `
                 <div class="ae-prop-row ${isStatic ? 'ae-prop-static' : 'ae-prop-animatable'}">
                     ${!isStatic ? render4WaySwitch(prop) : ''}
                     <span class="ae-badge-type ${isStatic ? 'static' : 'animatable'}" title="${isStatic ? 'Defined once on creation' : 'Animatable in AE timeline'}">${isStatic ? '[STATIC]' : '[ANIM]'}</span>
-                    <span class="ae-prop-stopwatch ${hasWiggle ? 'active' : ''}" title="${safeTitle}" data-action="toggle-wiggle" data-prop-name="${safePropName}">&#9201;</span>
+                    <span class="ae-prop-stopwatch ${hasWiggle ? 'active' : ''}" title="${safeTitle}" data-action="toggle-wiggle" data-prop-id="${prop._id || prop.id}" data-layer-id="${layer._id || layer.id}" data-prop-name="${safePropName}">&#9201;</span>
                     ${renderPropExprToggle(prop)}
                     <span class="ae-prop-name">${safeLabel}</span>
                     <div class="ae-prop-val-container">
@@ -1133,19 +1257,21 @@
             btn.addEventListener('click', (e) => {
                 e.stopPropagation();
                 const row = btn.closest('.ae-layer-row');
-                const layerIdx = parseInt(row.dataset.layerIndex);
-                const layer = app.project.activeItem.layers[layerIdx];
+                const propId = btn.dataset.propId;
+                let prop = (propId && typeof Property !== 'undefined' && Property.getById) ? Property.getById(propId) : null;
+                const layerId = row?.dataset.layerId;
+                const layer = (layerId && typeof Layer !== 'undefined' && Layer.getById) ? Layer.getById(layerId) : app.project.activeItem.layers[parseInt(row?.dataset.layerIndex)];
                 const propName = btn.dataset.propName;
-                const prop = layer?.transform?.property(propName);
+                if (!prop && layer) prop = layer.transform?.property(propName);
                 if (!prop) return;
 
                 const currentExpr = prop.expression || 'wiggle(0.5, 30)';
-                const newExpr = prompt(`Edit Expression / Wiggle for ${layer.name} -> ${propName}:\n(e.g. wiggle(freq, amp) or leave empty to remove)`, currentExpr);
+                const newExpr = prompt(`Edit Expression / Wiggle for ${layer?.name || 'Layer'} -> ${propName}:\n(e.g. wiggle(freq, amp) or leave empty to remove)`, currentExpr);
                 if (newExpr !== null) {
                     prop.expression = newExpr.trim();
                     prop.expressionEnabled = Boolean(prop.expression);
                     renderTimeline();
-                    appendConsole(`Set expression on ${layer.name}.${propName} = "${prop.expression}"`);
+                    appendConsole(`Set expression on ${layer?.name || 'Layer'}.${propName} = "${prop.expression}"`);
                 }
             });
         });
@@ -1155,11 +1281,13 @@
             btn.addEventListener('click', (e) => {
                 e.stopPropagation();
                 const row = btn.closest('.ae-layer-row');
-                const layerIdx = parseInt(row.dataset.layerIndex);
-                const layer = app.project.activeItem.layers[layerIdx];
+                const propId = btn.dataset.propId;
+                let prop = (propId && typeof Property !== 'undefined' && Property.getById) ? Property.getById(propId) : null;
+                const layerId = row?.dataset.layerId;
+                const layer = (layerId && typeof Layer !== 'undefined' && Layer.getById) ? Layer.getById(layerId) : app.project.activeItem.layers[parseInt(row?.dataset.layerIndex)];
                 const effName = btn.dataset.effectName;
                 const propName = btn.dataset.propName;
-                const prop = layer?.effects?.property(effName)?.property(propName);
+                if (!prop && layer) prop = layer.effects?.property(effName)?.property(propName);
                 if (!prop) return;
 
                 const currentExpr = prop.expression || 'wiggle(1, 1) > 0 ? 1 : 0';
@@ -1219,11 +1347,13 @@
         document.querySelectorAll('.ae-effect-checkbox').forEach(chk => {
             chk.addEventListener('change', (e) => {
                 const row = chk.closest('.ae-layer-row');
-                const layerIdx = parseInt(row.dataset.layerIndex);
-                const layer = app.project.activeItem.layers[layerIdx];
+                const propId = chk.dataset.propId;
+                let prop = (propId && typeof Property !== 'undefined' && Property.getById) ? Property.getById(propId) : null;
+                const layerId = row?.dataset.layerId;
+                const layer = (layerId && typeof Layer !== 'undefined' && Layer.getById) ? Layer.getById(layerId) : app.project.activeItem.layers[parseInt(row?.dataset.layerIndex)];
                 const effName = chk.dataset.effectName;
                 const propName = chk.dataset.propName;
-                const prop = layer?.effects?.property(effName)?.property(propName);
+                if (!prop && layer) prop = layer.effects?.property(effName)?.property(propName);
                 if (prop) {
                     prop.setValue(chk.checked ? 1 : 0);
                     prop.animMode = 'default';
@@ -1242,11 +1372,13 @@
         document.querySelectorAll('.ae-effect-color-input').forEach(input => {
             input.addEventListener('input', (e) => {
                 const row = input.closest('.ae-layer-row');
-                const layerIdx = parseInt(row.dataset.layerIndex);
-                const layer = app.project.activeItem.layers[layerIdx];
+                const propId = input.dataset.propId;
+                let prop = (propId && typeof Property !== 'undefined' && Property.getById) ? Property.getById(propId) : null;
+                const layerId = row?.dataset.layerId;
+                const layer = (layerId && typeof Layer !== 'undefined' && Layer.getById) ? Layer.getById(layerId) : app.project.activeItem.layers[parseInt(row?.dataset.layerIndex)];
                 const effName = input.dataset.effectName;
                 const propName = input.dataset.propName;
-                const prop = layer?.effects?.property(effName)?.property(propName);
+                if (!prop && layer) prop = layer.effects?.property(effName)?.property(propName);
                 if (prop) {
                     const hex = input.value;
                     const r = parseInt(hex.slice(1, 3), 16) / 255;
@@ -1268,8 +1400,8 @@
         document.querySelectorAll('.ae-vector-color-input').forEach(input => {
             input.addEventListener('input', (e) => {
                 const row = input.closest('.ae-layer-row');
-                const layerIdx = parseInt(row.dataset.layerIndex);
-                const layer = app.project.activeItem.layers[layerIdx];
+                const layerId = row?.dataset.layerId;
+                const layer = (layerId && typeof Layer !== 'undefined' && Layer.getById) ? Layer.getById(layerId) : app.project.activeItem.layers[parseInt(row?.dataset.layerIndex)];
                 const propType = input.dataset.propType;
                 if (!layer) return;
 
@@ -1304,12 +1436,21 @@
     // Composition Clear Helper (Runs on new script or build)
     // -------------------------------------------------------------
     function clearCompLayers() {
-        const comp = (typeof app !== 'undefined' && app.project) ? app.project.activeItem : null;
-        if (comp && comp.layers) {
-            while (comp.layers.length > 0) {
-                comp.layers.remove(comp.layers[0]);
+        if (typeof app !== 'undefined' && app.project) {
+            const mainComp = app.project.items.find(it => it.name === 'Main Comp') || app.project.items[0];
+            if (mainComp) {
+                app.project.activeItem = mainComp;
+                if (global.aeRenderer) {
+                    global.aeRenderer.comp = mainComp;
+                }
             }
-            if (comp._onChanged) comp._onChanged();
+            const comp = app.project.activeItem;
+            if (comp && comp.layers) {
+                while (comp.layers.length > 0) {
+                    comp.layers.remove(comp.layers[0]);
+                }
+                if (comp._onChanged) comp._onChanged();
+            }
         }
         if (typeof renderTimeline === 'function') renderTimeline();
     }
@@ -1432,12 +1573,17 @@
 
             // Sandbox execution with After Effects globals
             const scriptFunc = new Function(
-                'app', '$', 'CompItem', 'Shape', 'Window', 'Panel', 'Group', 'TabbedPanel', 'Tab', 'Mat4', 'File', 'Folder',
+                'app', '$', 'CompItem', 'Shape', 'Layer', 'AVLayer', 'ShapeLayer', 'TextLayer', 'Window', 'Panel', 'Group', 'TabbedPanel', 'Tab', 'Mat4', 'File', 'Folder',
                 `"use strict";\n${code}`
             );
             scriptFunc.call(
                 window,
-                app, $, CompItem, Shape, Window, Panel, Group, TabbedPanel, Tab, Mat4,
+                app, $, CompItem, Shape,
+                (window.Layer || (typeof Layer !== 'undefined' ? Layer : null)),
+                (window.AVLayer || window.Layer || (typeof AVLayer !== 'undefined' ? AVLayer : null)),
+                (window.ShapeLayer || (typeof ShapeLayer !== 'undefined' ? ShapeLayer : null)),
+                (window.TextLayer || (typeof TextLayer !== 'undefined' ? TextLayer : null)),
+                Window, Panel, Group, TabbedPanel, Tab, Mat4,
                 (window.AEFile || window.File),
                 (window.AEFolder || window.Folder)
             );

@@ -1269,10 +1269,154 @@ body.body-viewport-panning {
 .ae-layer-title {
     font-weight: 500;
     color: var(--text-primary);
-    width: 180px;
+    min-width: 140px;
+    max-width: 280px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    transition: text-indent 0.15s ease;
+}
+
+.ae-layer-title.is-nested {
+    font-weight: 400;
+    color: #e2e8f0;
+}
+
+.ae-nesting-indicator {
+    display: inline-block;
+    color: #818cf8;
+    margin-right: 3px;
+    font-family: var(--font-mono, monospace);
+    font-size: 11px;
+    font-weight: 600;
+    opacity: 0.85;
+}
+
+/* Composition Breadcrumbs in Timeline Header */
+.ae-comp-breadcrumbs {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    margin-left: 10px;
+    flex-wrap: nowrap;
+    vertical-align: middle;
+}
+
+.ae-comp-breadcrumb-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: #25282e;
+    color: #cbd5e1;
+    font-size: 10px;
+    padding: 2px 7px;
+    border-radius: 3px;
+    border: 1px solid #3c4048;
+    cursor: pointer;
+    font-family: inherit;
+    font-weight: 500;
+    line-height: 1.2;
+    transition: all 0.15s ease;
+}
+
+.ae-comp-breadcrumb-item:hover {
+    background: #313640;
+    border-color: #64b5f6;
+    color: #fff;
+}
+
+.ae-comp-breadcrumb-item.active {
+    background: #1e3a5f;
+    border-color: #3b82f6;
+    color: #93c5fd;
+    font-weight: 600;
+}
+
+.ae-comp-icon {
+    display: inline-block;
+    vertical-align: middle;
+    flex-shrink: 0;
+}
+
+/* Precomposition Badges, Buttons, and Nesting Styles */
+.ae-badge-precomp {
+    background: #5e35b1 !important;
+    color: #fff !important;
+    border: 1px solid #7e57c2 !important;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    padding: 1px 5px;
+    font-size: 9px;
+    border-radius: 2px;
+}
+
+.ae-badge-nested {
+    background: #2d3748 !important;
+    color: #a0aec0 !important;
+    border: 1px solid #4a5568 !important;
+    font-size: 9px;
+    padding: 1px 4px;
+    border-radius: 2px;
+}
+
+.ae-badge-comp-dims {
+    color: #888;
+    font-size: 10px;
+    font-family: var(--font-mono, monospace);
+    margin-left: 4px;
+    padding: 0 4px;
+}
+
+.ae-btn-open-comp, .ae-btn-open-comp-inline {
+    background: #252830;
+    color: #93c5fd;
+    border: 1px solid rgba(59, 130, 246, 0.4);
+    border-radius: 3px;
+    padding: 1px 6px;
+    font-size: 10px;
+    cursor: pointer;
+    margin-left: 6px;
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    transition: all 0.15s ease;
+}
+
+.ae-btn-open-comp:hover, .ae-btn-open-comp-inline:hover {
+    background: #1e3a5f;
+    border-color: #3b82f6;
+    color: #fff;
+}
+
+.ae-nested-comp-group {
+    background: rgba(15, 23, 42, 0.4);
+    border-left: 2px solid #5e35b1;
+    margin: 4px 0 6px 12px;
+    border-radius: 0 4px 4px 0;
+}
+
+.ae-nested-comp-group .ae-prop-group-header {
+    background: rgba(94, 53, 177, 0.15);
+    padding: 4px 8px;
+    font-size: 11px;
+    color: #d8b4fe;
+}
+
+.ae-nested-comp-items {
+    padding-left: 4px;
+    border-left: 1px dashed rgba(126, 87, 194, 0.4);
+    margin-left: 10px;
+}
+
+.ae-layer-row.is-nested {
+    border-left: 2px solid rgba(94, 53, 177, 0.3);
+}
+
+.ae-layer-row.is-precomp-row > .ae-layer-main-bar {
+    background-color: rgba(94, 53, 177, 0.08);
+}
+.ae-layer-row.is-precomp-row > .ae-layer-main-bar:hover {
+    background-color: rgba(94, 53, 177, 0.2);
 }
 
 /* Switches & 3D Cube Icon */
