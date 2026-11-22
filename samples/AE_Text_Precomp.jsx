@@ -1,6 +1,6 @@
 // Co-authored & architected with Google DeepMind Antigravity.
 // =============================================================================
-// ADOBE AFTER EFFECTS EXTENDSCRIPT & SCRIPTUI PANEL: AE TEXT PRECOMP v1.1
+// ADOBE AFTER EFFECTS EXTENDSCRIPT & SCRIPTUI PANEL: AE TEXT PRECOMP v1.2
 // =============================================================================
 //
 // PURPOSE:
@@ -9,27 +9,35 @@
 //   a procedural 2D rounded rectangle background card featuring 4 independent
 //   corner radii (based on AE_Extruded_Round_corners).
 //
+// COHERENCE & COMPATIBILITY REFERENCES:
+//   - Text Properties Extraction & In-Memory Store:
+//     https://github.com/work2survive/AE_JS_builder/blob/main/samples/Text_Properties_To_Effects.jsx
+//   - Procedural Rounded Corner Background Card & Color Picker:
+//     https://github.com/work2survive/AE_Extruded_Round_corners
+//
 // KEY FEATURES:
-//   1. Padding & Textbox Reduction:
-//      - Padding option that reduces the textbox width to fit inside the precomp.
+//   1. Padding & Textbox Width Reduction:
+//      - Reduces the textbox width by (2 * padding) to accommodate padding inside the precomp.
 //      - When "automatic precomp height" is active, precomp height expands to fit
 //        the wrapped textbox vertical size plus top and bottom padding.
 //      - Anchor point automatically accounts for padding, resting cleanly at the
 //        top of the text box (Top-Left, Top-Center, or Top-Right based on alignment).
-//   2. Procedural Rounded Background Card (AE_Extruded_Round_corners):
+//   2. Coherent Text Properties Extraction Engine:
+//      - Follows Text_Properties_To_Effects.jsx for robust typography metrics,
+//        paragraph justification, box text detection, sourceRect bounds, and
+//        in-memory $.global.AE_TEXT_BOX_MEMORY caching.
+//   3. Procedural Rounded Background Card (AE_Extruded_Round_corners):
 //      - Creates an individual 4-corner rounded rectangle shape layer behind the text.
 //      - Interactive UI asks which corners will react to the padding to round.
 //      - 8-vertex Bézier path with W3C CSS proportional overlap protection.
 //      - Master Effect Controls (Radius Top-Left, Top-Right, Bottom-Right, Bottom-Left,
-//        Width, Height) with live parametric expressions on the Path property.
-//   3. Integrated Color Picker & Opacity:
-//      - Interactive swatch button + hex input (#RRGGBB) compatible with AE's native
-//        color picker, Windows OS color picker, and the AE_JS_builder web emulator.
-//      - Opacity slider with live value sync.
-//   4. Dummy Text Generation:
-//      - If no text layer is selected, generates a 100-word Lorem Ipsum layer using
-//        a system font (ArialMT) and formatted to the padded textbox dimensions.
-//   5. Zero Visual Shift:
+//        Card Width, Card Height) with live parametric expressions on the Path property.
+//   4. Integrated Interactive Color Picker:
+//      - Custom swatch button + hex input (#RRGGBB) compatible with AE native
+//        $.colorPicker, Windows OS color picker, and AE_JS_builder web emulator.
+//   5. 100-Word Lorem Ipsum Dummy Layer:
+//      - If no text layer is selected, creates a 100-word dummy layer with a system font (ArialMT).
+//   6. Zero Visual Shift:
 //      - Mathematically compensates position so that the text does not jump on screen.
 // =============================================================================
 
@@ -37,10 +45,45 @@
     "use strict";
 
     var SCRIPT_NAME = "AE Text Precomp";
-    var SCRIPT_VERSION = "v1.1";
+    var SCRIPT_VERSION = "v1.2";
+    var TEXT_PROP_REF_URL = "https://github.com/work2survive/AE_JS_builder/blob/main/samples/Text_Properties_To_Effects.jsx";
+    var EXTRUDED_CORNERS_REF_URL = "https://github.com/work2survive/AE_Extruded_Round_corners";
 
     // -------------------------------------------------------------------------
-    // 1. ES3 Helpers & Polyfills
+    // 1. Global In-Memory Cache Initialization (from Text_Properties_To_Effects.jsx)
+    // -------------------------------------------------------------------------
+    var globalObj = (typeof $ !== "undefined" && typeof $.global !== "undefined")
+        ? $.global
+        : (typeof globalThis !== "undefined" ? globalThis : (typeof window !== "undefined" ? window : this));
+
+    if (typeof $ === "undefined") {
+        globalObj.$ = { global: globalObj, writeln: function (msg) { if (typeof console !== "undefined") console.log(msg); } };
+    } else if (typeof $.global === "undefined") {
+        $.global = globalObj;
+    }
+    var $root = (typeof $ !== "undefined") ? $ : globalObj.$;
+
+    if (typeof $root.global.AE_TEXT_BOX_MEMORY === "undefined") {
+        $root.global.AE_TEXT_BOX_MEMORY = {
+            layerName: "",
+            words: [],
+            wordWidths: [],
+            lines: [],
+            lineWidths: [],
+            spaceWidth: 0,
+            fontSize: 0,
+            boxWidth: 0,
+            boxHeight: 0,
+            totalWords: 0,
+            totalLines: 0,
+            maxLineWidth: 0,
+            maxWordWidth: 0,
+            timestamp: 0
+        };
+    }
+
+    // -------------------------------------------------------------------------
+    // 2. ES3 Helpers & Polyfills
     // -------------------------------------------------------------------------
     function trimStr(str) {
         if (!str) return "";
@@ -95,7 +138,386 @@
     }
 
     // -------------------------------------------------------------------------
-    // 2. Bézier Rounded Rectangle Path Computation (AE_Extruded_Round_corners)
+    // 3. TEXT PROPERTIES EXTRACTION ENGINE
+    //    Referenced from & coherent with:
+    //    https://github.com/work2survive/AE_JS_builder/blob/main/samples/Text_Properties_To_Effects.jsx
+    // -------------------------------------------------------------------------
+
+    function isTextLayer(layer) {
+        if (!layer) return false;
+        try {
+            if (typeof TextLayer !== "undefined" && layer instanceof TextLayer) return true;
+        } catch (e) {}
+        try {
+            if (layer.property("ADBE Text Properties") !== null) return true;
+            if (layer.property("Source Text") !== null) return true;
+        } catch (e) {}
+        return false;
+    }
+
+    function getTextDocument(layer) {
+        if (!isTextLayer(layer)) return null;
+        try {
+            var srcText = layer.property("Source Text");
+            if (srcText) return srcText.value;
+        } catch (e) {}
+        return null;
+    }
+
+    function getSourceRect(layer) {
+        if (!layer || typeof layer.sourceRectAtTime !== "function") return null;
+        try {
+            var t = (typeof layer.time !== "undefined") ? layer.time : 0;
+            return layer.sourceRectAtTime(t, false);
+        } catch (e) {
+            return null;
+        }
+    }
+
+    function getSelectedTextLayer(comp) {
+        if (!comp) {
+            comp = app.project.activeItem;
+        }
+        if (!comp || !(comp instanceof CompItem)) return null;
+
+        var sel = comp.selectedLayers;
+        if (!sel || sel.length === 0) return null;
+
+        for (var i = 0; i < sel.length; i++) {
+            if (isTextLayer(sel[i])) {
+                return sel[i];
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Measures and stores in memory (from Text_Properties_To_Effects.jsx):
+     *   1. Array with each word detected in the text box.
+     *   2. Array with the width in pixels of each word.
+     *   3. Array with the width in pixels of each text line.
+     */
+    function measureAndStoreTextMetrics(comp, layer) {
+        if (!comp || !layer) return null;
+        if (!isTextLayer(layer)) return null;
+
+        var textDoc = getTextDocument(layer);
+        if (!textDoc) return null;
+
+        var fullText = String(textDoc.text || "");
+        if (fullText.length === 0) {
+            var emptyStore = {
+                layerName: layer.name,
+                layerIndex: layer.index,
+                fullText: "",
+                words: [],
+                wordWidths: [],
+                lines: [],
+                lineWidths: [],
+                spaceWidth: 0,
+                fontSize: textDoc.fontSize || 0,
+                font: textDoc.font || "",
+                boxWidth: 0,
+                boxHeight: 0,
+                totalWords: 0,
+                totalLines: 0,
+                maxLineWidth: 0,
+                maxWordWidth: 0,
+                timestamp: (new Date()).getTime()
+            };
+            $root.global.AE_TEXT_BOX_MEMORY = emptyStore;
+            try { layer._textMetrics = emptyStore; } catch (e) {}
+            return emptyStore;
+        }
+
+        var words = fullText.match(/\S+/g) || [];
+        var wordWidths = [];
+        var lines = [];
+        var lineWidths = [];
+        var spaceWidth = 0;
+
+        var isBox = false;
+        var boxWidth = 0;
+        var boxHeight = 0;
+        try {
+            if (textDoc.boxText && textDoc.boxTextSize) {
+                isBox = true;
+                boxWidth = textDoc.boxTextSize[0];
+                boxHeight = textDoc.boxTextSize[1];
+            }
+        } catch (eBox) {}
+
+        // Create temporary offscreen text layer to measure exact AE glyph geometry
+        var tempLayer = null;
+        try {
+            tempLayer = comp.layers.addText("");
+            tempLayer.enabled = false;
+            var tempDoc = tempLayer.property("Source Text").value;
+            tempDoc.fontSize = textDoc.fontSize;
+            if (textDoc.font) {
+                try { tempDoc.font = textDoc.font; } catch (eFont) {}
+            }
+            tempDoc.tracking = textDoc.tracking || 0;
+            tempDoc.applyStroke = textDoc.applyStroke || false;
+            tempDoc.strokeWidth = textDoc.strokeWidth || 0;
+            tempDoc.applyFill = true;
+            tempDoc.fillColor = [1, 1, 1];
+            tempLayer.property("Source Text").setValue(tempDoc);
+
+            // 1. Measure width in pixels of each word
+            for (var w = 0; w < words.length; w++) {
+                tempDoc.text = words[w];
+                tempLayer.property("Source Text").setValue(tempDoc);
+                var rW = tempLayer.sourceRectAtTime(0, false);
+                var ww = rW ? (Math.round(rW.width * 100) / 100) : 0;
+                wordWidths.push(ww);
+            }
+
+            // 2. Measure space width in pixels
+            tempDoc.text = "A A";
+            tempLayer.property("Source Text").setValue(tempDoc);
+            var rPair = tempLayer.sourceRectAtTime(0, false);
+            tempDoc.text = "AA";
+            tempLayer.property("Source Text").setValue(tempDoc);
+            var rSingle = tempLayer.sourceRectAtTime(0, false);
+            if (rPair && rSingle) {
+                spaceWidth = Math.max(0, Math.round((rPair.width - rSingle.width) * 100) / 100);
+            }
+            if (spaceWidth <= 0) {
+                spaceWidth = Math.round((textDoc.fontSize * 0.28) * 100) / 100;
+            }
+
+            // 3. Measure lines and width in pixels of each text line
+            var paragraphs = fullText.split(/\r\n|\r|\n/);
+            for (var p = 0; p < paragraphs.length; p++) {
+                var para = paragraphs[p];
+                if (!isBox || boxWidth <= 0) {
+                    tempDoc.text = para;
+                    tempLayer.property("Source Text").setValue(tempDoc);
+                    var rL = tempLayer.sourceRectAtTime(0, false);
+                    var lw = rL ? (Math.round(rL.width * 100) / 100) : 0;
+                    lines.push(para);
+                    lineWidths.push(lw);
+                } else {
+                    var pWords = para.match(/\S+/g) || [];
+                    if (pWords.length === 0) {
+                        lines.push("");
+                        lineWidths.push(0);
+                        continue;
+                    }
+                    var curLine = pWords[0];
+                    tempDoc.text = curLine;
+                    tempLayer.property("Source Text").setValue(tempDoc);
+                    var curW = tempLayer.sourceRectAtTime(0, false).width;
+
+                    for (var pw = 1; pw < pWords.length; pw++) {
+                        var testLine = curLine + " " + pWords[pw];
+                        tempDoc.text = testLine;
+                        tempLayer.property("Source Text").setValue(tempDoc);
+                        var testW = tempLayer.sourceRectAtTime(0, false).width;
+
+                        if (testW > boxWidth && curLine.length > 0) {
+                            lines.push(curLine);
+                            lineWidths.push(Math.round(curW * 100) / 100);
+                            curLine = pWords[pw];
+                            tempDoc.text = curLine;
+                            tempLayer.property("Source Text").setValue(tempDoc);
+                            curW = tempLayer.sourceRectAtTime(0, false).width;
+                        } else {
+                            curLine = testLine;
+                            curW = testW;
+                        }
+                    }
+                    lines.push(curLine);
+                    lineWidths.push(Math.round(curW * 100) / 100);
+                }
+            }
+        } catch (measErr) {
+            if (wordWidths.length === 0) {
+                var charRatio = (textDoc.fontSize || 40) * 0.52;
+                for (var fw = 0; fw < words.length; fw++) {
+                    wordWidths.push(Math.round(words[fw].length * charRatio * 100) / 100);
+                }
+            }
+            if (lines.length === 0) {
+                lines = fullText.split(/\r\n|\r|\n/);
+                for (var fl = 0; fl < lines.length; fl++) {
+                    lineWidths.push(Math.round(lines[fl].length * ((textDoc.fontSize || 40) * 0.52) * 100) / 100);
+                }
+            }
+        } finally {
+            if (tempLayer) {
+                try { tempLayer.remove(); } catch (remErr) {}
+            }
+        }
+
+        var maxLW = 0;
+        for (var ml = 0; ml < lineWidths.length; ml++) {
+            if (lineWidths[ml] > maxLW) maxLW = lineWidths[ml];
+        }
+
+        var maxWW = 0;
+        for (var mw = 0; mw < wordWidths.length; mw++) {
+            if (wordWidths[mw] > maxWW) maxWW = wordWidths[mw];
+        }
+
+        var memoryStore = {
+            layerName: layer.name,
+            layerIndex: layer.index,
+            fullText: fullText,
+            words: words,
+            wordWidths: wordWidths,
+            lines: lines,
+            lineWidths: lineWidths,
+            spaceWidth: spaceWidth,
+            fontSize: textDoc.fontSize,
+            font: textDoc.font || "",
+            boxWidth: boxWidth,
+            boxHeight: boxHeight,
+            totalWords: words.length,
+            totalLines: lines.length,
+            maxLineWidth: maxLW,
+            maxWordWidth: maxWW,
+            timestamp: (new Date()).getTime()
+        };
+
+        $root.global.AE_TEXT_BOX_MEMORY = memoryStore;
+        try { layer._textMetrics = memoryStore; } catch (eMem) {}
+        return memoryStore;
+    }
+
+    /**
+     * High-level text metrics extractor coherent with Text_Properties_To_Effects.jsx
+     */
+    function getTextLayerMetrics(comp, layer) {
+        if (!layer) return null;
+
+        var rect = getSourceRect(layer);
+        if (!rect || typeof rect.width === "undefined") {
+            rect = { left: 0, top: 0, width: 800, height: 200 };
+        }
+
+        var textDoc = getTextDocument(layer);
+
+        // Store comprehensive metrics in memory
+        var metricsStore = null;
+        if (comp) {
+            try {
+                metricsStore = measureAndStoreTextMetrics(comp, layer);
+            } catch (eMeas) {}
+        }
+
+        var isBoxText = false;
+        var boxWidth = 0;
+        var boxHeight = 0;
+        var justification = 7412; // LEFT_JUSTIFY default
+        var align = "left";
+        var alignIndex = 0;       // 0: Left, 1: Center, 2: Right, 3: Justified
+        var alignRatio = 0.0;     // 0.0 (Left), 0.5 (Center), 1.0 (Right)
+        var font = "ArialMT";
+        var fontSize = 28;
+        var leading = 0;
+        var tracking = 0;
+        var baselineShift = 0;
+        var fillColor = [1, 1, 1, 1];
+        var strokeColor = [0, 0, 0, 1];
+        var strokeWidth = 0;
+
+        if (textDoc) {
+            try {
+                if (textDoc.font) font = textDoc.font;
+                if (textDoc.fontSize) fontSize = textDoc.fontSize;
+                if (typeof textDoc.justification !== "undefined") {
+                    justification = textDoc.justification;
+                }
+                if (textDoc.boxText && textDoc.boxTextSize) {
+                    isBoxText = true;
+                    boxWidth = textDoc.boxTextSize[0];
+                    boxHeight = textDoc.boxTextSize[1];
+                }
+                leading = textDoc.autoLeading ? (textDoc.fontSize * 1.2) : (textDoc.leading || 0);
+                tracking = textDoc.tracking || 0;
+                baselineShift = textDoc.baselineShift || 0;
+                if (textDoc.applyFill && textDoc.fillColor) {
+                    var fc = textDoc.fillColor;
+                    fillColor = [fc[0], fc[1], fc[2], 1.0];
+                }
+                if (textDoc.applyStroke && textDoc.strokeColor) {
+                    var sc = textDoc.strokeColor;
+                    strokeColor = [sc[0], sc[1], sc[2], 1.0];
+                    strokeWidth = textDoc.strokeWidth || 0;
+                }
+            } catch (eDoc) {}
+        }
+
+        // Justification evaluation coherent with Text_Properties_To_Effects.jsx
+        if (typeof ParagraphJustification !== "undefined") {
+            if (justification === ParagraphJustification.CENTER_JUSTIFY ||
+                justification === ParagraphJustification.FULL_JUSTIFY_LASTCENTER) {
+                align = "center";
+                alignIndex = 1;
+                alignRatio = 0.5;
+            } else if (justification === ParagraphJustification.RIGHT_JUSTIFY ||
+                       justification === ParagraphJustification.FULL_JUSTIFY_LASTRIGHT) {
+                align = "right";
+                alignIndex = 2;
+                alignRatio = 1.0;
+            } else if (justification === ParagraphJustification.LEFT_JUSTIFY ||
+                       justification === ParagraphJustification.FULL_JUSTIFY_LASTLEFT) {
+                align = "left";
+                alignIndex = 0;
+                alignRatio = 0.0;
+            } else {
+                align = "left";
+                alignIndex = 3;
+                alignRatio = 0.0;
+            }
+        } else {
+            if (justification == 7414 || justification == 7417) {
+                align = "center";
+                alignIndex = 1;
+                alignRatio = 0.5;
+            } else if (justification == 7413 || justification == 7416) {
+                align = "right";
+                alignIndex = 2;
+                alignRatio = 1.0;
+            } else {
+                align = "left";
+                alignIndex = 0;
+                alignRatio = 0.0;
+            }
+        }
+
+        var detW = isBoxText && boxWidth > 0 ? Math.round(boxWidth) : Math.ceil(rect.width);
+        var detH = isBoxText && boxHeight > 0 ? Math.max(Math.round(boxHeight), Math.ceil(rect.height)) : Math.ceil(rect.height);
+
+        return {
+            layer: layer,
+            name: layer.name,
+            rect: rect,
+            isBoxText: isBoxText,
+            boxWidth: boxWidth,
+            boxHeight: boxHeight,
+            detectedWidth: Math.max(10, detW),
+            detectedHeight: Math.max(10, detH),
+            justification: justification,
+            align: align,
+            alignIndex: alignIndex,
+            alignRatio: alignRatio,
+            font: font,
+            fontSize: fontSize,
+            leading: leading,
+            tracking: tracking,
+            baselineShift: baselineShift,
+            fillColor: fillColor,
+            strokeColor: strokeColor,
+            strokeWidth: strokeWidth,
+            memoryStore: metricsStore || $root.global.AE_TEXT_BOX_MEMORY
+        };
+    }
+
+    // -------------------------------------------------------------------------
+    // 4. Bézier Rounded Rectangle Path Computation (AE_Extruded_Round_corners)
     // -------------------------------------------------------------------------
     function computeRoundRectPathData(w, h, rTL, rTR, rBR, rBL) {
         // W3C CSS Backgrounds and Borders Module Level 3 (§5.5 Corner Overlapping)
@@ -164,119 +586,7 @@
     }
 
     // -------------------------------------------------------------------------
-    // 3. Text Layer Detection & Metrics
-    // -------------------------------------------------------------------------
-    function isTextLayer(layer) {
-        if (!layer) return false;
-        try {
-            if (typeof TextLayer !== "undefined" && layer instanceof TextLayer) return true;
-        } catch (e) {}
-        try {
-            if (layer.property("ADBE Text Properties") !== null) return true;
-            if (layer.property("Source Text") !== null) return true;
-        } catch (e) {}
-        return false;
-    }
-
-    function getSelectedTextLayer(comp) {
-        if (!comp) {
-            comp = app.project.activeItem;
-        }
-        if (!comp || !(comp instanceof CompItem)) return null;
-
-        var sel = comp.selectedLayers;
-        if (!sel || sel.length === 0) return null;
-
-        for (var i = 0; i < sel.length; i++) {
-            if (isTextLayer(sel[i])) {
-                return sel[i];
-            }
-        }
-        return null;
-    }
-
-    function getTextLayerMetrics(comp, layer) {
-        if (!layer) return null;
-
-        var t = (comp && typeof comp.time !== "undefined") ? comp.time : 0;
-        var rect = null;
-        try {
-            if (typeof layer.sourceRectAtTime === "function") {
-                rect = layer.sourceRectAtTime(t, false);
-            }
-        } catch (eRect) {}
-
-        if (!rect || typeof rect.width === "undefined") {
-            rect = { left: 0, top: 0, width: 800, height: 200 };
-        }
-
-        var textProp = layer.property("Source Text");
-        var textDoc = textProp ? textProp.value : null;
-
-        var isBoxText = false;
-        var boxWidth = 0;
-        var boxHeight = 0;
-        var justification = 7412; // LEFT_JUSTIFY default
-        var align = "left";
-        var font = "ArialMT";
-        var fontSize = 28;
-
-        if (textDoc) {
-            try {
-                if (textDoc.font) font = textDoc.font;
-                if (textDoc.fontSize) fontSize = textDoc.fontSize;
-                if (typeof textDoc.justification !== "undefined") {
-                    justification = textDoc.justification;
-                }
-                if (textDoc.boxText && textDoc.boxTextSize) {
-                    isBoxText = true;
-                    boxWidth = textDoc.boxTextSize[0];
-                    boxHeight = textDoc.boxTextSize[1];
-                }
-            } catch (eDoc) {}
-        }
-
-        if (typeof ParagraphJustification !== "undefined") {
-            if (justification === ParagraphJustification.CENTER_JUSTIFY ||
-                justification === ParagraphJustification.FULL_JUSTIFY_LASTCENTER) {
-                align = "center";
-            } else if (justification === ParagraphJustification.RIGHT_JUSTIFY ||
-                       justification === ParagraphJustification.FULL_JUSTIFY_LASTRIGHT) {
-                align = "right";
-            } else {
-                align = "left";
-            }
-        } else {
-            if (justification == 7414 || justification == 7417) {
-                align = "center";
-            } else if (justification == 7413 || justification == 7416) {
-                align = "right";
-            } else {
-                align = "left";
-            }
-        }
-
-        var detW = isBoxText && boxWidth > 0 ? Math.round(boxWidth) : Math.ceil(rect.width);
-        var detH = isBoxText && boxHeight > 0 ? Math.max(Math.round(boxHeight), Math.ceil(rect.height)) : Math.ceil(rect.height);
-
-        return {
-            layer: layer,
-            name: layer.name,
-            rect: rect,
-            isBoxText: isBoxText,
-            boxWidth: boxWidth,
-            boxHeight: boxHeight,
-            detectedWidth: Math.max(10, detW),
-            detectedHeight: Math.max(10, detH),
-            justification: justification,
-            align: align,
-            font: font,
-            fontSize: fontSize
-        };
-    }
-
-    // -------------------------------------------------------------------------
-    // 4. Create Dummy 100-Word Lorem Ipsum Text Layer
+    // 5. Create Dummy 100-Word Lorem Ipsum Text Layer
     // -------------------------------------------------------------------------
     function createDummyTextLayer(comp, targetW, targetH, autoHeight, pad) {
         if (!comp) {
@@ -356,7 +666,7 @@
     }
 
     // -------------------------------------------------------------------------
-    // 5. Create Background Card Layer (Procedural Bézier Rounded Rectangle)
+    // 6. Create Background Card Layer (Procedural Bézier Rounded Rectangle)
     // -------------------------------------------------------------------------
     function createBackgroundShapeLayer(comp, precompW, precompH, radii, hexColor, opacity) {
         var bgLayer = comp.layers.addShape();
@@ -464,7 +774,7 @@
     }
 
     // -------------------------------------------------------------------------
-    // 6. Core Precompose Engine
+    // 7. Core Precompose Engine
     // -------------------------------------------------------------------------
     function precompTextLayer(options) {
         var comp = app.project.activeItem;
@@ -754,12 +1064,13 @@
             padding: padding,
             align: align,
             createdDummy: createdDummy,
-            name: precompName
+            name: precompName,
+            metrics: metrics
         };
     }
 
     // -------------------------------------------------------------------------
-    // 7. ScriptUI Color Picker (AE_Extruded_Round_corners pattern)
+    // 8. ScriptUI Color Picker (AE_Extruded_Round_corners pattern)
     // -------------------------------------------------------------------------
     function createColorPicker(parent, defaultHex) {
         var grp = parent.add("group");
@@ -859,7 +1170,7 @@
     }
 
     // -------------------------------------------------------------------------
-    // 8. ScriptUI Window & Interface Panels
+    // 9. ScriptUI Window & Interface Panels
     // -------------------------------------------------------------------------
     var win = (thisObj instanceof Panel)
         ? thisObj
@@ -883,6 +1194,9 @@
     var lblSubTitle = pnlHeader.add("statictext", undefined, "Text Box Precomposer with Padding, Auto Anchor & Rounded Background");
     lblSubTitle.graphics.foregroundColor = win.graphics.newPen(win.graphics.PenType.SOLID_COLOR, [0.35, 0.65, 0.95, 1], 1);
 
+    var lblRef = pnlHeader.add("statictext", undefined, "Metrics Engine: Text_Properties_To_Effects.jsx coherent");
+    lblRef.helpTip = TEXT_PROP_REF_URL;
+
     // --- Detection & Status Panel ---
     var pnlDetect = win.add("panel", undefined, "Text Layer Detection");
     pnlDetect.orientation = "column";
@@ -899,7 +1213,7 @@
     lblStatusText.alignment = ["fill", "center"];
 
     var btnAutoDetect = pnlDetect.add("button", undefined, "Auto-Detect Selected Text Size");
-    btnAutoDetect.helpTip = "Detects dimensions and justification from the currently selected text layer.";
+    btnAutoDetect.helpTip = "Detects dimensions and justification from the currently selected text layer using Text_Properties_To_Effects engine.";
 
     // --- Dimensions & Padding Panel ---
     var pnlDims = win.add("panel", undefined, "Precomp Dimensions & Padding");
@@ -1164,7 +1478,7 @@
     };
 
     // -------------------------------------------------------------------------
-    // 9. UI Event Handlers & State Sync
+    // 10. UI Event Handlers & State Sync
     // -------------------------------------------------------------------------
     function syncLayerDetection() {
         var comp = app.project.activeItem;
@@ -1179,7 +1493,8 @@
             var metrics = getTextLayerMetrics(comp, textLayer);
             var typeStr = metrics.isBoxText ? "Paragraph Box" : "Point Text";
             var alignStr = metrics.align.toUpperCase();
-            lblStatusText.text = "'" + textLayer.name + "' (" + typeStr + ", " + alignStr + ")";
+            var wordCount = (metrics.memoryStore && metrics.memoryStore.totalWords) ? (" | " + metrics.memoryStore.totalWords + " words") : "";
+            lblStatusText.text = "'" + textLayer.name + "' (" + typeStr + ", " + alignStr + wordCount + ")";
             btnAutoDetect.enabled = true;
             return metrics;
         } else {
@@ -1193,7 +1508,6 @@
         var metrics = syncLayerDetection();
         if (metrics) {
             var padVal = parseFloat(txtPad.text) || 30;
-            // Proposed precomp width = text width + padding on both sides
             var proposedPrecompW = metrics.detectedWidth + (padVal * 2);
             txtWidth.text = String(proposedPrecompW);
             txtHeight.text = String(metrics.detectedHeight + (padVal * 2));
@@ -1206,7 +1520,7 @@
                 dropAlign.selection = 1; // Top-Left
             }
 
-            lblFeedback.text = "Auto-detected: Text " + metrics.detectedWidth + "x" + metrics.detectedHeight + "px -> Precomp " + proposedPrecompW + "px (" + metrics.align + ")";
+            lblFeedback.text = "Auto-detected: Text " + metrics.detectedWidth + "x" + metrics.detectedHeight + "px (" + metrics.align + ") -> Precomp " + proposedPrecompW + "px";
         } else {
             alert("Please select a text layer in your active composition first.");
         }
