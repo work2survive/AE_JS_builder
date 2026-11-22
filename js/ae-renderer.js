@@ -572,6 +572,10 @@
             requestAnimationFrame(loop);
         }
 
+        render(time = (this.comp ? this.comp.time : 0)) {
+            this.renderLayers(time);
+        }
+
         // -------------------------------------------------------------
         // SVG Vector Rendering for AE Shape Layers
         // -------------------------------------------------------------
@@ -1672,14 +1676,14 @@
                 } else if (layer instanceof ShapeLayer) {
                     const svgContent = this.renderShapeContents(layer.contents, time);
                     layerEl.innerHTML = `
-                        <svg class="ae-layer-svg" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" style="overflow: visible;">
+                        <svg class="ae-layer-svg" style="overflow: visible;">
                             ${svgContent}
                         </svg>
                     `;
                 } else if (typeof TextLayer !== 'undefined' && layer instanceof TextLayer) {
                     const textSvg = this.renderTextContent(layer, time);
                     layerEl.innerHTML = `
-                        <svg class="ae-layer-svg" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" style="overflow: visible;">
+                        <svg class="ae-layer-svg" style="overflow: visible;">
                             ${textSvg}
                         </svg>
                     `;
@@ -1729,11 +1733,11 @@
                     subLayer.source.time = nestedTime;
                     subContent = this.renderCompLayersHtml(subLayer.source, nestedTime, isStaticPreview, depth + 1);
                 } else if (typeof TextLayer !== 'undefined' && subLayer instanceof TextLayer) {
-                    subContent = `<svg class="ae-layer-svg" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" style="overflow: visible;">${this.renderTextContent(subLayer, time)}</svg>`;
+                    subContent = `<svg class="ae-layer-svg" style="overflow: visible;">${this.renderTextContent(subLayer, time)}</svg>`;
                 } else if (subLayer.sourceText) {
-                    subContent = `<svg class="ae-layer-svg" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" style="overflow: visible;">${this.renderTextContent(subLayer, time)}</svg>`;
+                    subContent = `<svg class="ae-layer-svg" style="overflow: visible;">${this.renderTextContent(subLayer, time)}</svg>`;
                 } else if (subLayer.contents) {
-                    subContent = `<svg class="ae-layer-svg" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" style="overflow: visible;">${this.renderShapeContents(subLayer.contents, time)}</svg>`;
+                    subContent = `<svg class="ae-layer-svg" style="overflow: visible;">${this.renderShapeContents(subLayer.contents, time)}</svg>`;
                 }
 
                 if (subContent) {
