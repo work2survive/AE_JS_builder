@@ -170,7 +170,7 @@ The simulator automatically detects and loads standalone production-ready After 
    - **Repository**: [work2survive/AE_Get_Emojis](https://github.com/work2survive/AE_Get_Emojis)
    - **Live Demo**: [https://work2survive.github.io/AE_JS_builder/?jsx=AE_Get_Emojis.jsx&autobuild=true](https://work2survive.github.io/AE_JS_builder/?jsx=AE_Get_Emojis.jsx&autobuild=true)
 
-11. **[AE Text Precomp](https://github.com/work2survive/AE-text-precomp)** (`jsx/AE_Text_Precomp.jsx` - v1.2):
+11. **[AE Text Precomp](https://github.com/work2survive/AE-text-precomp)** (`jsx/AE_Text_Precomp.jsx` - v1.2.1):
    - ScriptUI text precomposer that encapsulates selected paragraph/point text layers into comfortably-sized precomps with customizable padding, auto-height calculation, and dynamic top anchor alignment (left, center, right) with zero visual shift. Includes a procedural 2D rounded rectangle background card with 4 independent corner radii (adapted from `AE_Extruded_Round_corners`), padding reactivity toggles, and an integrated color picker.
    - **Repository**: [work2survive/AE-text-precomp](https://github.com/work2survive/AE-text-precomp)
    - **Live Demo**: [https://work2survive.github.io/AE_JS_builder/?jsx=AE_Text_Precomp.jsx&autobuild=true](https://work2survive.github.io/AE_JS_builder/?jsx=AE_Text_Precomp.jsx&autobuild=true)
