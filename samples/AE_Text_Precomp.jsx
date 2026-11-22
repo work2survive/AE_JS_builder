@@ -676,32 +676,69 @@
         bgLayer.transform.position.setValue([precompW / 2, precompH / 2, 0]);
         bgLayer.transform.anchorPoint.setValue([0, 0, 0]);
 
-        var rootVectors = bgLayer.property("Contents") || bgLayer.property("ADBE Root Vectors Group");
+        var rootVectors = bgLayer.property("ADBE Root Vectors Group") || bgLayer.property("Contents") || (bgLayer.property && bgLayer.property(1));
         var group = rootVectors.addProperty("ADBE Vector Group");
         group.name = "Rounded Card";
 
-        var groupContents = group.property("Contents") || group.property("ADBE Vectors Group");
-        var pathProp = groupContents.addProperty("ADBE Vector Shape - Path");
-        pathProp.name = "Rounded Path";
+        var groupContents = group.property("ADBE Vectors Group") || group.property("Contents") || (group.property && group.property(2)) || (group.property && group.property(1));
 
-        var fill = groupContents.addProperty("ADBE Vector Graphic - Fill");
-        var rgb = hexToRgb(hexColor || "#1E222D");
-        fill.property("Color").setValue([rgb[0], rgb[1], rgb[2]]);
-        if (fill.property("Opacity")) {
-            fill.property("Opacity").setValue(opacity !== undefined ? opacity : 100);
+        // In Adobe After Effects, a Bézier path is added as "ADBE Vector Shape - Group"
+        var shapeGroup = null;
+        try {
+            shapeGroup = groupContents.addProperty("ADBE Vector Shape - Group");
+        } catch (eG1) {
+            try {
+                shapeGroup = groupContents.addProperty("Path");
+            } catch (eG2) {
+                try {
+                    shapeGroup = groupContents.addProperty("ADBE Vector Shape - Path");
+                } catch (eG3) {}
+            }
+        }
+
+        if (shapeGroup) {
+            try { shapeGroup.name = "Rounded Path"; } catch (eName) {}
+        }
+
+        var fill = null;
+        try {
+            fill = groupContents.addProperty("ADBE Vector Graphic - Fill");
+        } catch (eF1) {
+            try { fill = groupContents.addProperty("Fill"); } catch (eF2) {}
+        }
+
+        if (fill) {
+            var rgb = hexToRgb(hexColor || "#1E222D");
+            try {
+                fill.property("Color").setValue([rgb[0], rgb[1], rgb[2]]);
+            } catch (eCol) {
+                try { fill.property("ADBE Vector Fill Color").setValue([rgb[0], rgb[1], rgb[2]]); } catch (eCol2) {}
+            }
+            if (fill.property("Opacity")) {
+                try { fill.property("Opacity").setValue(opacity !== undefined ? opacity : 100); } catch (eOp) {}
+            }
         }
 
         // Static shape computation
         var pathData = computeRoundRectPathData(precompW, precompH, radii.rTL, radii.rTR, radii.rBR, radii.rBL);
-        var aeShape = null;
-        try {
-            aeShape = new Shape();
-            aeShape.vertices = pathData.points;
-            aeShape.inTangents = pathData.inTangents;
-            aeShape.outTangents = pathData.outTangents;
-            aeShape.closed = true;
-            pathProp.property("Path").setValue(aeShape);
-        } catch (eShape) {}
+        var pathProp = null;
+        if (shapeGroup) {
+            pathProp = shapeGroup.property("ADBE Vector Shape") ||
+                       shapeGroup.property("Path") ||
+                       shapeGroup.path ||
+                       (shapeGroup.numProperties >= 2 ? shapeGroup.property(2) : shapeGroup.property(1));
+        }
+
+        if (pathProp) {
+            try {
+                var aeShape = new Shape();
+                aeShape.vertices = pathData.points;
+                aeShape.inTangents = pathData.inTangents;
+                aeShape.outTangents = pathData.outTangents;
+                aeShape.closed = true;
+                pathProp.setValue(aeShape);
+            } catch (eShape) {}
+        }
 
         // Master Effect Controls driving the 4 corners independently
         var fxGroup = bgLayer.property("ADBE Effect Parade") || bgLayer.property("Effects");
@@ -766,8 +803,12 @@
                     "];",
                     "createPath(pts, inT, outT, true);"
                 ];
-                pathProp.property("Path").expression = exprLines.join("\n");
-            } catch (eExpr) {}
+                if (pathProp) {
+                    try {
+                        pathProp.expression = exprLines.join("\n");
+                    } catch (eExpr) {}
+                }
+            } catch (eFx) {}
         }
 
         return bgLayer;
