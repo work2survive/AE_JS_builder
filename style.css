@@ -484,8 +484,12 @@ body.body-viewport-panning {
 }
 
 .ae-timeline-panel-title {
-    display: inline-block;
+    display: inline-flex;
+    align-items: center;
     padding: 0 2px; /* Matches .ae-viewport-panel-title so both titles align horizontally */
+    white-space: nowrap;
+    flex-shrink: 0;
+    line-height: 1.2;
 }
 
 .ae-cam-info {
@@ -1170,34 +1174,77 @@ body.body-viewport-panning {
     border-bottom: 1px solid var(--border-color);
     display: flex;
     align-items: center;
+    justify-content: space-between;
     padding: 0 10px;
     font-size: 11px;
     color: var(--text-muted);
-    min-width: 520px;
+    min-width: 0;
     flex-shrink: 0;
-}
-
-.ae-col-layer-name {
-    /* No left padding: header padding (10px) + title padding (2px) = 12px, same as the Viewport title. */
-    width: 250px;
-    flex-shrink: 0;
+    overflow: hidden;
+    gap: 8px;
     box-sizing: border-box;
 }
 
-.ae-col-switches {
-    width: 130px;
+.ae-timeline-header-left {
     display: flex;
-    justify-content: space-around;
     align-items: center;
+    gap: 6px;
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    height: 100%;
+}
+
+.ae-header-sep {
+    display: inline-block;
+    width: 1px;
+    height: 14px;
+    background: #373b44;
+    flex-shrink: 0;
+    margin: 0 2px;
+}
+
+.ae-timeline-header-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+    margin-left: auto;
+    height: 100%;
+}
+
+.ae-col-switches {
+    display: flex;
+    align-items: center;
+    gap: 5px;
     flex-shrink: 0;
 }
 
-.ae-col-properties {
-    flex: 1;
-    padding-left: 12px;
+.ae-switches-label {
+    font-size: 11px;
+    color: var(--text-muted);
+    user-select: none;
+    margin-left: 2px;
     white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+}
+
+.ae-col-properties {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    white-space: nowrap;
+    font-size: 11px;
+    flex-shrink: 0;
+}
+
+.ae-legend-blue {
+    color: #64b5f6;
+    white-space: nowrap;
+}
+
+.ae-legend-red {
+    color: #ff6b6b;
+    white-space: nowrap;
 }
 
 .ae-layers-tree {
@@ -1294,12 +1341,20 @@ body.body-viewport-panning {
 
 /* Composition Breadcrumbs in Timeline Header */
 .ae-comp-breadcrumbs {
-    display: inline-flex;
+    display: flex;
     align-items: center;
     gap: 4px;
-    margin-left: 10px;
-    flex-wrap: nowrap;
-    vertical-align: middle;
+    flex: 1;
+    min-width: 0;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    white-space: nowrap;
+    height: 24px;
+}
+.ae-comp-breadcrumbs::-webkit-scrollbar {
+    display: none;
 }
 
 .ae-comp-breadcrumb-item {
@@ -1309,14 +1364,28 @@ body.body-viewport-panning {
     background: #25282e;
     color: #cbd5e1;
     font-size: 10px;
-    padding: 2px 7px;
+    padding: 0 7px;
+    height: 20px;
     border-radius: 3px;
     border: 1px solid #3c4048;
     cursor: pointer;
     font-family: inherit;
     font-weight: 500;
-    line-height: 1.2;
+    line-height: 1;
+    white-space: nowrap;
+    max-width: 140px;
+    flex-shrink: 0;
+    box-sizing: border-box;
     transition: all 0.15s ease;
+}
+
+.ae-comp-breadcrumb-item span.ae-comp-name {
+    display: inline-block;
+    max-width: 112px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    vertical-align: middle;
 }
 
 .ae-comp-breadcrumb-item:hover {

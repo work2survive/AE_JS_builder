@@ -255,14 +255,14 @@
             if (allComps.length <= 1) {
                 bHtml = `<span class="ae-comp-breadcrumb-item active" title="Active Composition: ${escapeHtml(activeComp?.name || 'Main Comp')}">
                     <svg class="ae-comp-icon" viewBox="0 0 16 16" width="10" height="10" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2.5" width="12" height="11" rx="1.5"/><path d="M 5.5 2.5 V 13.5 M 10.5 2.5 V 13.5 M 2 6 H 5.5 M 10.5 6 H 14 M 2 10 H 5.5 M 10.5 10 H 14"/></svg>
-                    ${escapeHtml(activeComp?.name || 'Main Comp')}
+                    <span class="ae-comp-name">${escapeHtml(activeComp?.name || 'Main Comp')}</span>
                 </span>`;
             } else {
                 allComps.forEach(c => {
                     const isActive = (c === activeComp);
-                    bHtml += `<button class="ae-comp-breadcrumb-item ${isActive ? 'active' : ''}" data-action="switch-comp" data-comp-name="${escapeHtml(c.name)}" title="${isActive ? 'Active Composition' : 'Switch to ' + escapeHtml(c.name)}">
+                    bHtml += `<button class="ae-comp-breadcrumb-item ${isActive ? 'active' : ''}" data-action="switch-comp" data-comp-name="${escapeHtml(c.name)}" title="${isActive ? 'Active Composition: ' + escapeHtml(c.name) : 'Switch to ' + escapeHtml(c.name)}">
                         <svg class="ae-comp-icon" viewBox="0 0 16 16" width="10" height="10" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2.5" width="12" height="11" rx="1.5"/><path d="M 5.5 2.5 V 13.5 M 10.5 2.5 V 13.5 M 2 6 H 5.5 M 10.5 6 H 14 M 2 10 H 5.5 M 10.5 10 H 14"/></svg>
-                        ${escapeHtml(c.name)}
+                        <span class="ae-comp-name">${escapeHtml(c.name)}</span>
                     </button>`;
                 });
             }
@@ -273,6 +273,12 @@
                     openComposition(btn.dataset.compName);
                 };
             });
+            const activeBtn = breadcrumbsEl.querySelector('.ae-comp-breadcrumb-item.active');
+            if (activeBtn && typeof activeBtn.scrollIntoView === 'function') {
+                try {
+                    activeBtn.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+                } catch (e) {}
+            }
         }
 
         let shiedLayerCount = 0;
