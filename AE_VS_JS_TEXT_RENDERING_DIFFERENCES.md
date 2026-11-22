@@ -194,7 +194,154 @@ When rendering genuine Box Text (`boxText: true`):
 
 ---
 
-## 8. Summary Checklist for Future Repositories
+## 9. Visual Symmetry: Container Box Width vs. Content Width
+
+When creating backgrounds or precompositions around text layers (e.g. rounded rectangle cards, badges, or subtitles):
+
+```
+       CONTAINER BOX (ASYMMETRIC)               CONTENT-BOUND (SYMMETRIC)
+   ┌────────────────────────────────┐         ┌───────────────────────┐
+   │ [pad]                     [pad]│         │ [pad]            [pad]│
+   │ Sed ut perspiciatis unde       │         │ Sed ut perspiciatis   │
+   │ omnis iste natus               │         │ unde omnis iste natus │
+   │ error sit...                   │         │ error sit...          │
+   │                   ◄── GAP ───► │         └───────────────────────┘
+   └────────────────────────────────┘          Left Pad == Right Pad
+```
+
+### 9.1 The Dragged Container Box Trap
+In native After Effects, Paragraph (Box) Text layers have a container bounding box (`textDoc.boxTextSize = [boxW, boxH]`). This value represents the rectangular area the user dragged out in the AE composition window, **not** the rendered width of the text inside:
+- If a user drags an 800 px wide text box in AE, but the text inside wraps and the longest line only reaches 380 px, `boxTextSize[0]` remains `800`.
+- Sizing a precomp or background card using `boxTextSize[0] + (2 * padding)` creates an asymmetric layout: 30 px padding on the left, but `(800 - 380) + 30 = 450 px` of empty space on the right!
+
+### 9.2 The Content-Bound Golden Rule
+To achieve 100% visual symmetry across all justification modes:
+1. Wrap or split the text into visual lines.
+2. Measure the exact advance width of each line $W_i$.
+3. Compute $\text{maxLineContentW} = \max(W_0, W_1, \dots, W_{N-1})$.
+4. Set the precomposition and background card width to:
+   $$\text{precompW} = \text{maxLineContentW} + (2 \times \text{padding})$$
+5. Set the internal text box width to $\text{textboxW} = \text{maxLineContentW}$.
+- **Result**: The longest line starts at $x = \text{padding}$ and ends at $x = \text{precompW} - \text{padding}$. Left padding and right padding are identical ($=\text{padding}$).
+
+---
+
+## 10. Typographic Vertical Padding: Ascender-to-Descender Calibration
+
+A common mistake in automated layout scripts is using individual glyph bounding boxes (`sourceRectAtTime()`) to determine top and bottom padding.
+
+```
+       GLYPH-BOUND (UNSTABLE)                  TYPOGRAPHIC (BALANCED)
+   ┌───────────────────────┐                 ┌───────────────────────┐
+   │ [pad]                 │                 │ [pad]                 │
+   │ aeiou (no ascenders)  │                 │ --- Ascender Line --- │
+   │                       │                 │ aeiou (no ascenders)  │
+   │ dicta sunt explicabo. │                 │ dicta sunt explicabo. │
+   │ (no descenders)       │                 │ --- Descender Line ---│
+   │ [pad]                 │                 │ [pad]                 │
+   └───────────────────────┘                 └───────────────────────┘
+     Unequal visual balance                    Equal visual balance
+```
+
+### 10.1 Why Glyph Bounding Boxes Cause Jumping
+- A line containing only lowercase non-ascenders (`"aeiou"`) has a bounding box top at x-height ($\approx 0.50 \times \text{fontSize}$). If top padding is measured from this box, uppercase letters or ascenders on another line will appear cramped or overflow the card.
+- A line containing descenders (`"happy"`) extends down to $\approx 0.22 \times \text{fontSize}$, whereas a line without descenders (`"dicta sunt explicabo."`) terminates at the baseline ($y = 0$). If bottom padding is measured from glyph extents, the card height will jump depending on whether the last word has a `p, g, y, q, j`.
+
+### 10.2 Universal Typographic Formula
+To achieve stable, balanced vertical padding:
+1. Treat every line as occupying the universal typographic span from **ascender line** to **descender line**:
+   $$\text{ascenderHeight} = \text{fontSize} \times 0.78$$
+   $$\text{descenderHeight} = \text{fontSize} \times 0.22$$
+2. For $N$ lines with leading $\text{lineStep}$:
+   $$\text{textTypoHeight} = \text{ascenderHeight} + ((N - 1) \times \text{lineStep}) + \text{descenderHeight}$$
+3. Set the precomp / card height to:
+   $$\text{precompH} = \text{textTypoHeight} + (2 \times \text{padding})$$
+4. Place the first line's alphabetic baseline at:
+   $$\text{firstBaselineY} = \text{padding} + \text{ascenderHeight}$$
+- **Top Padding**: distance from card top ($y=0$) to first line's ascender line is $(\text{padding} + \text{ascenderHeight}) - \text{ascenderHeight} = \text{padding}$.
+- **Bottom Padding**: distance from last line's descender line to card bottom is $\text{precompH} - (\text{firstBaselineY} + (N-1)\text{lineStep} + \text{descenderHeight}) = \text{padding}$.
+
+---
+
+## 11. Word-by-Word Kinetic Splitting & Space Character Measurement
+
+When breaking paragraph text into individual word layers (for kinetic typography, karaoke effects, or physics simulations):
+
+### 11.1 Space Characters Have Zero Vector Bounding Box
+In After Effects ExtendScript, `newComp.layers.addText(" ")` creates a layer with an empty space character. Calling `layer.sourceRectAtTime(0, false)` on a space character returns `width = 0` (or throws), because space characters have no vector paths or outlines.
+
+### 11.2 The Differential Delimiter Calibration
+To measure the true advance width of the space character in native After Effects (including font-specific kerning):
+1. Create a measurement layer.
+2. Set text to `"A A"`, measure $W_1 = \text{sourceRectAtTime}(0, \text{false}).\text{width}$.
+3. Set text to `"AA"`, measure $W_2 = \text{sourceRectAtTime}(0, \text{false}).\text{width}$.
+4. Compute:
+   $$\text{spaceWidth} = W_1 - W_2$$
+5. *Fallback (if measurement layer unavailable)*:
+   $$\text{spaceWidth} \approx \text{fontSize} \times 0.28$$
+
+### 11.3 Sequential Word Placement
+Never place words using string `indexOf` or substring prefix matching, as duplicate words or trailing space stripping cause words to collapse onto the same X coordinate. Instead, advance sequentially:
+$$\text{curX}_{i+1} = \text{curX}_i + \text{wordWidth}_i + \text{spaceWidth}$$
+
+---
+
+## 12. Canvas 2D Metric Calibration vs. SVG DOM Rendering in Web Simulators
+
+In web-based After Effects simulators (like `AE_JS_builder`):
+
+### 12.1 The Approximation Ratio Trap
+Older JS emulators estimated character widths using a static ratio table (e.g., $0.51 \times \text{fontSize}$ for standard characters). However:
+- In real fonts (e.g. Arial, Segoe UI), narrow characters (`r, t, f, c`) take $0.25\text{--}0.38 \times \text{fontSize}$, while wide characters (`w, m`) take $0.75\text{--}0.85 \times \text{fontSize}$.
+- When SVG `<text>` renders in the browser, the browser's native text engine (DirectWrite / CoreText / FreeType) uses real font glyph widths.
+- If `computeSourceRect` uses static ratios while SVG renders real glyphs, layout calculations deviate by 10%–30%, causing word drift, erratic gaps, or overlapping collisions (e.g. `"commodoconsequat"` collisions).
+
+### 12.2 Unified Canvas 2D Font Metric Engine
+In `ae-core.js`, `measureLineWidth` must query an offscreen HTML5 Canvas 2D context using the exact font stack used by the SVG renderer:
+```javascript
+const canvas = document.createElement('canvas');
+const ctx = canvas.getContext('2d');
+ctx.font = `${fontSize}px ${fontStack}`;
+const actualWidth = ctx.measureText(str).width;
+```
+This guarantees 1:1 sub-pixel parity between `sourceRectAtTime()` calculations and rendered SVG DOM elements.
+
+---
+
+## 13. Zero-Displacement Anchor Point Compensation via `toComp()` & `fromComp()`
+
+When precomposing a text layer and modifying its anchor point (e.g. "automatic anchor point" moving to Top-Left, Top-Center, or Top-Right):
+
+### 13.1 The Displacement Problem
+In native AE, moving a layer's anchor point from $[A_x, A_y]$ to $[A'_x, A'_y]$ displaces the layer on screen by $(A' - A)$ rotated and scaled. When a user creates a precomp with an automatic anchor point, they expect the text box to remain **pinned to its exact screen position**.
+
+### 13.2 Mathematical Compensation Algorithm
+1. **Before modifying or precomposing**, record the exact composition coordinates of the text's local reference point:
+   $$P_{\text{comp}} = \text{textLayer.toComp}(P_{\text{local\_ref}})$$
+   - Point Text: $P_{\text{local\_ref}} = [0, -\text{ascenderHeight}]$ (Top-Left of text).
+   - Box Text: $P_{\text{local\_ref}} = [0, 0]$ (Top-Left of box).
+2. Inside `newComp`, place the text so that its local reference point sits at $[ \text{padding}, \text{padding} ]$.
+3. In the parent composition:
+   - If `autoAnchor` is active, set the precomp's anchor point to $[ \text{padding}, \text{padding} ]$.
+   - Position `precompLayer` at $P_{\text{comp}}$:
+     $$\text{precompLayer.position} = \begin{cases} 
+     \text{origParent.fromComp}(P_{\text{comp}}) & \text{if parented} \\
+     P_{\text{comp}} & \text{if unparented}
+     \end{cases}$$
+   - If `autoAnchor` is inactive (centered at $[W/2, H/2]$), offset position by $\Delta A = [W/2 - \text{padding}, H/2 - \text{padding}]$ rotated by layer rotation and scaled by layer scale.
+- **Result**: The text on screen does not move a single pixel.
+
+---
+
+## 14. Web Simulator Script Caching & Manifest Synchronization
+
+In web environments serving JSX tools dynamically via GitHub Pages:
+1. **Aggressive Manifest Caching**: Browsers aggressively cache script manifests (`manifest.js`). If `index.html` references `jsx/manifest.js?v=1.3.1`, browsers will execute stale cached code even after the `.jsx` file on disk has been updated.
+2. **Synchronized Cache Busters**: Whenever the JSX codebase or simulator core is updated, bump the version query string (`?v=X.Y.Z`) across `index.html`, `manifest.js`, `ae-core.js`, `ae-renderer.js`, and `app.js`.
+
+---
+
+## 15. Summary Checklist for Future Repositories
 
 When developing tools or emulators that interface with After Effects typography:
 - [x] **Identify text layer mode**: Check if `doc.boxText === true` or Point Text.
@@ -203,3 +350,9 @@ When developing tools or emulators that interface with After Effects typography:
 - [x] **Account for negative `sourceRectAtTime().top`**: When building bounding boxes or auto-crop backgrounds, remember `r.top` is negative in Point Text.
 - [x] **Use $1.20 \times \text{fontSize}$ for auto-leading**: Never use browser default line-heights (1.35–1.50) when emulating AE.
 - [x] **Apply 1/1000 em for tracking**: Scale tracking values linearly by `(tracking / 1000) * fontSize`.
+- [x] **Wrap backgrounds by content, not container box**: Base precomp widths on `maxLineContentW + 2 * padding` instead of arbitrary `boxTextSize[0]`.
+- [x] **Measure vertical padding by typographic ascender/descender**: Calculate card height from $0.78 \times fs$ to $0.22 \times fs$, never from individual glyph bounds.
+- [x] **Measure space character differentially**: Compute `spaceWidth = measure("A A") - measure("AA")` for sub-pixel word spacing.
+- [x] **Synchronize layout metrics with Canvas 2D in Web**: Use `ctx.measureText()` in browser JS emulators to eliminate layout vs. SVG rendering drift.
+- [x] **Compensate anchor points via `toComp()` & `fromComp()`**: Pinned layer positions must counter anchor shifts across parent hierarchies.
+- [x] **Bump cache busters across all assets**: Update `?v=X.Y.Z` in `index.html` to prevent browsers from executing cached manifests.
