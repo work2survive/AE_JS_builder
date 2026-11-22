@@ -1286,26 +1286,6 @@
     var txtWidth = grpWidth.add("edittext", undefined, "800");
     txtWidth.alignment = ["fill", "center"];
 
-    // Quick Width Buttons
-    var grpQuickW = pnlDims.add("group");
-    grpQuickW.orientation = "row";
-    grpQuickW.alignment = ["fill", "top"];
-    var lblPresets = grpQuickW.add("statictext", undefined, "Quick Widths:");
-    lblPresets.preferredSize = [135, -1];
-    var btnW600 = grpQuickW.add("button", undefined, "600");
-    btnW600.preferredSize = [48, 22];
-    var btnW800 = grpQuickW.add("button", undefined, "800");
-    btnW800.preferredSize = [48, 22];
-    var btnW1080 = grpQuickW.add("button", undefined, "1080");
-    btnW1080.preferredSize = [48, 22];
-    var btnW1920 = grpQuickW.add("button", undefined, "1920");
-    btnW1920.preferredSize = [48, 22];
-
-    btnW600.onClick = function() { txtWidth.text = "600"; };
-    btnW800.onClick = function() { txtWidth.text = "800"; };
-    btnW1080.onClick = function() { txtWidth.text = "1080"; };
-    btnW1920.onClick = function() { txtWidth.text = "1920"; };
-
     // Padding Row
     var grpPad = pnlDims.add("group");
     grpPad.orientation = "row";
@@ -1327,26 +1307,6 @@
         var v = parseFloat(txtPad.text) || 0;
         sldPad.value = Math.max(0, Math.min(120, v));
     };
-
-    // Quick Padding Buttons
-    var grpQuickPad = pnlDims.add("group");
-    grpQuickPad.orientation = "row";
-    grpQuickPad.alignment = ["fill", "top"];
-    var lblQuickP = grpQuickPad.add("statictext", undefined, "Quick Padding:");
-    lblQuickP.preferredSize = [135, -1];
-    var btnP0 = grpQuickPad.add("button", undefined, "0");
-    btnP0.preferredSize = [48, 22];
-    var btnP16 = grpQuickPad.add("button", undefined, "16");
-    btnP16.preferredSize = [48, 22];
-    var btnP30 = grpQuickPad.add("button", undefined, "30");
-    btnP30.preferredSize = [48, 22];
-    var btnP48 = grpQuickPad.add("button", undefined, "48");
-    btnP48.preferredSize = [48, 22];
-
-    btnP0.onClick = function() { sldPad.value = 0; txtPad.text = "0"; };
-    btnP16.onClick = function() { sldPad.value = 16; txtPad.text = "16"; };
-    btnP30.onClick = function() { sldPad.value = 30; txtPad.text = "30"; };
-    btnP48.onClick = function() { sldPad.value = 48; txtPad.text = "48"; };
 
     // Automatic Precomp Height Checkbox
     var chkAutoHeight = pnlDims.add("checkbox", undefined, "automatic precomp height");
