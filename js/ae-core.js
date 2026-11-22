@@ -2260,6 +2260,24 @@
             return layer;
         }
 
+        addBoxText(size = [100, 100], initialText = '') {
+            const count = this.length + 1;
+            const textStr = (typeof initialText === 'string') ? initialText : (initialText?.toString() || '');
+            const layer = new TextLayer('Text Layer ' + count, this.comp, textStr);
+            const w = (Array.isArray(size) && size[0] > 0) ? Number(size[0]) : 100;
+            const h = (Array.isArray(size) && size.length > 1 && size[1] > 0) ? Number(size[1]) : 100;
+            layer.boxText = true;
+            layer.boxTextSize = [w, h];
+            if (layer.sourceText && layer.sourceText._baseValue && typeof layer.sourceText._baseValue === 'object') {
+                layer.sourceText._baseValue.boxText = true;
+                layer.sourceText._baseValue.boxTextSize = [w, h];
+            }
+            layer.transform.position.setValue([this.comp.width / 2, this.comp.height / 2, 0]);
+            this.unshift(layer);
+            this._notify();
+            return layer;
+        }
+
         addSolid(color, name, width, height, pixelAspect, duration) {
             const count = this.length + 1;
             const layerName = name || ('Solid ' + count);

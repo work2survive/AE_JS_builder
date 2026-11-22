@@ -494,21 +494,39 @@
 
                     // C. Paragraph Box Text Layer (The core calibration subject)
                     var textBoxHeight = BOX_HEIGHT - 20; // Room for top badge
-                    var textLayer = comp.layers.addText(CALIBRATION_TEXT);
-                    textLayer.name = cellPrefix + "_Text";
-                    // Position according to Point Text alignment mechanics:
-                    // In AE Point Text, anchorPoint.x is at 0 (left edge for Left, center for Center, right edge for Right).
-                    // And position.y is the first baseline.
-                    var textPosX = cellX;
-                    if (rowSpec.justName === "Center") {
-                        textPosX = cellX + (BOX_WIDTH + cellLeftIndent - cellRightIndent) / 2;
-                    } else if (rowSpec.justName === "Right") {
-                        textPosX = cellX + BOX_WIDTH - cellRightIndent;
+                    var textLayer;
+                    if (typeof comp.layers.addBoxText === "function") {
+                        try {
+                            textLayer = comp.layers.addBoxText([BOX_WIDTH, textBoxHeight], CALIBRATION_TEXT);
+                        } catch (eBox) {
+                            textLayer = comp.layers.addText(CALIBRATION_TEXT);
+                        }
                     } else {
-                        textPosX = cellX + cellLeftIndent;
+                        textLayer = comp.layers.addText(CALIBRATION_TEXT);
                     }
-                    var textPosY = cellY + 34; // First baseline offset, leaving clean headroom below badge
+                    textLayer.name = cellPrefix + "_Text";
+
+                    // In AE Box Text:
+                    // Left Justify: anchorPoint is [0, 0] -> position is [cellX, cellY + 20]
+                    // Center Justify: anchorPoint is [BOX_WIDTH / 2, 0] -> position is [cellX + BOX_WIDTH / 2, cellY + 20]
+                    // Right Justify: anchorPoint is [BOX_WIDTH, 0] -> position is [cellX + BOX_WIDTH, cellY + 20]
+                    var textPosX = cellX;
+                    var anchorX = 0;
+                    if (rowSpec.justName === "Center") {
+                        textPosX = cellX + BOX_WIDTH / 2;
+                        anchorX = BOX_WIDTH / 2;
+                    } else if (rowSpec.justName === "Right") {
+                        textPosX = cellX + BOX_WIDTH;
+                        anchorX = BOX_WIDTH;
+                    } else {
+                        textPosX = cellX;
+                        anchorX = 0;
+                    }
+                    var textPosY = cellY + 20;
                     textLayer.transform.position.setValue([textPosX, textPosY, 0]);
+                    try {
+                        textLayer.transform.anchorPoint.setValue([anchorX, 0, 0]);
+                    } catch (eAnc) {}
 
                     // Apply comprehensive text document attributes
                     setupCalibratedTextDocument(textLayer, {
@@ -571,6 +589,39 @@
     // -------------------------------------------------------------------------
     // 6. Helper Text Document Setup Functions
     // -------------------------------------------------------------------------
+    function applyDocumentWithFontFallback(docProp, doc, candidates) {
+        var applied = false;
+        if (candidates && candidates.length > 0) {
+            for (var i = 0; i < candidates.length; i++) {
+                try {
+                    doc.font = candidates[i];
+                    docProp.setValue(doc);
+                    applied = true;
+                    break;
+                } catch (eCandidate) {
+                    // Font candidate not recognized by AE FontServer, try next candidate
+                }
+            }
+        }
+        if (!applied) {
+            try {
+                doc.font = "ArialMT";
+                docProp.setValue(doc);
+                applied = true;
+            } catch (eArialMT) {
+                try {
+                    doc.font = "Arial";
+                    docProp.setValue(doc);
+                    applied = true;
+                } catch (eArial) {
+                    try {
+                        docProp.setValue(doc);
+                    } catch (eFinal) {}
+                }
+            }
+        }
+    }
+
     function setupSimpleText(textLayer, textStr, fontName, fontSize, fontColor, justification) {
         try {
             var prop = textLayer.property("ADBE Text Properties") || textLayer.property("Text");
@@ -580,9 +631,6 @@
                 if (doc) {
                     doc.text = textStr;
                     doc.fontSize = fontSize;
-                    if (fontName) {
-                        try { doc.font = fontName; } catch (eF) {}
-                    }
                     doc.fillColor = fontColor || [1, 1, 1];
                     doc.applyFill = true;
                     doc.applyStroke = false;
@@ -593,7 +641,14 @@
                     } else {
                         try { doc.justification = (typeof ParagraphJustification !== "undefined" && ParagraphJustification.LEFT_JUSTIFY !== undefined) ? ParagraphJustification.LEFT_JUSTIFY : 7412; } catch (eJ) {}
                     }
-                    docProp.setValue(doc);
+
+                    var candidates = [];
+                    if (fontName === "Segoe UI") {
+                        candidates = ["SegoeUI", "Segoe UI", "ArialMT", "Arial"];
+                    } else if (fontName) {
+                        candidates = [fontName, "ArialMT", "Arial"];
+                    }
+                    applyDocumentWithFontFallback(docProp, doc, candidates);
                 }
             }
         } catch (err) {}
@@ -609,18 +664,6 @@
             if (!doc) return;
 
             doc.fontSize = params.fontSize;
-
-            // Set font with PostScript name fallback
-            if (params.fontName) {
-                try {
-                    doc.font = params.fontName;
-                } catch (eF1) {
-                    if (params.postScript) {
-                        try { doc.font = params.postScript; } catch (eF2) {}
-                    }
-                }
-            }
-
             doc.fillColor = params.fontColor || [1, 1, 1];
             doc.applyFill = true;
 
@@ -638,10 +681,29 @@
                 try { doc.justification = params.justification; } catch (eJ) {}
             }
 
-            // Use Point Text with soft carriage-return wraps matching native After Effects
-            doc.text = wrapTextToWidth(params.text, params.boxWidth - 10, params.fontSize, params.fontName, params.firstLineIndent);
-            doc.pointText = true;
-            doc.boxText = false;
+            // Detect if this is a box text (paragraph) layer or point text layer
+            // Note: In After Effects ExtendScript, doc.pointText and doc.boxText are strictly READ-ONLY!
+            var isBox = false;
+            try {
+                isBox = (doc.boxText === true || textLayer.boxText === true);
+            } catch (eB) {
+                isBox = false;
+            }
+
+            if (isBox) {
+                // Paragraph text layer: AE automatically wraps lines within the bounding box
+                doc.text = params.text;
+                try {
+                    if (typeof doc.setBoxTextSize === "function") {
+                        doc.setBoxTextSize([params.boxWidth, params.boxHeight]);
+                    } else if (doc.boxTextSize !== undefined) {
+                        doc.boxTextSize = [params.boxWidth, params.boxHeight];
+                    }
+                } catch (eBoxSize) {}
+            } else {
+                // Point text layer fallback: wrap text with soft carriage returns
+                doc.text = wrapTextToWidth(params.text, params.boxWidth - 10, params.fontSize, params.fontName, params.firstLineIndent);
+            }
 
             // Paragraph Indents
             if (params.firstLineIndent !== undefined) {
@@ -680,8 +742,29 @@
                 try { doc.allCaps = params.allCaps; } catch (eAc) {}
             }
 
-            // Set back to TextDocument property
-            docProp.setValue(doc);
+            // Build prioritized font candidate list: PostScript name must be tried first!
+            var fontCandidates = [];
+            if (params.postScript) {
+                fontCandidates.push(params.postScript);
+            }
+            if (params.fontName && params.fontName !== params.postScript) {
+                fontCandidates.push(params.fontName);
+            }
+            if (params.fontName === "Times New Roman") {
+                fontCandidates.push("TimesNewRomanPS-RegularMT", "TimesNewRoman", "Times-Roman");
+            } else if (params.fontName === "Courier New") {
+                fontCandidates.push("CourierNewPS-RegularMT", "CourierNew", "Courier");
+            } else if (params.fontName === "Trebuchet MS") {
+                fontCandidates.push("Trebuchet-MS", "Trebuchet");
+            } else if (params.fontName === "Segoe UI") {
+                fontCandidates.push("SegoeUI-Regular", "SegoeUI", "Segoe UI");
+            } else if (params.fontName === "Impact") {
+                fontCandidates.push("ImpactMT");
+            } else if (params.fontName === "Arial") {
+                fontCandidates.push("ArialMT", "Arial");
+            }
+
+            applyDocumentWithFontFallback(docProp, doc, fontCandidates);
 
             // Also mirror directly onto layer if layer supports direct properties
             try {
