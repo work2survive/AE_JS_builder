@@ -1,4 +1,4 @@
-# AE Text Precomp (v1.4.4)
+# AE Text Precomp (v1.5.0)
 
 [![Live Browser Simulator](https://img.shields.io/badge/Live%20Demo-AE%20ScriptUI%20Simulator-2c8cff?style=for-the-badge&logo=javascript)](https://work2survive.github.io/AE_JS_builder/?jsx=AE_Text_Precomp.jsx&autobuild=true)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](LICENSE)
@@ -15,7 +15,11 @@
 
 Whenever an anchor point is placed or changed by this script, the precomposition's position is automatically and mathematically compensated using the layer's complete rotation, scale, and parent transform matrix so that the text box on screen never moves a single pixel from its original position.
 
-In **v1.4.4**, AE Text Precomp delivers **kinetic word and line splitting**: seamlessly divide any paragraph or point text into individual, perfectly styled and positioned layers for every single word or line inside the precomp with sub-pixel uniform word spacing, calibrated across both native After Effects and the browser-based AE simulator.
+In **v1.5.0**, AE Text Precomp delivers:
+- **Visually Symmetric Background Card & Precomp Width**: Automatically fits the precomp width tightly and symmetrically around the actual maximum line content width rather than empty bounding boxes, ensuring equal padding on both left and right.
+- **Typographic Ascender-to-Descender Vertical Padding**: Vertical padding is measured from universal font ascender lines to descender lines rather than character glyph bounds, ensuring identical, balanced padding at top and bottom.
+- **Zero-Displacement Automatic Anchor Point Engine**: Mathematically compensates parent comp layer position when the automatic anchor point is set, locking the text box visually in place.
+- **Kinetic Word & Line Splitting**: Seamlessly divide text into individual word or line layers with calibrated uniform word spacing.
 
 ---
 

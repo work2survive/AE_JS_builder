@@ -1,6 +1,6 @@
 // Co-authored & architected with Google DeepMind Antigravity.
 // =============================================================================
-// ADOBE AFTER EFFECTS EXTENDSCRIPT & SCRIPTUI PANEL: AE TEXT PRECOMP v1.4.4
+// ADOBE AFTER EFFECTS EXTENDSCRIPT & SCRIPTUI PANEL: AE TEXT PRECOMP v1.5.0
 // =============================================================================
 //
 // PURPOSE:
@@ -60,7 +60,7 @@
     "use strict";
 
     var SCRIPT_NAME = "AE Text Precomp";
-    var SCRIPT_VERSION = "v1.4.4";
+    var SCRIPT_VERSION = "v1.5.0";
     var TEXT_PROP_REF_URL = "https://github.com/work2survive/AE_JS_builder/blob/main/samples/Text_Properties_To_Effects.jsx";
     var EXTRUDED_CORNERS_REF_URL = "https://github.com/work2survive/AE_Extruded_Round_corners";
 
@@ -571,8 +571,15 @@
             }
         }
 
-        var detW = isBoxText && boxWidth > 0 ? Math.round(boxWidth) : Math.ceil(rect.width);
-        var detH = isBoxText && boxHeight > 0 ? Math.max(Math.round(boxHeight), Math.ceil(rect.height)) : Math.ceil(rect.height);
+        var contentW = (metricsStore && metricsStore.maxLineWidth > 0) ? metricsStore.maxLineWidth : Math.ceil(rect.width);
+        var detW = contentW > 0 ? Math.ceil(contentW) : (isBoxText && boxWidth > 0 ? Math.round(boxWidth) : Math.ceil(rect.width));
+        var detH = Math.ceil(rect.height);
+        if (metricsStore && metricsStore.totalLines && metricsStore.totalLines > 0) {
+            var fsVal = fontSize || 28;
+            var lVal = leading || (fsVal * 1.2);
+            var typoH = (fsVal * 1.0) + ((metricsStore.totalLines - 1) * lVal);
+            if (typoH > detH) detH = Math.ceil(typoH);
+        }
 
         return {
             layer: layer,
@@ -1001,43 +1008,51 @@
         // ---------------------------------------------------------------------
         // 1. Capture Original Text Box Reference Point BEFORE any modifications
         // ---------------------------------------------------------------------
-        var origBoxW = (metrics.isBoxText && metrics.boxWidth > 0) ? metrics.boxWidth : metrics.detectedWidth;
-        var origBoxH = (metrics.isBoxText && metrics.boxHeight > 0) ? metrics.boxHeight : metrics.detectedHeight;
+        var origFs = metrics.fontSize || 28;
+        var ascenderHeightInit = Math.round((origFs * 0.78) * 100) / 100;
+        var origBoxW = (metrics.detectedWidth && metrics.detectedWidth > 0) ? metrics.detectedWidth : ((metrics.isBoxText && metrics.boxWidth > 0) ? metrics.boxWidth : 400);
 
         var origRefX = 0;
-        var origRefY = 0;
-        if (metrics.isBoxText) {
-            origRefY = 0;
-            if (align === "left") {
-                origRefX = 0;
-            } else if (align === "center") {
-                origRefX = origBoxW / 2;
-            } else if (align === "right") {
-                origRefX = origBoxW;
-            }
+        var origRefY = metrics.isBoxText ? 0 : -ascenderHeightInit;
+        if (align === "center") {
+            origRefX = origBoxW / 2;
+        } else if (align === "right") {
+            origRefX = origBoxW;
         } else {
-            origRefY = metrics.rect ? metrics.rect.top : 0;
-            if (align === "left") {
-                origRefX = metrics.rect ? metrics.rect.left : 0;
-            } else if (align === "center") {
-                origRefX = metrics.rect ? (metrics.rect.left + (metrics.rect.width / 2)) : 0;
-            } else if (align === "right") {
-                origRefX = metrics.rect ? (metrics.rect.left + metrics.rect.width) : 0;
-            }
+            origRefX = 0;
         }
 
         var sx = (origScale && origScale.length > 0) ? (origScale[0] / 100.0) : 1.0;
         var sy = (origScale && origScale.length > 1) ? (origScale[1] / 100.0) : 1.0;
-        var dxOrig = (origRefX - origAnchor[0]) * sx;
-        var dyOrig = (origRefY - origAnchor[1]) * sy;
         var rad = (origRot || 0) * Math.PI / 180.0;
         var cosA = Math.cos(rad);
         var sinA = Math.sin(rad);
 
         // Exact coordinate of original text reference point in parent/comp space:
-        var prefX = origPos[0] + (dxOrig * cosA - dyOrig * sinA);
-        var prefY = origPos[1] + (dxOrig * sinA + dyOrig * cosA);
+        var prefX = origPos[0];
+        var prefY = origPos[1];
         var prefZ = (origPos.length > 2) ? origPos[2] : 0;
+
+        var compPoint = null;
+        try {
+            if (typeof textLayer.toComp === "function") {
+                compPoint = textLayer.toComp([origRefX, origRefY, 0]);
+                if (!compPoint || compPoint.length < 2) {
+                    compPoint = textLayer.toComp([origRefX, origRefY]);
+                }
+            }
+        } catch (eTC) {}
+
+        if (compPoint && compPoint.length >= 2 && !isNaN(compPoint[0]) && !isNaN(compPoint[1])) {
+            prefX = compPoint[0];
+            prefY = compPoint[1];
+            if (compPoint.length > 2) prefZ = compPoint[2];
+        } else {
+            var dxOrig = (origRefX - origAnchor[0]) * sx;
+            var dyOrig = (origRefY - origAnchor[1]) * sy;
+            prefX = origPos[0] + (dxOrig * cosA - dyOrig * sinA);
+            prefY = origPos[1] + (dxOrig * sinA + dyOrig * cosA);
+        }
 
         // ---------------------------------------------------------------------
         // 2. Precomp Dimensions & Textbox Sizing
@@ -1262,32 +1277,51 @@
                 if (visualLines.length === 0) visualLines.push(fullText || "");
                 totalLineCount = visualLines.length;
 
-                // Calibrate the exact first-line typographic baseline offset from top padding
-                var firstLineCap = Math.round(fs * 0.75);
-                if (measureLayer && visualLines.length > 0) {
-                    try {
-                        var dFL = measureLayer.property("Source Text").value;
-                        dFL.text = visualLines[0];
-                        measureLayer.property("Source Text").setValue(dFL);
-                        var rFL = measureLayer.sourceRectAtTime(0, false);
-                        if (rFL && typeof rFL.top === "number" && rFL.top < 0) {
-                            firstLineCap = Math.abs(rFL.top);
-                        }
-                    } catch (eFL) {}
+                // Measure exact width of each visual line and find maximum line width
+                var measuredLineWidths = [];
+                var maxLineContentW = 0;
+                for (var vIdx = 0; vIdx < visualLines.length; vIdx++) {
+                    var vStr = visualLines[vIdx];
+                    var vWords = vStr.match(/\S+/g) || [];
+                    var vW = 0;
+                    for (var vw = 0; vw < vWords.length; vw++) {
+                        vW += measureSingleWord(vWords[vw]);
+                    }
+                    vW += Math.max(0, vWords.length - 1) * spaceWidth;
+                    measuredLineWidths.push(vW);
+                    if (vW > maxLineContentW) maxLineContentW = vW;
                 }
-                var firstBaselineY = padding + firstLineCap;
+                if (maxLineContentW <= 0) maxLineContentW = (metrics && metrics.detectedWidth) ? metrics.detectedWidth : 200;
+
+                // Calibrate symmetric horizontal padding: box width wraps tightly around content
+                if (options.autoDetectWidth || !options.width || options.width <= 0) {
+                    textboxW = Math.max(20, Math.round(maxLineContentW));
+                    precompW = Math.max(40, Math.round(textboxW + (padding * 2)));
+                    newComp.width = precompW;
+                }
+
+                // Calibrate symmetric vertical padding: measured from typographic ascender line to descender line
+                // (do not measure individual glyphs so that ascenders/descenders never shift padding)
+                var ascenderHeight = Math.round((fs * 0.78) * 100) / 100;
+                var descenderHeight = Math.round((fs * 0.22) * 100) / 100;
+                var lineCount = Math.max(1, visualLines.length);
+                var textTypoHeight = ascenderHeight + ((lineCount - 1) * lineStep) + descenderHeight;
+
+                if (options.autoHeight) {
+                    textboxH = Math.max(20, Math.round(textTypoHeight));
+                    precompH = Math.max(20, Math.round(textboxH + (padding * 2)));
+                    newComp.height = precompH;
+                }
+
+                // Baseline of first line is strictly top padding + ascenderHeight
+                var firstBaselineY = padding + ascenderHeight;
 
                 if (divideMode === "lines") {
                     for (var li = 0; li < visualLines.length; li++) {
                         var lineStr = visualLines[li];
                         if (trimStr(lineStr).length === 0) continue;
 
-                        var lWords = lineStr.match(/\S+/g) || [];
-                        var lineW = 0;
-                        for (var lw = 0; lw < lWords.length; lw++) {
-                            lineW += measureSingleWord(lWords[lw]);
-                        }
-                        lineW += Math.max(0, lWords.length - 1) * spaceWidth;
+                        var lineW = (measuredLineWidths.length > li) ? measuredLineWidths[li] : 0;
 
                         var lineLayer = newComp.layers.addText(lineStr);
                         applyTextDocStyling(lineLayer, origDoc, lineStr);
@@ -1532,6 +1566,17 @@
             var finalPosX = prefX + (dAx * cosA - dAy * sinA);
             var finalPosY = prefY + (dAx * sinA + dAy * cosA);
             var finalPosZ = prefZ;
+
+            if (origParent && typeof origParent.fromComp === "function") {
+                try {
+                    var pPt = origParent.fromComp([finalPosX, finalPosY, finalPosZ]);
+                    if (pPt && pPt.length >= 2 && !isNaN(pPt[0]) && !isNaN(pPt[1])) {
+                        finalPosX = pPt[0];
+                        finalPosY = pPt[1];
+                        if (pPt.length > 2) finalPosZ = pPt[2];
+                    }
+                } catch (eFC) {}
+            }
 
             if (is3D) {
                 try { precompLayer.threeDLayer = true; } catch (e3D) {}
