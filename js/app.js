@@ -20,7 +20,7 @@
     let renderer = null;
     let selectedLayer = null;
     let globalShyActive = true; // Switch to shy all properties not related to .JSX UI by default
-    let expressionsVisible = true; // Switch to hide/show expressions
+    const expressionsVisible = true; // Always show expressions
 
     // Console logging helper
     function appendConsole(msg, isError = false) {
@@ -2396,17 +2396,7 @@
             };
         }
 
-        // Global Expression Hide/Show Button (= symbol only)
-        const btnGlobalExpr = document.getElementById('btn-global-expr');
-        if (btnGlobalExpr) {
-            btnGlobalExpr.classList.toggle('active', expressionsVisible);
-            btnGlobalExpr.onclick = () => {
-                expressionsVisible = !expressionsVisible;
-                btnGlobalExpr.classList.toggle('active', expressionsVisible);
-                renderTimeline();
-                appendConsole(expressionsVisible ? 'Expressions display shown.' : 'Expressions display hidden.');
-            };
-        }
+
 
         // Buttons
         document.getElementById('btn-run-script').onclick = () => {

@@ -1586,38 +1586,8 @@ body.body-viewport-panning {
 }
 
 /* -------------------------------------------------------------
-   Global Expressions Switch & 4-Way Evaluation Switch
+   Expressions Formatting
    ------------------------------------------------------------- */
-.ae-global-expr-btn {
-    width: 22px;
-    height: 22px;
-    max-height: 22px;
-    min-height: 22px;
-    background: #252525;
-    border: 1px solid var(--border-light);
-    color: var(--text-muted);
-    border-radius: 3px;
-    padding: 0;
-    margin: 0;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    box-sizing: border-box;
-    flex-shrink: 0;
-    line-height: 1;
-    vertical-align: middle;
-    transition: all 0.15s ease;
-}
-.ae-global-expr-btn:hover {
-    color: #ffffff;
-    background: #383838;
-}
-.ae-global-expr-btn.active {
-    background: #4a3b10;
-    border-color: var(--ae-gold);
-    color: #ffd166;
-}
 .ae-expr-icon {
     font-weight: 900;
     font-size: 14px;
