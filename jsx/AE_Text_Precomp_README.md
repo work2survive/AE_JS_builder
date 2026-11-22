@@ -1,4 +1,4 @@
-# AE Text Precomp (v1.4.0)
+# AE Text Precomp (v1.4.1)
 
 [![Live Browser Simulator](https://img.shields.io/badge/Live%20Demo-AE%20ScriptUI%20Simulator-2c8cff?style=for-the-badge&logo=javascript)](https://work2survive.github.io/AE_JS_builder/?jsx=AE_Text_Precomp.jsx&autobuild=true)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](LICENSE)
@@ -15,13 +15,17 @@
 
 Whenever an anchor point is placed or changed by this script, the precomposition's position is automatically and mathematically compensated using the layer's complete rotation, scale, and parent transform matrix so that the text box on screen never moves a single pixel from its original position.
 
-In **v1.4.0**, AE Text Precomp introduces **kinetic word and line splitting**: seamlessly divide any paragraph or point text into individual, perfectly styled and positioned layers for every single word or line inside the precomp, ready for kinetic typography animations.
+In **v1.4.1**, AE Text Precomp introduces **kinetic word and line splitting**: seamlessly divide any paragraph or point text into individual, perfectly styled and positioned layers for every single word or line inside the precomp, ready for kinetic typography animations.
 
 ---
 
-## 🌟 What's New in v1.4.0
+## 🌟 What's New in v1.4.1
 
-1. **"Divide by Words" Action Button**:
+1. **Hotfix for Native After Effects Text Extraction (`getTextLayerString`)**:
+   - Added `getTextLayerString` helper to resolve `Function getTextLayerString is undefined` during "Divide by Lines" and "Divide by Words".
+   - Hardened text property queries across `TextDocument`, native property values, and in-memory caches.
+
+2. **"Divide by Words" Action Button**:
    - Splits paragraph or point text into individual text layers for each word at its exact matching spatial position.
    - Calculates sub-pixel word offsets along each typographic line using prefix measurement (`measureExact(textBefore)`) to perfectly preserve typographic kerning and letter tracking.
    - Grounds each word's anchor point to its local glyph bounding box `[rWord.left, rWord.top]`, ensuring clean per-word scaling and rotation.
@@ -85,7 +89,7 @@ If no text layer is selected when clicking precompose (or when clicking **Create
 
 ```text
 ┌──────────────────────────────────────────────────┐
-│ 📦 AE TEXT PRECOMP v1.4.0                        │
+│ 📦 AE TEXT PRECOMP v1.4.1                        │
 ├──────────────────────────────────────────────────┤
 │ Selected Text Layer Status:                      │
 │ 'Title Layer' (Paragraph Box, LEFT | 42 words)  │

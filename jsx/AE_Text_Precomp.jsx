@@ -1,6 +1,6 @@
 // Co-authored & architected with Google DeepMind Antigravity.
 // =============================================================================
-// ADOBE AFTER EFFECTS EXTENDSCRIPT & SCRIPTUI PANEL: AE TEXT PRECOMP v1.4.0
+// ADOBE AFTER EFFECTS EXTENDSCRIPT & SCRIPTUI PANEL: AE TEXT PRECOMP v1.4.1
 // =============================================================================
 //
 // PURPOSE:
@@ -60,7 +60,7 @@
     "use strict";
 
     var SCRIPT_NAME = "AE Text Precomp";
-    var SCRIPT_VERSION = "v1.4.0";
+    var SCRIPT_VERSION = "v1.4.1";
     var TEXT_PROP_REF_URL = "https://github.com/work2survive/AE_JS_builder/blob/main/samples/Text_Properties_To_Effects.jsx";
     var EXTRUDED_CORNERS_REF_URL = "https://github.com/work2survive/AE_Extruded_Round_corners";
 
@@ -281,6 +281,29 @@
             if (srcText) return srcText.value;
         } catch (e) {}
         return null;
+    }
+
+    function getTextLayerString(layer) {
+        if (!layer) return "";
+        try {
+            var doc = getTextDocument(layer);
+            if (doc) {
+                if (typeof doc.text === "string") return doc.text;
+                if (typeof doc === "string") return doc;
+            }
+        } catch (e) {}
+        try {
+            if (typeof layer.text === "string") return layer.text;
+        } catch (e2) {}
+        try {
+            var prop = layer.property("Source Text");
+            if (prop && prop.value) {
+                var v = prop.value;
+                if (typeof v.text === "string") return v.text;
+                return String(v);
+            }
+        } catch (e3) {}
+        return "";
     }
 
     function getSourceRect(layer) {
@@ -1169,9 +1192,18 @@
                     return measureTextExact(str, fs, fn);
                 }
 
-                var fullText = getTextLayerString(innerTextLayer);
+                var fullText = "";
+                try {
+                    fullText = getTextLayerString(innerTextLayer);
+                } catch (eGTLS) {}
                 if (!fullText || fullText.length === 0) {
-                    fullText = metrics.fullText || (metrics.memoryStore ? metrics.memoryStore.fullText : "");
+                    if (origDoc && typeof origDoc.text === "string" && origDoc.text.length > 0) {
+                        fullText = origDoc.text;
+                    } else if (metrics && metrics.fullText) {
+                        fullText = metrics.fullText;
+                    } else if (metrics && metrics.memoryStore && metrics.memoryStore.fullText) {
+                        fullText = metrics.memoryStore.fullText;
+                    }
                 }
 
                 var visualLines = [];
