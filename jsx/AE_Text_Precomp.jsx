@@ -252,107 +252,48 @@
             }
         } catch (eBox) {}
 
-        // Create temporary offscreen text layer to measure exact AE glyph geometry
-        var tempLayer = null;
-        try {
-            tempLayer = comp.layers.addText("");
-            tempLayer.enabled = false;
-            var tempDoc = tempLayer.property("Source Text").value;
-            tempDoc.fontSize = textDoc.fontSize;
-            if (textDoc.font) {
-                try { tempDoc.font = textDoc.font; } catch (eFont) {}
-            }
-            tempDoc.tracking = textDoc.tracking || 0;
-            tempDoc.applyStroke = textDoc.applyStroke || false;
-            tempDoc.strokeWidth = textDoc.strokeWidth || 0;
-            tempDoc.applyFill = true;
-            tempDoc.fillColor = [1, 1, 1];
-            tempLayer.property("Source Text").setValue(tempDoc);
+        // Measure metrics safely and non-destructively without altering composition layers
+        var fontSize = textDoc.fontSize || 28;
+        var charRatio = fontSize * 0.52;
+        spaceWidth = Math.round((fontSize * 0.28) * 100) / 100;
 
-            // 1. Measure width in pixels of each word
-            for (var w = 0; w < words.length; w++) {
-                tempDoc.text = words[w];
-                tempLayer.property("Source Text").setValue(tempDoc);
-                var rW = tempLayer.sourceRectAtTime(0, false);
-                var ww = rW ? (Math.round(rW.width * 100) / 100) : 0;
-                wordWidths.push(ww);
-            }
+        for (var w = 0; w < words.length; w++) {
+            var ww = Math.round(words[w].length * charRatio * 100) / 100;
+            wordWidths.push(ww);
+        }
 
-            // 2. Measure space width in pixels
-            tempDoc.text = "A A";
-            tempLayer.property("Source Text").setValue(tempDoc);
-            var rPair = tempLayer.sourceRectAtTime(0, false);
-            tempDoc.text = "AA";
-            tempLayer.property("Source Text").setValue(tempDoc);
-            var rSingle = tempLayer.sourceRectAtTime(0, false);
-            if (rPair && rSingle) {
-                spaceWidth = Math.max(0, Math.round((rPair.width - rSingle.width) * 100) / 100);
-            }
-            if (spaceWidth <= 0) {
-                spaceWidth = Math.round((textDoc.fontSize * 0.28) * 100) / 100;
-            }
+        var paragraphs = fullText.split(/\r\n|\r|\n/);
+        for (var p = 0; p < paragraphs.length; p++) {
+            var para = paragraphs[p];
+            if (!isBox || boxWidth <= 0) {
+                lines.push(para);
+                lineWidths.push(Math.round(para.length * charRatio * 100) / 100);
+            } else {
+                var pWords = para.match(/\S+/g) || [];
+                if (pWords.length === 0) {
+                    lines.push("");
+                    lineWidths.push(0);
+                    continue;
+                }
+                var curLine = pWords[0];
+                var curW = curLine.length * charRatio;
 
-            // 3. Measure lines and width in pixels of each text line
-            var paragraphs = fullText.split(/\r\n|\r|\n/);
-            for (var p = 0; p < paragraphs.length; p++) {
-                var para = paragraphs[p];
-                if (!isBox || boxWidth <= 0) {
-                    tempDoc.text = para;
-                    tempLayer.property("Source Text").setValue(tempDoc);
-                    var rL = tempLayer.sourceRectAtTime(0, false);
-                    var lw = rL ? (Math.round(rL.width * 100) / 100) : 0;
-                    lines.push(para);
-                    lineWidths.push(lw);
-                } else {
-                    var pWords = para.match(/\S+/g) || [];
-                    if (pWords.length === 0) {
-                        lines.push("");
-                        lineWidths.push(0);
-                        continue;
+                for (var pw = 1; pw < pWords.length; pw++) {
+                    var testLine = curLine + " " + pWords[pw];
+                    var testW = testLine.length * charRatio;
+
+                    if (testW > boxWidth && curLine.length > 0) {
+                        lines.push(curLine);
+                        lineWidths.push(Math.round(curW * 100) / 100);
+                        curLine = pWords[pw];
+                        curW = curLine.length * charRatio;
+                    } else {
+                        curLine = testLine;
+                        curW = testW;
                     }
-                    var curLine = pWords[0];
-                    tempDoc.text = curLine;
-                    tempLayer.property("Source Text").setValue(tempDoc);
-                    var curW = tempLayer.sourceRectAtTime(0, false).width;
-
-                    for (var pw = 1; pw < pWords.length; pw++) {
-                        var testLine = curLine + " " + pWords[pw];
-                        tempDoc.text = testLine;
-                        tempLayer.property("Source Text").setValue(tempDoc);
-                        var testW = tempLayer.sourceRectAtTime(0, false).width;
-
-                        if (testW > boxWidth && curLine.length > 0) {
-                            lines.push(curLine);
-                            lineWidths.push(Math.round(curW * 100) / 100);
-                            curLine = pWords[pw];
-                            tempDoc.text = curLine;
-                            tempLayer.property("Source Text").setValue(tempDoc);
-                            curW = tempLayer.sourceRectAtTime(0, false).width;
-                        } else {
-                            curLine = testLine;
-                            curW = testW;
-                        }
-                    }
-                    lines.push(curLine);
-                    lineWidths.push(Math.round(curW * 100) / 100);
                 }
-            }
-        } catch (measErr) {
-            if (wordWidths.length === 0) {
-                var charRatio = (textDoc.fontSize || 40) * 0.52;
-                for (var fw = 0; fw < words.length; fw++) {
-                    wordWidths.push(Math.round(words[fw].length * charRatio * 100) / 100);
-                }
-            }
-            if (lines.length === 0) {
-                lines = fullText.split(/\r\n|\r|\n/);
-                for (var fl = 0; fl < lines.length; fl++) {
-                    lineWidths.push(Math.round(lines[fl].length * ((textDoc.fontSize || 40) * 0.52) * 100) / 100);
-                }
-            }
-        } finally {
-            if (tempLayer) {
-                try { tempLayer.remove(); } catch (remErr) {}
+                lines.push(curLine);
+                lineWidths.push(Math.round(curW * 100) / 100);
             }
         }
 
@@ -677,9 +618,16 @@
         var bgLayer = comp.layers.addShape();
         bgLayer.name = "Background Card";
 
-        // Place at center of precomposition
-        bgLayer.transform.position.setValue([precompW / 2, precompH / 2, 0]);
-        bgLayer.transform.anchorPoint.setValue([0, 0, 0]);
+        // Place at center of precomposition (2D safe)
+        try {
+            bgLayer.transform.position.setValue([precompW / 2, precompH / 2]);
+            bgLayer.transform.anchorPoint.setValue([0, 0]);
+        } catch (eTf2D) {
+            try {
+                bgLayer.transform.position.setValue([precompW / 2, precompH / 2, 0]);
+                bgLayer.transform.anchorPoint.setValue([0, 0, 0]);
+            } catch (eTf3D) {}
+        }
 
         var rootVectors = bgLayer.property("ADBE Root Vectors Group") || bgLayer.property("Contents") || (bgLayer.property && bgLayer.property(1));
         var group = rootVectors.addProperty("ADBE Vector Group");
@@ -976,22 +924,52 @@
         newComp.width = precompW;
         newComp.height = precompH;
 
-        // Find the resulting precomp layer in the parent comp
+        // Find the resulting precomp layer in the parent comp safely
         var precompLayer = null;
-        var totalL = (typeof comp.numLayers !== "undefined") ? comp.numLayers : comp.layers.length;
-        for (var i = 1; i <= totalL; i++) {
-            var l = (typeof comp.layer === "function") ? comp.layer(i) : comp.layers[i - 1];
-            if (l && l.source === newComp) {
-                precompLayer = l;
-                break;
-            }
+        try {
+            precompLayer = comp.layer(precompName);
+        } catch (eFind1) {}
+
+        if (!precompLayer) {
+            try {
+                if (comp.selectedLayers && comp.selectedLayers.length > 0) {
+                    var s0 = comp.selectedLayers[0];
+                    if (s0 && s0.name === precompName) {
+                        precompLayer = s0;
+                    }
+                }
+            } catch (eFind2) {}
         }
+
+        if (!precompLayer) {
+            try {
+                var totalL = (typeof comp.numLayers !== "undefined") ? comp.numLayers : comp.layers.length;
+                for (var i = 1; i <= totalL; i++) {
+                    try {
+                        var l = (typeof comp.layer === "function") ? comp.layer(i) : comp.layers[i - 1];
+                        if (l && l.name === precompName) {
+                            precompLayer = l;
+                            break;
+                        }
+                        if (l && typeof l.source !== "undefined" && l.source === newComp) {
+                            precompLayer = l;
+                            break;
+                        }
+                    } catch (eLCheck) {}
+                }
+            } catch (eFind3) {}
+        }
+
         if (!precompLayer && comp.selectedLayers && comp.selectedLayers.length > 0) {
-            precompLayer = comp.selectedLayers[0];
+            try { precompLayer = comp.selectedLayers[0]; } catch (eFind4) {}
         }
 
         // Inside newComp: configure inner text layer
-        var innerTextLayer = (typeof newComp.layer === "function") ? newComp.layer(1) : newComp.layers[0];
+        var innerTextLayer = null;
+        try {
+            innerTextLayer = (typeof newComp.layer === "function") ? newComp.layer(1) : newComp.layers[0];
+        } catch (eGetInner) {}
+
         if (innerTextLayer) {
             // Update boxText size to the reduced textbox width
             if (metrics.isBoxText) {
@@ -1010,25 +988,42 @@
                 } catch (eInBox) {}
             }
 
-            // Position and Anchor Point inside newComp:
-            // Text is offset by padding inward from edges
-            if (options.autoAnchor) {
-                innerTextLayer.transform.anchorPoint.setValue([ax, ay]);
+            var isInner3D = false;
+            try { isInner3D = !!innerTextLayer.threeDLayer; } catch (eInner3D) {}
 
-                var innerX = padding;
-                if (align === "center") {
-                    innerX = precompW / 2;
-                } else if (align === "right") {
-                    innerX = precompW - padding;
+            var innerX = padding;
+            if (align === "center") {
+                innerX = precompW / 2;
+            } else if (align === "right") {
+                innerX = precompW - padding;
+            }
+            var innerY = padding;
+
+            try {
+                if (isInner3D) {
+                    innerTextLayer.transform.anchorPoint.setValue([ax, ay, 0]);
+                    innerTextLayer.transform.position.setValue([innerX, innerY, 0]);
+                } else {
+                    innerTextLayer.transform.anchorPoint.setValue([ax, ay]);
+                    innerTextLayer.transform.position.setValue([innerX, innerY]);
                 }
-                var innerY = padding;
-                innerTextLayer.transform.position.setValue([innerX, innerY, 0]);
-            } else {
-                innerTextLayer.transform.anchorPoint.setValue([ax, ay]);
-                innerTextLayer.transform.position.setValue([precompW / 2, precompH / 2, 0]);
+            } catch (eInPos) {
+                try {
+                    innerTextLayer.transform.anchorPoint.setValue([ax, ay]);
+                    innerTextLayer.transform.position.setValue([innerX, innerY]);
+                } catch (eInPos2) {}
             }
 
-            innerTextLayer.transform.scale.setValue([100, 100, 100]);
+            try {
+                if (isInner3D) {
+                    innerTextLayer.transform.scale.setValue([100, 100, 100]);
+                } else {
+                    innerTextLayer.transform.scale.setValue([100, 100]);
+                }
+            } catch (eInScale) {
+                try { innerTextLayer.transform.scale.setValue([100, 100]); } catch (eInScale2) {}
+            }
+
             try {
                 if (innerTextLayer.transform.rotation) innerTextLayer.transform.rotation.setValue(0);
                 if (innerTextLayer.transform.zRotation) innerTextLayer.transform.zRotation.setValue(0);
@@ -1052,12 +1047,12 @@
                 options.bgOpacity
             );
 
-            // Move background shape layer behind the text layer
+            // Move background shape layer behind the text layer (moveToEnd is native AE ExtendScript)
             try {
-                if (typeof bgLayer.moveAfter === "function" && innerTextLayer) {
-                    bgLayer.moveAfter(innerTextLayer);
-                } else if (typeof bgLayer.moveToEnd === "function") {
+                if (typeof bgLayer.moveToEnd === "function") {
                     bgLayer.moveToEnd();
+                } else if (typeof bgLayer.moveAfter === "function" && innerTextLayer) {
+                    bgLayer.moveAfter(innerTextLayer);
                 }
             } catch (eMove) {}
         }
@@ -1082,9 +1077,29 @@
                 precompAnchorY = precompH / 2;
             }
 
-            precompLayer.transform.anchorPoint.setValue([precompAnchorX, precompAnchorY, 0]);
-            precompLayer.transform.position.setValue([compPosX, compPosY, compPosZ]);
-            precompLayer.transform.scale.setValue(origScale);
+            if (is3D) {
+                try { precompLayer.threeDLayer = true; } catch (e3D) {}
+            }
+
+            try {
+                if (is3D) {
+                    precompLayer.transform.anchorPoint.setValue([precompAnchorX, precompAnchorY, 0]);
+                    precompLayer.transform.position.setValue([compPosX, compPosY, compPosZ]);
+                } else {
+                    precompLayer.transform.anchorPoint.setValue([precompAnchorX, precompAnchorY]);
+                    precompLayer.transform.position.setValue([compPosX, compPosY]);
+                }
+            } catch (ePrePos) {
+                try {
+                    precompLayer.transform.anchorPoint.setValue([precompAnchorX, precompAnchorY]);
+                    precompLayer.transform.position.setValue([compPosX, compPosY]);
+                } catch (ePrePos2) {}
+            }
+
+            try {
+                precompLayer.transform.scale.setValue(origScale);
+            } catch (eScale) {}
+
             try {
                 if (precompLayer.transform.rotation) precompLayer.transform.rotation.setValue(origRot);
                 if (precompLayer.transform.zRotation) precompLayer.transform.zRotation.setValue(origRot);
@@ -1093,11 +1108,8 @@
             if (origParent) {
                 try { precompLayer.parent = origParent; } catch (ePar) {}
             }
-            if (is3D) {
-                try { precompLayer.threeDLayer = true; } catch (e3D) {}
-            }
 
-            precompLayer.selected = true;
+            try { precompLayer.selected = true; } catch (eSel) {}
         }
 
         return {
@@ -1620,14 +1632,17 @@
                 bgOpacity: bgOpacity
             });
 
-            syncLayerDetection();
+            try {
+                syncLayerDetection();
+            } catch (eSync) {}
+
             var msg = "Precomposed '" + res.name + "' [" + res.width + "x" + res.height + "px, Padding: " + res.padding + "px, Textbox: " + res.textboxWidth + "px]";
             if (res.createdDummy) {
                 msg += " (Generated 100-word dummy layer)";
             }
             lblFeedback.text = msg;
         } catch (err) {
-            alert("Error precomposing text box:\n" + err.toString());
+            alert("Error precomposing text box" + (err.line ? (" at line " + err.line) : "") + ":\n" + (err.message || err.toString()));
         } finally {
             if (app.endUndoGroup) app.endUndoGroup();
         }
