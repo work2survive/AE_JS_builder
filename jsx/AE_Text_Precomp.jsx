@@ -9,11 +9,16 @@
 //   a procedural 2D rounded rectangle background card featuring 4 independent
 //   corner radii (based on AE_Extruded_Round_corners).
 //
+// REPOSITORY:
+//   https://github.com/work2survive/AE-text-precomp
+//
 // COHERENCE & COMPATIBILITY REFERENCES:
 //   - Text Properties Extraction & In-Memory Store:
 //     https://github.com/work2survive/AE_JS_builder/blob/main/samples/Text_Properties_To_Effects.jsx
 //   - Procedural Rounded Corner Background Card & Color Picker:
 //     https://github.com/work2survive/AE_Extruded_Round_corners
+//   - Web Emulator Live Demo:
+//     https://work2survive.github.io/AE_JS_builder/?jsx=AE_Text_Precomp.jsx&autobuild=true
 //
 // KEY FEATURES:
 //   1. Padding & Textbox Width Reduction:
@@ -1494,10 +1499,10 @@
     grpFooter.alignment = ["fill", "bottom"];
     grpFooter.alignChildren = ["center", "center"];
     grpFooter.margins = [0, 4, 0, 0];
-    var lblRepo = grpFooter.add("statictext", undefined, "GitHub: work2survive/AE_JS_builder");
-    lblRepo.helpTip = "https://github.com/work2survive/AE_JS_builder";
+    var lblRepo = grpFooter.add("statictext", undefined, "GitHub: work2survive/AE-text-precomp");
+    lblRepo.helpTip = "https://github.com/work2survive/AE-text-precomp";
     lblRepo.onClick = function() {
-        var url = "https://github.com/work2survive/AE_JS_builder";
+        var url = "https://github.com/work2survive/AE-text-precomp";
         if (typeof window !== "undefined" && window.open) {
             window.open(url, "_blank");
         } else if ($.os && $.os.indexOf("Windows") !== -1) {

@@ -169,6 +169,12 @@ The simulator automatically detects and loads standalone production-ready After 
    - Instant full-color vector emoji search, indexing, and native Shape Layer generator for Adobe After Effects. Solves After Effects' lack of color emoji font support by generating native vector shapes from OpenMoji and Twemoji databases stored in `emojis/`. Features smart search by name, Unicode hex, integer, emoji glyph, or Wikipedia text emoticons (`:D`, `:)`, `;)`, `:P`, `<3`, `</3`, `XD`, `¯\_(ツ)_/¯`), bidirectional Unicode ↔ Integer conversion (`U+1F603` ↔ `128515`), interactive catalog index sliders, dynamic `Add Emoji` / `Replace Emoji` mode, and custom outline width and size controls.
    - **Repository**: [work2survive/AE_Get_Emojis](https://github.com/work2survive/AE_Get_Emojis)
    - **Live Demo**: [https://work2survive.github.io/AE_JS_builder/?jsx=AE_Get_Emojis.jsx&autobuild=true](https://work2survive.github.io/AE_JS_builder/?jsx=AE_Get_Emojis.jsx&autobuild=true)
+
+11. **[AE Text Precomp](https://github.com/work2survive/AE-text-precomp)** (`jsx/AE_Text_Precomp.jsx` - v1.2):
+   - ScriptUI text precomposer that encapsulates selected paragraph/point text layers into comfortably-sized precomps with customizable padding, auto-height calculation, and dynamic top anchor alignment (left, center, right) with zero visual shift. Includes a procedural 2D rounded rectangle background card with 4 independent corner radii (adapted from `AE_Extruded_Round_corners`), padding reactivity toggles, and an integrated color picker.
+   - **Repository**: [work2survive/AE-text-precomp](https://github.com/work2survive/AE-text-precomp)
+   - **Live Demo**: [https://work2survive.github.io/AE_JS_builder/?jsx=AE_Text_Precomp.jsx&autobuild=true](https://work2survive.github.io/AE_JS_builder/?jsx=AE_Text_Precomp.jsx&autobuild=true)
+
 #### Built-in Samples (`samples/` Folder)
 
 The simulator includes built-in sample scripts located in [`samples/`](samples/) demonstrating ScriptUI, kinetic typography, expressions, and 3D primitives:
