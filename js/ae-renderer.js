@@ -1293,8 +1293,8 @@
             const profile = calib ? calib.getFontProfile(requestedFont) : { ascentRatio: 0.78, descentRatio: 0.22, leadingRatio: 1.20, charWidthRatio: 0.52 };
 
             // Paragraph box detection
-            const isBox = (textDoc && textDoc.boxText) || (layer.boxText === true) || Boolean(layer.boxTextSize);
-            const boxSize = (textDoc && textDoc.boxTextSize) || layer.boxTextSize || null;
+            const isBox = Boolean((textDoc && textDoc.boxText === true) || (layer.boxText === true));
+            const boxSize = isBox ? ((textDoc && textDoc.boxTextSize) || layer.boxTextSize || null) : null;
             const boxWidth = boxSize ? boxSize[0] : 0;
             const boxHeight = boxSize ? boxSize[1] : 0;
 

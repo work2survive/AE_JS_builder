@@ -314,7 +314,8 @@
                     'try {',
                     '    var target = thisComp.layer("' + targetNameEscaped + '");',
                     '    var r = target.sourceRectAtTime(time, false);',
-                    '    target.toComp([r.left + r.width / 2, r.top + r.height / 2]);',
+                    '    var p = target.toComp([r.left + r.width / 2, r.top + r.height / 2]);',
+                    '    [p[0], p[1]];',
                     '} catch (err) {',
                     '    value;',
                     '}'
@@ -495,7 +496,19 @@
                     var textBoxHeight = BOX_HEIGHT - 20; // Room for top badge
                     var textLayer = comp.layers.addText(CALIBRATION_TEXT);
                     textLayer.name = cellPrefix + "_Text";
-                    textLayer.transform.position.setValue([cellX, cellY + 18, 0]);
+                    // Position according to Point Text alignment mechanics:
+                    // In AE Point Text, anchorPoint.x is at 0 (left edge for Left, center for Center, right edge for Right).
+                    // And position.y is the first baseline.
+                    var textPosX = cellX;
+                    if (rowSpec.justName === "Center") {
+                        textPosX = cellX + (BOX_WIDTH + cellLeftIndent - cellRightIndent) / 2;
+                    } else if (rowSpec.justName === "Right") {
+                        textPosX = cellX + BOX_WIDTH - cellRightIndent;
+                    } else {
+                        textPosX = cellX + cellLeftIndent;
+                    }
+                    var textPosY = cellY + 34; // First baseline offset, leaving clean headroom below badge
+                    textLayer.transform.position.setValue([textPosX, textPosY, 0]);
 
                     // Apply comprehensive text document attributes
                     setupCalibratedTextDocument(textLayer, {
@@ -625,30 +638,10 @@
                 try { doc.justification = params.justification; } catch (eJ) {}
             }
 
-            // Paragraph Box Dimensions
-            var isRealBox = false;
-            if (params.boxWidth > 0 && params.boxHeight > 0) {
-                try {
-                    if (typeof doc.setBoxTextSize === "function") {
-                        doc.setBoxTextSize([params.boxWidth, params.boxHeight]);
-                        isRealBox = true;
-                    } else {
-                        doc.boxTextSize = [params.boxWidth, params.boxHeight];
-                        doc.boxText = true;
-                        isRealBox = true;
-                    }
-                } catch (eBox) {
-                    isRealBox = false;
-                }
-            }
-
-            // If native AE box text size could not be set (e.g. AE CC 2023 or older),
-            // supply soft carriage-return wraps so text wraps neatly inside the box width:
-            if (!isRealBox && params.boxWidth > 0) {
-                doc.text = wrapTextToWidth(params.text, params.boxWidth - 10, params.fontSize, params.fontName, params.firstLineIndent);
-            } else {
-                doc.text = params.text;
-            }
+            // Use Point Text with soft carriage-return wraps matching native After Effects
+            doc.text = wrapTextToWidth(params.text, params.boxWidth - 10, params.fontSize, params.fontName, params.firstLineIndent);
+            doc.pointText = true;
+            doc.boxText = false;
 
             // Paragraph Indents
             if (params.firstLineIndent !== undefined) {
@@ -692,9 +685,6 @@
 
             // Also mirror directly onto layer if layer supports direct properties
             try {
-                if (typeof textLayer.setBoxTextSize === "function") {
-                    textLayer.setBoxTextSize([params.boxWidth, params.boxHeight]);
-                }
                 if (params.fontName) textLayer.font = params.fontName;
                 if (params.firstLineIndent !== undefined) textLayer.firstLineIndent = params.firstLineIndent;
                 if (params.leftIndent !== undefined) textLayer.leftIndent = params.leftIndent;

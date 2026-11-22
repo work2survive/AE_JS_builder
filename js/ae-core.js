@@ -679,7 +679,11 @@
                 if (res !== undefined && res !== null) {
                     if (res instanceof Property) return res.value;
                     if (Array.isArray(res)) {
-                        return res.map(item => (item instanceof Property) ? item.value : item);
+                        const unwrapped = res.map(item => (item instanceof Property) ? item.value : item);
+                        if (Array.isArray(base) && base.length === 2 && unwrapped.length >= 2) {
+                            return [unwrapped[0], unwrapped[1]];
+                        }
+                        return unwrapped;
                     }
                     return res;
                 }
@@ -1756,6 +1760,15 @@
                 yOffset: 0,
                 monospace: false
             },
+            'segoe': {
+                ascentRatio: 0.79,
+                descentRatio: 0.22,
+                charWidthRatio: 0.52,
+                trackingScale: 1.0,
+                xOffset: 0,
+                yOffset: 0,
+                monospace: false
+            },
             'myriad': {
                 ascentRatio: 0.78,
                 descentRatio: 0.22,
@@ -1905,8 +1918,8 @@
             const normJust = normalizeJustification(justification);
             const baselineShift = (textDoc && textDoc.baselineShift !== undefined) ? textDoc.baselineShift : (layer.baselineShift || 0);
 
-            const isBox = (textDoc && textDoc.boxText) || (layer.boxText === true) || Boolean(layer.boxTextSize);
-            const boxSize = (textDoc && textDoc.boxTextSize) || layer.boxTextSize || null;
+            const isBox = Boolean((textDoc && textDoc.boxText === true) || (layer.boxText === true));
+            const boxSize = isBox ? ((textDoc && textDoc.boxTextSize) || layer.boxTextSize || null) : null;
             const boxWidth = boxSize ? boxSize[0] : 0;
             const boxHeight = boxSize ? boxSize[1] : 0;
 
