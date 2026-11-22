@@ -46,7 +46,7 @@
     "use strict";
 
     var SCRIPT_TITLE    = "AE Text Highlight";
-    var SCRIPT_VERSION  = "v1.4.0";
+    var SCRIPT_VERSION  = "v1.4.1";
     var GITHUB_REPO_URL = "https://github.com/work2survive/AE-Text-Highlight";
 
     // Global in-memory cache initialization (matching Text_Properties_To_Effects.jsx)
@@ -1263,6 +1263,9 @@
         win.alignChildren = ["fill", "top"];
         win.spacing = 8;
         win.margins = 10;
+        try {
+            win.minimumSize = [280, 420];
+        } catch(eMin) {}
 
         // Current State Variables
         var currentHighlightColor = COLOR_HOT_PINK.slice(0);
@@ -1285,16 +1288,20 @@
         var pnlHeader = win.add("panel", undefined, "");
         pnlHeader.orientation = "column";
         pnlHeader.alignChildren = ["fill", "top"];
+        pnlHeader.alignment = ["fill", "top"];
         pnlHeader.spacing = 2;
         pnlHeader.margins = [10, 8, 10, 8];
 
         var lblTitle = pnlHeader.add("statictext", undefined, "🖊️ AE TEXT HIGHLIGHT " + SCRIPT_VERSION);
+        lblTitle.alignment = ["fill", "top"];
         try {
             lblTitle.graphics.font = ScriptUI.newFont("Verdana", "Bold", 13);
         } catch(eF) {}
 
         var lblDesc = pnlHeader.add("statictext", undefined, "Procedural Vector Text Highlights with Real-Time Bounding & Sync.");
+        lblDesc.alignment = ["fill", "top"];
         var lblInspired = pnlHeader.add("statictext", undefined, "Zero-drift token engine & AE_Text_Precomp integration.");
+        lblInspired.alignment = ["fill", "top"];
 
         // ---------------------------------------------------------------------
         // 2. PRESETS BAR
@@ -1302,16 +1309,19 @@
         var grpPreset = win.add("group");
         grpPreset.orientation = "row";
         grpPreset.alignChildren = ["left", "center"];
+        grpPreset.alignment = ["fill", "top"];
         grpPreset.spacing = 6;
 
         grpPreset.add("statictext", undefined, "Preset:");
         var dropPreset = grpPreset.add("dropdownlist", undefined, PRESET_NAMES);
-        dropPreset.preferredSize = [230, 24];
+        dropPreset.alignment = ["fill", "center"];
+        dropPreset.preferredSize = [-1, 24];
         dropPreset.selection = 0;
         dropPreset.helpTip = "Choose from curated styling presets (Hot Pink, Neon Mint, Golden Glow, etc.)";
 
         var btnReloadPresets = grpPreset.add("button", undefined, "🔄");
         btnReloadPresets.maximumSize = [28, 24];
+        btnReloadPresets.preferredSize = [28, 24];
         btnReloadPresets.helpTip = "Reset preset parameters to defaults";
 
         // ---------------------------------------------------------------------
@@ -1319,6 +1329,7 @@
         // ---------------------------------------------------------------------
         var tpanel = win.add("tabbedpanel");
         tpanel.alignChildren = ["fill", "top"];
+        tpanel.alignment = ["fill", "fill"];
         tpanel.spacing = 4;
         tpanel.margins = 4;
 
@@ -1328,6 +1339,7 @@
         var tabText = tpanel.add("tab", undefined, "📝 Text Box");
         tabText.orientation = "column";
         tabText.alignChildren = ["fill", "top"];
+        tabText.alignment = ["fill", "fill"];
         tabText.spacing = 6;
         tabText.margins = [8, 8, 8, 8];
 
@@ -1335,10 +1347,12 @@
         var pnlStatus = tabText.add("panel", undefined, "Target Text Layer & Precomposition");
         pnlStatus.orientation = "column";
         pnlStatus.alignChildren = ["fill", "top"];
+        pnlStatus.alignment = ["fill", "top"];
         pnlStatus.spacing = 6;
         pnlStatus.margins = [10, 8, 10, 8];
 
         var lblStatus = pnlStatus.add("statictext", undefined, "Checking active selection...");
+        lblStatus.alignment = ["fill", "top"];
         try {
             lblStatus.graphics.foregroundColor = lblStatus.graphics.newPen(win.graphics.PenType.SOLID_COLOR, [0.4, 0.75, 1.0, 1.0], 1);
         } catch(e) {}
@@ -1346,40 +1360,54 @@
         var grpStatusActions = pnlStatus.add("group");
         grpStatusActions.orientation = "row";
         grpStatusActions.alignChildren = ["left", "center"];
+        grpStatusActions.alignment = ["fill", "top"];
         grpStatusActions.spacing = 10;
 
         var btnRefreshLayer = grpStatusActions.add("button", undefined, "Detect Selection");
+        btnRefreshLayer.preferredSize = [-1, 24];
+        btnRefreshLayer.alignment = ["left", "center"];
         btnRefreshLayer.helpTip = "Re-scan active composition to detect any newly selected Text Layer.";
 
         var chkPrecomp = grpStatusActions.add("checkbox", undefined, "Make Precomp Out of Text Box");
         chkPrecomp.value = false;
+        chkPrecomp.alignment = ["fill", "center"];
         chkPrecomp.helpTip = "If checked, precomposes the text box and its highlight layer with zero visual shift (based on AE_Text_Precomp).";
 
         // 1.2 Highlight Targets
         var pnlTargets = tabText.add("panel", undefined, "Highlight Targets (Words, Phrases, Sentences)");
         pnlTargets.orientation = "column";
         pnlTargets.alignChildren = ["fill", "top"];
+        pnlTargets.alignment = ["fill", "top"];
         pnlTargets.spacing = 6;
         pnlTargets.margins = [10, 8, 10, 8];
 
-        pnlTargets.add("statictext", undefined, "Words or sentences to detect & highlight (1 per line or comma-separated):");
+        var lblTargetsNote = pnlTargets.add("statictext", undefined, "Words or sentences to detect & highlight (1 per line or comma-separated):");
+        lblTargetsNote.alignment = ["fill", "top"];
 
         var txtHighlights = pnlTargets.add("edittext", undefined, "", { multiline: true, wantReturn: true });
-        txtHighlights.preferredSize.height = 70;
+        txtHighlights.alignment = ["fill", "top"];
+        txtHighlights.preferredSize = [-1, 70];
         txtHighlights.helpTip = "Type or paste words, chains of characters, or complete sentences to highlight.";
 
         var grpActionBtns = pnlTargets.add("group");
         grpActionBtns.orientation = "row";
         grpActionBtns.alignChildren = ["fill", "center"];
+        grpActionBtns.alignment = ["fill", "top"];
         grpActionBtns.spacing = 4;
 
         var btnPickRandom = grpActionBtns.add("button", undefined, "🎲 Re-Pick 3 Words + 1 Sent");
+        btnPickRandom.alignment = ["fill", "center"];
+        btnPickRandom.preferredSize = [-1, 24];
         btnPickRandom.helpTip = "Re-picks 3 random words and 1 full sentence from the current text.";
 
         var btnLoadDemo = grpActionBtns.add("button", undefined, "📷 Slow Living (Demo)");
+        btnLoadDemo.alignment = ["fill", "center"];
+        btnLoadDemo.preferredSize = [-1, 24];
         btnLoadDemo.helpTip = "Loads the exact Slow Living quote & highlights shown in the reference screenshot.";
 
         var btnClearTargets = grpActionBtns.add("button", undefined, "✕ Clear");
+        btnClearTargets.alignment = ["fill", "center"];
+        btnClearTargets.preferredSize = [-1, 24];
         btnClearTargets.helpTip = "Clears the target list.";
 
         // ==========================================
@@ -1388,6 +1416,7 @@
         var tabDummy = tpanel.add("tab", undefined, "🎲 Dummy Text");
         tabDummy.orientation = "column";
         tabDummy.alignChildren = ["fill", "top"];
+        tabDummy.alignment = ["fill", "fill"];
         tabDummy.spacing = 6;
         tabDummy.margins = [8, 8, 8, 8];
 
@@ -1395,23 +1424,28 @@
         var pnlNotice = tabDummy.add("panel", undefined, "ℹ️ Notice");
         pnlNotice.orientation = "column";
         pnlNotice.alignChildren = ["fill", "top"];
+        pnlNotice.alignment = ["fill", "top"];
         pnlNotice.spacing = 4;
         pnlNotice.margins = [10, 8, 10, 8];
 
         var lblNotice1 = pnlNotice.add("statictext", undefined, "⚠️ Dummy Text Generator ONLY applies when NO text layer is selected.");
+        lblNotice1.alignment = ["fill", "top"];
         try {
             lblNotice1.graphics.foregroundColor = lblNotice1.graphics.newPen(win.graphics.PenType.SOLID_COLOR, [0.95, 0.7, 0.2, 1.0], 1);
         } catch(eN1) {}
         var lblNotice2 = pnlNotice.add("statictext", undefined, "If a text layer is selected in After Effects, your selected layer is highlighted directly.");
+        lblNotice2.alignment = ["fill", "top"];
 
         // 2.2 Dummy Generator Controls
         var pnlRandom = tabDummy.add("panel", undefined, "Dummy Text Generator & Multi-Attribute Randomization (~100 Words)");
         pnlRandom.orientation = "column";
         pnlRandom.alignChildren = ["fill", "top"];
+        pnlRandom.alignment = ["fill", "top"];
         pnlRandom.spacing = 6;
         pnlRandom.margins = [10, 8, 10, 8];
 
         var lblRandomSummary = pnlRandom.add("statictext", undefined, "Font: " + dummyFont + " | Align: " + dummyAlignment + " | Width: " + dummyBoxWidth + "px | Indent: " + dummyIndent + "px");
+        lblRandomSummary.alignment = ["fill", "top"];
         try {
             lblRandomSummary.graphics.foregroundColor = lblRandomSummary.graphics.newPen(win.graphics.PenType.SOLID_COLOR, [0.95, 0.75, 0.3, 1.0], 1);
         } catch(e) {}
@@ -1419,41 +1453,52 @@
         var grpRandBtns = pnlRandom.add("group");
         grpRandBtns.orientation = "row";
         grpRandBtns.alignChildren = ["fill", "center"];
+        grpRandBtns.alignment = ["fill", "top"];
         grpRandBtns.spacing = 4;
 
         var btnRandomizeAll = grpRandBtns.add("button", undefined, "🎲 Randomize Dummy & Layout");
+        btnRandomizeAll.alignment = ["fill", "center"];
+        btnRandomizeAll.preferredSize = [-1, 26];
         btnRandomizeAll.helpTip = "Randomizes font, alignment, text box width, indent, and picks 3 random words + 1 sentence.";
 
         // Font selection row
         var grpFontRow = pnlRandom.add("group");
         grpFontRow.orientation = "row";
         grpFontRow.alignChildren = ["left", "center"];
+        grpFontRow.alignment = ["fill", "top"];
+        grpFontRow.spacing = 6;
+
         grpFontRow.add("statictext", undefined, "Font:");
         var ddFont = grpFontRow.add("dropdownlist", undefined, TYPICAL_FONTS);
         ddFont.selection = 0;
-        ddFont.preferredSize.width = 130;
+        ddFont.alignment = ["fill", "center"];
+        ddFont.preferredSize = [-1, 24];
 
         grpFontRow.add("statictext", undefined, "Align:");
         var ddAlign = grpFontRow.add("dropdownlist", undefined, ["Left", "Center", "Right"]);
         ddAlign.selection = 0;
-        ddAlign.preferredSize.width = 80;
+        ddAlign.preferredSize = [75, 24];
 
         // Box width & indent row
         var grpBoxRow = pnlRandom.add("group");
         grpBoxRow.orientation = "row";
         grpBoxRow.alignChildren = ["left", "center"];
+        grpBoxRow.alignment = ["fill", "top"];
+        grpBoxRow.spacing = 6;
+
         grpBoxRow.add("statictext", undefined, "Box Width:");
         var sldBoxW = grpBoxRow.add("slider", undefined, 950, 600, 1300);
-        sldBoxW.preferredSize.width = 85;
+        sldBoxW.alignment = ["fill", "center"];
+        sldBoxW.preferredSize = [-1, -1];
         var txtBoxW = grpBoxRow.add("edittext", undefined, "950");
-        txtBoxW.preferredSize.width = 45;
+        txtBoxW.preferredSize = [45, 22];
         grpBoxRow.add("statictext", undefined, "px");
 
         grpBoxRow.add("statictext", undefined, "Indent:");
         var sldInd = grpBoxRow.add("slider", undefined, 0, 0, 80);
-        sldInd.preferredSize.width = 50;
+        sldInd.preferredSize = [50, -1];
         var txtInd = grpBoxRow.add("edittext", undefined, "0");
-        txtInd.preferredSize.width = 30;
+        txtInd.preferredSize = [30, 22];
         grpBoxRow.add("statictext", undefined, "px");
 
         // ==========================================
@@ -1462,6 +1507,7 @@
         var tabApp = tpanel.add("tab", undefined, "🎨 Appearance");
         tabApp.orientation = "column";
         tabApp.alignChildren = ["fill", "top"];
+        tabApp.alignment = ["fill", "fill"];
         tabApp.spacing = 6;
         tabApp.margins = [8, 8, 8, 8];
 
@@ -1469,6 +1515,7 @@
         var pnlGeometry = tabApp.add("panel", undefined, "Highlight Geometry & Offsets");
         pnlGeometry.orientation = "column";
         pnlGeometry.alignChildren = ["fill", "top"];
+        pnlGeometry.alignment = ["fill", "top"];
         pnlGeometry.spacing = 5;
         pnlGeometry.margins = [10, 8, 10, 8];
 
@@ -1476,54 +1523,63 @@
         var grpThick = pnlGeometry.add("group");
         grpThick.orientation = "row";
         grpThick.alignChildren = ["left", "center"];
+        grpThick.alignment = ["fill", "top"];
         var lblThick = grpThick.add("statictext", undefined, "Thickness Y:");
-        lblThick.preferredSize.width = 90;
+        lblThick.preferredSize = [85, -1];
         var sldThick = grpThick.add("slider", undefined, 0, -20, 60);
-        sldThick.preferredSize.width = 110;
+        sldThick.alignment = ["fill", "center"];
+        sldThick.preferredSize = [-1, -1];
         var txtThick = grpThick.add("edittext", undefined, "0");
-        txtThick.preferredSize.width = 45;
-        grpThick.add("statictext", undefined, "px (0 = Ascender to Descender)");
+        txtThick.preferredSize = [42, 22];
+        grpThick.add("statictext", undefined, "px (0 = Font Height)");
 
         // Horizontal Padding X
         var grpPadX = pnlGeometry.add("group");
         grpPadX.orientation = "row";
         grpPadX.alignChildren = ["left", "center"];
+        grpPadX.alignment = ["fill", "top"];
         var lblPadX = grpPadX.add("statictext", undefined, "Padding X:");
-        lblPadX.preferredSize.width = 90;
+        lblPadX.preferredSize = [85, -1];
         var sldPadX = grpPadX.add("slider", undefined, 8, 0, 40);
-        sldPadX.preferredSize.width = 110;
+        sldPadX.alignment = ["fill", "center"];
+        sldPadX.preferredSize = [-1, -1];
         var txtPadX = grpPadX.add("edittext", undefined, "8");
-        txtPadX.preferredSize.width = 45;
+        txtPadX.preferredSize = [42, 22];
         grpPadX.add("statictext", undefined, "px");
 
         // Roundness
         var grpRound = pnlGeometry.add("group");
         grpRound.orientation = "row";
         grpRound.alignChildren = ["left", "center"];
+        grpRound.alignment = ["fill", "top"];
         var lblRound = grpRound.add("statictext", undefined, "Roundness:");
-        lblRound.preferredSize.width = 90;
+        lblRound.preferredSize = [85, -1];
         var sldRound = grpRound.add("slider", undefined, 6, 0, 40);
-        sldRound.preferredSize.width = 110;
+        sldRound.alignment = ["fill", "center"];
+        sldRound.preferredSize = [-1, -1];
         var txtRound = grpRound.add("edittext", undefined, "6");
-        txtRound.preferredSize.width = 45;
-        grpRound.add("statictext", undefined, "px (0 = Square blocks)");
+        txtRound.preferredSize = [42, 22];
+        grpRound.add("statictext", undefined, "px (0 = Square)");
 
         // Position Offset (X / Y)
         var grpOffset = pnlGeometry.add("group");
         grpOffset.orientation = "row";
         grpOffset.alignChildren = ["left", "center"];
+        grpOffset.alignment = ["fill", "top"];
         var lblOff = grpOffset.add("statictext", undefined, "Offset X / Y:");
-        lblOff.preferredSize.width = 90;
+        lblOff.preferredSize = [85, -1];
 
         var sldOffX = grpOffset.add("slider", undefined, 0, -100, 100);
-        sldOffX.preferredSize.width = 50;
+        sldOffX.alignment = ["fill", "center"];
+        sldOffX.preferredSize = [-1, -1];
         var txtOffX = grpOffset.add("edittext", undefined, "0");
-        txtOffX.preferredSize.width = 32;
+        txtOffX.preferredSize = [35, 22];
 
         var sldOffY = grpOffset.add("slider", undefined, 0, -100, 100);
-        sldOffY.preferredSize.width = 50;
+        sldOffY.alignment = ["fill", "center"];
+        sldOffY.preferredSize = [-1, -1];
         var txtOffY = grpOffset.add("edittext", undefined, "0");
-        txtOffY.preferredSize.width = 32;
+        txtOffY.preferredSize = [35, 22];
         grpOffset.add("statictext", undefined, "px");
 
         // 3.2 Highlight Color & Interactive Color Picker
@@ -1531,6 +1587,7 @@
         var pnlColor = tabApp.add("panel", undefined, "Highlight Color & Opacity");
         pnlColor.orientation = "column";
         pnlColor.alignChildren = ["fill", "top"];
+        pnlColor.alignment = ["fill", "top"];
         pnlColor.spacing = 6;
         pnlColor.margins = [10, 8, 10, 8];
 
@@ -1631,33 +1688,46 @@
         var grpCol = pnlColor.add("group");
         grpCol.orientation = "row";
         grpCol.alignChildren = ["left", "center"];
+        grpCol.alignment = ["fill", "top"];
         grpCol.spacing = 8;
 
         var lblCol = grpCol.add("statictext", undefined, "Highlight Color:");
-        lblCol.preferredSize.width = 95;
+        lblCol.preferredSize = [95, -1];
 
         var cpHighlight = createColorPicker(grpCol, rgbToHex(currentHighlightColor));
 
         var lblOp = grpCol.add("statictext", undefined, "Opacity:");
-        lblOp.preferredSize.width = 48;
+        lblOp.preferredSize = [48, -1];
         var sldOp = grpCol.add("slider", undefined, 100, 0, 100);
-        sldOp.preferredSize.width = 65;
+        sldOp.alignment = ["fill", "center"];
+        sldOp.preferredSize = [-1, -1];
         var txtOp = grpCol.add("edittext", undefined, "100");
-        txtOp.preferredSize.width = 35;
+        txtOp.preferredSize = [35, 22];
         grpCol.add("statictext", undefined, "%");
 
         // Color Swatches
         var grpSwatches = pnlColor.add("group");
         grpSwatches.orientation = "row";
         grpSwatches.alignChildren = ["left", "center"];
+        grpSwatches.alignment = ["fill", "top"];
         grpSwatches.spacing = 4;
         grpSwatches.add("statictext", undefined, "Presets:");
 
         var btnSwPink   = grpSwatches.add("button", undefined, "Pink");
+        btnSwPink.alignment = ["fill", "center"];
+        btnSwPink.preferredSize = [-1, 24];
         var btnSwYellow = grpSwatches.add("button", undefined, "Gold");
+        btnSwYellow.alignment = ["fill", "center"];
+        btnSwYellow.preferredSize = [-1, 24];
         var btnSwMint   = grpSwatches.add("button", undefined, "Mint");
+        btnSwMint.alignment = ["fill", "center"];
+        btnSwMint.preferredSize = [-1, 24];
         var btnSwCyan   = grpSwatches.add("button", undefined, "Cyan");
+        btnSwCyan.alignment = ["fill", "center"];
+        btnSwCyan.preferredSize = [-1, 24];
         var btnSwPurple = grpSwatches.add("button", undefined, "Purple");
+        btnSwPurple.alignment = ["fill", "center"];
+        btnSwPurple.preferredSize = [-1, 24];
 
         // Set Default Active Tab to Text Box
         tpanel.selection = 0;
@@ -1666,11 +1736,13 @@
         // 4. MAIN ACTION BUTTONS (Full Width, At Bottom)
         // ---------------------------------------------------------------------
         var btnBuild = win.add("button", undefined, "🖊️ Create Highlight Layer");
-        btnBuild.preferredSize.height = 36;
+        btnBuild.alignment = ["fill", "top"];
+        btnBuild.preferredSize = [-1, 36];
         btnBuild.helpTip = "Generates procedural vector highlight shape layer parented to the text layer.";
 
         var btnUpdate = win.add("button", undefined, "⟳ Update Selected Highlight Layer");
-        btnUpdate.preferredSize.height = 28;
+        btnUpdate.alignment = ["fill", "top"];
+        btnUpdate.preferredSize = [-1, 32];
         btnUpdate.helpTip = "Updates effects and styling on existing highlight layer in real time.";
 
         // ---------------------------------------------------------------------
@@ -2183,21 +2255,29 @@
         updateRandomSummaryLabel();
         applyPreset("Hot Pink (Default)");
 
+        win.layout.layout(true);
+        win.layout.resize();
+        win.onResizing = win.onResize = function () {
+            this.layout.resize();
+        };
+
         if (win instanceof Window) {
             win.center();
             win.show();
-        } else {
-            win.layout.layout(true);
-            win.layout.resize();
         }
 
         return win;
     }
 
     var scriptPanel = buildUI(thisObj);
-    if (scriptPanel !== null && scriptPanel instanceof Window) {
-        scriptPanel.center();
-        scriptPanel.show();
+    if (scriptPanel !== null) {
+        if (scriptPanel instanceof Window) {
+            scriptPanel.center();
+            scriptPanel.show();
+        } else {
+            scriptPanel.layout.layout(true);
+            scriptPanel.layout.resize();
+        }
     }
 
 })(this);
