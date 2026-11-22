@@ -1,4 +1,4 @@
-# AE Text Precomp (v1.5.0)
+# AE Text Precomp (v1.6.0)
 
 [![Live Browser Simulator](https://img.shields.io/badge/Live%20Demo-AE%20ScriptUI%20Simulator-2c8cff?style=for-the-badge&logo=javascript)](https://work2survive.github.io/AE_JS_builder/?jsx=AE_Text_Precomp.jsx&autobuild=true)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](LICENSE)
@@ -15,15 +15,27 @@
 
 Whenever an anchor point is placed or changed by this script, the precomposition's position is automatically and mathematically compensated using the layer's complete rotation, scale, and parent transform matrix so that the text box on screen never moves a single pixel from its original position.
 
-In **v1.5.0**, AE Text Precomp delivers:
-- **Visually Symmetric Background Card & Precomp Width**: Automatically fits the precomp width tightly and symmetrically around the actual maximum line content width rather than empty bounding boxes, ensuring equal padding on both left and right.
+In **v1.6.0**, AE Text Precomp delivers:
+- **Get Precomp Width from Selected Text Box**: Added checkbox option in the Dimensions panel before Precomp Width. Automatically updates Precomp Width to the detected text box width plus padding upon selection or scan.
+- **Relocated Dimensions Controls**: Moved layer dimension detection out of Padding and directly into Dimensions where it naturally belongs.
+- **Visually Symmetric Background Card & Precomp Width**: Fits the precomp width symmetrically around actual content or text box width, ensuring equal padding on both left and right.
 - **Typographic Ascender-to-Descender Vertical Padding**: Vertical padding is measured from universal font ascender lines to descender lines rather than character glyph bounds, ensuring identical, balanced padding at top and bottom.
 - **Zero-Displacement Automatic Anchor Point Engine**: Mathematically compensates parent comp layer position when the automatic anchor point is set, locking the text box visually in place.
 - **Kinetic Word & Line Splitting**: Seamlessly divide text into individual word or line layers with calibrated uniform word spacing.
 
 ---
 
-## 🌟 What's New in v1.4.3
+## 🌟 What's New in v1.6.0
+
+1. **"Get Precomp Width from Selected Text Box" Option**:
+   - Checkbox placed in the **Dimensions** panel directly before **Precomp Width (px)**.
+   - Automatically detects the selected text box dimensions and updates Precomp Width to $\text{boxWidth} + (2 \times \text{padding})$.
+2. **Dimensions & Padding UI Clean-Up**:
+   - Relocated detection controls from the Padding panel to Dimensions.
+
+---
+
+## 🌟 What's New in v1.5.0
 
 1. **Deterministic Inter-Word Spacing via Space Character Width**:
    - In "Divide by Words", spacing between consecutive words is strictly and uniformly calculated using the exact measured font space character width (`spaceWidth`).

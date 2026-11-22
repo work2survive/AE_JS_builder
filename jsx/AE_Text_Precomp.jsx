@@ -1,6 +1,6 @@
 // Co-authored & architected with Google DeepMind Antigravity.
 // =============================================================================
-// ADOBE AFTER EFFECTS EXTENDSCRIPT & SCRIPTUI PANEL: AE TEXT PRECOMP v1.5.0
+// ADOBE AFTER EFFECTS EXTENDSCRIPT & SCRIPTUI PANEL: AE TEXT PRECOMP v1.6.0
 // =============================================================================
 //
 // PURPOSE:
@@ -60,7 +60,7 @@
     "use strict";
 
     var SCRIPT_NAME = "AE Text Precomp";
-    var SCRIPT_VERSION = "v1.5.0";
+    var SCRIPT_VERSION = "v1.6.0";
     var TEXT_PROP_REF_URL = "https://github.com/work2survive/AE_JS_builder/blob/main/samples/Text_Properties_To_Effects.jsx";
     var EXTRUDED_CORNERS_REF_URL = "https://github.com/work2survive/AE_Extruded_Round_corners";
 
@@ -572,7 +572,7 @@
         }
 
         var contentW = (metricsStore && metricsStore.maxLineWidth > 0) ? metricsStore.maxLineWidth : Math.ceil(rect.width);
-        var detW = contentW > 0 ? Math.ceil(contentW) : (isBoxText && boxWidth > 0 ? Math.round(boxWidth) : Math.ceil(rect.width));
+        var detW = (isBoxText && boxWidth > 0) ? Math.round(boxWidth) : (contentW > 0 ? Math.ceil(contentW) : Math.ceil(rect.width));
         var detH = Math.ceil(rect.height);
         if (metricsStore && metricsStore.totalLines && metricsStore.totalLines > 0) {
             var fsVal = fontSize || 28;
@@ -588,6 +588,7 @@
             isBoxText: isBoxText,
             boxWidth: boxWidth,
             boxHeight: boxHeight,
+            contentWidth: contentW,
             detectedWidth: Math.max(10, detW),
             detectedHeight: Math.max(10, detH),
             justification: justification,
@@ -1293,8 +1294,16 @@
                 }
                 if (maxLineContentW <= 0) maxLineContentW = (metrics && metrics.detectedWidth) ? metrics.detectedWidth : 200;
 
-                // Calibrate symmetric horizontal padding: box width wraps tightly around content
-                if (options.autoDetectWidth || !options.width || options.width <= 0) {
+                // Calibrate horizontal padding and width:
+                if (options.autoDetectWidth) {
+                    if (metrics && metrics.isBoxText && metrics.boxWidth > 0) {
+                        textboxW = Math.max(20, Math.round(metrics.boxWidth));
+                    } else {
+                        textboxW = Math.max(20, Math.round(maxLineContentW));
+                    }
+                    precompW = Math.max(40, Math.round(textboxW + (padding * 2)));
+                    newComp.width = precompW;
+                } else if (!options.width || options.width <= 0) {
                     textboxW = Math.max(20, Math.round(maxLineContentW));
                     precompW = Math.max(40, Math.round(textboxW + (padding * 2)));
                     newComp.width = precompW;
@@ -1791,6 +1800,20 @@
     pnlDims.spacing = 8;
     pnlDims.margins = 10;
 
+    // Checkbox Option Before Width: Get Precomp Width From Selected Text Box
+    var grpAutoDetect = pnlDims.add("group");
+    grpAutoDetect.orientation = "row";
+    grpAutoDetect.alignment = ["fill", "top"];
+    var chkAutoDetectWidth = grpAutoDetect.add("checkbox", undefined, "get precomp width from selected text box");
+    chkAutoDetectWidth.value = true;
+    chkAutoDetectWidth.alignment = ["fill", "center"];
+    chkAutoDetectWidth.helpTip = "Automatically detects width from the selected text box/layer and computes precomp width plus padding.";
+
+    var btnAutoDetect = grpAutoDetect.add("button", undefined, "Detect Now");
+    btnAutoDetect.preferredSize = [85, 22];
+    btnAutoDetect.alignment = ["right", "center"];
+    btnAutoDetect.helpTip = "Detects dimensions and justification from the currently selected text layer.";
+
     // Width Row
     var grpWidth = pnlDims.add("group");
     grpWidth.orientation = "row";
@@ -1825,20 +1848,6 @@
     pnlPad.alignChildren = ["fill", "top"];
     pnlPad.spacing = 8;
     pnlPad.margins = 10;
-
-    // First Option: Auto Detect Width From Selected Layer
-    var grpAutoDetect = pnlPad.add("group");
-    grpAutoDetect.orientation = "row";
-    grpAutoDetect.alignment = ["fill", "top"];
-    var chkAutoDetectWidth = grpAutoDetect.add("checkbox", undefined, "auto detect width from selected layer");
-    chkAutoDetectWidth.value = true;
-    chkAutoDetectWidth.alignment = ["fill", "center"];
-    chkAutoDetectWidth.helpTip = "Automatically detects width from selected text layer and computes precomp width plus padding.";
-
-    var btnAutoDetect = grpAutoDetect.add("button", undefined, "Detect Now");
-    btnAutoDetect.preferredSize = [85, 22];
-    btnAutoDetect.alignment = ["right", "center"];
-    btnAutoDetect.helpTip = "Detects dimensions and justification from the currently selected text layer.";
 
     // Padding Slider & Text Row
     var grpPadRow = pnlPad.add("group");
@@ -1880,9 +1889,13 @@
     };
 
     chkAutoDetectWidth.onClick = function() {
-        txtWidth.enabled = !chkAutoDetectWidth.value;
         if (chkAutoDetectWidth.value) {
             syncAutoDetectedWidth();
+        }
+    };
+    txtWidth.onChange = function() {
+        if (chkAutoDetectWidth) {
+            chkAutoDetectWidth.value = false;
         }
     };
 
@@ -2101,6 +2114,13 @@
             var wordCount = (metrics.memoryStore && metrics.memoryStore.totalWords) ? (" | " + metrics.memoryStore.totalWords + " words") : "";
             lblStatusText.text = "'" + textLayer.name + "' (" + typeStr + ", " + alignStr + wordCount + ")";
             btnAutoDetect.enabled = true;
+
+            // Automatically update Precomp Width if option is checked
+            if (chkAutoDetectWidth && chkAutoDetectWidth.value && metrics && metrics.detectedWidth) {
+                var padVal = parseFloat(txtPad.text) || 0;
+                var proposedPrecompW = Math.max(40, Math.round(metrics.detectedWidth + (padVal * 2)));
+                txtWidth.text = String(proposedPrecompW);
+            }
             return metrics;
         } else {
             lblStatusText.text = "None selected (will create 100-word dummy layer)";
@@ -2113,9 +2133,9 @@
         var metrics = syncLayerDetection();
         if (metrics) {
             var padVal = parseFloat(txtPad.text) || 30;
-            var proposedPrecompW = metrics.detectedWidth + (padVal * 2);
+            var proposedPrecompW = Math.max(40, Math.round(metrics.detectedWidth + (padVal * 2)));
             txtWidth.text = String(proposedPrecompW);
-            txtHeight.text = String(metrics.detectedHeight + (padVal * 2));
+            txtHeight.text = String(Math.round(metrics.detectedHeight + (padVal * 2)));
 
             if (metrics.align === "center") {
                 dropAlign.selection = 2; // Top-Center
