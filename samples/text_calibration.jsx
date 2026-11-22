@@ -45,7 +45,7 @@
     "use strict";
 
     var SCRIPT_NAME = "AE Text Calibration Matrix";
-    var SCRIPT_VERSION = "v1.2";
+    var SCRIPT_VERSION = "v1.2.1";
     var COMP_WIDTH = 1920;
     var COMP_HEIGHT = 1080;
     var COMP_FPS = 30;
