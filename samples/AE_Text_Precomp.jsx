@@ -1238,8 +1238,22 @@
     var lblRef = pnlHeader.add("statictext", undefined, "Metrics Engine: Text_Properties_To_Effects.jsx coherent");
     lblRef.helpTip = TEXT_PROP_REF_URL;
 
+    // --- Main Tabbed Panel ---
+    var tpanel = win.add("tabbedpanel");
+    tpanel.alignChildren = ["fill", "top"];
+    tpanel.alignment = ["fill", "top"];
+
+    // =========================================================================
+    // TAB 1: PRECOMP
+    // =========================================================================
+    var tabPrecomp = tpanel.add("tab", undefined, "Precomp");
+    tabPrecomp.orientation = "column";
+    tabPrecomp.alignChildren = ["fill", "top"];
+    tabPrecomp.spacing = 8;
+    tabPrecomp.margins = 8;
+
     // --- Detection & Status Panel ---
-    var pnlDetect = win.add("panel", undefined, "Text Layer Detection");
+    var pnlDetect = tabPrecomp.add("panel", undefined, "Text Layer Detection");
     pnlDetect.orientation = "column";
     pnlDetect.alignChildren = ["fill", "top"];
     pnlDetect.spacing = 6;
@@ -1257,7 +1271,7 @@
     btnAutoDetect.helpTip = "Detects dimensions and justification from the currently selected text layer using Text_Properties_To_Effects engine.";
 
     // --- Dimensions & Padding Panel ---
-    var pnlDims = win.add("panel", undefined, "Precomp Dimensions & Padding");
+    var pnlDims = tabPrecomp.add("panel", undefined, "Precomp Dimensions & Padding");
     pnlDims.orientation = "column";
     pnlDims.alignChildren = ["fill", "top"];
     pnlDims.spacing = 8;
@@ -1354,7 +1368,7 @@
     };
 
     // --- Anchor Point Options Panel ---
-    var pnlAnchor = win.add("panel", undefined, "Anchor Point & Alignment");
+    var pnlAnchor = tabPrecomp.add("panel", undefined, "Anchor Point & Alignment");
     pnlAnchor.orientation = "column";
     pnlAnchor.alignChildren = ["fill", "top"];
     pnlAnchor.spacing = 8;
@@ -1378,8 +1392,17 @@
     dropAlign.selection = 0;
     dropAlign.alignment = ["fill", "center"];
 
+    // =========================================================================
+    // TAB 2: BACKGROUND
+    // =========================================================================
+    var tabBg = tpanel.add("tab", undefined, "Background");
+    tabBg.orientation = "column";
+    tabBg.alignChildren = ["fill", "top"];
+    tabBg.spacing = 8;
+    tabBg.margins = 8;
+
     // --- Background Card & Rounded Corners Panel ---
-    var pnlBg = win.add("panel", undefined, "Background Card (Custom Rounded Corners)");
+    var pnlBg = tabBg.add("panel", undefined, "Background Card (Custom Rounded Corners)");
     pnlBg.orientation = "column";
     pnlBg.alignChildren = ["fill", "top"];
     pnlBg.spacing = 8;
@@ -1481,6 +1504,12 @@
         sldBgOp.enabled = on;
         txtBgOp.enabled = on;
     };
+
+    try {
+        tpanel.selection = tabPrecomp;
+    } catch(eTab) {
+        try { tpanel.selection = 0; } catch(eTab2) {}
+    }
 
     // --- Action Buttons ---
     var pnlActions = win.add("panel", undefined, "Actions");
