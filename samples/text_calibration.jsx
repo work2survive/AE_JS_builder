@@ -45,7 +45,7 @@
     "use strict";
 
     var SCRIPT_NAME = "AE Text Calibration Matrix";
-    var SCRIPT_VERSION = "v1.1";
+    var SCRIPT_VERSION = "v1.2";
     var COMP_WIDTH = 1920;
     var COMP_HEIGHT = 1080;
     var COMP_FPS = 30;
@@ -116,7 +116,7 @@
             firstLineIndent: 0,
             leftIndent: 0,
             rightIndent: 0,
-            fontSize: 12.5,
+            fontSize: 16.25,
             leading: 0, // Auto leading
             tracking: 0,
             textColor: [0.90, 0.93, 0.97],
@@ -132,8 +132,8 @@
             firstLineIndent: 0,
             leftIndent: 8,
             rightIndent: 8,
-            fontSize: 12.5,
-            leading: 16,
+            fontSize: 16.25,
+            leading: 20.8,
             tracking: 10,
             textColor: [0.45, 0.75, 1.0],
             badgeColor: [0.25, 0.65, 0.95]
@@ -148,8 +148,8 @@
             firstLineIndent: 0,
             leftIndent: 0,
             rightIndent: 14,
-            fontSize: 12.0,
-            leading: 15.5,
+            fontSize: 15.6,
+            leading: 20.15,
             tracking: 0,
             textColor: [0.55, 0.88, 0.65],
             badgeColor: [0.35, 0.75, 0.45]
@@ -164,8 +164,8 @@
             firstLineIndent: 24, // Modified per-column below
             leftIndent: 0,
             rightIndent: 0,
-            fontSize: 12.0,
-            leading: 15.0,
+            fontSize: 15.6,
+            leading: 19.5,
             tracking: 0,
             textColor: [1.0, 0.75, 0.35],
             badgeColor: [0.95, 0.60, 0.20]
@@ -180,8 +180,8 @@
             firstLineIndent: 0,
             leftIndent: 0,
             rightIndent: 0,
-            fontSize: 12.0,
-            leading: 16.0,
+            fontSize: 15.6,
+            leading: 20.8,
             tracking: 0,
             textColor: [0.95, 0.50, 0.75],
             badgeColor: [0.85, 0.35, 0.65]
@@ -456,8 +456,8 @@
                         } else if (c === 2) { // Times: All Caps
                             cellAllCaps = true;
                             cellTracking = 40;
-                            cellFontSize = 10.5;
-                            cellLeading = 14.5;
+                            cellFontSize = 13.65;
+                            cellLeading = 18.85;
                         } else if (c === 3) { // Courier: Outline stroke
                             cellApplyStroke = true;
                             cellStrokeWidth = 0.8;
@@ -467,10 +467,10 @@
                             cellTracking = -15;
                         } else if (c === 5) { // Trebuchet: Baseline shift + Loose leading
                             cellBaselineShift = 2.5;
-                            cellLeading = 17.5;
+                            cellLeading = 22.75;
                         } else if (c === 6) { // Impact: Heavy display
                             cellTracking = 25;
-                            cellFontSize = 13.0;
+                            cellFontSize = 16.9;
                         } else if (c === 7) { // Segoe UI: Bold + Italic synthesis
                             cellFauxBold = true;
                             cellFauxItalic = true;
