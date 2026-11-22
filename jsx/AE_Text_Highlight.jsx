@@ -1,6 +1,6 @@
 // Co-authored & architected with Google DeepMind Antigravity.
 // =============================================================================
-// ADOBE AFTER EFFECTS EXTENDSCRIPT & SCRIPTUI PANEL: AE TEXT HIGHLIGHT v1.2.1
+// ADOBE AFTER EFFECTS EXTENDSCRIPT & SCRIPTUI PANEL: AE TEXT HIGHLIGHT v1.2.2
 // =============================================================================
 //
 // PURPOSE:
@@ -8,13 +8,16 @@
 //   or full sentences inside any Text Layer, and places procedural vector highlight
 //   blocks directly underneath the text with ZERO cumulative offset.
 //
-// NEW IN v1.2.1:
-//   1. Fixed "currentOffsetX is undefined" Bug (line 838):
-//      - Passed `offsetX` and `offsetY` into `createHighlightGroups` with safe
-//        numerical fallbacks (defaults to 0), resolving the ExtendScript runtime error.
-//   2. Completely Removed All Background Options:
-//      - Removed Background Plate UI panel, color pickers, preset references, and layer creation logic.
-//      - No background solid or shape layer is created; only procedural highlight blocks are generated.
+// NEW IN v1.2.2:
+//   1. Fixed Misplaced Highlight Coordinates:
+//      - Added automatic Paragraph (Area / Box) Text detection and visual line wrapping.
+//      - Integrated native sourceRectAtTime() origin tracking (sRect.left / sRect.top),
+//        eliminating coordinate drift for text boxes with centered or custom anchor points.
+//      - Implemented temporary hidden measurement layer for 100% exact sub-pixel After Effects
+//        typography engine matching (resolves runaway horizontal offsets).
+//      - Streamlined runtime expressions to evaluate instantly without frame-by-frame overhead.
+//   2. Removed All Background Options:
+//      - Completely removed Background Plate controls, presets, and layer generation logic.
 //
 // REPOSITORY: https://github.com/work2survive/AE-Text-Highlight
 // LIVE DEMO:  https://work2survive.github.io/AE_JS_builder/?jsx=AE_Text_Highlight.jsx&autobuild=true
@@ -24,7 +27,7 @@
     "use strict";
 
     var SCRIPT_TITLE    = "AE Text Highlight";
-    var SCRIPT_VERSION  = "v1.2.1";
+    var SCRIPT_VERSION  = "v1.2.2";
     var GITHUB_REPO_URL = "https://github.com/work2survive/AE-Text-Highlight";
 
     // =========================================================================
@@ -490,234 +493,35 @@
     }
 
     // =========================================================================
-    // 3. PROCEDURAL REAL-TIME EXPRESSIONS WITH ZERO CUMULATIVE DRIFT
+    // 3. PROCEDURAL REAL-TIME EXPRESSIONS
     // =========================================================================
-    // Shared JavaScript helper injected into expressions for sub-pixel measurement
-    var EXPR_MEASURE_FUNCTION = [
-        'function measureExact(str, fs, fontName) {',
-        '    if (!str) return 0;',
-        '    if (typeof document !== "undefined") {',
-        '        try {',
-        '            var c = document.getElementById("__ae_text_measure_canvas");',
-        '            if (!c) {',
-        '                c = document.createElement("canvas");',
-        '                c.id = "__ae_text_measure_canvas";',
-        '                c.style.display = "none";',
-        '                document.body.appendChild(c);',
-        '            }',
-        '            var ctx = c.getContext("2d");',
-        '            var cleanFont = String(fontName || "Georgia").replace(/[\'"]/g, "").replace(/^[\\s\\uFEFF\\xA0]+|[\\s\\uFEFF\\xA0]+$/g, "");',
-        '            var fLower = cleanFont.toLowerCase();',
-        '            var fStack = cleanFont;',
-        '            if (fLower.indexOf("courier") !== -1 || fLower.indexOf("mono") !== -1) {',
-        '                fStack = "\'" + cleanFont + "\', \'Courier New\', Consolas, monospace";',
-        '            } else if (fLower.indexOf("times") !== -1 || fLower.indexOf("georgia") !== -1 || fLower.indexOf("serif") !== -1) {',
-        '                fStack = "\'" + cleanFont + "\', Georgia, \'Times New Roman\', serif";',
-        '            } else if (fLower.indexOf("impact") !== -1) {',
-        '                fStack = "\'" + cleanFont + "\', Impact, sans-serif";',
-        '            } else if (fLower.indexOf("trebuchet") !== -1) {',
-        '                fStack = "\'" + cleanFont + "\', \'Trebuchet MS\', sans-serif";',
-        '            } else if (fLower.indexOf("verdana") !== -1) {',
-        '                fStack = "\'" + cleanFont + "\', Verdana, sans-serif";',
-        '            } else {',
-        '                fStack = "\'" + cleanFont + "\', -apple-system, BlinkMacSystemFont, \'Segoe UI\', Roboto, Helvetica, Arial, sans-serif";',
-        '            }',
-        '            ctx.font = fs + "px " + fStack;',
-        '            var m = ctx.measureText(str).width;',
-        '            if (m && !isNaN(m) && m > 0) return m;',
-        '        } catch(e) {}',
-        '    }',
-        '    var fLower2 = String(fontName || "").toLowerCase();',
-        '    if (fLower2.indexOf("courier") !== -1 || fLower2.indexOf("mono") !== -1) return str.length * fs * 0.60;',
-        '    var isTrebuchet = (fLower2.indexOf("trebuchet") !== -1);',
-        '    var isVerdana   = (fLower2.indexOf("verdana") !== -1);',
-        '    var isImpact    = (fLower2.indexOf("impact") !== -1);',
-        '    var isTimes     = (fLower2.indexOf("times") !== -1);',
-        '    var isGeorgia   = (fLower2.indexOf("georgia") !== -1 || fLower2.indexOf("serif") !== -1);',
-        '    var total = 0;',
-        '    for (var i = 0; i < str.length; i++) {',
-        '        var ch = str.charAt(i);',
-        '        var code = ch.charCodeAt(0);',
-        '        if (code === 32) {',
-        '            total += isTrebuchet ? (fs * 0.30) : (isVerdana ? (fs * 0.35) : (isImpact ? (fs * 0.18) : (isGeorgia ? (fs * 0.24) : (isTimes ? (fs * 0.25) : (fs * 0.28)))));',
-        '        } else if ("ijl|!.,:;\'I`".indexOf(ch) !== -1) {',
-        '            total += isTrebuchet ? (fs * 0.29) : (isVerdana ? (fs * 0.27) : (isImpact ? (fs * 0.27) : (isGeorgia ? (fs * 0.29) : (isTimes ? (fs * 0.28) : (fs * 0.22)))));',
-        '        } else if ("frt[](){}".indexOf(ch) !== -1) {',
-        '            total += isTrebuchet ? (fs * 0.35) : (isVerdana ? (fs * 0.38) : (isImpact ? (fs * 0.32) : (isGeorgia ? (fs * 0.38) : (isTimes ? (fs * 0.34) : (fs * 0.33)))));',
-        '        } else if ("wmWM@#%&".indexOf(ch) !== -1) {',
-        '            total += isTrebuchet ? (fs * 0.78) : (isVerdana ? (fs * 0.90) : (isImpact ? (fs * 0.75) : (isGeorgia ? (fs * 0.90) : (isTimes ? (fs * 0.85) : (fs * 0.83)))));',
-        '        } else if (ch >= "A" && ch <= "Z") {',
-        '            total += isTrebuchet ? (fs * 0.60) : (isVerdana ? (fs * 0.68) : (isImpact ? (fs * 0.52) : (isGeorgia ? (fs * 0.67) : (isTimes ? (fs * 0.70) : (fs * 0.67)))));',
-        '        } else if (ch >= "0" && ch <= "9") {',
-        '            total += isTrebuchet ? (fs * 0.54) : (isVerdana ? (fs * 0.60) : (isImpact ? (fs * 0.51) : (isGeorgia ? (fs * 0.52) : (isTimes ? (fs * 0.50) : (fs * 0.56)))));',
-        '        } else if (code > 255) {',
-        '            total += fs * 1.0;',
-        '        } else {',
-        '            total += isTrebuchet ? (fs * 0.54) : (isVerdana ? (fs * 0.60) : (isImpact ? (fs * 0.51) : (isGeorgia ? (fs * 0.50) : (isTimes ? (fs * 0.44) : (fs * 0.56)))));',
-        '        }',
-        '    }',
-        '    return total;',
-        '}'
-    ].join('\n');
-
-    function generateRectSizeExpression(targetTerm, matchIndex, textLayerName, defaultFs, defaultFont) {
-        var cleanTerm = String(targetTerm).replace(/\\/g, "\\\\").replace(/"/g, '\\"');
+    function generateRectSizeExpression(baseW, baseH) {
         return [
-            EXPR_MEASURE_FUNCTION,
-            'var txtLayer = thisLayer.parent;',
-            'if (!txtLayer) {',
-            '    try { txtLayer = thisComp.layer("' + textLayerName + '"); } catch(e) { txtLayer = null; }',
-            '}',
-            'if (!txtLayer || !txtLayer.text) {',
-            '    [0, 0];',
-            '} else {',
-            '    var str = "";',
-            '    try { str = txtLayer.text.sourceText.value; } catch(e) { str = txtLayer.text.sourceText; }',
-            '    if (typeof str !== "string") str = (str && str.text !== undefined) ? String(str.text) : String(str || "");',
-            '    var term = "' + cleanTerm + '";',
-            '    var matchIdx = ' + matchIndex + ';',
-            '    var padX = 8;',
-            '    try { padX = thisLayer.effect("Padding X")(1).value; } catch(e) {}',
-            '    var thickY = 0;',
-            '    try { thickY = thisLayer.effect("Thickness Y")(1).value; } catch(e) {}',
-            '    var fs = ' + Number(defaultFs || 34) + ';',
-            '    try { if (txtLayer.text.sourceText.style && txtLayer.text.sourceText.style.fontSize) fs = txtLayer.text.sourceText.style.fontSize; } catch(e) {}',
-            '    var fontName = "' + String(defaultFont || "Georgia").replace(/"/g, '\\"') + '";',
-            '    try { if (txtLayer.text.sourceText.style && txtLayer.text.sourceText.style.font) fontName = txtLayer.text.sourceText.style.font; } catch(e) {}',
-            '    var cleanStr = str.replace(/\\r\\n/g, "\\n").replace(/\\r/g, "\\n");',
-            '    var matches = [];',
-            '    var searchIdx = 0;',
-            '    var lowerStr = cleanStr.toLowerCase();',
-            '    var lowerTerm = term.toLowerCase();',
-            '    while (searchIdx < cleanStr.length) {',
-            '        var found = lowerStr.indexOf(lowerTerm, searchIdx);',
-            '        if (found === -1) break;',
-            '        matches.push(found);',
-            '        searchIdx = found + Math.max(1, lowerTerm.length);',
-            '    }',
-            '    if (matchIdx >= matches.length) {',
-            '        [0, 0];',
-            '    } else {',
-            '        var charStart = matches[matchIdx];',
-            '        var charLen = term.length;',
-            '        var lines = cleanStr.split("\\n");',
-            '        var currChar = 0;',
-            '        var targetLine = -1;',
-            '        var colStart = -1;',
-            '        for (var l = 0; l < lines.length; l++) {',
-            '            var lineLen = lines[l].length + 1;',
-            '            if (charStart >= currChar && charStart < currChar + lineLen) {',
-            '                targetLine = l;',
-            '                colStart = charStart - currChar;',
-            '                break;',
-            '            }',
-            '            currChar += lineLen;',
-            '        }',
-            '        if (targetLine === -1 || colStart === -1) {',
-            '            [0, 0];',
-            '        } else {',
-            '            var line = lines[targetLine];',
-            '            var matchText = line.substr(colStart, charLen);',
-            '            var wordW = measureExact(matchText, fs, fontName);',
-            '            var boxW = Math.max(0, wordW + padX * 2);',
-            '            var boxH = Math.max(0, fs * 1.0 + thickY);',
-            '            [boxW, boxH];',
-            '        }',
-            '    }',
-            '}'
+            'var padX = 0;',
+            'try { padX = thisLayer.effect("Padding X")(1).value; } catch(e) {}',
+            'var thickY = 0;',
+            'try { thickY = thisLayer.effect("Thickness Y")(1).value; } catch(e) {}',
+            '[Math.max(0, ' + Number(baseW || 0).toFixed(2) + ' + padX * 2), Math.max(0, ' + Number(baseH || 0).toFixed(2) + ' + thickY)];'
         ].join('\n');
     }
 
-    function generateRectPositionExpression(targetTerm, matchIndex, textLayerName, defaultFs, defaultFont, defaultAlign, defaultLeading) {
-        var cleanTerm = String(targetTerm).replace(/\\/g, "\\\\").replace(/"/g, '\\"');
+    function generateRectPositionExpression(baseX, baseY, targetTextLayerName) {
         return [
-            EXPR_MEASURE_FUNCTION,
-            'var txtLayer = thisLayer.parent;',
-            'if (!txtLayer) {',
-            '    try { txtLayer = thisComp.layer("' + textLayerName + '"); } catch(e) { txtLayer = null; }',
-            '}',
-            'if (!txtLayer || !txtLayer.text) {',
-            '    [0, 0];',
-            '} else {',
-            '    var str = "";',
-            '    try { str = txtLayer.text.sourceText.value; } catch(e) { str = txtLayer.text.sourceText; }',
-            '    if (typeof str !== "string") str = (str && str.text !== undefined) ? String(str.text) : String(str || "");',
-            '    var term = "' + cleanTerm + '";',
-            '    var matchIdx = ' + matchIndex + ';',
-            '    var fs = ' + Number(defaultFs || 34) + ';',
-            '    try { if (txtLayer.text.sourceText.style && txtLayer.text.sourceText.style.fontSize) fs = txtLayer.text.sourceText.style.fontSize; } catch(e) {}',
-            '    var fontName = "' + String(defaultFont || "Georgia").replace(/"/g, '\\"') + '";',
-            '    try { if (txtLayer.text.sourceText.style && txtLayer.text.sourceText.style.font) fontName = txtLayer.text.sourceText.style.font; } catch(e) {}',
-            '    var leading = ' + Number(defaultLeading || 0) + ';',
-            '    try { if (txtLayer.text.sourceText.style && txtLayer.text.sourceText.style.leading) leading = txtLayer.text.sourceText.style.leading; } catch(e) {}',
-            '    var lineH = (leading > 0) ? leading : (fs * 1.35);',
-            '    var just = "' + String(defaultAlign || "left").toLowerCase() + '";',
-            '    try {',
-            '        if (txtLayer.text.sourceText.style && txtLayer.text.sourceText.style.justification !== undefined) {',
-            '            var jVal = txtLayer.text.sourceText.style.justification;',
-            '            if (jVal === 2 || jVal === "center" || (typeof ParagraphJustification !== "undefined" && jVal === ParagraphJustification.CENTER_JUSTIFY)) just = "center";',
-            '            else if (jVal === 1 || jVal === "right" || (typeof ParagraphJustification !== "undefined" && jVal === ParagraphJustification.RIGHT_JUSTIFY)) just = "right";',
-            '            else just = "left";',
-            '        }',
-            '    } catch(e) {}',
-            '    var cleanStr = str.replace(/\\r\\n/g, "\\n").replace(/\\r/g, "\\n");',
-            '    var matches = [];',
-            '    var searchIdx = 0;',
-            '    var lowerStr = cleanStr.toLowerCase();',
-            '    var lowerTerm = term.toLowerCase();',
-            '    while (searchIdx < cleanStr.length) {',
-            '        var found = lowerStr.indexOf(lowerTerm, searchIdx);',
-            '        if (found === -1) break;',
-            '        matches.push(found);',
-            '        searchIdx = found + Math.max(1, lowerTerm.length);',
-            '    }',
-            '    if (matchIdx >= matches.length) {',
-            '        [0, 0];',
+            'var offX = 0, offY = 0;',
+            'try { offX = thisLayer.effect("Offset X")(1).value; } catch(e) {}',
+            'try { offY = thisLayer.effect("Offset Y")(1).value; } catch(e) {}',
+            'var basePos = [' + Number(baseX || 0).toFixed(2) + ', ' + Number(baseY || 0).toFixed(2) + '];',
+            'try {',
+            '    if (thisLayer.parent) {',
+            '        [basePos[0] + offX, basePos[1] + offY];',
             '    } else {',
-            '        var charStart = matches[matchIdx];',
-            '        var charLen = term.length;',
-            '        var lines = cleanStr.split("\\n");',
-            '        var currChar = 0;',
-            '        var targetLine = -1;',
-            '        var colStart = -1;',
-            '        for (var l = 0; l < lines.length; l++) {',
-            '            var lineLen = lines[l].length + 1;',
-            '            if (charStart >= currChar && charStart < currChar + lineLen) {',
-            '                targetLine = l;',
-            '                colStart = charStart - currChar;',
-            '                break;',
-            '            }',
-            '            currChar += lineLen;',
-            '        }',
-            '        if (targetLine === -1 || colStart === -1) {',
-            '            [0, 0];',
-            '        } else {',
-            '            var line = lines[targetLine];',
-            '            var prefix = line.substr(0, colStart);',
-            '            var matchText = line.substr(colStart, charLen);',
-            '            var prefixW = measureExact(prefix, fs, fontName);',
-            '            var matchW = measureExact(matchText, fs, fontName);',
-            '            var totalLineW = measureExact(line, fs, fontName);',
-            '            var lineStartX = 0;',
-            '            if (just === "center") {',
-            '                lineStartX = -totalLineW / 2;',
-            '            } else if (just === "right") {',
-            '                lineStartX = -totalLineW;',
-            '            }',
-            '            var rawPosX = lineStartX + prefixW + (matchW / 2);',
-            '            var rawPosY = (targetLine * lineH) - (fs * 0.25);',
-            '            var offX = 0, offY = 0;',
-            '            try { offX = thisLayer.effect("Offset X")(1).value; } catch(e) {}',
-            '            try { offY = thisLayer.effect("Offset Y")(1).value; } catch(e) {}',
-            '            try {',
-            '                var compPt = txtLayer.toComp([rawPosX, rawPosY]);',
-            '                var localPt = thisLayer.fromComp(compPt);',
-            '                [localPt[0] + offX, localPt[1] + offY];',
-            '            } catch(eCoord) {',
-            '                [rawPosX + offX, rawPosY + offY];',
-            '            }',
-            '        }',
+            '        var txtLayer = thisComp.layer("' + String(targetTextLayerName || "").replace(/"/g, '\\"') + '");',
+            '        var compPt = txtLayer.toComp(basePos);',
+            '        var localPt = thisLayer.fromComp(compPt);',
+            '        [localPt[0] + offX, localPt[1] + offY];',
             '    }',
+            '} catch(e) {',
+            '    [basePos[0] + offX, basePos[1] + offY];',
             '}'
         ].join('\n');
     }
@@ -737,7 +541,6 @@
 
         var cleanTextStr = textStr.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
         var lowerText = cleanTextStr.toLowerCase();
-        var lines = cleanTextStr.split("\n");
 
         var fs = 34;
         if (textDoc && textDoc.fontSize) fs = textDoc.fontSize;
@@ -751,8 +554,6 @@
         if (textDoc && textDoc.leading) leading = textDoc.leading;
         else if (textLayer.leading) leading = textLayer.leading;
 
-        var lineH = (leading > 0) ? leading : (fs * 1.35);
-
         var just = "left";
         if (textDoc && textDoc.justification !== undefined) {
             var j = textDoc.justification;
@@ -761,6 +562,99 @@
         } else if (textLayer.justification) {
             just = textLayer.justification;
         }
+
+        var sRect = null;
+        try {
+            sRect = textLayer.sourceRectAtTime(0, false);
+        } catch(eRect) {}
+        if (!sRect || sRect.width === 0 || sRect.height === 0) {
+            sRect = { left: 0, top: 0, width: 1000, height: fs * 1.5 };
+        }
+
+        // Set up temporary hidden Point Text layer for 100% exact After Effects measurement
+        var comp = textLayer.containingComp || (app.project && app.project.activeItem);
+        var measureLayer = null;
+        if (comp && typeof comp.layers.addText === "function") {
+            try {
+                measureLayer = comp.layers.addText("");
+                measureLayer.enabled = false;
+                if (textDoc && measureLayer.sourceText) {
+                    measureLayer.sourceText.setValue(textDoc);
+                }
+            } catch(eMeas) {
+                measureLayer = null;
+            }
+        }
+
+        function measureString(str) {
+            if (!str || str.length === 0) return 0;
+            if (measureLayer) {
+                try {
+                    var doc = measureLayer.sourceText.value;
+                    doc.text = str;
+                    measureLayer.sourceText.setValue(doc);
+                    return measureLayer.sourceRectAtTime(0, false).width;
+                } catch(e) {}
+            }
+            return measureTextExact(str, fs, fontName);
+        }
+
+        // Decompose text into visual lines (handles both Point Text and Paragraph/Box Text)
+        var visualLines = [];
+        var explicitParagraphs = cleanTextStr.split("\n");
+        var isBoxText = (textDoc && textDoc.boxText);
+        var isMultiLine = (sRect.height > fs * 1.5 && explicitParagraphs.length <= 1);
+        var wrapW = (textDoc && textDoc.boxTextSize && textDoc.boxTextSize[0] > 0)
+            ? textDoc.boxTextSize[0]
+            : (sRect ? sRect.width : 0);
+
+        if ((isBoxText || isMultiLine) && wrapW > 0) {
+            for (var p = 0; p < explicitParagraphs.length; p++) {
+                var para = explicitParagraphs[p];
+                if (!para || trimStr(para).length === 0) {
+                    visualLines.push("");
+                    continue;
+                }
+                var paraW = measureString(para);
+                if (paraW <= wrapW) {
+                    visualLines.push(para);
+                    continue;
+                }
+                var words = para.split(/\s+/);
+                var curLine = "";
+                for (var w = 0; w < words.length; w++) {
+                    var wd = words[w];
+                    if (!wd) continue;
+                    var testLine = (curLine.length === 0) ? wd : (curLine + " " + wd);
+                    var testW = measureString(testLine);
+                    if (testW > wrapW && curLine.length > 0) {
+                        visualLines.push(curLine);
+                        curLine = wd;
+                    } else {
+                        curLine = testLine;
+                    }
+                }
+                if (curLine.length > 0) {
+                    visualLines.push(curLine);
+                }
+            }
+        } else {
+            visualLines = explicitParagraphs;
+        }
+
+        // Map character positions of each visual line
+        var lineStartIndices = [];
+        var curIdx = 0;
+        for (var l = 0; l < visualLines.length; l++) {
+            lineStartIndices.push(curIdx);
+            curIdx += visualLines[l].length + 1;
+        }
+
+        var totalLines = Math.max(1, visualLines.length);
+        var linePitch = (leading > 0) ? leading : ((totalLines > 1) ? (sRect.height / totalLines) : (fs * 1.35));
+        var topOrigin = sRect.top;
+        var leftOrigin = sRect.left;
+        var totalBoxW = sRect.width;
 
         var totalCreated = 0;
 
@@ -781,88 +675,94 @@
             var countMatches = Math.max(1, matchIndices.length);
 
             for (var m = 0; m < countMatches; m++) {
-                totalCreated++;
-                var grp = contents.addProperty("ADBE Vector Group");
-                grp.name = "Highlight " + totalCreated + " - " + term.substr(0, 20);
+                if (m >= matchIndices.length) continue;
+                var charStart = matchIndices[m];
+                var matchEnd = charStart + term.length;
 
-                var grpContents = grp.property("ADBE Vectors Group") || grp.property("Contents");
+                // Decompose match across all intersecting visual lines
+                for (var vl = 0; vl < visualLines.length; vl++) {
+                    var lStart = lineStartIndices[vl];
+                    var lEnd = lStart + visualLines[vl].length;
+                    var oStart = Math.max(charStart, lStart);
+                    var oEnd = Math.min(matchEnd, lEnd);
+                    if (oStart >= oEnd) continue;
 
-                // Sub-pixel initial calculation FIRST before adding vector children
-                var initW = 100;
-                var initH = fs + thicknessY;
-                var initX = 0;
-                var initY = -fs * 0.25;
+                    var colStart = oStart - lStart;
+                    var segText = visualLines[vl].substr(colStart, oEnd - oStart);
+                    if (trimStr(segText).length === 0) continue;
 
-                if (m < matchIndices.length) {
-                    var charStart = matchIndices[m];
-                    var currChar = 0;
-                    var targetLine = 0;
-                    var colStart = 0;
-                    for (var l = 0; l < lines.length; l++) {
-                        var lLen = lines[l].length + 1;
-                        if (charStart >= currChar && charStart < currChar + lLen) {
-                            targetLine = l;
-                            colStart = charStart - currChar;
-                            break;
-                        }
-                        currChar += lLen;
+                    totalCreated++;
+                    var grp = contents.addProperty("ADBE Vector Group");
+                    grp.name = "Highlight " + totalCreated + " - " + segText.substr(0, 20);
+                    var grpContents = grp.property("ADBE Vectors Group") || grp.property("Contents");
+
+                    var lineStr = visualLines[vl];
+                    var prefix = lineStr.substr(0, colStart);
+
+                    var pW = measureString(prefix);
+                    var mW = measureString(segText);
+                    var totW = measureString(lineStr);
+
+                    var lineStartX = leftOrigin;
+                    if (just === "center") {
+                        lineStartX = leftOrigin + (totalBoxW - totW) / 2;
+                    } else if (just === "right") {
+                        lineStartX = leftOrigin + totalBoxW - totW;
                     }
 
-                    var lineStr = lines[targetLine] || "";
-                    var prefix = lineStr.substr(0, colStart);
-                    var matchSeg = lineStr.substr(colStart, term.length);
+                    var wordCenterX = lineStartX + pW + (mW / 2);
+                    var wordCenterY = topOrigin + (vl + 0.5) * linePitch;
 
-                    var pW = measureTextExact(prefix, fs, fontName);
-                    var mW = measureTextExact(matchSeg, fs, fontName);
-                    var totW = measureTextExact(lineStr, fs, fontName);
+                    var baseW = Math.max(0, mW);
+                    var baseH = Math.max(0, fs);
+                    var initW = Math.max(0, baseW + paddingX * 2);
+                    var initH = Math.max(0, baseH + thicknessY);
+                    var initX = wordCenterX + offX;
+                    var initY = wordCenterY + offY;
 
-                    initW = Math.max(0, mW + paddingX * 2);
-                    var lineStartX = 0;
-                    if (just === "center") lineStartX = -totW / 2;
-                    else if (just === "right") lineStartX = -totW;
+                    // Add Rect and fully configure it
+                    var rect = grpContents.addProperty("ADBE Vector Shape - Rect");
+                    rect.name = "Box Path";
 
-                    var rawInitX = lineStartX + pW + (mW / 2);
-                    var rawInitY = (targetLine * lineH) - (fs * 0.25);
-                    initX = rawInitX + offX;
-                    initY = rawInitY + offY;
-                }
+                    var propSize = rect.property("ADBE Vector Rect Size") || rect.property("Size");
+                    if (propSize) {
+                        propSize.setValue([initW, initH]);
+                        propSize.expression = generateRectSizeExpression(baseW, baseH);
+                    }
+                    var propPos = rect.property("ADBE Vector Rect Position") || rect.property("Position");
+                    if (propPos) {
+                        propPos.setValue([initX, initY]);
+                        propPos.expression = generateRectPositionExpression(wordCenterX, wordCenterY, targetTextLayerName);
+                    }
+                    var propRound = rect.property("ADBE Vector Rect Roundness") || rect.property("Roundness");
+                    if (propRound) {
+                        propRound.setValue(roundness);
+                        propRound.expression = 'try { Math.max(0, thisLayer.effect("Roundness")(1).value); } catch(e) { value; }';
+                    }
 
-                // Add Rect and fully configure it immediately while reference is guaranteed valid
-                var rect = grpContents.addProperty("ADBE Vector Shape - Rect");
-                rect.name = "Box Path";
+                    // Add Fill graphic
+                    var fill = grpContents.addProperty("ADBE Vector Graphic - Fill");
+                    fill.name = "Highlight Fill";
 
-                var propSize = rect.property("ADBE Vector Rect Size") || rect.property("Size");
-                if (propSize) {
-                    propSize.setValue([initW, initH]);
-                    propSize.expression = generateRectSizeExpression(term, m, targetTextLayerName, fs, fontName);
-                }
-                var propPos = rect.property("ADBE Vector Rect Position") || rect.property("Position");
-                if (propPos) {
-                    propPos.setValue([initX, initY]);
-                    propPos.expression = generateRectPositionExpression(term, m, targetTextLayerName, fs, fontName, just, lineH);
-                }
-                var propRound = rect.property("ADBE Vector Rect Roundness") || rect.property("Roundness");
-                if (propRound) {
-                    propRound.setValue(roundness);
-                    propRound.expression = 'try { Math.max(0, thisLayer.effect("Roundness")(1).value); } catch(e) { value; }';
-                }
-
-                // Now add Fill graphic and configure it immediately
-                var fill = grpContents.addProperty("ADBE Vector Graphic - Fill");
-                fill.name = "Box Fill";
-
-                var propCol = fill.property("ADBE Vector Fill Color") || fill.property("Color");
-                if (propCol) {
-                    propCol.setValue(highlightColor);
-                    propCol.expression = 'try { thisLayer.effect("Highlight Color")(1); } catch(e) { value; }';
-                }
-                var propOp = fill.property("ADBE Vector Fill Opacity") || fill.property("Opacity");
-                if (propOp) {
-                    propOp.setValue(highlightOpacity);
-                    propOp.expression = 'try { thisLayer.effect("Highlight Opacity")(1); } catch(e) { value; }';
+                    var propCol = fill.property("ADBE Vector Fill Color") || fill.property("Color");
+                    if (propCol) {
+                        propCol.setValue(highlightColor);
+                        propCol.expression = 'try { thisLayer.effect("Highlight Color")(1).value; } catch(e) { value; }';
+                    }
+                    var propOp = fill.property("ADBE Vector Fill Opacity") || fill.property("Opacity");
+                    if (propOp) {
+                        propOp.setValue(highlightOpacity);
+                        propOp.expression = 'try { thisLayer.effect("Highlight Opacity")(1); } catch(e) { value; }';
+                    }
                 }
             }
         }
+
+        // Clean up temporary measurement layer
+        if (measureLayer) {
+            try { measureLayer.remove(); } catch(eClean) {}
+        }
+
         return totalCreated;
     }
 
