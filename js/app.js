@@ -8,13 +8,13 @@
     'use strict';
 
     // -------------------------------------------------------------
-    // Version Management (v1.2.5)
+    // Version Management (v1.2.6)
     // -------------------------------------------------------------
     function computeDailyVersion() {
-        return '1.2.5';
+        return '1.2.6';
     }
 
-    const APP_VERSION = '1.2.5';
+    const APP_VERSION = '1.2.6';
     global.EMULATOR_VERSION = APP_VERSION;
 
     let renderer = null;
@@ -318,6 +318,7 @@
                 iconHtml = `<span style="font-weight:700; font-family:sans-serif; color:#ff6b81; font-size:11px;">T</span>`;
             }
 
+            let badgesHtml = '';
             if (isPrecomp) {
                 badgesHtml += `<span class="ae-badge-type static ae-badge-precomp" title="Composition / Precomp layer">[PRECOMP]</span>`;
                 badgesHtml += `<span class="ae-badge-comp-dims" title="Dimensions: ${layer.source.width}×${layer.source.height} px">${layer.source.width}×${layer.source.height}</span>`;
