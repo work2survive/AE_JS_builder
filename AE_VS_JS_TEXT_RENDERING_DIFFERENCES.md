@@ -367,13 +367,18 @@ In native AE, moving a layer's anchor point from $[A_x, A_y]$ to $[A'_x, A'_y]$ 
      where $\text{ascenderHeight} = 0.78 \times \text{fontSize}$ (or font ascent).
    - Capture composition coordinates before precomposing:
      $$P_{\text{comp}} = \text{textLayer.toComp}(P_{\text{local\_ref}})$$
-3. **Placement Inside `newComp`**:
+3. **Placement Inside `newComp` (Unified Baseline & Background Card Alignment)**:
+   - In `newComp`, the background card shape layer spans from $y = 0$ to $y = \text{precompH}$.
+   - To ensure the background card fully encloses Line 0 (rather than cutting through Line 0's baseline) while maintaining symmetric top and bottom padding:
+     - The first line's alphabetic baseline must be positioned at $y = \text{padding} + \text{ascenderHeight}$.
+     - Glyphs ascend by $\text{ascenderHeight}$ into the headroom space, placing Line 0's visual ascender edge strictly at $y = \text{padding}$.
    - For standard single-layer precomposition:
-     $$\text{innerTextLayer.transform.anchorPoint} = [ X_{\text{ref}}, -\text{ascenderHeight} ]$$
-     $$\text{innerTextLayer.transform.position} = [ X_{\text{target}}, \text{padding} ]$$
+     $$\text{innerTextLayer.transform.anchorPoint} = [ X_{\text{ref}}, 0 ]$$
+     $$\text{innerTextLayer.transform.position} = [ X_{\text{target}}, \text{padding} + \text{ascenderHeight} ]$$
    - For kinetic word and line layers:
      $$\text{firstBaselineY} = \text{padding} + \text{ascenderHeight}$$
-   - This ensures the visual top edge of the text sits strictly at $y = \text{padding}$.
+     $$\text{lineLayer.transform.anchorPoint} = [ r.\text{left}, 0 ], \quad \text{lineLayer.transform.position} = [ X_{\text{line}}, \text{lineBaselineY} ]$$
+   - This guarantees that inside `newComp`, the distance from the top edge of the background card ($y = 0$) to the top of Line 0 ($y = \text{padding}$) is strictly $\text{padding}$. When $\text{padding} = 0$, the background card top edge perfectly aligns with the top of Line 0 without any clipping at $y < 0$.
 4. **Placement in Parent Composition**:
    - Set precomposition anchor point to:
      $$\text{precompAnchor} = [ \text{innerRefX}, \text{padding} ]$$
@@ -382,7 +387,7 @@ In native AE, moving a layer's anchor point from $[A_x, A_y]$ to $[A'_x, A'_y]$ 
      \text{origParent.fromComp}(P_{\text{comp}}) & \text{if parented} \\
      P_{\text{comp}} & \text{if unparented}
      \end{cases}$$
-- **Result**: When $\text{padding} = 0$, the text inside the precomposition aligns over the original text with **zero vertical or horizontal displacement (0.00px error)**.
+- **Result**: When $\text{padding} = 0$, both the text and the background card inside the precomposition align over the original text with **zero vertical or horizontal displacement (0.00px error)** and the background card moves up to completely wrap Line 0.
 
 ---
 

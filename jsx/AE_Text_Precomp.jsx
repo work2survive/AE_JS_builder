@@ -1462,9 +1462,9 @@
                 try { isInner3D = !!innerTextLayer.threeDLayer; } catch (eInner3D) {}
 
                 var innerAnchorX = 0;
-                var innerAnchorY = -ascenderHeightInit;
-                var innerPosX = 0;
-                var innerPosY = padding;
+                var innerAnchorY = 0;
+                var innerPosX = padding;
+                var innerPosY = padding + ascenderHeightInit;
 
                 if (metrics.isBoxText) {
                     if (align === "left") {
