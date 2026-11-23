@@ -2055,7 +2055,7 @@
 
     // -------------------------------------------------------------------------
     // 15. Interactive Color Picker Component
-    // Reference: custom_rounded_rect.jsx
+    // Reference: custom_rounded_rect.jsx & windows-color-picker.js
     // -------------------------------------------------------------------------
     function createColorPickerGroup(parent, labelText, defaultHex, onChangeCallback) {
         var grp = parent.add("group");
@@ -2069,85 +2069,132 @@
 
         var btnSwatch = grp.add("button", undefined, "");
         btnSwatch.preferredSize = [40, 22];
+        btnSwatch.helpTip = "Click to pick color";
 
         var txtHex = grp.add("edittext", undefined, defaultHex);
         txtHex.preferredSize = [75, 22];
+        txtHex.characters = 7;
 
-        var curHex = defaultHex;
-        var curRgb = hexToRgb(defaultHex);
+        var curHex = defaultHex || "#FF2A6D";
+        var curRgb = hexToRgb(curHex);
 
-        function updateSwatch(rgb) {
-            btnSwatch.onDraw = function () {
+        btnSwatch.onDraw = function () {
+            try {
                 var g = this.graphics;
+                var rgb = hexToRgb(curHex);
                 var brush = g.newBrush(g.BrushType.SOLID_COLOR, [rgb[0], rgb[1], rgb[2], 1.0]);
-                var pen = g.newPen(g.PenType.SOLID_COLOR, [0.15, 0.15, 0.15, 1.0], 1);
-                g.rectPath(0, 0, this.size[0], this.size[1]);
+                var pen = g.newPen(g.PenType.SOLID_COLOR, [0.3, 0.3, 0.3, 1.0], 1);
+                g.newPath();
+                g.rectPath(0, 0, this.size ? this.size[0] : 40, this.size ? this.size[1] : 22);
                 g.fillPath(brush);
                 g.strokePath(pen);
-            };
-            btnSwatch.notify("onDraw");
+            } catch (eDraw) {}
+        };
+
+        function refresh() {
+            try {
+                if (typeof btnSwatch.notify === "function") btnSwatch.notify("onDraw");
+            } catch (eN) {}
+
+            try {
+                if (btnSwatch.domElement) {
+                    btnSwatch.domElement.style.backgroundColor = curHex;
+                    btnSwatch.domElement.style.border = "1px solid #555";
+                    btnSwatch.domElement.style.cursor = "pointer";
+                }
+            } catch (eDOM) {}
         }
 
-        updateSwatch(curRgb);
+        function setHex(newHex, triggerChange) {
+            if (!newHex) return;
+            var clean = String(newHex).replace(/^\s+|\s+$/g, "");
+            if (clean.indexOf("#") !== 0) clean = "#" + clean;
+            curHex = clean.toUpperCase();
+            curRgb = hexToRgb(curHex);
+            txtHex.text = curHex;
+
+            refresh();
+
+            if (triggerChange !== false && typeof onChangeCallback === "function") {
+                onChangeCallback(curRgb, curHex);
+            }
+        }
 
         btnSwatch.onClick = function () {
-            var pickedRgb = null;
-            if (typeof $.colorPicker === "function") {
-                try {
-                    var decimalCol = (Math.round(curRgb[0] * 255) << 16) +
-                                     (Math.round(curRgb[1] * 255) << 8) +
-                                     Math.round(curRgb[2] * 255);
-                    var res = $.colorPicker(decimalCol);
-                    if (res !== -1 && res !== null && res !== undefined) {
-                        pickedRgb = [
-                            ((res >> 16) & 255) / 255,
-                            ((res >> 8) & 255) / 255,
-                            (res & 255) / 255
-                        ];
-                    }
-                } catch (eCP) {}
+            // 1. Direct browser emulator Windows Color Picker support
+            var fnPicker = null;
+            if (typeof window !== "undefined" && typeof window.openWindowsColorPicker === "function") {
+                fnPicker = window.openWindowsColorPicker;
+            } else if (typeof global !== "undefined" && typeof global.openWindowsColorPicker === "function") {
+                fnPicker = global.openWindowsColorPicker;
+            } else if (typeof $.global !== "undefined" && typeof $.global.openWindowsColorPicker === "function") {
+                fnPicker = $.global.openWindowsColorPicker;
+            } else if (typeof openWindowsColorPicker === "function") {
+                fnPicker = openWindowsColorPicker;
             }
 
-            if (!pickedRgb && typeof document !== "undefined") {
+            if (fnPicker) {
+                fnPicker(curHex, function (selectedHex) {
+                    setHex(selectedHex, true);
+                });
+                return;
+            }
+
+            // 2. ExtendScript native $.colorPicker API with callback support
+            var hexNum = parseInt(curHex.replace("#", ""), 16);
+            var result = -1;
+            if (typeof $.colorPicker === "function") {
+                try {
+                    result = $.colorPicker(hexNum, function (selectedHex) {
+                        setHex(selectedHex, true);
+                    });
+                } catch (eCP) {
+                    try { result = $.colorPicker(hexNum); } catch (eCP2) {}
+                }
+            }
+
+            // Handle synchronous return in native After Effects
+            if (result !== -1 && result !== undefined && result !== null) {
+                var hexStr = Number(result).toString(16);
+                while (hexStr.length < 6) hexStr = "0" + hexStr;
+                setHex("#" + hexStr, true);
+                return;
+            }
+
+            // 3. Browser HTML5 input[type=color] fallback
+            if (typeof document !== "undefined" && typeof document.createElement === "function") {
                 try {
                     var inp = document.createElement("input");
                     inp.type = "color";
                     inp.value = curHex;
                     inp.onchange = function () {
-                        setHex(this.value);
+                        setHex(this.value, true);
                     };
                     inp.click();
                     return;
                 } catch (eDOM) {}
             }
-
-            if (pickedRgb) {
-                var newHex = rgbToHex(pickedRgb);
-                setHex(newHex);
-            }
         };
 
         txtHex.onChange = function () {
-            setHex(this.text);
+            var val = this.text.replace(/^\s+|\s+$/g, "");
+            if (val.indexOf("#") !== 0) val = "#" + val;
+            if (/^#[0-9A-Fa-f]{6}$/.test(val)) {
+                setHex(val, true);
+            }
         };
 
-        function setHex(newHex) {
-            if (!newHex) return;
-            var clean = newHex.indexOf("#") === 0 ? newHex : ("#" + newHex);
-            curHex = clean.toUpperCase();
-            curRgb = hexToRgb(curHex);
-            txtHex.text = curHex;
-            updateSwatch(curRgb);
-            if (typeof onChangeCallback === "function") {
-                onChangeCallback(curRgb, curHex);
-            }
-        }
+        // Initialize swatch appearance without triggering onChange
+        setHex(defaultHex, false);
 
         return {
             group: grp,
+            button: btnSwatch,
+            edittext: txtHex,
+            refresh: refresh,
             getRgb: function () { return curRgb; },
             getHex: function () { return curHex; },
-            setHex: setHex
+            setHex: function (h) { setHex(h, true); }
         };
     }
 
@@ -2652,6 +2699,11 @@
             win.layout.layout(true);
             win.layout.resize();
         }
+
+        try {
+            pickerHighlight.refresh();
+            pickerText.refresh();
+        } catch (eRef) {}
 
         return win;
     }
