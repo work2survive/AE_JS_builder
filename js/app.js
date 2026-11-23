@@ -16,6 +16,7 @@
 
     const APP_VERSION = '1.2.12';
     global.EMULATOR_VERSION = APP_VERSION;
+    global.AE_TEXT_GUIDE_URL = 'https://github.com/work2survive/AE_JS_builder/blob/main/AE_VS_JS_TEXT_RENDERING_DIFFERENCES.md';
 
     let renderer = null;
     let selectedLayer = null;
@@ -2511,6 +2512,7 @@
         initPanelResizers();
 
         renderTimeline();
+        appendConsole(`Adobe After Effects vs JS Text Rendering Differences Guide: ${global.AE_TEXT_GUIDE_URL}`);
     }
 
     if (document.readyState === 'loading') {

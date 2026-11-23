@@ -2,8 +2,10 @@
 
 [![GitHub Pages](https://img.shields.io/badge/Live%20Demo-GitHub%20Pages-2c8cff?style=for-the-badge&logo=github)](https://work2survive.github.io/AE_JS_builder/)
 [![Built with Antigravity](https://img.shields.io/badge/Built%20With-Antigravity-4285F4?style=for-the-badge&logo=google)](https://deepmind.google/)
+[![AE vs JS Typography Guide](https://img.shields.io/badge/Documentation-AE%20vs%20JS%20Typography%20Guide-8a2be2?style=for-the-badge&logo=adobeaftereffects)](https://github.com/work2survive/AE_JS_builder/blob/main/AE_VS_JS_TEXT_RENDERING_DIFFERENCES.md)
 
-**Live Browser Simulator**: [https://work2survive.github.io/AE_JS_builder/](https://work2survive.github.io/AE_JS_builder/)
+**Live Browser Simulator**: [https://work2survive.github.io/AE_JS_builder/](https://work2survive.github.io/AE_JS_builder/)  
+**Text Rendering Guide**: [https://github.com/work2survive/AE_JS_builder/blob/main/AE_VS_JS_TEXT_RENDERING_DIFFERENCES.md](https://github.com/work2survive/AE_JS_builder/blob/main/AE_VS_JS_TEXT_RENDERING_DIFFERENCES.md)
 
 An agnostic, browser-based runtime that emulates Adobe After Effects 2D/3D layers, shape vector contents (rectangles, ellipses, Bézier paths), property hierarchy, wiggle expressions, camera navigation, and ScriptUI UI panels.
 
@@ -195,7 +197,7 @@ The simulator includes built-in sample scripts located in [`samples/`](samples/)
      - **5 Row Alignment & Indent Modes**: Left Justified (0px indent), Center Justified (symmetric margins + tracking), Right Justified (14px right margin), Paragraph Indents (+24px) & Hanging Outdents (-18px / 18px left margin), and Advanced Synthesis (Faux Bold, Faux Italic, All Caps, Outline Strokes, Letter Tracking, and Baseline Shift).
      - **Visual Calibration Guides per Cell**: Background box boundary card (`boxTextSize`), origin crosshair `[0, 0]`, cell badge, and dynamic live `sourceRectAtTime()` cyan bounding outline.
      - **Global Emulator Calibration Engine**: Backed by the runtime `AETextCalibration` system in `js/ae-core.js` and `js/ae-renderer.js` that standardizes baseline ascent/descent, paragraph word wrapping, indents, and `sourceRectAtTime()` boundaries across all emulated JSX scripts.
-     - **Knowledge Base Guide**: Read [`AE_VS_JS_TEXT_RENDERING_DIFFERENCES.md`](AE_VS_JS_TEXT_RENDERING_DIFFERENCES.md) for the complete engineering guide on Point vs. Box text, coordinate origins, justification formulas, and expression vector slicing.
+     - **Knowledge Base Guide**: Read [`AE_VS_JS_TEXT_RENDERING_DIFFERENCES.md`](https://github.com/work2survive/AE_JS_builder/blob/main/AE_VS_JS_TEXT_RENDERING_DIFFERENCES.md) for the complete engineering guide on Point vs. Box text, coordinate origins, justification formulas, font substitutions, and expression vector slicing.
    - **Live Demo**: [https://work2survive.github.io/AE_JS_builder/?sample=text_calibration.jsx&autobuild=true](https://work2survive.github.io/AE_JS_builder/?sample=text_calibration.jsx&autobuild=true)
 
 3. **Text Roundabout** (`samples/text_roundabout.jsx` - v1.0):

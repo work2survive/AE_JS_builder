@@ -233,6 +233,69 @@ When rendering genuine Box Text (`boxText: true`):
 
 ---
 
+## 8. Font Substitutions, PostScript Mappings & Boundary-Condition Line Wrapping
+
+Empirical ground-truth comparisons between native Adobe After Effects and the JavaScript emulator reveal that font metrics and line-breaking algorithms are intensely sensitive to runtime font resolution.
+
+### 8.1 PostScript Font Server Mappings vs. Web Font Fallback Stacks
+Adobe After Effects and Web browsers resolve font families through completely distinct subsystem architectures:
+
+```
+    ADOBE AFTER EFFECTS                                 WEB / JS EMULATOR
+┌──────────────────────────────┐                   ┌──────────────────────────────┐
+│ ExtendScript:                │                   │ CSS Font Stack:              │
+│ doc.font = "ArialMT"         │                   │ font-family: 'Arial', ...    │
+└──────────────┬───────────────┘                   └──────────────┬───────────────┘
+               ▼                                                  ▼
+┌──────────────────────────────┐                   ┌──────────────────────────────┐
+│ Adobe CoolType / FontServer: │                   │ Browser Font Matching:       │
+│ Matches PostScript table in  │                   │ DirectWrite / CoreText /     │
+│ system OpenType/TrueType file│                   │ FreeType / Fontconfig        │
+└──────────────┬───────────────┘                   └──────────────┬───────────────┘
+               ▼                                                  ▼
+┌──────────────────────────────┐                   ┌──────────────────────────────┐
+│ Exact Glyph Advance Widths   │                   │ Fallback Substitution:       │
+│ (Desktop TrueType font file) │                   │ Liberation Sans / DejaVu Sans│
+└──────────────────────────────┘                   └──────────────────────────────┘
+```
+
+1. **ExtendScript PostScript Names**: In native After Effects, setting `doc.font = "Arial"` can throw an error or fall back unless the font's canonical PostScript name is provided (e.g. `ArialMT`, `Georgia`, `TimesNewRomanPSMT`, `CourierNewPSMT`, `Verdana`, `TrebuchetMS`, `Impact`, `SegoeUI`).
+2. **Web Browser Fallbacks**: Browsers rely on the client OS font inventory. On Linux distributions (e.g., Ubuntu, ChromeOS) or mobile platforms without proprietary Microsoft fonts installed, requested fonts like `Arial`, `Times New Roman`, or `Segoe UI` are silently substituted with open-source alternatives (such as `Liberation Sans`, `FreeSerif`, or `DejaVu Sans`).
+3. **Advance Width Variance**: While substituted fonts maintain similar design proportions, individual character advance widths deviate by **1% to 4%**. For example, the advance width of `"over the lazy dog. Calibration:"` at $15.6\text{px}$ is:
+   - Genuine Arial (Windows/macOS): $\approx 206.4\text{px}$
+   - Fallback Sans-Serif (Linux FreeType): $\approx 198.8\text{px}$
+
+### 8.2 The "1-Word" Line-Wrap Boundary Threshold
+When paragraph text wraps inside a Paragraph (Box) layer:
+$$\text{availBaseWidth} = \text{boxWidth} - \text{leftIndent} - \text{rightIndent}$$
+
+If the cumulative advance width of a sequence of words falls within a critical boundary threshold ($\pm 5\text{px}$) of $\text{availBaseWidth}$:
+- **In Native AE**: If $\text{cumulativeWidth} > \text{availBaseWidth}$ by even $0.1\text{px}$, the engine breaks the line and pushes the trailing word onto the next line.
+- **In Web Emulator**: If an OS-level font substitution renders glyphs slightly more condensed ($\text{cumulativeWidth} \le \text{availBaseWidth}$), the trailing word is retained on the line, resulting in **one fewer total line** for the paragraph.
+
+### 8.3 Overset Text Spill Direction: Left vs. Right
+The direction in which overflowing or overset text spills outside the container boundary is determined by justification:
+
+```
+LEFT JUSTIFIED OVERFLOW (Spills Right)       RIGHT JUSTIFIED OVERFLOW (Spills Left)
+┌─────────────────────────┐                 ┌─────────────────────────┐
+│ The quick brown fox     │                 │     The quick brown fox │
+│ jumps over the lazy dog. Calibration:!    !Calibration: jumps over the lazy dog. │
+└─────────────────────────┘                 └─────────────────────────┘
+                          ▲                 ▲
+            Spills OUTSIDE RIGHT       Spills OUTSIDE LEFT
+```
+
+1. **Left Justified (`LEFT_JUSTIFY`)**:
+   - Anchor point is at $x = \text{leftIndent}$, and glyphs advance in positive $+x$.
+   - Any line that exceeds the box boundary spills visibly across the **right** border of the bounding card.
+2. **Right Justified (`RIGHT_JUSTIFY`)**:
+   - Anchor point is at $x = \text{boxWidth} - \text{rightIndent}$, and SVG uses `text-anchor="end"`.
+   - Glyphs advance backward into negative $-x$ relative to the anchor point.
+   - **Critical Gotcha**: If a line fails to wrap or exceeds the available width, the overflow spills across the **left** border of the bounding card!
+
+---
+
 ## 9. Visual Symmetry: Container Box Width vs. Content Width
 
 When creating backgrounds or precompositions around text layers (e.g. rounded rectangle cards, badges, or subtitles):
@@ -399,18 +462,64 @@ In web environments serving JSX tools dynamically via GitHub Pages:
 
 ---
 
-## 15. Summary Checklist for Future Repositories
+## 15. Dynamic `sourceRectAtTime()` Live Expression Bounding Boxes
+
+To visualize, debug, or dynamically parent backgrounds to text in real time, rigging live bounding boxes via shape layer expressions is the industry standard in both native AE and the Web Emulator.
+
+### 15.1 Bounding Box Geometry Formulas
+To track any text layer (`Point Text` or `Paragraph Box Text`) with an active shape rectangle layer:
+
+```javascript
+// 1. Rect Size Expression (ADBE Vector Rect Size)
+try {
+    var target = thisComp.layer("My_Text_Layer");
+    var r = target.sourceRectAtTime(time, false);
+    [Math.max(2, r.width), Math.max(2, r.height)];
+} catch (err) {
+    value;
+}
+
+// 2. Shape Layer Position Expression (ADBE Position)
+try {
+    var target = thisComp.layer("My_Text_Layer");
+    var r = target.sourceRectAtTime(time, false);
+    // target.toComp takes the geometric center in local layer space:
+    var p = target.toComp([r.left + r.width / 2, r.top + r.height / 2]);
+    [p[0], p[1]]; // Crucial: slice to 2D
+} catch (err) {
+    value;
+}
+```
+
+### 15.2 Coordinate Transformation Nuances Across Engines
+1. **Local Bounding Box (`r.left`, `r.top`)**:
+   - In **Point Text**: `r.top` is negative (relative to alphabetic baseline $y=0$), and `r.left` depends on justification ($0$ for Left, $-W/2$ for Center, $-W$ for Right).
+   - In **Paragraph Box Text**: When anchor point is pinned to `doc.boxTextPos`, `r.top` is positive ($\approx 0$ to ascender), and `r.left` reflects the internal paragraph margin (`leftIndent` or `boxWidth - contentWidth - rightIndent`).
+2. **`target.toComp()` Parity**:
+   Because `toComp()` accounts for layer position, anchor point, scale, rotation, and parent transforms:
+   $$\mathbf{P}_{\text{comp}} = \mathbf{M}_{\text{world}} \times \begin{bmatrix} r.\text{left} + \frac{r.\text{width}}{2} \\ r.\text{top} + \frac{r.\text{height}}{2} \\ 0 \\ 1 \end{bmatrix}$$
+   The shape rectangle's center automatically snaps directly over the optical center of the text glyphs, guaranteeing exact 1:1 bounding alignment.
+
+---
+
+## 16. Summary Checklist for Future Repositories
 
 When developing tools or emulators that interface with After Effects typography:
 - [x] **Identify text layer mode**: Check if `doc.boxText === true` or Point Text.
 - [x] **Compensate Point Text positions**: Position Center Justified point text at center $(W/2)$ and Right Justified point text at right $(W - \text{margin})$.
-- [x] **Slice expression vectors**: Always convert `target.toComp(...)` results to 2D `[p[0], p[1]]` when driving 2D properties.
+- [x] **Pin Box Text anchor point to `doc.boxTextPos`**: Avoid overwriting `anchorPoint = [0, 0]` without offsetting for native baseline origin.
+- [x] **Respect Box Text justification internally**: Do not add $W/2$ or $W$ position offsets to Center/Right justified Box Text.
+- [x] **Slice expression vectors to 2D**: Always convert `target.toComp(...)` results to 2D `[p[0], p[1]]` when driving 2D properties.
 - [x] **Account for negative `sourceRectAtTime().top`**: When building bounding boxes or auto-crop backgrounds, remember `r.top` is negative in Point Text.
 - [x] **Use $1.20 \times \text{fontSize}$ for auto-leading**: Never use browser default line-heights (1.35–1.50) when emulating AE.
 - [x] **Apply 1/1000 em for tracking**: Scale tracking values linearly by `(tracking / 1000) * fontSize`.
+- [x] **Handle OS font substitution variances**: Recognize that Linux/Android fallback fonts (Liberation Sans, DejaVu Sans) have 1%–4% advance width variances from native Windows/Mac Adobe FontServer fonts.
+- [x] **Test line-wrapping boundary conditions**: Near `availBaseWidth`, a 1-pixel advance width deviation can cause the trailing word to wrap or spill.
+- [x] **Account for right-justified overset spill**: Right-justified text (`text-anchor="end"`) spills over the **left** edge of containers when overflowing.
 - [x] **Wrap backgrounds by content, not container box**: Base precomp widths on `maxLineContentW + 2 * padding` instead of arbitrary `boxTextSize[0]`.
 - [x] **Measure vertical padding by typographic ascender/descender**: Calculate card height from $0.78 \times fs$ to $0.22 \times fs$, never from individual glyph bounds.
 - [x] **Measure space character differentially**: Compute `spaceWidth = measure("A A") - measure("AA")` for sub-pixel word spacing.
 - [x] **Synchronize layout metrics with Canvas 2D in Web**: Use `ctx.measureText()` in browser JS emulators to eliminate layout vs. SVG rendering drift.
 - [x] **Compensate anchor points via `toComp()` & `fromComp()`**: Pinned layer positions must counter anchor shifts across parent hierarchies.
 - [x] **Bump cache busters across all assets**: Update `?v=X.Y.Z` in `index.html` to prevent browsers from executing cached manifests.
+

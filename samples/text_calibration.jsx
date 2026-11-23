@@ -38,7 +38,9 @@
 // COMPATIBILITY:
 //   - Adobe After Effects CS6 through CC 2026+ (ExtendScript ES3 engine).
 //   - Web AE JSX & ScriptUI Simulator runtime (with AETextCalibration engine).
-//   - Works both as a dockable panel (ScriptUI Panels) and via File > Scripts > Run.
+//
+// KNOWLEDGE BASE & CALIBRATION GUIDE:
+//   https://github.com/work2survive/AE_JS_builder/blob/main/AE_VS_JS_TEXT_RENDERING_DIFFERENCES.md
 // =============================================================================
 
 (function (thisObj) {
@@ -913,6 +915,23 @@
         var btnToggleOutlines = grpBtns.add("button", undefined, "👁️ Toggle Bounds");
         btnToggleOutlines.preferredSize = [120, 32];
         btnToggleOutlines.helpTip = "Toggles visibility of sourceRect bounding outline layers.";
+
+        var btnDoc = grpBtns.add("button", undefined, "📖 Text Guide");
+        btnDoc.preferredSize = [100, 32];
+        btnDoc.helpTip = "Opens or logs the AE vs JS Text Rendering Differences Knowledge Base Guide.";
+        btnDoc.onClick = function () {
+            var url = "https://github.com/work2survive/AE_JS_builder/blob/main/AE_VS_JS_TEXT_RENDERING_DIFFERENCES.md";
+            try {
+                if (typeof window !== "undefined" && typeof window.open === "function") {
+                    window.open(url, "_blank");
+                }
+            } catch (eWin) {}
+            try {
+                if (typeof $ !== "undefined" && typeof $.writeln === "function") {
+                    $.writeln("AE vs JS Text Guide: " + url);
+                }
+            } catch (eWriteln) {}
+        };
 
         // Status Label
         var lblStatus = win.add("statictext", undefined, "✓ Matrix generated (40 text boxes in 'AE_Text_Calibration_Matrix_8x5').");
