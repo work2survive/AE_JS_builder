@@ -1,37 +1,40 @@
 // Co-authored & architected with Google DeepMind Antigravity.
 // =============================================================================
-// ADOBE AFTER EFFECTS EXTENDSCRIPT & SCRIPTUI PANEL: AE ALIGN ANCHOR POINT v1.0.0
+// ADOBE AFTER EFFECTS EXTENDSCRIPT & SCRIPTUI PANEL: AE ALIGN ANCHOR POINT v1.1.0
 // =============================================================================
 //
 // PURPOSE:
 //   Aligns the anchor point of any comp, text box (point or paragraph), shape/vector
-//   layer, solid, footage, or null to the Left, Center, or Right edge (X) and
-//   Top, Center, or Bottom edge (Y) WITHOUT shifting the layer's visual content on screen.
+//   layer, solid, footage, or null to Left, Center, or Right (X) and
+//   Top, Center, or Bottom (Y) WITHOUT shifting the layer's visual content on screen.
 //
 // KEY MECHANICS:
 //   1. Zero-Shift Content Invariance:
 //      - Keeps layer content visually locked in place using scale-safe and rotation-safe
 //        position compensation formulas.
 //   2. Dynamic Expression Linking (Universal Compatibility):
-//      - Uses sourceRectAtTime(time, false) on Anchor Point and Position.
+//      - Supports both sourceRectAtTime(time, false) and Stated Width & Height methods.
 //      - Anchor Point Expression:
 //          const r = sourceRectAtTime(time, false);
 //          [r.left, r.top]; // for Top-Left
 //      - Position Expression (Scale-Safe):
 //          const r = sourceRectAtTime(time, false);
-//          const s = transform.scale / 100;
-//          const target = [r.left, r.top];
+//          const s = [transform.scale[0] / 100, transform.scale[1] / 100];
+//          const targetX = r.left;
+//          const targetY = r.top;
 //          const origA = transform.anchorPoint.value;
-//          value + [(target[0] - origA[0]) * s[0], (target[1] - origA[1]) * s[1]];
-//   3. One-Time Static Bake Mode:
-//      - Evaluates the offset and sets numeric values directly without expressions.
+//          value + [(targetX - origA[0]) * s[0], (targetY - origA[1]) * s[1]];
+//   3. Stated Width & Height Option:
+//      - Uses declared box text width/height, solid size, or precomp dimensions.
 //   4. Vector Cross Indicator Child Layer:
-//      - Creates a vector crosshair shape layer linked as a child layer.
-//      - Position is ALWAYS locked to [0, 0] so it dynamically indicates the anchor
-//        point pivot across rotations, scales, animations, and text updates.
-//      - Marked as Guide Layer so it never renders in final exports.
-//   5. ScriptUI Panel & 3x3 Visual Matrix:
-//      - Quick 9-point preset grid, individual X/Y radio controls, and demo comp generator.
+//      - Shape layer linked as a child layer with position [0, 0] and anchor point [0, 0].
+//      - Guideline layer (guideLayer = true) visible in working viewport, non-renderable in exports.
+//   5. State Storage Effect:
+//      - Attaches "Anchor Alignment State" effect controls (Align X, Align Y, Bounds Mode)
+//        on the target layer storing exact alignment status.
+//   6. Intelligent Dummy Text Box Creation & Live Updating:
+//      - If nothing is selected, creates a dummy text box in the center of the viewport.
+//      - If a layer is already selected, immediately updates it with the new alignment.
 //
 // REPOSITORY:
 //   https://github.com/work2survive/AE_JS_builder
@@ -44,7 +47,7 @@
     "use strict";
 
     var SCRIPT_NAME = "AE Align Anchor Point";
-    var SCRIPT_VERSION = "v1.0.0";
+    var SCRIPT_VERSION = "v1.1.0";
     var REPO_URL = "https://github.com/work2survive/AE_JS_builder";
     var README_URL = "https://github.com/work2survive/AE_JS_builder/blob/main/samples/AE_Align_Anchor_Point_README.md";
 
@@ -67,10 +70,9 @@
     // -------------------------------------------------------------------------
 
     /**
-     * Obtains the local bounding rectangle of any layer via sourceRectAtTime
-     * with robust fallbacks for precomps, solids, shapes, and text.
+     * Obtains the dynamic bounding box via sourceRectAtTime(time, false)
      */
-    function getLayerBounds(layer, compTime) {
+    function getLayerSourceRectBounds(layer, compTime) {
         if (!layer) return { left: 0, top: 0, width: 100, height: 100 };
         var t = (compTime !== undefined) ? compTime : 0;
 
@@ -120,7 +122,7 @@
             }
         } catch (eShape) {}
 
-        // 4. Precomp, Solid, Footage dimensions
+        // 4. Precomp, Solid, Footage fallback
         var w = 0, h = 0;
         if (layer.source && typeof layer.source.width === "number" && typeof layer.source.height === "number") {
             w = layer.source.width;
@@ -134,10 +136,86 @@
             return { left: 0, top: 0, width: w, height: h };
         }
 
-        // 5. Fallback to containing composition size
         var cW = (layer.containingComp && layer.containingComp.width) ? layer.containingComp.width : 1920;
         var cH = (layer.containingComp && layer.containingComp.height) ? layer.containingComp.height : 1080;
         return { left: 0, top: 0, width: cW, height: cH };
+    }
+
+    /**
+     * Obtains stated / nominal dimensions (declared box text width/height, solid size, or precomp dimensions)
+     */
+    function getLayerStatedBounds(layer) {
+        if (!layer) return { left: 0, top: 0, width: 100, height: 100 };
+
+        // 1. Text Layer (Box Text stated size)
+        try {
+            var textProp = layer.property("ADBE Text Properties") || layer.property("Text");
+            if (textProp) {
+                var docProp = textProp.property("ADBE Text Document") || layer.property("Source Text");
+                if (docProp && docProp.value) {
+                    var doc = docProp.value;
+                    if (doc.boxText && doc.boxTextSize) {
+                        var bPos = doc.boxTextPos || [0, 0];
+                        return {
+                            left: bPos[0],
+                            top: bPos[1],
+                            width: doc.boxTextSize[0],
+                            height: doc.boxTextSize[1]
+                        };
+                    }
+                }
+            }
+        } catch (eBox) {}
+
+        // 2. Precomp or Footage
+        if (layer.source && typeof layer.source.width === "number" && typeof layer.source.height === "number") {
+            return {
+                left: 0,
+                top: 0,
+                width: layer.source.width,
+                height: layer.source.height
+            };
+        }
+
+        // 3. Solid or Stated Layer Width/Height
+        if (typeof layer.width === "number" && typeof layer.height === "number" && layer.width > 0 && layer.height > 0) {
+            return {
+                left: 0,
+                top: 0,
+                width: layer.width,
+                height: layer.height
+            };
+        }
+
+        // 4. Shape Layer Stated Rectangle Size
+        try {
+            var contents = layer.property("Contents") || layer.property("ADBE Root Vectors Group");
+            if (contents && contents.numProperties > 0) {
+                for (var i = 1; i <= contents.numProperties; i++) {
+                    var grp = contents.property(i);
+                    var gContents = grp.property ? (grp.property("Contents") || grp) : null;
+                    if (gContents) {
+                        for (var j = 1; j <= gContents.numProperties; j++) {
+                            var p = gContents.property(j);
+                            if (p && (p.matchName === "ADBE Vector Shape - Rect" || p.name === "Rectangle Path 1")) {
+                                var szP = p.property("Size") || p.property("ADBE Vector Rect Size");
+                                if (szP && szP.value) {
+                                    return {
+                                        left: -szP.value[0] / 2,
+                                        top: -szP.value[1] / 2,
+                                        width: szP.value[0],
+                                        height: szP.value[1]
+                                    };
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (eShp) {}
+
+        // 5. Fallback to sourceRectAtTime
+        return getLayerSourceRectBounds(layer, 0);
     }
 
     /**
@@ -221,43 +299,111 @@
     }
 
     // -------------------------------------------------------------------------
-    // 3. Expression Generator Engine
+    // 3. Expression Generator Engine (sourceRect vs Stated Dimensions)
     // -------------------------------------------------------------------------
 
-    function getTargetXExpression(xMode) {
+    function getTargetXExpression(xMode, boundsMethod) {
+        if (boundsMethod === "stated") {
+            if (xMode === "left") return "bLeft";
+            if (xMode === "right") return "bLeft + bW";
+            return "bLeft + bW / 2";
+        }
         if (xMode === "left") return "r.left";
         if (xMode === "right") return "r.left + r.width";
         return "r.left + r.width / 2";
     }
 
-    function getTargetYExpression(yMode) {
+    function getTargetYExpression(yMode, boundsMethod) {
+        if (boundsMethod === "stated") {
+            if (yMode === "top") return "bTop";
+            if (yMode === "bottom") return "bTop + bH";
+            return "bTop + bH / 2";
+        }
         if (yMode === "top") return "r.top";
         if (yMode === "bottom") return "r.top + r.height";
         return "r.top + r.height / 2";
     }
 
-    function buildAnchorExpression(xMode, yMode, is3D) {
-        var exprX = getTargetXExpression(xMode);
-        var exprY = getTargetYExpression(yMode);
+    function buildAnchorExpression(xMode, yMode, boundsMethod, is3D) {
         var zPart = is3D ? ", value[2]" : "";
-        return "// AE Align Anchor Point (Dynamic Expression)\n" +
+        if (boundsMethod === "stated") {
+            var exprXStated = getTargetXExpression(xMode, "stated");
+            var exprYStated = getTargetYExpression(yMode, "stated");
+            return "// AE Align Anchor Point (Stated Dimensions)\n" +
+                   "let bLeft = 0, bTop = 0, bW = thisLayer.width, bH = thisLayer.height;\n" +
+                   "try {\n" +
+                   "    const rawDoc = thisLayer.text ? thisLayer.text.sourceText : thisLayer.sourceText;\n" +
+                   "    const sDoc = (rawDoc && rawDoc.value) ? rawDoc.value : rawDoc;\n" +
+                   "    if (sDoc && sDoc.boxText && sDoc.boxTextSize) {\n" +
+                   "        bW = sDoc.boxTextSize[0];\n" +
+                   "        bH = sDoc.boxTextSize[1];\n" +
+                   "        if (sDoc.boxTextPos) { bLeft = sDoc.boxTextPos[0]; bTop = sDoc.boxTextPos[1]; }\n" +
+                   "    } else if (thisLayer.boxTextSize) {\n" +
+                   "        bW = thisLayer.boxTextSize[0];\n" +
+                   "        bH = thisLayer.boxTextSize[1];\n" +
+                   "    }\n" +
+                   "} catch(e) {}\n" +
+                   "const targetX = " + exprXStated + ";\n" +
+                   "const targetY = " + exprYStated + ";\n" +
+                   "[targetX, targetY" + zPart + "];";
+        }
+
+        var exprX = getTargetXExpression(xMode, "sourceRect");
+        var exprY = getTargetYExpression(yMode, "sourceRect");
+        return "// AE Align Anchor Point (Dynamic sourceRectAtTime)\n" +
                "const r = sourceRectAtTime(time, false);\n" +
                "const targetX = " + exprX + ";\n" +
                "const targetY = " + exprY + ";\n" +
                "[targetX, targetY" + zPart + "];";
     }
 
-    function buildPositionExpression(xMode, yMode, is3D) {
-        var exprX = getTargetXExpression(xMode);
-        var exprY = getTargetYExpression(yMode);
+    function buildPositionExpression(xMode, yMode, boundsMethod, is3D, baseA) {
         var zPart = is3D ? ", (value.length > 2 ? value[2] : 0)" : "";
+        var baseAx = (baseA && typeof baseA[0] === "number") ? baseA[0] : 0;
+        var baseAy = (baseA && typeof baseA[1] === "number") ? baseA[1] : 0;
 
-        return "// AE Align Anchor Point (Scale & Rotation Safe Compensator)\n" +
+        if (boundsMethod === "stated") {
+            var exprXStated = getTargetXExpression(xMode, "stated");
+            var exprYStated = getTargetYExpression(yMode, "stated");
+            return "// AE Align Anchor Point (Stated Dimensions Scale-Safe Compensator)\n" +
+                   "let bLeft = 0, bTop = 0, bW = thisLayer.width, bH = thisLayer.height;\n" +
+                   "try {\n" +
+                   "    const rawDoc = thisLayer.text ? thisLayer.text.sourceText : thisLayer.sourceText;\n" +
+                   "    const sDoc = (rawDoc && rawDoc.value) ? rawDoc.value : rawDoc;\n" +
+                   "    if (sDoc && sDoc.boxText && sDoc.boxTextSize) {\n" +
+                   "        bW = sDoc.boxTextSize[0];\n" +
+                   "        bH = sDoc.boxTextSize[1];\n" +
+                   "        if (sDoc.boxTextPos) { bLeft = sDoc.boxTextPos[0]; bTop = sDoc.boxTextPos[1]; }\n" +
+                   "    } else if (thisLayer.boxTextSize) {\n" +
+                   "        bW = thisLayer.boxTextSize[0];\n" +
+                   "        bH = thisLayer.boxTextSize[1];\n" +
+                   "    }\n" +
+                   "} catch(e) {}\n" +
+                   "const s = [transform.scale[0] / 100, transform.scale[1] / 100];\n" +
+                   "const targetX = " + exprXStated + ";\n" +
+                   "const targetY = " + exprYStated + ";\n" +
+                   "const origA = [" + baseAx + ", " + baseAy + "];\n" +
+                   "const dx = (targetX - origA[0]) * s[0];\n" +
+                   "const dy = (targetY - origA[1]) * s[1];\n" +
+                   "const rot = transform.rotation;\n" +
+                   "if (rot && Math.abs(rot) > 0.0001) {\n" +
+                   "    const rad = rot * (Math.PI / 180);\n" +
+                   "    const rx = dx * Math.cos(rad) - dy * Math.sin(rad);\n" +
+                   "    const ry = dx * Math.sin(rad) + dy * Math.cos(rad);\n" +
+                   "    [value[0] + rx, value[1] + ry" + zPart + "];\n" +
+                   "} else {\n" +
+                   "    [value[0] + dx, value[1] + dy" + zPart + "];\n" +
+                   "}";
+        }
+
+        var exprX = getTargetXExpression(xMode, "sourceRect");
+        var exprY = getTargetYExpression(yMode, "sourceRect");
+        return "// AE Align Anchor Point (sourceRectAtTime Scale-Safe Compensator)\n" +
                "const r = sourceRectAtTime(time, false);\n" +
                "const s = [transform.scale[0] / 100, transform.scale[1] / 100];\n" +
                "const targetX = " + exprX + ";\n" +
                "const targetY = " + exprY + ";\n" +
-               "const origA = transform.anchorPoint.value;\n" +
+               "const origA = [" + baseAx + ", " + baseAy + "];\n" +
                "const dx = (targetX - origA[0]) * s[0];\n" +
                "const dy = (targetY - origA[1]) * s[1];\n" +
                "const rot = transform.rotation;\n" +
@@ -265,14 +411,119 @@
                "    const rad = rot * (Math.PI / 180);\n" +
                "    const rx = dx * Math.cos(rad) - dy * Math.sin(rad);\n" +
                "    const ry = dx * Math.sin(rad) + dy * Math.cos(rad);\n" +
-               "    value + [rx, ry" + zPart + "];\n" +
+               "    [value[0] + rx, value[1] + ry" + zPart + "];\n" +
                "} else {\n" +
-               "    value + [dx, dy" + zPart + "];\n" +
+               "    [value[0] + dx, value[1] + dy" + zPart + "];\n" +
                "}";
     }
 
     // -------------------------------------------------------------------------
-    // 4. Vector Crosshair Child Indicator Builder
+    // 4. Alignment State Storage Effect
+    // -------------------------------------------------------------------------
+
+    var ALIGN_X_INDICES = { "left": 0, "center": 1, "right": 2 };
+    var ALIGN_Y_INDICES = { "top": 0, "center": 1, "bottom": 2 };
+    var BOUNDS_MODE_INDICES = { "sourceRect": 0, "stated": 1 };
+
+    /**
+     * Stores alignment state directly on targetLayer as effect slider controls
+     */
+    function storeAlignmentEffect(layer, xMode, yMode, boundsMethod, baseA) {
+        if (!layer) return;
+        try {
+            var fxParade = layer.property("ADBE Effect Parade") || layer.property("Effects");
+            if (!fxParade) return;
+
+            var xVal = ALIGN_X_INDICES[xMode] !== undefined ? ALIGN_X_INDICES[xMode] : 0;
+            var yVal = ALIGN_Y_INDICES[yMode] !== undefined ? ALIGN_Y_INDICES[yMode] : 0;
+            var bVal = BOUNDS_MODE_INDICES[boundsMethod] !== undefined ? BOUNDS_MODE_INDICES[boundsMethod] : 0;
+
+            // 1. Slider: Anchor Align X
+            var effX = fxParade.property("Anchor Align X") || fxParade.addProperty("ADBE Slider Control");
+            if (effX) {
+                effX.name = "Anchor Align X";
+                var pX = effX.property("ADBE Slider Control-0001") || effX.property(1);
+                if (pX) pX.setValue(xVal);
+            }
+
+            // 2. Slider: Anchor Align Y
+            var effY = fxParade.property("Anchor Align Y") || fxParade.addProperty("ADBE Slider Control");
+            if (effY) {
+                effY.name = "Anchor Align Y";
+                var pY = effY.property("ADBE Slider Control-0001") || effY.property(1);
+                if (pY) pY.setValue(yVal);
+            }
+
+            // 3. Slider: Anchor Bounds Mode
+            var effB = fxParade.property("Anchor Bounds Mode") || fxParade.addProperty("ADBE Slider Control");
+            if (effB) {
+                effB.name = "Anchor Bounds Mode";
+                var pB = effB.property("ADBE Slider Control-0001") || effB.property(1);
+                if (pB) pB.setValue(bVal);
+            }
+
+            // 4. Optional Point Control: Anchor Align [X, Y]
+            try {
+                var effPt = fxParade.property("Anchor Align [X, Y]") || fxParade.addProperty("ADBE Point Control");
+                if (effPt) {
+                    effPt.name = "Anchor Align [X, Y]";
+                    var pPt = effPt.property("ADBE Point Control-0001") || effPt.property(1);
+                    if (pPt) pPt.setValue([xVal, yVal]);
+                }
+            } catch (ePt) {}
+
+            // 5. Point Control: Anchor Base Point
+            try {
+                if (baseA && typeof baseA[0] === "number") {
+                    var effBasePt = fxParade.property("Anchor Base Point") || fxParade.addProperty("ADBE Point Control");
+                    if (effBasePt) {
+                        effBasePt.name = "Anchor Base Point";
+                        var pBasePt = effBasePt.property("ADBE Point Control-0001") || effBasePt.property(1);
+                        if (pBasePt) pBasePt.setValue([baseA[0], baseA[1]]);
+                    }
+                }
+            } catch (eBasePt) {}
+        } catch (eStore) {}
+    }
+
+    /**
+     * Reads alignment state from stored effect sliders on the layer (if present)
+     */
+    function readAlignmentEffect(layer) {
+        if (!layer) return null;
+        try {
+            var fxParade = layer.property("ADBE Effect Parade") || layer.property("Effects");
+            if (!fxParade) return null;
+
+            var effX = fxParade.property("Anchor Align X");
+            var effY = fxParade.property("Anchor Align Y");
+            if (!effX || !effY) return null;
+
+            var pX = effX.property("ADBE Slider Control-0001") || effX.property(1);
+            var pY = effY.property("ADBE Slider Control-0001") || effY.property(1);
+            var xVal = Math.round(pX ? pX.value : 0);
+            var yVal = Math.round(pY ? pY.value : 0);
+
+            var xModes = ["left", "center", "right"];
+            var yModes = ["top", "center", "bottom"];
+
+            var effB = fxParade.property("Anchor Bounds Mode");
+            var pB = effB ? (effB.property("ADBE Slider Control-0001") || effB.property(1)) : null;
+            var bVal = Math.round(pB ? pB.value : 0);
+            var bModes = ["sourceRect", "stated"];
+
+            return {
+                xMode: xModes[xVal] || "left",
+                yMode: yModes[yVal] || "top",
+                boundsMethod: bModes[bVal] || "sourceRect"
+            };
+        } catch (eRead) {
+            return null;
+        }
+    }
+
+    // -------------------------------------------------------------------------
+    // 5. Vector Crosshair Child Indicator Builder
     // -------------------------------------------------------------------------
 
     var COLOR_PRESETS = {
@@ -285,6 +536,7 @@
 
     /**
      * Creates or updates a vector cross shape layer parented to targetLayer at [0, 0]
+     * with anchor point [0, 0], marked as a guide layer (non-renderable).
      */
     function attachAnchorCross(comp, targetLayer, crossSize, isGuide, colorName) {
         if (!comp || !targetLayer) return null;
@@ -310,7 +562,7 @@
             crossLayer.name = crossName;
         }
 
-        crossLayer.parent = null; // Unparent momentarily during setup
+        crossLayer.parent = null; // Unparent momentarily during vector setup
 
         // Clear previous vector contents
         var contents = crossLayer.property("Contents") || crossLayer.property("ADBE Root Vectors Group");
@@ -335,22 +587,32 @@
         rectV.property("Size").setValue([strokeW, crossSize]);
         rectV.property("Position").setValue([0, 0]);
 
-        // 3. Center Dot Ring
+        // 3. Center Optical Dot
         var dot = grpContents.addProperty("ADBE Vector Shape - Ellipse");
         dot.name = "Center Pivot Dot";
-        dot.property("Size").setValue([strokeW * 2.8, strokeW * 2.8]);
+        dot.property("Size").setValue([strokeW * 3.0, strokeW * 3.0]);
         dot.property("Position").setValue([0, 0]);
 
         // 4. Fill Color
         var fill = grpContents.addProperty("ADBE Vector Graphic - Fill");
         fill.property("Color").setValue(col);
 
+        // 5. Outer Reticle Ring Stroke (for high visibility on any background)
+        var ring = grpContents.addProperty("ADBE Vector Shape - Ellipse");
+        ring.name = "Reticle Outer Ring";
+        ring.property("Size").setValue([crossSize * 0.72, crossSize * 0.72]);
+        ring.property("Position").setValue([0, 0]);
+
+        var ringStroke = grpContents.addProperty("ADBE Vector Graphic - Stroke");
+        ringStroke.property("Color").setValue(col);
+        ringStroke.property("Stroke Width").setValue(1.5);
+
         // Properties & Transform
         crossLayer.guideLayer = Boolean(isGuide);
         crossLayer.threeDLayer = Boolean(targetLayer.threeDLayer);
         crossLayer.label = 14; // Cyan label in AE
 
-        // Child position is ALWAYS locked to [0, 0]
+        // Child position AND anchor point are ALWAYS locked to [0, 0]
         var is3D = targetLayer.threeDLayer;
         crossLayer.transform.anchorPoint.setValue(is3D ? [0, 0, 0] : [0, 0]);
         crossLayer.transform.position.setValue(is3D ? [0, 0, 0] : [0, 0]);
@@ -383,16 +645,16 @@
     }
 
     // -------------------------------------------------------------------------
-    // 5. Core Alignment Execution Logic
+    // 6. Core Alignment Execution Logic
     // -------------------------------------------------------------------------
 
-    function alignLayerAnchorPoint(layer, xMode, yMode, useExpressions, createCross, isGuide, crossSize, crossColor) {
+    function alignLayerAnchorPoint(layer, xMode, yMode, boundsMethod, useExpressions, createCross, isGuide, crossSize, crossColor) {
         if (!layer) return false;
         var comp = layer.containingComp;
         var curTime = comp ? comp.time : 0;
         var is3D = Boolean(layer.threeDLayer);
 
-        var bounds = getLayerBounds(layer, curTime);
+        var bounds = (boundsMethod === "stated") ? getLayerStatedBounds(layer) : getLayerSourceRectBounds(layer, curTime);
         var targetA = computeTargetAnchor(bounds, xMode, yMode);
 
         var apProp = layer.property("Transform").property("Anchor Point");
@@ -410,16 +672,26 @@
         var deltaAx = targetA[0] - curA[0];
         var deltaAy = targetA[1] - curA[1];
 
+        var fxParade = layer.property("ADBE Effect Parade") || layer.property("Effects");
+        var effBase = fxParade ? fxParade.property("Anchor Base Point") : null;
+        var baseA;
+        if (effBase && effBase.property(1) && effBase.property(1).value) {
+            baseA = effBase.property(1).value;
+        } else if (apProp._baseValue && Array.isArray(apProp._baseValue)) {
+            baseA = [apProp._baseValue[0], apProp._baseValue[1]];
+        } else {
+            baseA = [curA[0], curA[1]];
+        }
+
         if (useExpressions) {
             // --- Dynamic Expression Mode ---
-            var aExpr = buildAnchorExpression(xMode, yMode, is3D);
-            var pExpr = buildPositionExpression(xMode, yMode, is3D);
+            var aExpr = buildAnchorExpression(xMode, yMode, boundsMethod, is3D);
+            var pExpr = buildPositionExpression(xMode, yMode, boundsMethod, is3D, baseA);
 
             apProp.expression = aExpr;
             posProp.expression = pExpr;
         } else {
             // --- One-Time Static Bake Mode ---
-            // Calculate exact position compensation: R * S * deltaA
             var sdx = deltaAx * sx;
             var sdy = deltaAy * sy;
             var pDeltaX = sdx;
@@ -455,7 +727,12 @@
                     posProp.setValue([curPos[0] + pDeltaX, curPos[1] + pDeltaY]);
                 }
             }
+
+            baseA = [targetA[0], targetA[1]];
         }
+
+        // Store alignment status effect directly on the layer
+        storeAlignmentEffect(layer, xMode, yMode, boundsMethod, baseA);
 
         // Handle Anchor Cross Indicator Child Layer
         if (createCross) {
@@ -466,14 +743,60 @@
     }
 
     // -------------------------------------------------------------------------
-    // 6. Interactive Demo Composition Generator
+    // 7. Dummy Text Box & Demo Composition Generator
     // -------------------------------------------------------------------------
+
+    /**
+     * Creates a dummy text box centered in the viewport
+     */
+    function createDummyTextBox(comp) {
+        if (!comp) return null;
+        var centerPos = [comp.width / 2, comp.height / 2, 0];
+        var boxW = 460;
+        var boxH = 180;
+        var dummyText = "AE ALIGN ANCHOR POINT\nZero-shift live expressions dynamically anchor text to bounding boxes.";
+
+        var textLayer;
+        if (typeof comp.layers.addBoxText === "function") {
+            try {
+                textLayer = comp.layers.addBoxText([boxW, boxH], dummyText);
+            } catch (eB) {
+                textLayer = comp.layers.addText(dummyText);
+            }
+        } else {
+            textLayer = comp.layers.addText(dummyText);
+        }
+
+        textLayer.name = "Dummy_Box_Text";
+        textLayer.transform.position.setValue(centerPos);
+        textLayer.transform.anchorPoint.setValue([boxW / 2, boxH / 2, 0]);
+
+        var doc = textLayer.property("Source Text").value;
+        if (doc) {
+            doc.fontSize = 24;
+            doc.font = "Arial-BoldMT";
+            doc.fillColor = [1.0, 1.0, 1.0];
+            try {
+                doc.justification = (typeof ParagraphJustification !== "undefined" && ParagraphJustification.CENTER_JUSTIFY !== undefined)
+                    ? ParagraphJustification.CENTER_JUSTIFY
+                    : 7414;
+            } catch (eJ) {}
+            textLayer.property("Source Text").setValue(doc);
+        }
+
+        // Unselect all other layers, select dummy text layer
+        var numL = (typeof comp.numLayers === "number") ? comp.numLayers : comp.layers.length;
+        for (var i = 1; i <= numL; i++) {
+            var lyr = (typeof comp.layer === "function") ? comp.layer(i) : (comp.layers[i] || comp.layers[i - 1]);
+            if (lyr && lyr !== textLayer) lyr.selected = false;
+        }
+        textLayer.selected = true;
+
+        return textLayer;
+    }
 
     function createDemoComposition() {
         var comp = app.project.items.addComp("Anchor Point Demo", 1920, 1080, 1, 10, 30);
-        if (typeof comp.openInViewer === "function") {
-            comp.openInViewer();
-        }
 
         // 1. Dark Background Plate
         var bg = comp.layers.addShape();
@@ -484,35 +807,16 @@
         var bgFill = bgGrp.property("Contents").addProperty("ADBE Vector Graphic - Fill");
         bgFill.property("Color").setValue([0.07, 0.08, 0.11]);
 
-        // 2. Demo Box Text Layer
-        var sampleText = "AE ALIGN ANCHOR POINT\nZero-shift live expressions dynamically anchor text to bounding boxes.";
-        var textLayer;
-        if (typeof comp.layers.addBoxText === "function") {
-            try {
-                textLayer = comp.layers.addBoxText([540, 160], sampleText);
-            } catch (eB) {
-                textLayer = comp.layers.addText(sampleText);
-            }
-        } else {
-            textLayer = comp.layers.addText(sampleText);
-        }
-        textLayer.name = "Demo_Box_Text";
-        textLayer.transform.position.setValue([250, 220, 0]);
-        var tDoc = textLayer.property("Source Text").value;
-        if (tDoc) {
-            tDoc.fontSize = 24;
-            tDoc.font = "Arial-BoldMT";
-            tDoc.fillColor = [1.0, 1.0, 1.0];
-            textLayer.property("Source Text").setValue(tDoc);
-        }
+        // 2. Demo Box Text Layer in Center of Viewport
+        var textLayer = createDummyTextBox(comp);
 
         // 3. Demo Vector Shape Layer (Rounded Card)
         var shapeLayer = comp.layers.addShape();
         shapeLayer.name = "Demo_Vector_Shape";
-        shapeLayer.transform.position.setValue([1100, 280, 0]);
+        shapeLayer.transform.position.setValue([1350, 320, 0]);
         var sGrp = shapeLayer.property("Contents").addProperty("ADBE Vector Group");
         var sRect = sGrp.property("Contents").addProperty("ADBE Vector Shape - Rect");
-        sRect.property("Size").setValue([420, 240]);
+        sRect.property("Size").setValue([380, 220]);
         sRect.property("Roundness").setValue(28);
         var sFill = sGrp.property("Contents").addProperty("ADBE Vector Graphic - Fill");
         sFill.property("Color").setValue([0.18, 0.45, 0.90]);
@@ -521,25 +825,25 @@
         sStroke.property("Stroke Width").setValue(3);
 
         // 4. Demo Solid / AVLayer
-        var solidLayer = comp.layers.addSolid([0.95, 0.40, 0.15], "Demo_Solid_Card", 360, 220, 1);
-        solidLayer.transform.position.setValue([450, 680, 0]);
+        var solidLayer = comp.layers.addSolid([0.95, 0.40, 0.15], "Demo_Solid_Card", 340, 200, 1);
+        solidLayer.transform.position.setValue([320, 720, 0]);
 
         // 5. Demo Nested Precomposition
-        var precompItem = app.project.items.addComp("Inner Precomp Item", 400, 220, 1, 10, 30);
+        var precompItem = app.project.items.addComp("Inner Precomp Item", 380, 200, 1, 10, 30);
         var pBg = precompItem.layers.addShape();
         pBg.name = "Precomp_Bg";
         var pGrp = pBg.property("Contents").addProperty("ADBE Vector Group");
         var pRect = pGrp.property("Contents").addProperty("ADBE Vector Shape - Rect");
-        pRect.property("Size").setValue([380, 200]);
+        pRect.property("Size").setValue([360, 180]);
         pRect.property("Roundness").setValue(16);
         var pFill = pGrp.property("Contents").addProperty("ADBE Vector Graphic - Fill");
         pFill.property("Color").setValue([0.16, 0.70, 0.50]);
 
         var precompLayer = comp.layers.add(precompItem);
         precompLayer.name = "Demo_Precomp_Layer";
-        precompLayer.transform.position.setValue([1100, 680, 0]);
+        precompLayer.transform.position.setValue([1350, 720, 0]);
 
-        // Select the text layer by default
+        // Keep text layer selected in center
         textLayer.selected = true;
 
         if (typeof comp.openInViewer === "function") {
@@ -550,7 +854,7 @@
     }
 
     // -------------------------------------------------------------------------
-    // 7. ScriptUI Panel Architecture (matching AE_Text_Precomp.jsx)
+    // 8. ScriptUI Panel Architecture (matching AE_Text_Precomp.jsx)
     // -------------------------------------------------------------------------
 
     var win = (thisObj instanceof Panel)
@@ -573,12 +877,12 @@
     pnlHeader.spacing = 4;
     pnlHeader.margins = [12, 10, 12, 10];
 
-    var lblSubTitle = pnlHeader.add("statictext", undefined, "Zero-Shift Anchor Point Aligner with Dynamic Expressions & Vector Crosshair");
+    var lblSubTitle = pnlHeader.add("statictext", undefined, "Zero-Shift Anchor Aligner with State Effect, Crosshair Reticle & Auto Text Box");
     try {
         lblSubTitle.graphics.foregroundColor = win.graphics.newPen(win.graphics.PenType.SOLID_COLOR, [0.35, 0.70, 0.95, 1], 1);
     } catch (ePen) {}
 
-    var lblRef = pnlHeader.add("statictext", undefined, "Mechanics: sourceRectAtTime scale-safe expression linking");
+    var lblRef = pnlHeader.add("statictext", undefined, "Mechanics: sourceRectAtTime vs Stated Dimensions scale-safe linking");
     lblRef.helpTip = README_URL;
 
     // --- Layer Detection & Status Panel ---
@@ -591,13 +895,27 @@
     var grpStatus = pnlDetect.add("group");
     grpStatus.orientation = "row";
     grpStatus.alignment = ["fill", "top"];
-    var lblStatusIcon = grpStatus.add("statictext", undefined, "[Layer]:");
-    lblStatusIcon.preferredSize = [55, -1];
+    var lblStatusIcon = grpStatus.add("statictext", undefined, "[Target]:");
+    lblStatusIcon.preferredSize = [60, -1];
     var lblStatusText = grpStatus.add("statictext", undefined, "Scanning active selection...");
     lblStatusText.alignment = ["fill", "center"];
 
     var btnRefresh = grpStatus.add("button", undefined, "Refresh");
     btnRefresh.preferredSize = [70, 22];
+
+    // --- Bounds Calculation Engine Panel ---
+    var pnlBoundsMethod = win.add("panel", undefined, "Bounds Calculation Method");
+    pnlBoundsMethod.orientation = "row";
+    pnlBoundsMethod.alignChildren = ["center", "center"];
+    pnlBoundsMethod.spacing = 20;
+    pnlBoundsMethod.margins = [10, 8, 10, 8];
+
+    var rbBoundsSourceRect = pnlBoundsMethod.add("radiobutton", undefined, "sourceRectAtTime() (Dynamic Content)");
+    rbBoundsSourceRect.value = true;
+    rbBoundsSourceRect.helpTip = "Measures exact rendered bounding box including letter ascenders, descenders, and vector paths.";
+
+    var rbBoundsStated = pnlBoundsMethod.add("radiobutton", undefined, "Stated Width & Height (Box / Layer Size)");
+    rbBoundsStated.helpTip = "Uses declared box text dimensions, solid size, or precomp dimensions rooted at [0, 0].";
 
     // --- Horizontal Alignment (X) Panel ---
     var pnlAlignX = win.add("panel", undefined, "Horizontal Alignment (X)");
@@ -609,7 +927,7 @@
     var rbXLeft = pnlAlignX.add("radiobutton", undefined, "Left Edge");
     var rbXCenter = pnlAlignX.add("radiobutton", undefined, "Center");
     var rbXRight = pnlAlignX.add("radiobutton", undefined, "Right Edge");
-    rbXLeft.value = true; // Default to Left
+    rbXCenter.value = true; // Default to Center
 
     // --- Vertical Alignment (Y) Panel ---
     var pnlAlignY = win.add("panel", undefined, "Vertical Alignment (Y)");
@@ -621,7 +939,7 @@
     var rbYTop = pnlAlignY.add("radiobutton", undefined, "Top Edge");
     var rbYCenter = pnlAlignY.add("radiobutton", undefined, "Center");
     var rbYBottom = pnlAlignY.add("radiobutton", undefined, "Bottom Edge");
-    rbYTop.value = true; // Default to Top
+    rbYCenter.value = true; // Default to Center
 
     // --- 3x3 Visual Preset Grid Panel ---
     var pnlGrid = win.add("panel", undefined, "Quick 9-Point Presets (Visual Matrix)");
@@ -692,7 +1010,7 @@
 
     var chkGuide = grpCrossChecks.add("checkbox", undefined, "Guide Layer (Exclude from Render)");
     chkGuide.value = true;
-    chkGuide.helpTip = "Sets the indicator layer as an AE Guide Layer so it never appears in output renders.";
+    chkGuide.helpTip = "Sets the indicator layer as an AE Guide Layer so it is visible in the viewport but never appears in output renders.";
 
     var grpCrossProps = pnlCross.add("group");
     grpCrossProps.orientation = "row";
@@ -717,7 +1035,7 @@
 
     var rbModeExpr = pnlMode.add("radiobutton", undefined, "Dynamic Expressions (Live Updates)");
     rbModeExpr.value = true;
-    rbModeExpr.helpTip = "Applies linked sourceRectAtTime expressions so resizing, typing text, or scaling dynamically maintains anchor point alignment.";
+    rbModeExpr.helpTip = "Applies linked expressions so resizing, typing text, or scaling dynamically maintains anchor point alignment.";
 
     var rbModeBake = pnlMode.add("radiobutton", undefined, "One-Time Static Bake (No Expressions)");
     rbModeBake.helpTip = "Calculates exact compensation once and sets static numeric values on Anchor Point and Position without running expressions.";
@@ -736,6 +1054,10 @@
     grpSecondary.alignment = ["fill", "top"];
     grpSecondary.spacing = 6;
 
+    var btnCreateTextBox = grpSecondary.add("button", undefined, "📝 New Centered Text Box");
+    btnCreateTextBox.alignment = ["fill", "center"];
+    btnCreateTextBox.helpTip = "Creates a fresh dummy text box in the center of the viewport.";
+
     var btnRemove = grpSecondary.add("button", undefined, "✕ Remove Crosshairs & Expressions");
     btnRemove.alignment = ["fill", "center"];
 
@@ -743,7 +1065,7 @@
     btnDemo.alignment = ["fill", "center"];
 
     // --- Feedback Label ---
-    var lblFeedback = win.add("statictext", undefined, "Ready. Select a layer or click 'Create Demo Comp'.");
+    var lblFeedback = win.add("statictext", undefined, "Ready. Select a layer or click 'Align Anchor Point'.");
     lblFeedback.alignment = ["fill", "bottom"];
 
     // --- Link Footer (matching AE_Text_Precomp.jsx) ---
@@ -766,7 +1088,7 @@
     };
 
     // -------------------------------------------------------------------------
-    // 8. Event Handlers & Orchestration
+    // 9. Event Handlers & Orchestration
     // -------------------------------------------------------------------------
 
     function getSelectedXMode() {
@@ -779,6 +1101,10 @@
         if (rbYBottom.value) return "bottom";
         if (rbYCenter.value) return "center";
         return "top";
+    }
+
+    function getSelectedBoundsMethod() {
+        return rbBoundsStated.value ? "stated" : "sourceRect";
     }
 
     function syncLayerDetection() {
@@ -802,10 +1128,20 @@
             else if (lyr.source && lyr.source instanceof CompItem) typeName = "Precomp Layer";
             else if (lyr.source) typeName = "Solid / Footage";
 
+            // Check if layer has stored alignment effect
+            var stored = readAlignmentEffect(lyr);
+            var statusSuffix = "";
+            if (stored) {
+                setAlignSelection(stored.xMode, stored.yMode);
+                rbBoundsSourceRect.value = (stored.boundsMethod === "sourceRect");
+                rbBoundsStated.value = (stored.boundsMethod === "stated");
+                statusSuffix = " • Stored Align: " + stored.xMode.toUpperCase() + "-" + stored.yMode.toUpperCase() + " (" + stored.boundsMethod + ")";
+            }
+
             var curA = lyr.transform.anchorPoint.value || [0, 0];
             var ax = Math.round(curA[0] * 10) / 10;
             var ay = Math.round(curA[1] * 10) / 10;
-            lblStatusText.text = "'" + lyr.name + "' [" + typeName + ", Anchor: " + ax + ", " + ay + "]";
+            lblStatusText.text = "'" + lyr.name + "' [" + typeName + ", Anchor: " + ax + ", " + ay + "]" + statusSuffix;
         } else {
             lblStatusText.text = sel.length + " layers selected in '" + comp.name + "'.";
         }
@@ -816,32 +1152,23 @@
         try {
             var comp = app.project.activeItem;
             if (!comp || !(comp instanceof CompItem)) {
-                // If no active comp, automatically create demo composition
-                comp = createDemoComposition();
-                syncLayerDetection();
+                comp = app.project.items.addComp("Anchor Point Workspace", 1920, 1080, 1, 10, 30);
+                if (typeof comp.openInViewer === "function") comp.openInViewer();
             }
 
             var sel = comp.selectedLayers;
-            if (!sel || sel.length === 0) {
-                // If nothing selected, align the first non-cross layer
-                var numL = (typeof comp.numLayers === "number") ? comp.numLayers : comp.layers.length;
-                for (var l = 1; l <= numL; l++) {
-                    var candidate = (typeof comp.layer === "function") ? comp.layer(l) : (comp.layers[l] || comp.layers[l - 1]);
-                    if (candidate && candidate.name.indexOf("Anchor_Cross_") !== 0 && candidate.name !== "Background_Plate") {
-                        candidate.selected = true;
-                        sel = [candidate];
-                        break;
-                    }
-                }
-            }
+            var createdDummy = false;
 
+            // If nothing is selected, create a dummy text box in the center of the viewport!
             if (!sel || sel.length === 0) {
-                alert("Please select at least one layer to align its anchor point.");
-                return;
+                var dummyLyr = createDummyTextBox(comp);
+                sel = [dummyLyr];
+                createdDummy = true;
             }
 
             var xMode = getSelectedXMode();
             var yMode = getSelectedYMode();
+            var boundsMethod = getSelectedBoundsMethod();
             var useExpr = rbModeExpr.value;
             var addCross = chkAddCross.value;
             var isGuide = chkGuide.value;
@@ -852,14 +1179,20 @@
             for (var i = 0; i < sel.length; i++) {
                 var layer = sel[i];
                 if (!layer || layer.name.indexOf("Anchor_Cross_") === 0) continue;
-                alignLayerAnchorPoint(layer, xMode, yMode, useExpr, addCross, isGuide, crossSz, crossCol);
+                alignLayerAnchorPoint(layer, xMode, yMode, boundsMethod, useExpr, addCross, isGuide, crossSz, crossCol);
                 count++;
             }
 
             syncLayerDetection();
             var alignStr = xMode.toUpperCase() + "-" + yMode.toUpperCase();
             var modeStr = useExpr ? "Dynamic Expressions" : "Static Bake";
-            lblFeedback.text = "Aligned " + count + " layer(s) to " + alignStr + " via " + modeStr + ". Cross locked at [0, 0].";
+            var boundsStr = (boundsMethod === "stated") ? "Stated Dimensions" : "sourceRectAtTime()";
+
+            if (createdDummy) {
+                lblFeedback.text = "Created dummy text box in viewport center & aligned to " + alignStr + " (" + boundsStr + ").";
+            } else {
+                lblFeedback.text = "Updated " + count + " layer(s) to " + alignStr + " via " + modeStr + " (" + boundsStr + ").";
+            }
         } catch (err) {
             alert("Error aligning anchor point:\n" + (err.message || err.toString()));
         } finally {
@@ -871,6 +1204,34 @@
         executeAlignment();
     };
 
+    btnCreateTextBox.onClick = function() {
+        if (app.beginUndoGroup) app.beginUndoGroup("Create Centered Text Box");
+        try {
+            var comp = app.project.activeItem;
+            if (!comp || !(comp instanceof CompItem)) {
+                comp = app.project.items.addComp("Anchor Point Workspace", 1920, 1080, 1, 10, 30);
+                if (typeof comp.openInViewer === "function") comp.openInViewer();
+            }
+            var textLayer = createDummyTextBox(comp);
+            var xMode = getSelectedXMode();
+            var yMode = getSelectedYMode();
+            var boundsMethod = getSelectedBoundsMethod();
+            var useExpr = rbModeExpr.value;
+            var addCross = chkAddCross.value;
+            var isGuide = chkGuide.value;
+            var crossSz = parseFloat(txtCrossSize.text) || 30;
+            var crossCol = ddlColor.selection ? ddlColor.selection.text : "Cyan";
+
+            alignLayerAnchorPoint(textLayer, xMode, yMode, boundsMethod, useExpr, addCross, isGuide, crossSz, crossCol);
+            syncLayerDetection();
+            lblFeedback.text = "Created new dummy text box at viewport center with anchor aligned.";
+        } catch (eTxt) {
+            alert("Error creating text box:\n" + eTxt.toString());
+        } finally {
+            if (app.endUndoGroup) app.endUndoGroup();
+        }
+    };
+
     btnRefresh.onClick = function() {
         syncLayerDetection();
     };
@@ -880,7 +1241,7 @@
         try {
             createDemoComposition();
             syncLayerDetection();
-            lblFeedback.text = "Created 'Anchor Point Demo' comp with Box Text, Vector Shape, Solid, and Precomp.";
+            lblFeedback.text = "Created 'Anchor Point Demo' comp with Box Text in viewport center, Shape, Solid, and Precomp.";
         } catch (eDemo) {
             alert("Error creating demo comp:\n" + eDemo.toString());
         } finally {
@@ -923,12 +1284,21 @@
         }
     };
 
-    // Initial check
-    syncLayerDetection();
+    // Initial check: if comp is empty, create dummy text box in center automatically
+    (function initialSetup() {
+        var comp = app.project.activeItem;
+        if (comp && comp instanceof CompItem) {
+            if (comp.layers.length === 0) {
+                createDummyTextBox(comp);
+            }
+        }
+        syncLayerDetection();
+    })();
 
     // Expose programmatic hooks on win object
     win.btnDemo = btnDemo;
     win.btnAlign = btnAlign;
+    win.btnCreateTextBox = btnCreateTextBox;
     win.btnTL = btnTL;
     win.btnTC = btnTC;
     win.btnTR = btnTR;
@@ -939,9 +1309,14 @@
     win.btnBC = btnBC;
     win.btnBR = btnBR;
     win.btnRemove = btnRemove;
+    win.rbBoundsSourceRect = rbBoundsSourceRect;
+    win.rbBoundsStated = rbBoundsStated;
     win.executeAlignment = executeAlignment;
     win.createDemoComposition = createDemoComposition;
+    win.createDummyTextBox = createDummyTextBox;
     win.syncLayerDetection = syncLayerDetection;
+    win.storeAlignmentEffect = storeAlignmentEffect;
+    win.readAlignmentEffect = readAlignmentEffect;
 
     win.layout.layout(true);
     win.onResizing = win.onResize = function() { this.layout.resize(); };

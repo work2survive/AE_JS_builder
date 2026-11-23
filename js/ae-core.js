@@ -285,6 +285,31 @@
             return this.getValueAtTime(t);
         }
 
+        get 0() {
+            const v = this.value;
+            return Array.isArray(v) ? v[0] : (typeof v === 'number' ? v : undefined);
+        }
+
+        get 1() {
+            const v = this.value;
+            return Array.isArray(v) ? v[1] : undefined;
+        }
+
+        get 2() {
+            const v = this.value;
+            return Array.isArray(v) ? v[2] : undefined;
+        }
+
+        get 3() {
+            const v = this.value;
+            return Array.isArray(v) ? v[3] : undefined;
+        }
+
+        get length() {
+            const v = this.value;
+            return Array.isArray(v) ? v.length : 1;
+        }
+
         valueOf() {
             return this.value;
         }
@@ -817,6 +842,10 @@
                 case 'Color Control':
                     prop = new EffectColorControl();
                     break;
+                case 'ADBE Point Control':
+                case 'Point Control':
+                    prop = new EffectPointControl();
+                    break;
                 default:
                     prop = new PropertyGroup(nameOrMatchName, nameOrMatchName);
                     break;
@@ -1123,6 +1152,15 @@
             this.color = new Property('Color', 'ADBE Color Control-0001', [1, 1, 1], 'color');
             this.color.parentProperty = this;
             this.properties.push(this.color);
+        }
+    }
+
+    class EffectPointControl extends EffectGroup {
+        constructor(name = 'Point Control') {
+            super(name, 'ADBE Point Control');
+            this.point = new Property('Point', 'ADBE Point Control-0001', [0, 0], '2d');
+            this.point.parentProperty = this;
+            this.properties.push(this.point);
         }
     }
 
