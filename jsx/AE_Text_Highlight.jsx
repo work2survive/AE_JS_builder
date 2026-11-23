@@ -1090,6 +1090,243 @@
         } catch (eStyling) {}
     }
 
+    // -------------------------------------------------------------------------
+    // 10. Zero-Shift Precomposition Engine
+    // Reference: https://github.com/work2survive/AE-text-precomp
+    // -------------------------------------------------------------------------
+    /**
+     * Executes zero-shift precomposition of text & highlight layers.
+     * Captures pContentTopLeft via origLayer.toComp(), sizes newComp with margin,
+     * normalizes inner layer origins, and positions precompLayer with exact affine
+     * compensation so the content does not shift visually on screen by even 0.00px.
+     * Mirrors all master effect controls and expression-links inner shape effects.
+     */
+    function precomposeWithZeroShift(comp, origLayer, props, layersToPrecompose, precompName, shapeLayer, options) {
+        if (!comp || !origLayer || !layersToPrecompose || layersToPrecompose.length === 0) return null;
+
+        // 1. Capture original layer transforms and parenting before precompose
+        var origPos = origLayer.transform.position.value;
+        var origAnchor = origLayer.transform.anchorPoint.value;
+        var origScale = origLayer.transform.scale.value;
+        var origRot = 0;
+        try {
+            if (origLayer.transform.rotation) origRot = origLayer.transform.rotation.value;
+            else if (origLayer.transform.zRotation) origRot = origLayer.transform.zRotation.value;
+        } catch (eRot) {}
+        var origParent = origLayer.parent;
+        var is3D = !!origLayer.threeDLayer;
+
+        var origBounds = props.isBox
+            ? { left: props.boxPos[0], top: props.boxPos[1], width: props.boxWidth, height: props.boxHeight }
+            : { left: props.sRect.left, top: props.sRect.top, width: props.sRect.width, height: props.sRect.height };
+
+        var sx = (origScale && origScale.length > 0) ? (origScale[0] / 100.0) : 1.0;
+        var sy = (origScale && origScale.length > 1) ? (origScale[1] / 100.0) : 1.0;
+        var rad = (origRot || 0) * Math.PI / 180.0;
+        var cosA = Math.cos(rad);
+        var sinA = Math.sin(rad);
+
+        // Exact composition-space coordinate of the visual top-left corner of the content:
+        var pContentTopLeft = null;
+        try {
+            if (typeof origLayer.toComp === "function") {
+                pContentTopLeft = origLayer.toComp([origBounds.left, origBounds.top, 0]);
+                if (!pContentTopLeft || pContentTopLeft.length < 2) {
+                    pContentTopLeft = origLayer.toComp([origBounds.left, origBounds.top]);
+                }
+            }
+        } catch (eTC) {}
+
+        if (!pContentTopLeft || isNaN(pContentTopLeft[0]) || isNaN(pContentTopLeft[1])) {
+            var dxOrig = (origBounds.left - origAnchor[0]) * sx;
+            var dyOrig = (origBounds.top - origAnchor[1]) * sy;
+            pContentTopLeft = [
+                origPos[0] + (dxOrig * cosA - dyOrig * sinA),
+                origPos[1] + (dxOrig * sinA + dyOrig * cosA),
+                (origPos.length > 2 ? origPos[2] : 0)
+            ];
+        }
+
+        // 2. Precomposition dimensions with margin to enclose highlight padding/thickness
+        var padMargin = 30;
+        var precompW = Math.max(100, Math.round(origBounds.width + (padMargin * 2)));
+        var precompH = Math.max(60, Math.round(origBounds.height + (padMargin * 2)));
+
+        var precompIndices = [];
+        for (var i = 0; i < layersToPrecompose.length; i++) {
+            precompIndices.push(layersToPrecompose[i].index);
+        }
+
+        // 3. Execute Precompose
+        var newComp = comp.layers.precompose(precompIndices, precompName, true);
+        if (!newComp) {
+            var nItems = (typeof app.project.numItems !== "undefined") ? app.project.numItems : app.project.items.length;
+            for (var it = 1; it <= nItems; it++) {
+                var candidate = (typeof app.project.item === "function") ? app.project.item(it) : app.project.items[it - 1];
+                if (candidate && candidate.name === precompName && (candidate instanceof CompItem)) {
+                    newComp = candidate;
+                    break;
+                }
+            }
+        }
+        if (!newComp) return null;
+
+        newComp.width = precompW;
+        newComp.height = precompH;
+
+        // 4. Inside newComp: Adjust inner layers so content top-left is placed at [padMargin, padMargin]
+        var shiftX = padMargin - origBounds.left;
+        var shiftY = padMargin - origBounds.top;
+
+        var numInner = (typeof newComp.numLayers !== "undefined") ? newComp.numLayers : newComp.layers.length;
+        for (var ni = 1; ni <= numInner; ni++) {
+            var inL = (typeof newComp.layer === "function") ? newComp.layer(ni) : newComp.layers[ni - 1];
+            if (!inL) continue;
+            try {
+                if (shapeLayer && inL.name === shapeLayer.name) {
+                    inL.transform.position.setValue([shiftX, shiftY, 0]);
+                    inL.transform.anchorPoint.setValue([0, 0, 0]);
+                    inL.transform.scale.setValue([100, 100, 100]);
+                    if (inL.transform.rotation) inL.transform.rotation.setValue(0);
+                } else {
+                    var inP = inL.transform.position.value;
+                    inL.transform.position.setValue([inP[0] + shiftX, inP[1] + shiftY, (inP.length > 2 ? inP[2] : 0)]);
+                    inL.transform.scale.setValue([100, 100, 100]);
+                    if (inL.transform.rotation) inL.transform.rotation.setValue(0);
+                }
+            } catch (eInShift) {}
+        }
+
+        // 5. In parent comp: Find and configure precompLayer with zero-shift compensation
+        var precompLayer = comp.layer(precompName);
+        if (!precompLayer) {
+            try {
+                var totalL = (typeof comp.numLayers !== "undefined") ? comp.numLayers : comp.layers.length;
+                for (var li = 1; li <= totalL; li++) {
+                    var candL = (typeof comp.layer === "function") ? comp.layer(li) : comp.layers[li - 1];
+                    if (candL && (candL.name === precompName || (candL.source && candL.source === newComp))) {
+                        precompLayer = candL;
+                        break;
+                    }
+                }
+            } catch (eFindPL) {}
+        }
+
+        if (precompLayer) {
+            try { precompLayer.comment = "AE_HIGHLIGHT_CHILD"; } catch (ePC) {}
+
+            var targetA = [padMargin, padMargin];
+            var deltaAx = (targetA[0] - padMargin) * sx;
+            var deltaAy = (targetA[1] - padMargin) * sy;
+            var pDeltaX = deltaAx * cosA - deltaAy * sinA;
+            var pDeltaY = deltaAx * sinA + deltaAy * cosA;
+
+            var finalPosX = pContentTopLeft[0] + pDeltaX;
+            var finalPosY = pContentTopLeft[1] + pDeltaY;
+            var finalPosZ = (pContentTopLeft.length > 2) ? pContentTopLeft[2] : 0;
+
+            if (origParent && typeof origParent.fromComp === "function") {
+                try {
+                    var pPt = origParent.fromComp([finalPosX, finalPosY, finalPosZ]);
+                    if (pPt && pPt.length >= 2 && !isNaN(pPt[0]) && !isNaN(pPt[1])) {
+                        finalPosX = pPt[0];
+                        finalPosY = pPt[1];
+                        if (pPt.length > 2) finalPosZ = pPt[2];
+                    }
+                } catch (eFC) {}
+            }
+
+            if (is3D) {
+                try { precompLayer.threeDLayer = true; } catch (e3D) {}
+            }
+
+            try {
+                if (is3D) {
+                    precompLayer.transform.anchorPoint.setValue([targetA[0], targetA[1], 0]);
+                    precompLayer.transform.position.setValue([finalPosX, finalPosY, finalPosZ]);
+                } else {
+                    precompLayer.transform.anchorPoint.setValue([targetA[0], targetA[1]]);
+                    precompLayer.transform.position.setValue([finalPosX, finalPosY]);
+                }
+            } catch (ePrePos) {
+                try {
+                    precompLayer.transform.anchorPoint.setValue([targetA[0], targetA[1], 0]);
+                    precompLayer.transform.position.setValue([finalPosX, finalPosY, 0]);
+                } catch (ePrePos2) {}
+            }
+
+            try {
+                if (is3D) {
+                    precompLayer.transform.scale.setValue([origScale[0], origScale[1], (origScale.length > 2 ? origScale[2] : 100)]);
+                } else {
+                    precompLayer.transform.scale.setValue([origScale[0], origScale[1]]);
+                }
+            } catch (ePreScale) {
+                try { precompLayer.transform.scale.setValue(origScale); } catch (ePreScale2) {}
+            }
+
+            try {
+                if (precompLayer.transform.rotation) precompLayer.transform.rotation.setValue(origRot);
+                if (precompLayer.transform.zRotation) precompLayer.transform.zRotation.setValue(origRot);
+            } catch (ePreRot) {}
+
+            if (origParent) {
+                try { precompLayer.parent = origParent; } catch (ePar) {}
+            }
+
+            // 6. Mirror master controls on precompLayer
+            var pFx = precompLayer.property("ADBE Effect Parade") || precompLayer.property("Effects");
+            if (pFx) {
+                function addMirrorControl(type, name, val) {
+                    var eff = pFx.property(name) || pFx.addProperty(type);
+                    if (eff) {
+                        eff.name = name;
+                        var p = eff.property(1);
+                        if (p) p.setValue(val);
+                    }
+                }
+                addMirrorControl("ADBE Color Control", "Highlight Color", options.highlightColor);
+                addMirrorControl("ADBE Color Control", "Highlighted Text Color", options.highlightedTextColor);
+                addMirrorControl("ADBE Slider Control", "Highlight Opacity", options.opacity);
+                addMirrorControl("ADBE Slider Control", "Padding X", options.paddingX);
+                addMirrorControl("ADBE Slider Control", "Thickness Y", options.thicknessY);
+                addMirrorControl("ADBE Slider Control", "Roundness", options.roundness);
+                addMirrorControl("ADBE Slider Control", "Offset X", options.offsetX);
+                addMirrorControl("ADBE Slider Control", "Offset Y", options.offsetY);
+            }
+
+            // 7. Reference inner effects to parent precompLayer
+            try {
+                var innerShape = newComp.layer(shapeLayer.name);
+                if (innerShape) {
+                    var innerFx = innerShape.property("ADBE Effect Parade") || innerShape.property("Effects");
+                    var effectNames = [
+                        "Highlight Color", "Highlighted Text Color", "Highlight Opacity",
+                        "Padding X", "Thickness Y", "Roundness", "Offset X", "Offset Y"
+                    ];
+                    for (var en = 0; en < effectNames.length; en++) {
+                        var eName = effectNames[en];
+                        var eProp = innerFx ? innerFx.property(eName) : null;
+                        if (eProp && eProp.property(1)) {
+                            var pCompRef = 'comp("' + comp.name.replace(/"/g, '\\"') + '").layer("' + precompLayer.name.replace(/"/g, '\\"') + '")';
+                            eProp.property(1).expression = [
+                                'try {',
+                                '    ' + pCompRef + '.effect("' + eName + '")(1).value;',
+                                '} catch(e) {',
+                                '    value;',
+                                '}'
+                            ].join('\n');
+                        }
+                    }
+                }
+            } catch (eInner) {}
+
+            try { precompLayer.selected = true; } catch (eSel) {}
+        }
+
+        return { newComp: newComp, precompLayer: precompLayer };
+    }
+
     /**
      * Rebuilds the text layer into split text boxes with top-left anchor points
      * and rigs matching procedural vector highlight boxes parented to the original.
@@ -1400,84 +1637,20 @@
             markOriginalAsGuideline(origLayer);
 
             // -----------------------------------------------------------------
-            // 13. Precomposition Option (with Mirrored Master Controls)
+            // 13. Precomposition Option (Zero-Shift, based on AE-text-precomp)
             // -----------------------------------------------------------------
             if (options.makePrecomp) {
-                var precompIndices = [];
-                for (var cl = 0; cl < createdLayers.length; cl++) {
-                    precompIndices.push(createdLayers[cl].index);
-                }
-
                 var precompName = origLayer.name + " Highlight Precomp";
-                var newComp = comp.layers.precompose(precompIndices, precompName, true);
-
-                if (!newComp) {
-                    var nItems = (typeof app.project.numItems !== "undefined") ? app.project.numItems : app.project.items.length;
-                    for (var it = 1; it <= nItems; it++) {
-                        var candidate = (typeof app.project.item === "function") ? app.project.item(it) : app.project.items[it - 1];
-                        if (candidate && candidate.name === precompName && (candidate instanceof CompItem)) {
-                            newComp = candidate;
-                            break;
-                        }
-                    }
-                }
-
-                if (newComp) {
-                    var precompLayer = comp.layer(precompName);
-                    if (precompLayer) {
-                        try { precompLayer.comment = "AE_HIGHLIGHT_CHILD"; } catch (ePC) {}
-                        try { precompLayer.parent = origLayer; } catch (ePar) {}
-
-                        // Mirror all master effect controls onto the Precomp layer in parent comp
-                        var pFx = precompLayer.property("ADBE Effect Parade") || precompLayer.property("Effects");
-                        if (pFx) {
-                            function addPrecompControl(type, name, val) {
-                                var eff = pFx.property(name) || pFx.addProperty(type);
-                                if (eff) {
-                                    eff.name = name;
-                                    var p = eff.property(1);
-                                    if (p) p.setValue(val);
-                                }
-                            }
-                            addPrecompControl("ADBE Color Control", "Highlight Color", highlightColor);
-                            addPrecompControl("ADBE Color Control", "Highlighted Text Color", highlightedTextColor);
-                            addPrecompControl("ADBE Slider Control", "Highlight Opacity", opacity);
-                            addPrecompControl("ADBE Slider Control", "Padding X", padX);
-                            addPrecompControl("ADBE Slider Control", "Thickness Y", thickY);
-                            addPrecompControl("ADBE Slider Control", "Roundness", roundness);
-                            addPrecompControl("ADBE Slider Control", "Offset X", offX);
-                            addPrecompControl("ADBE Slider Control", "Offset Y", offY);
-                        }
-
-                        // Reference inner effects to the parent precomp layer
-                        try {
-                            var innerShape = newComp.layer(shapeLayer.name);
-                            if (innerShape) {
-                                var innerFx = innerShape.property("ADBE Effect Parade") || innerShape.property("Effects");
-                                var effectNames = [
-                                    "Highlight Color", "Highlighted Text Color", "Highlight Opacity",
-                                    "Padding X", "Thickness Y", "Roundness", "Offset X", "Offset Y"
-                                ];
-                                for (var en = 0; en < effectNames.length; en++) {
-                                    var eName = effectNames[en];
-                                    var eProp = innerFx ? innerFx.property(eName) : null;
-                                    if (eProp && eProp.property(1)) {
-                                        var pCompRef = 'comp("' + comp.name.replace(/"/g, '\\"') + '").layer("' + precompLayer.name.replace(/"/g, '\\"') + '")';
-                                        eProp.property(1).expression = [
-                                            'try {',
-                                            '    ' + pCompRef + '.effect("' + eName + '")(1).value;',
-                                            '} catch(e) {',
-                                            '    value;',
-                                            '}'
-                                        ].join('\n');
-                                    }
-                                }
-                            }
-                        } catch (eInnerLink) {}
-
-                        try { precompLayer.selected = true; } catch (eSel) {}
-                    }
-                }
+                precomposeWithZeroShift(comp, origLayer, props, createdLayers, precompName, shapeLayer, {
+                    highlightColor: highlightColor,
+                    highlightedTextColor: highlightedTextColor,
+                    opacity: opacity,
+                    paddingX: padX,
+                    thicknessY: thickY,
+                    roundness: roundness,
+                    offsetX: offX,
+                    offsetY: offY
+                });
             }
 
             return {
@@ -1748,87 +1921,27 @@
                 }
             } catch (eAnim) {}
 
-            // Precomposition Option for Calculation Method
+            // Precomposition Option for Calculation Method (Zero-Shift, based on AE-text-precomp)
             if (options.makePrecomp) {
                 var textCopy = origLayer.duplicate ? origLayer.duplicate() : null;
-                var precompIndices = [shapeLayer.index];
+                var precompLayers = [shapeLayer];
                 if (textCopy) {
                     textCopy.enabled = true;
                     textCopy.guideLayer = false;
-                    precompIndices.push(textCopy.index);
+                    precompLayers.push(textCopy);
                     markOriginalAsGuideline(origLayer);
                 }
-
                 var precompName = origLayer.name + " Highlight Precomp";
-                var newComp = comp.layers.precompose(precompIndices, precompName, true);
-
-                if (!newComp) {
-                    var nItems = (typeof app.project.numItems !== "undefined") ? app.project.numItems : app.project.items.length;
-                    for (var it = 1; it <= nItems; it++) {
-                        var candidate = (typeof app.project.item === "function") ? app.project.item(it) : app.project.items[it - 1];
-                        if (candidate && candidate.name === precompName && (candidate instanceof CompItem)) {
-                            newComp = candidate;
-                            break;
-                        }
-                    }
-                }
-
-                if (newComp) {
-                    var precompLayer = comp.layer(precompName);
-                    if (precompLayer) {
-                        try { precompLayer.comment = "AE_HIGHLIGHT_CHILD"; } catch (ePC) {}
-                        try { precompLayer.parent = origLayer; } catch (ePar) {}
-
-                        // Mirror master controls on precomp layer
-                        var pFx = precompLayer.property("ADBE Effect Parade") || precompLayer.property("Effects");
-                        if (pFx) {
-                            function addPrecompControlCalc(type, name, val) {
-                                var eff = pFx.property(name) || pFx.addProperty(type);
-                                if (eff) {
-                                    eff.name = name;
-                                    var p = eff.property(1);
-                                    if (p) p.setValue(val);
-                                }
-                            }
-                            addPrecompControlCalc("ADBE Color Control", "Highlight Color", highlightColor);
-                            addPrecompControlCalc("ADBE Color Control", "Highlighted Text Color", highlightedTextColor);
-                            addPrecompControlCalc("ADBE Slider Control", "Highlight Opacity", opacity);
-                            addPrecompControlCalc("ADBE Slider Control", "Padding X", padX);
-                            addPrecompControlCalc("ADBE Slider Control", "Thickness Y", thickY);
-                            addPrecompControlCalc("ADBE Slider Control", "Roundness", roundness);
-                            addPrecompControlCalc("ADBE Slider Control", "Offset X", offX);
-                            addPrecompControlCalc("ADBE Slider Control", "Offset Y", offY);
-                        }
-
-                        // Reference inner effects to parent precomp
-                        try {
-                            var innerShape = newComp.layer(shapeLayer.name);
-                            if (innerShape) {
-                                var innerFx = innerShape.property("ADBE Effect Parade") || innerShape.property("Effects");
-                                var effectNames = [
-                                    "Highlight Color", "Highlighted Text Color", "Highlight Opacity",
-                                    "Padding X", "Thickness Y", "Roundness", "Offset X", "Offset Y"
-                                ];
-                                for (var en = 0; en < effectNames.length; en++) {
-                                    var eName = effectNames[en];
-                                    var eProp = innerFx ? innerFx.property(eName) : null;
-                                    if (eProp && eProp.property(1)) {
-                                        var pCompRef = 'comp("' + comp.name.replace(/"/g, '\\"') + '").layer("' + precompLayer.name.replace(/"/g, '\\"') + '")';
-                                        eProp.property(1).expression = [
-                                            'try {',
-                                            '    ' + pCompRef + '.effect("' + eName + '")(1).value;',
-                                            '} catch(e) {',
-                                            '    value;',
-                                            '}'
-                                        ].join('\n');
-                                    }
-                                }
-                            }
-                        } catch (eInner) {}
-
-                        try { precompLayer.selected = true; } catch (eSel) {}
-                    }
-                }
+                precomposeWithZeroShift(comp, origLayer, props, precompLayers, precompName, shapeLayer, {
+                    highlightColor: highlightColor,
+                    highlightedTextColor: highlightedTextColor,
+                    opacity: opacity,
+                    paddingX: padX,
+                    thicknessY: thickY,
+                    roundness: roundness,
+                    offsetX: offX,
+                    offsetY: offY
+                });
             }
 
             return {
