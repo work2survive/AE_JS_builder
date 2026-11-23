@@ -5,35 +5,39 @@
 //
 // PURPOSE:
 //   Advanced procedural typography highlighter for Adobe After Effects.
-//   Aligns the anchor point based on text box justification, duplicates the text layer,
-//   marks the original as a guideline layer, splits relevant lines and target words
-//   into independent text boxes with top-left anchor points, generates procedural
-//   vector highlight shapes, links all layers to the original text box, and offers
-//   precomposition with mirrored effect controls and complete non-destructive restoration.
+//   Supports two swappable highlight generation methods selectable at the top of the UI:
+//     1. "Split Method": Aligns anchor point based on text box justification (zero shift),
+//        marks original as guideline layer, splits target lines & words into independent
+//        text boxes with top-left anchor points, and rigs matching vector highlight boxes.
+//     2. "Calculation Method": Keeps the original text box intact without splitting,
+//        calculating exact highlight box positions and dimensions in-place using all
+//        available font metrics, leading, tracking, boxTextPos, and delimiter-anchored advance.
 //
 // ARCHITECTURAL REFERENCES & KNOWLEDGE BASE:
-//   1. AE vs. JS Text Rendering Differences Guide:
+//   1. AE vs. JS Text Rendering Differences Guide (Engine Metrics, Delimiter Advance & Justification):
 //      https://github.com/work2survive/AE_JS_builder/blob/main/AE_VS_JS_TEXT_RENDERING_DIFFERENCES.md
-//   2. AE Align Anchor Point (Zero-Shift Anchor Alignment):
+//   2. AE Align Anchor Point (Justification-Based Zero-Shift Anchor Alignment):
 //      https://github.com/work2survive/AE-Align-AnchorPoint
 //   3. Text & Box Properties to Effects (Typography & Inspector Engine):
 //      https://github.com/work2survive/AE_JS_builder/blob/main/samples/Text_Properties_To_Effects.jsx
 //   4. AE Text Precomp (Zero-Shift Precomposition & Line/Word Splitting):
-//      https://github.com/work2survive/AE_JS_builder/blob/main/jsx/AE_Text_Precomp.jsx
+//      https://github.com/work2survive/AE_JS_builder/blob/main/samples/AE_Text_Precomp.jsx
+//      https://github.com/work2survive/AE-text-precomp
 //   5. Interactive Custom Rounded Rect & Color Picker:
 //      https://github.com/work2survive/AE_JS_builder/blob/main/jsx/custom_rounded_rect.jsx
+//   6. AE Text Highlight Repository:
+//      https://github.com/work2survive/AE-Text-Highlight
 //
 // NEW IN v2.0.0:
+//   - Top-of-UI Method Switch: "Split Method" vs. "Calculation Method (Intact Text Box)".
 //   - Anchor Point Alignment based on Text Box Justification (Left, Center, Right) with zero visual shift.
-//   - Original Text Layer preserved as hidden Guideline Layer (guideLayer = true, enabled = false).
-//   - Selective Line & Target Word Splitting into independent text boxes (anchor points pinned to Top-Left).
-//   - Sub-pixel Delimiter-Anchored Advance measurement eliminating all font offset issues.
-//   - Vector Highlight Shape Box Layer with top-left anchor point matching each highlighted text box.
+//   - In-place Font Parameter Calculation without layer splitting using delimiter-anchored advance.
+//   - Original Text Layer preserved as hidden Guideline Layer in Split Method, or intact in Calculation Method.
+//   - Top-left anchor points pinned across all generated text boxes and highlight vector shapes.
 //   - Dual Interactive Color Pickers: Highlight Box Fill Color & Highlighted Text Color.
-//   - All split text and highlight layers parented to the original text box.
-//   - "Make Precomp Out of Text Box & Highlights" with mirrored effect controls and live expressions.
-//   - "Remove Highlights & Restore Text Box" non-destructive action.
-//   - "Create Dummy Text Box" generator button for instant testing.
+//   - Mirrored Precomposition Engine with parent-to-precomp expression linking.
+//   - Non-destructive "Remove Highlights & Restore Text Box" action.
+//   - "Create Dummy Text Box" generator button for rapid testing.
 //
 // REPOSITORY: https://github.com/work2survive/AE-Text-Highlight
 // LIVE DEMO:  https://work2survive.github.io/AE_JS_builder/?jsx=AE_Text_Highlight.jsx&autobuild=true
@@ -918,6 +922,21 @@
             } catch (eRest) {}
         }
 
+        // Clean up any text animators added by Calculation Method on text layers in the comp
+        for (var t = 1; t <= total; t++) {
+            var tl = (typeof comp.layer === "function") ? comp.layer(t) : (comp.layers[t] || comp.layers[t - 1]);
+            if (tl && isTextLayer(tl)) {
+                try {
+                    var animGroup = tl.property("ADBE Text Properties");
+                    var animators = animGroup ? animGroup.property("ADBE Text Animators") : null;
+                    if (animators) {
+                        var hAnim = animators.property("Highlight Text Color");
+                        if (hAnim) hAnim.remove();
+                    }
+                } catch (eAnimRem) {}
+            }
+        }
+
         return toRemove.length;
     }
 
@@ -1473,7 +1492,359 @@
     }
 
     // -------------------------------------------------------------------------
-    // 14. Dummy Text Layer Generator
+    // 12. In-Place Font Metric Calculation Engine (Calculation Method)
+    // Reference: https://github.com/work2survive/AE_JS_builder/blob/main/AE_VS_JS_TEXT_RENDERING_DIFFERENCES.md
+    // -------------------------------------------------------------------------
+    /**
+     * Builds highlights WITHOUT splitting the text box.
+     * Calculates the exact position and dimensions of highlight boxes in-place using
+     * all available typography parameters (fontSize, leading, tracking, boxTextPos,
+     * sourceRectAtTime, and delimiter-anchored advance).
+     *
+     * References:
+     * - Engine guide: https://github.com/work2survive/AE_JS_builder/blob/main/AE_VS_JS_TEXT_RENDERING_DIFFERENCES.md
+     * - Anchor alignment: https://github.com/work2survive/AE-Align-AnchorPoint
+     * - Typography effects: https://github.com/work2survive/AE_JS_builder/blob/main/samples/Text_Properties_To_Effects.jsx
+     */
+    function buildCalculationHighlightsRig(comp, origLayer, options) {
+        if (!comp || !origLayer || !isTextLayer(origLayer)) return null;
+
+        var props = getTextBoxProperties(comp, origLayer);
+        if (!props || !props.metrics) return null;
+
+        // 1. Align original text layer anchor point based on text box justification (zero visual shift)
+        alignAnchorPointToJustification(origLayer, props);
+
+        // 2. Attach comprehensive typography inspector effect controls
+        attachTextPropertiesEffects(origLayer, props);
+
+        var terms = options.terms || [];
+        var highlightColor = options.highlightColor || [1.0, 0.16, 0.43];
+        var highlightedTextColor = options.highlightedTextColor || [1.0, 1.0, 1.0];
+        var padX = (typeof options.paddingX === "number") ? options.paddingX : 6;
+        var thickY = (typeof options.thicknessY === "number") ? options.thicknessY : 4;
+        var roundness = (typeof options.roundness === "number") ? options.roundness : 6;
+        var opacity = (typeof options.opacity === "number") ? options.opacity : 100;
+        var offX = (typeof options.offsetX === "number") ? options.offsetX : 0;
+        var offY = (typeof options.offsetY === "number") ? options.offsetY : 0;
+
+        var lines = props.metrics.lines;
+        var lineStep = props.leading || (props.fontSize * 1.2);
+        var just = props.justification || "left";
+
+        var measurer = createMeasureHelper(comp, props);
+
+        // Determine first line baseline relative to original text layer local origin:
+        var rFirst = measurer.measureRect(lines.length > 0 ? lines[0] : "A");
+        var ascender = Math.abs(rFirst.top) || (props.fontSize * 0.78);
+        var firstBaselineY = props.isBox ? (props.boxPos[1] + ascender) : 0;
+
+        var highlightBoxes = [];
+
+        try {
+            // Iterate visual lines and calculate highlight coordinates
+            for (var vl = 0; vl < lines.length; vl++) {
+                var lineStr = lines[vl];
+                if (trimStr(lineStr).length === 0) continue;
+
+                var lineW = measurer.measureRect(lineStr).width;
+                var lineBaselineY = firstBaselineY + (vl * lineStep);
+
+                var lineLeftX = 0;
+                if (props.isBox) {
+                    if (just === "center") {
+                        lineLeftX = props.boxPos[0] + (props.boxWidth - lineW) / 2;
+                    } else if (just === "right") {
+                        lineLeftX = props.boxPos[0] + props.boxWidth - lineW;
+                    } else {
+                        lineLeftX = props.boxPos[0];
+                    }
+                } else {
+                    if (just === "center") {
+                        lineLeftX = -lineW / 2;
+                    } else if (just === "right") {
+                        lineLeftX = -lineW;
+                    } else {
+                        lineLeftX = 0;
+                    }
+                }
+
+                // Check which target terms appear on this visual line
+                var lineMatches = [];
+                var lowerLine = lineStr.toLowerCase();
+
+                for (var t = 0; t < terms.length; t++) {
+                    var term = terms[t];
+                    if (!term || term.length === 0) continue;
+                    var lowerTerm = term.toLowerCase();
+                    var sIdx = 0;
+                    while (sIdx < lineStr.length) {
+                        var fIdx = lowerLine.indexOf(lowerTerm, sIdx);
+                        if (fIdx === -1) break;
+                        lineMatches.push({
+                            start: fIdx,
+                            end: fIdx + term.length,
+                            term: lineStr.substr(fIdx, term.length)
+                        });
+                        sIdx = fIdx + Math.max(1, term.length);
+                    }
+                }
+
+                lineMatches.sort(function (a, b) { return a.start - b.start; });
+
+                var cleanMatches = [];
+                var lastEnd = 0;
+                for (var m = 0; m < lineMatches.length; m++) {
+                    var match = lineMatches[m];
+                    if (match.start >= lastEnd) {
+                        cleanMatches.push(match);
+                        lastEnd = match.end;
+                    }
+                }
+
+                for (var cm = 0; cm < cleanMatches.length; cm++) {
+                    var cMatch = cleanMatches[cm];
+                    var prefix = lineStr.substring(0, cMatch.start);
+                    var prefixAdv = measurer.measurePrefixAdvance(prefix);
+                    var segX = lineLeftX + prefixAdv;
+                    var rSeg = measurer.measureRect(cMatch.term);
+
+                    var boxW = Math.max(4, rSeg.width);
+                    var boxH = Math.max(props.fontSize, rSeg.height);
+                    var boxPosX = segX + rSeg.left;
+                    var boxPosY = lineBaselineY + rSeg.top;
+
+                    highlightBoxes.push({
+                        text: cMatch.term,
+                        width: boxW,
+                        height: boxH,
+                        posX: boxPosX,
+                        posY: boxPosY
+                    });
+                }
+            }
+
+            // Create Procedural Vector Highlight Shapes Layer
+            var shapeLayer = comp.layers.addShape();
+            shapeLayer.name = origLayer.name + " - Highlights";
+            try { shapeLayer.comment = "AE_HIGHLIGHT_CHILD"; } catch (eC3) {}
+
+            // Attach Master Expression Controls on Shape Layer
+            var fxParade = shapeLayer.property("ADBE Effect Parade") || shapeLayer.property("Effects");
+            function addMasterControl(type, name, val) {
+                var eff = fxParade.property(name) || fxParade.addProperty(type);
+                if (eff) {
+                    eff.name = name;
+                    var p = eff.property(1);
+                    if (p) p.setValue(val);
+                }
+                return eff;
+            }
+
+            addMasterControl("ADBE Color Control", "Highlight Color", highlightColor);
+            addMasterControl("ADBE Color Control", "Highlighted Text Color", highlightedTextColor);
+            addMasterControl("ADBE Slider Control", "Highlight Opacity", opacity);
+            addMasterControl("ADBE Slider Control", "Padding X", padX);
+            addMasterControl("ADBE Slider Control", "Thickness Y", thickY);
+            addMasterControl("ADBE Slider Control", "Roundness", roundness);
+            addMasterControl("ADBE Slider Control", "Offset X", offX);
+            addMasterControl("ADBE Slider Control", "Offset Y", offY);
+
+            var rootVectors = shapeLayer.property("ADBE Root Vectors Group") || shapeLayer.property("Contents");
+
+            for (var hb = 0; hb < highlightBoxes.length; hb++) {
+                var box = highlightBoxes[hb];
+                var grp = rootVectors.addProperty("ADBE Vector Group");
+                grp.name = "Highlight " + (hb + 1) + " - " + box.text.substr(0, 16);
+                var grpContents = grp.property("ADBE Vectors Group") || grp.property("Contents");
+
+                var rect = grpContents.addProperty("ADBE Vector Shape - Rect");
+                rect.name = "Box Path";
+
+                var propSize = rect.property("ADBE Vector Rect Size") || rect.property("Size");
+                var baseW = box.width;
+                var baseH = box.height;
+                var initW = baseW + (padX * 2);
+                var initH = baseH + thickY;
+
+                if (propSize) {
+                    propSize.setValue([initW, initH]);
+                    propSize.expression = [
+                        'var padX = 0, thickY = 0;',
+                        'try { padX = thisLayer.effect("Padding X")(1).value; } catch(e) {}',
+                        'try { thickY = thisLayer.effect("Thickness Y")(1).value; } catch(e) {}',
+                        '[Math.max(0, ' + baseW.toFixed(2) + ' + padX * 2), Math.max(0, ' + baseH.toFixed(2) + ' + thickY)];'
+                    ].join('\n');
+                }
+
+                var propPos = rect.property("ADBE Vector Rect Position") || rect.property("Position");
+                var boxCenterX = box.posX + (baseW / 2);
+                var boxCenterY = box.posY + (baseH / 2);
+
+                if (propPos) {
+                    propPos.setValue([boxCenterX + offX, boxCenterY + offY]);
+                    propPos.expression = [
+                        'var offX = 0, offY = 0;',
+                        'try { offX = thisLayer.effect("Offset X")(1).value; } catch(e) {}',
+                        'try { offY = thisLayer.effect("Offset Y")(1).value; } catch(e) {}',
+                        '[' + boxCenterX.toFixed(2) + ' + offX, ' + boxCenterY.toFixed(2) + ' + offY];'
+                    ].join('\n');
+                }
+
+                var propRound = rect.property("ADBE Vector Rect Roundness") || rect.property("Roundness");
+                if (propRound) {
+                    propRound.setValue(roundness);
+                    propRound.expression = 'try { Math.max(0, thisLayer.effect("Roundness")(1).value); } catch(e) { value; }';
+                }
+
+                var fill = grpContents.addProperty("ADBE Vector Graphic - Fill");
+                fill.name = "Highlight Fill";
+                var propCol = fill.property("ADBE Vector Fill Color") || fill.property("Color");
+                if (propCol) {
+                    propCol.setValue(highlightColor);
+                    propCol.expression = 'try { thisLayer.effect("Highlight Color")(1).value; } catch(e) { value; }';
+                }
+                var propOp = fill.property("ADBE Vector Fill Opacity") || fill.property("Opacity");
+                if (propOp) {
+                    propOp.setValue(opacity);
+                    propOp.expression = 'try { thisLayer.effect("Highlight Opacity")(1); } catch(e) { value; }';
+                }
+            }
+
+            // Parent highlight shape layer to original text layer
+            shapeLayer.parent = origLayer;
+            shapeLayer.transform.position.setValue([0, 0, 0]);
+            shapeLayer.transform.anchorPoint.setValue([0, 0, 0]);
+            shapeLayer.transform.scale.setValue([100, 100, 100]);
+            if (shapeLayer.transform.rotation) shapeLayer.transform.rotation.setValue(0);
+
+            // Stacking: place shape layer directly behind original text layer
+            try {
+                if (typeof shapeLayer.moveAfter === "function") {
+                    shapeLayer.moveAfter(origLayer);
+                }
+            } catch (eMove) {}
+
+            // Color highlight on intact text layer via Text Animator (if supported)
+            try {
+                var textPropGroup = origLayer.property("ADBE Text Properties");
+                var animators = textPropGroup ? textPropGroup.property("ADBE Text Animators") : null;
+                if (animators) {
+                    var existingAnim = animators.property("Highlight Text Color");
+                    if (existingAnim) {
+                        try { existingAnim.remove(); } catch (eER) {}
+                    }
+                    var anim = animators.addProperty("ADBE Text Animator");
+                    if (anim) {
+                        anim.name = "Highlight Text Color";
+                        var animProps = anim.property("ADBE Text Animator Properties");
+                        var fillProp = animProps ? animProps.addProperty("ADBE Text Fill Color") : null;
+                        if (fillProp) {
+                            fillProp.setValue(highlightedTextColor);
+                            var shapeRef = 'thisComp.layer("' + shapeLayer.name.replace(/"/g, '\\"') + '")';
+                            fillProp.expression = 'try { ' + shapeRef + '.effect("Highlighted Text Color")(1).value; } catch(e) { value; }';
+                        }
+                    }
+                }
+            } catch (eAnim) {}
+
+            // Precomposition Option for Calculation Method
+            if (options.makePrecomp) {
+                var textCopy = origLayer.duplicate ? origLayer.duplicate() : null;
+                var precompIndices = [shapeLayer.index];
+                if (textCopy) {
+                    textCopy.enabled = true;
+                    textCopy.guideLayer = false;
+                    precompIndices.push(textCopy.index);
+                    markOriginalAsGuideline(origLayer);
+                }
+
+                var precompName = origLayer.name + " Highlight Precomp";
+                var newComp = comp.layers.precompose(precompIndices, precompName, true);
+
+                if (!newComp) {
+                    var nItems = (typeof app.project.numItems !== "undefined") ? app.project.numItems : app.project.items.length;
+                    for (var it = 1; it <= nItems; it++) {
+                        var candidate = (typeof app.project.item === "function") ? app.project.item(it) : app.project.items[it - 1];
+                        if (candidate && candidate.name === precompName && (candidate instanceof CompItem)) {
+                            newComp = candidate;
+                            break;
+                        }
+                    }
+                }
+
+                if (newComp) {
+                    var precompLayer = comp.layer(precompName);
+                    if (precompLayer) {
+                        try { precompLayer.comment = "AE_HIGHLIGHT_CHILD"; } catch (ePC) {}
+                        try { precompLayer.parent = origLayer; } catch (ePar) {}
+
+                        // Mirror master controls on precomp layer
+                        var pFx = precompLayer.property("ADBE Effect Parade") || precompLayer.property("Effects");
+                        if (pFx) {
+                            function addPrecompControlCalc(type, name, val) {
+                                var eff = pFx.property(name) || pFx.addProperty(type);
+                                if (eff) {
+                                    eff.name = name;
+                                    var p = eff.property(1);
+                                    if (p) p.setValue(val);
+                                }
+                            }
+                            addPrecompControlCalc("ADBE Color Control", "Highlight Color", highlightColor);
+                            addPrecompControlCalc("ADBE Color Control", "Highlighted Text Color", highlightedTextColor);
+                            addPrecompControlCalc("ADBE Slider Control", "Highlight Opacity", opacity);
+                            addPrecompControlCalc("ADBE Slider Control", "Padding X", padX);
+                            addPrecompControlCalc("ADBE Slider Control", "Thickness Y", thickY);
+                            addPrecompControlCalc("ADBE Slider Control", "Roundness", roundness);
+                            addPrecompControlCalc("ADBE Slider Control", "Offset X", offX);
+                            addPrecompControlCalc("ADBE Slider Control", "Offset Y", offY);
+                        }
+
+                        // Reference inner effects to parent precomp
+                        try {
+                            var innerShape = newComp.layer(shapeLayer.name);
+                            if (innerShape) {
+                                var innerFx = innerShape.property("ADBE Effect Parade") || innerShape.property("Effects");
+                                var effectNames = [
+                                    "Highlight Color", "Highlighted Text Color", "Highlight Opacity",
+                                    "Padding X", "Thickness Y", "Roundness", "Offset X", "Offset Y"
+                                ];
+                                for (var en = 0; en < effectNames.length; en++) {
+                                    var eName = effectNames[en];
+                                    var eProp = innerFx ? innerFx.property(eName) : null;
+                                    if (eProp && eProp.property(1)) {
+                                        var pCompRef = 'comp("' + comp.name.replace(/"/g, '\\"') + '").layer("' + precompLayer.name.replace(/"/g, '\\"') + '")';
+                                        eProp.property(1).expression = [
+                                            'try {',
+                                            '    ' + pCompRef + '.effect("' + eName + '")(1).value;',
+                                            '} catch(e) {',
+                                            '    value;',
+                                            '}'
+                                        ].join('\n');
+                                    }
+                                }
+                            }
+                        } catch (eInner) {}
+
+                        try { precompLayer.selected = true; } catch (eSel) {}
+                    }
+                }
+            }
+
+            return {
+                createdCount: 1,
+                highlightCount: highlightBoxes.length,
+                guidelineLayer: null,
+                shapeLayer: shapeLayer
+            };
+
+        } finally {
+            measurer.cleanup();
+        }
+    }
+
+    // -------------------------------------------------------------------------
+    // 13. Dummy Text Layer Generator
     // -------------------------------------------------------------------------
     function createDummyTextBoxLayer(comp, fontName, align, boxW, boxH) {
         if (!comp) {
@@ -1693,6 +2064,37 @@
         };
 
         // ---------------------------------------------------------------------
+        // Highlight Engine Method Switch (Top of UI)
+        // ---------------------------------------------------------------------
+        var pnlMethod = win.add("panel", undefined, "Highlight Engine Method");
+        pnlMethod.orientation = "column";
+        pnlMethod.alignChildren = ["fill", "top"];
+        pnlMethod.alignment = ["fill", "top"];
+        pnlMethod.spacing = 4;
+        pnlMethod.margins = [8, 6, 8, 6];
+
+        var grpMethodRow = pnlMethod.add("group");
+        grpMethodRow.orientation = "row";
+        grpMethodRow.alignChildren = ["left", "center"];
+        grpMethodRow.alignment = ["fill", "top"];
+        grpMethodRow.spacing = 8;
+
+        grpMethodRow.add("statictext", undefined, "Method:");
+        var ddMethod = grpMethodRow.add("dropdownlist", undefined, [
+            "✂️ Split Method (Decompose Lines & Words)",
+            "📐 Calculation Method (Intact Text Box)"
+        ]);
+        ddMethod.selection = 0;
+        ddMethod.preferredSize = [240, 24];
+        ddMethod.alignment = ["fill", "center"];
+
+        var lblMethodDesc = pnlMethod.add("statictext", undefined, "Splits target lines and words into independent text boxes with top-left anchor points.");
+        lblMethodDesc.alignment = ["fill", "top"];
+        try {
+            lblMethodDesc.graphics.foregroundColor = lblMethodDesc.graphics.newPen(win.graphics.PenType.SOLID_COLOR, [0.75, 0.75, 0.75, 1.0], 1);
+        } catch (eGDesc) {}
+
+        // ---------------------------------------------------------------------
         // Tabbed Panel
         // ---------------------------------------------------------------------
         var tpanel = win.add("tabbedpanel");
@@ -1777,9 +2179,9 @@
         pnlActions.spacing = 6;
         pnlActions.margins = [8, 8, 8, 8];
 
-        var btnBuild = pnlActions.add("button", undefined, "✨ Build Highlights (Split & Rig)");
+        var btnBuild = pnlActions.add("button", undefined, "✨ Build Highlights (Split Method)");
         btnBuild.preferredSize = [-1, 32];
-        btnBuild.helpTip = "Aligns anchor, preserves guideline, splits target lines & words with top-left anchors, and creates highlight boxes.";
+        btnBuild.helpTip = "Executes the selected highlight method: Split Method (decomposes text layers) or Calculation Method (intact text box).";
 
         var grpSubActions = pnlActions.add("group");
         grpSubActions.orientation = "row";
@@ -1939,6 +2341,21 @@
         ddDummyAlign.selection = 0;
         ddDummyAlign.preferredSize = [75, 24];
 
+        // Knowledge Base & Architectural References Panel
+        var pnlRefs = tabAdv.add("panel", undefined, "Knowledge Base & References");
+        pnlRefs.orientation = "column";
+        pnlRefs.alignChildren = ["fill", "top"];
+        pnlRefs.alignment = ["fill", "top"];
+        pnlRefs.spacing = 3;
+        pnlRefs.margins = [8, 6, 8, 6];
+
+        pnlRefs.add("statictext", undefined, "1. AE vs JS Text Rendering Differences Guide:\n   https://github.com/work2survive/AE_JS_builder/blob/main/AE_VS_JS_TEXT_RENDERING_DIFFERENCES.md", { multiline: true });
+        pnlRefs.add("statictext", undefined, "2. AE Align Anchor Point (Zero-Shift Alignment):\n   https://github.com/work2survive/AE-Align-AnchorPoint", { multiline: true });
+        pnlRefs.add("statictext", undefined, "3. Text & Box Properties to Effects Controls:\n   https://github.com/work2survive/AE_JS_builder/blob/main/samples/Text_Properties_To_Effects.jsx", { multiline: true });
+        pnlRefs.add("statictext", undefined, "4. AE Text Precomp (Zero-Shift Splitting):\n   https://github.com/work2survive/AE_JS_builder/blob/main/samples/AE_Text_Precomp.jsx", { multiline: true });
+        pnlRefs.add("statictext", undefined, "5. Custom Rounded Rect & Color Pickers:\n   https://github.com/work2survive/AE_JS_builder/blob/main/jsx/custom_rounded_rect.jsx", { multiline: true });
+        pnlRefs.add("statictext", undefined, "6. AE Text Highlight Repository:\n   https://github.com/work2survive/AE-Text-Highlight", { multiline: true });
+
         // ---------------------------------------------------------------------
         // Interactive Logic & Event Listeners
         // ---------------------------------------------------------------------
@@ -1959,6 +2376,19 @@
             lblStatus.text = "🎯 Target: \"" + textLayer.name + "\" (" + typeName + ", " + justName + " justified)";
             return textLayer;
         }
+
+        ddMethod.onChange = function () {
+            var idx = ddMethod.selection ? ddMethod.selection.index : 0;
+            if (idx === 0) {
+                lblMethodDesc.text = "Splits target lines and words into independent text boxes with top-left anchor points.";
+                btnBuild.text = "✨ Build Highlights (Split Method)";
+                chkPrecomp.helpTip = "If checked, precomposes the split text boxes and highlight layer with mirrored master controls.";
+            } else {
+                lblMethodDesc.text = "Keeps original text box intact; calculates highlight positions via full font metrics.";
+                btnBuild.text = "✨ Build Highlights (Calculation Method)";
+                chkPrecomp.helpTip = "If checked, precomposes the intact text box and highlight layer with mirrored master controls.";
+            }
+        };
 
         btnRefresh.onClick = function () {
             updateSelectionStatus();
@@ -2058,7 +2488,13 @@
                     makePrecomp: chkPrecomp.value
                 };
 
-                var result = buildSplitHighlightsRig(comp, textLayer, options);
+                var isSplitMethod = (!ddMethod.selection || ddMethod.selection.index === 0);
+                var result = null;
+                if (isSplitMethod) {
+                    result = buildSplitHighlightsRig(comp, textLayer, options);
+                } else {
+                    result = buildCalculationHighlightsRig(comp, textLayer, options);
+                }
                 if (result) {
                     updateSelectionStatus();
                 }
