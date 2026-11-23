@@ -1744,6 +1744,35 @@
         JUSTIFY_ALL: 7418
     };
 
+    const BoxVerticalAlignment = {
+        TOP: 7512,
+        CENTER: 7513,
+        BOTTOM: 7514,
+        JUSTIFY: 7515
+    };
+
+    const BoxFirstBaselineAlignment = {
+        ASCENT: 7612,
+        CAP_HEIGHT: 7613,
+        LEADING: 7614,
+        X_HEIGHT: 7615,
+        LOW_CAP: 7616,
+        FIXED: 7617,
+        PROPORTIONAL: 7618
+    };
+
+    const BoxAutoFitPolicy = {
+        NONE: 7712,
+        FIT_FONT_SIZE_TO_BOX: 7713,
+        FIT_BOX_TO_TEXT: 7714
+    };
+
+    const LineOrientation = {
+        HORIZONTAL: 7312,
+        VERTICAL_RIGHT_TO_LEFT: 7313,
+        VERTICAL_LEFT_TO_RIGHT: 7314
+    };
+
     function normalizeJustification(j) {
         if (j === 7414 || j === 2 || j === 'center' || j === 'CENTER_JUSTIFY' || j === ParagraphJustification.CENTER_JUSTIFY) return 'center';
         if (j === 7413 || j === 1 || j === 'right' || j === 'RIGHT_JUSTIFY' || j === ParagraphJustification.RIGHT_JUSTIFY) return 'right';
@@ -1774,8 +1803,13 @@
             this.firstLineIndent = 0;
             this.leftIndent = 0;
             this.rightIndent = 0;
+            this.startIndent = 0;
+            this.endIndent = 0;
             this.spaceBefore = 0;
             this.spaceAfter = 0;
+            this.autoHyphenate = false;
+            this.hangingRoman = false;
+            this.everyLineComposer = false;
             this.fauxBold = false;
             this.fauxItalic = false;
             this.allCaps = false;
@@ -1787,6 +1821,13 @@
             this.boxText = false;
             this.boxTextSize = null;
             this.boxTextPos = [0, 0];
+            this.boxInsetSpacing = 0;
+            this.boxVerticalAlignment = BoxVerticalAlignment.TOP;
+            this.boxFirstBaselineAlignment = BoxFirstBaselineAlignment.ASCENT;
+            this.boxFirstBaselineAlignmentMinimum = 0;
+            this.boxAutoFitPolicy = BoxAutoFitPolicy.NONE;
+            this.lineOrientation = LineOrientation.HORIZONTAL;
+            this._boxOverflow = false;
         }
 
         get pointText() {
@@ -1803,6 +1844,44 @@
 
         get isPointText() {
             return !this.boxText;
+        }
+
+        get boxOverflow() {
+            if (this._boxOverflow) return true;
+            if (this.boxText && this.boxTextSize && this.boxTextSize[1] > 0) {
+                const effectiveLeading = (this.autoLeading || this.leading <= 0) ? (this.fontSize * 1.2) : this.leading;
+                const totalHeight = this.composedLineCount * effectiveLeading;
+                return totalHeight > this.boxTextSize[1];
+            }
+            return false;
+        }
+
+        set boxOverflow(val) {
+            this._boxOverflow = Boolean(val);
+        }
+
+        get composedLineCount() {
+            const raw = String(this.text || '');
+            if (raw.length === 0) return 0;
+            const hardLines = raw.split(/\r\n|\r|\n/);
+            if (!this.boxText || !this.boxTextSize || this.boxTextSize[0] <= 0) {
+                return hardLines.length;
+            }
+            let total = 0;
+            const avgCharWidth = (this.fontSize || 24) * 0.52;
+            const maxCharsPerLine = Math.max(1, Math.floor(this.boxTextSize[0] / avgCharWidth));
+            for (let i = 0; i < hardLines.length; i++) {
+                const lineLen = hardLines[i].length;
+                if (lineLen === 0) total += 1;
+                else total += Math.max(1, Math.ceil(lineLen / maxCharsPerLine));
+            }
+            return total;
+        }
+
+        get paragraphCount() {
+            const raw = String(this.text || '');
+            if (raw.length === 0) return 0;
+            return raw.split(/\r\n|\r|\n/).length;
         }
 
         setBoxTextSize(size) {
@@ -2280,6 +2359,70 @@
                 },
                 isPointText: {
                     get: () => !Boolean(this.boxText || (textDoc && textDoc.boxText)),
+                    configurable: true
+                },
+                boxOverflow: {
+                    get: () => Boolean(textDoc && textDoc.boxOverflow),
+                    configurable: true
+                },
+                boxInsetSpacing: {
+                    get: () => (textDoc ? textDoc.boxInsetSpacing : 0),
+                    configurable: true
+                },
+                boxVerticalAlignment: {
+                    get: () => (textDoc ? textDoc.boxVerticalAlignment : 7512),
+                    configurable: true
+                },
+                boxFirstBaselineAlignment: {
+                    get: () => (textDoc ? textDoc.boxFirstBaselineAlignment : 7612),
+                    configurable: true
+                },
+                boxAutoFitPolicy: {
+                    get: () => (textDoc ? textDoc.boxAutoFitPolicy : 7712),
+                    configurable: true
+                },
+                lineOrientation: {
+                    get: () => (textDoc ? textDoc.lineOrientation : 7312),
+                    configurable: true
+                },
+                composedLineCount: {
+                    get: () => (textDoc ? textDoc.composedLineCount : 0),
+                    configurable: true
+                },
+                paragraphCount: {
+                    get: () => (textDoc ? textDoc.paragraphCount : 0),
+                    configurable: true
+                },
+                firstLineIndent: {
+                    get: () => (textDoc ? textDoc.firstLineIndent : 0),
+                    configurable: true
+                },
+                startIndent: {
+                    get: () => (textDoc ? textDoc.startIndent : 0),
+                    configurable: true
+                },
+                endIndent: {
+                    get: () => (textDoc ? textDoc.endIndent : 0),
+                    configurable: true
+                },
+                spaceBefore: {
+                    get: () => (textDoc ? textDoc.spaceBefore : 0),
+                    configurable: true
+                },
+                spaceAfter: {
+                    get: () => (textDoc ? textDoc.spaceAfter : 0),
+                    configurable: true
+                },
+                autoHyphenate: {
+                    get: () => Boolean(textDoc && textDoc.autoHyphenate),
+                    configurable: true
+                },
+                hangingRoman: {
+                    get: () => Boolean(textDoc && textDoc.hangingRoman),
+                    configurable: true
+                },
+                everyLineComposer: {
+                    get: () => Boolean(textDoc && textDoc.everyLineComposer),
                     configurable: true
                 }
             });
@@ -3228,6 +3371,10 @@
     global.VectorGraphicGradientStroke = VectorGraphicGradientStroke;
     global.TextDocument = TextDocument;
     global.ParagraphJustification = ParagraphJustification;
+    global.BoxVerticalAlignment = BoxVerticalAlignment;
+    global.BoxFirstBaselineAlignment = BoxFirstBaselineAlignment;
+    global.BoxAutoFitPolicy = BoxAutoFitPolicy;
+    global.LineOrientation = LineOrientation;
     global.normalizeJustification = normalizeJustification;
     global.AETextCalibration = AETextCalibration;
     global.EffectGroup = EffectGroup;
@@ -3235,4 +3382,4 @@
     global.EffectSliderControl = EffectSliderControl;
     global.EffectColorControl = EffectColorControl;
 
-})(typeof window !== 'undefined' ? window : global);
+})(typeof window !== 'undefined' ? window : (typeof globalThis !== 'undefined' ? globalThis : (typeof global !== 'undefined' ? global : this)));

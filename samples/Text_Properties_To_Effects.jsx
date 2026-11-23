@@ -1,7 +1,7 @@
 // Co-authored & architected with Google DeepMind Antigravity.
 // =============================================================================
 // ADOBE AFTER EFFECTS EXTENDSCRIPT & SCRIPTUI PANEL:
-// TEXT & BOX PROPERTIES TO EFFECTS (INSPECTOR & RIGGER) v1.2.3
+// TEXT & BOX PROPERTIES TO EFFECTS (INSPECTOR & RIGGER) v1.3.0
 // =============================================================================
 //
 // PURPOSE:
@@ -10,11 +10,26 @@
 //   content counters as live, interactive Effect Controls (Sliders, Points,
 //   Checkboxes, Colors) on the layer.
 //
+// OFFICIAL DOCUMENTATION & API REFERENCES:
+//   - Adobe AE TextDocument API:
+//     https://ae-scripting.docsforadobe.dev/text/textdocument/
+//   - Adobe AE Scripting Changelog:
+//     https://ae-scripting.docsforadobe.dev/introduction/changelog/
+//   - AE vs Web JS Text Rendering Differences Guide:
+//     https://github.com/work2survive/AE_JS_builder/blob/main/AE_VS_JS_TEXT_RENDERING_DIFFERENCES.md
+//   - Adobe AE Expression Reference:
+//     https://helpx.adobe.com/after-effects/using/expression-language-reference.html#text_properties
+//
+// PROPERTY ACCESS NOTATION:
+//   - [RO]  = Read-Only (Calculated dynamically by After Effects layout engine).
+//   - [R/W] = Read / Write (Can be modified via ExtendScript TextDocument or Expression Style).
+//
 // IN-MEMORY METRICS STORE:
 //   Automatically analyzes and stores in memory:
 //     - Array with each word detected in the text box.
 //     - Array with the width in pixels of each word.
 //     - Array with the width in pixels of each text line.
+//     - Real-time paragraph box dimensions, overflow state, and composed line count.
 //   Stored in:
 //     - $.global.AE_TEXT_BOX_MEMORY
 //     - win.textMemoryStore
@@ -30,7 +45,10 @@
     "use strict";
 
     var SCRIPT_NAME = "Text & Box Properties to Effects";
-    var SCRIPT_VERSION = "v1.2.3";
+    var SCRIPT_VERSION = "v1.3.0";
+    var DOC_TEXTDOC_URL = "https://ae-scripting.docsforadobe.dev/text/textdocument/";
+    var DOC_CHANGELOG_URL = "https://ae-scripting.docsforadobe.dev/introduction/changelog/";
+    var DOC_DIFFERENCES_URL = "https://github.com/work2survive/AE_JS_builder/blob/main/AE_VS_JS_TEXT_RENDERING_DIFFERENCES.md";
 
     // Global in-memory cache initialization
     var $global;
@@ -67,175 +85,69 @@
             fontSize: 0,
             boxWidth: 0,
             boxHeight: 0,
+            boxOverflow: 0,
+            boxInsetSpacing: 0,
+            boxVerticalAlignment: 7512,
+            boxFirstBaselineAlignment: 7612,
+            boxAutoFitPolicy: 7712,
+            lineOrientation: 7312,
             totalWords: 0,
             totalLines: 0,
+            composedLineCount: 0,
+            paragraphCount: 0,
+            firstLineIndent: 0,
+            startIndent: 0,
+            endIndent: 0,
+            spaceBefore: 0,
+            spaceAfter: 0,
+            autoHyphenate: false,
+            hangingRoman: false,
+            everyLineComposer: false,
             maxLineWidth: 0,
             maxWordWidth: 0,
             timestamp: 0
         };
     }
 
+    // Helper to safely open external URLs in default web browser
+    function openExternalURL(url) {
+        if (!url) return;
+        try {
+            if ($.os && $.os.indexOf("Windows") !== -1) {
+                system.callSystem('cmd.exe /c start "" "' + url + '"');
+            } else {
+                system.callSystem('open "' + url + '"');
+            }
+        } catch (eSys) {
+            try {
+                var f = new File(Folder.temp.fsName + "/open_url.url");
+                f.open("w");
+                f.writeln("[InternetShortcut]");
+                f.writeln("URL=" + url);
+                f.close();
+                f.execute();
+            } catch (eFile) {}
+        }
+    }
+
     // =========================================================================
     // 1. PROPERTY DEFINITIONS CATALOG
     // =========================================================================
     var PROPERTY_DEFS = [
-        // --- Category 1: sourceRect Dimensions & Bounds ---
-        {
-            id: "sr_width",
-            category: "bounds",
-            label: "Text Width (sourceRect)",
-            effectName: "Text Width (sourceRect)",
-            matchName: "ADBE Slider Control",
-            type: "slider",
-            defaultChecked: true,
-            tooltip: "sourceRectAtTime(time, false).width — Dynamic width of text glyphs / bounds",
-            expression: "sourceRectAtTime(time, false).width;",
-            evalStatic: function (layer, textDoc, rect) { return rect ? rect.width : 0; }
-        },
-        {
-            id: "sr_height",
-            category: "bounds",
-            label: "Text Height (sourceRect)",
-            effectName: "Text Height (sourceRect)",
-            matchName: "ADBE Slider Control",
-            type: "slider",
-            defaultChecked: true,
-            tooltip: "sourceRectAtTime(time, false).height — Dynamic height of text glyphs / bounds",
-            expression: "sourceRectAtTime(time, false).height;",
-            evalStatic: function (layer, textDoc, rect) { return rect ? rect.height : 0; }
-        },
-        {
-            id: "sr_size",
-            category: "bounds",
-            label: "Visual Size [W, H]",
-            effectName: "Visual Size [W, H]",
-            matchName: "ADBE Point Control",
-            type: "point",
-            defaultChecked: true,
-            tooltip: "2D Point with [width, height] from sourceRectAtTime",
-            expression: "var r = sourceRectAtTime(time, false);\n[r.width, r.height];",
-            evalStatic: function (layer, textDoc, rect) { return rect ? [rect.width, rect.height] : [0, 0]; }
-        },
-        {
-            id: "sr_left",
-            category: "bounds",
-            label: "Text Left Offset (X Min)",
-            effectName: "Text Left (sourceRect)",
-            matchName: "ADBE Slider Control",
-            type: "slider",
-            defaultChecked: true,
-            tooltip: "sourceRectAtTime(time, false).left — Horizontal distance from origin to text start",
-            expression: "sourceRectAtTime(time, false).left;",
-            evalStatic: function (layer, textDoc, rect) { return rect ? rect.left : 0; }
-        },
-        {
-            id: "sr_top",
-            category: "bounds",
-            label: "Text Top Offset (Y Min / Baseline)",
-            effectName: "Text Top (sourceRect)",
-            matchName: "ADBE Slider Control",
-            type: "slider",
-            defaultChecked: true,
-            tooltip: "sourceRectAtTime(time, false).top — Vertical distance from origin to top of text",
-            expression: "sourceRectAtTime(time, false).top;",
-            evalStatic: function (layer, textDoc, rect) { return rect ? rect.top : 0; }
-        },
-        {
-            id: "sr_center",
-            category: "bounds",
-            label: "Visual Center Offset [X, Y]",
-            effectName: "Visual Center Offset",
-            matchName: "ADBE Point Control",
-            type: "point",
-            defaultChecked: true,
-            tooltip: "Visual center point coordinates [left + width/2, top + height/2]",
-            expression: "var r = sourceRectAtTime(time, false);\n[r.left + r.width / 2, r.top + r.height / 2];",
-            evalStatic: function (layer, textDoc, rect) {
-                return rect ? [rect.left + rect.width / 2, rect.top + rect.height / 2] : [0, 0];
-            }
-        },
-        {
-            id: "sr_min_corner",
-            category: "bounds",
-            label: "Min Corner [Left, Top]",
-            effectName: "Min Corner [Left, Top]",
-            matchName: "ADBE Point Control",
-            type: "point",
-            defaultChecked: false,
-            tooltip: "Top-Left boundary coordinate [left, top]",
-            expression: "var r = sourceRectAtTime(time, false);\n[r.left, r.top];",
-            evalStatic: function (layer, textDoc, rect) { return rect ? [rect.left, rect.top] : [0, 0]; }
-        },
-        {
-            id: "sr_max_corner",
-            category: "bounds",
-            label: "Max Corner [Right, Bottom]",
-            effectName: "Max Corner [Right, Bottom]",
-            matchName: "ADBE Point Control",
-            type: "point",
-            defaultChecked: false,
-            tooltip: "Bottom-Right boundary coordinate [left + width, top + height]",
-            expression: "var r = sourceRectAtTime(time, false);\n[r.left + r.width, r.top + r.height];",
-            evalStatic: function (layer, textDoc, rect) {
-                return rect ? [rect.left + rect.width, rect.top + rect.height] : [0, 0];
-            }
-        },
-
-        // --- Category 2: Paragraph Box & Indents ---
-        {
-            id: "box_width",
-            category: "box",
-            label: "Paragraph Box Width",
-            effectName: "Box Text Width",
-            matchName: "ADBE Slider Control",
-            type: "slider",
-            defaultChecked: true,
-            tooltip: "boxTextSize[0] for paragraph box text, with fallback to sourceRect width",
-            expression: "try {\n    var st = text.sourceText;\n    if (st && st.style && st.style.boxText && st.style.boxTextSize) {\n        st.style.boxTextSize[0];\n    } else {\n        sourceRectAtTime(time, false).width;\n    }\n} catch (err) {\n    sourceRectAtTime(time, false).width;\n}",
-            evalStatic: function (layer, textDoc, rect) {
-                if (textDoc && textDoc.boxText && textDoc.boxTextSize) return textDoc.boxTextSize[0];
-                return rect ? rect.width : 0;
-            }
-        },
-        {
-            id: "box_height",
-            category: "box",
-            label: "Paragraph Box Height",
-            effectName: "Box Text Height",
-            matchName: "ADBE Slider Control",
-            type: "slider",
-            defaultChecked: true,
-            tooltip: "boxTextSize[1] for paragraph box text, with fallback to sourceRect height",
-            expression: "try {\n    var st = text.sourceText;\n    if (st && st.style && st.style.boxText && st.style.boxTextSize) {\n        st.style.boxTextSize[1];\n    } else {\n        sourceRectAtTime(time, false).height;\n    }\n} catch (err) {\n    sourceRectAtTime(time, false).height;\n}",
-            evalStatic: function (layer, textDoc, rect) {
-                if (textDoc && textDoc.boxText && textDoc.boxTextSize) return textDoc.boxTextSize[1];
-                return rect ? rect.height : 0;
-            }
-        },
-        {
-            id: "box_size",
-            category: "box",
-            label: "Paragraph Box Size [W, H]",
-            effectName: "Box Text Size [W, H]",
-            matchName: "ADBE Point Control",
-            type: "point",
-            defaultChecked: true,
-            tooltip: "boxTextSize [width, height] 2D point for paragraph box text",
-            expression: "try {\n    var st = text.sourceText;\n    if (st && st.style && st.style.boxText && st.style.boxTextSize) {\n        st.style.boxTextSize;\n    } else {\n        var r = sourceRectAtTime(time, false);\n        [r.width, r.height];\n    }\n} catch (err) {\n    var r = sourceRectAtTime(time, false);\n    [r.width, r.height];\n}",
-            evalStatic: function (layer, textDoc, rect) {
-                if (textDoc && textDoc.boxText && textDoc.boxTextSize) return textDoc.boxTextSize;
-                return rect ? [rect.width, rect.height] : [0, 0];
-            }
-        },
+        // =====================================================================
+        // CATEGORY: BOX & DIMENSIONS
+        // =====================================================================
         {
             id: "text_type",
             category: "box",
-            label: "Text Type: Point (0) / Box (1) (Slider)",
+            access: "RO",
+            label: "[RO] Text Type: Point (0) / Box (1)",
             effectName: "Text Type (0:Point, 1:Box)",
             matchName: "ADBE Slider Control",
             type: "slider",
             defaultChecked: true,
-            tooltip: "Slider value: 0 if Point Text, 1 if Box Text",
+            docUrl: "https://ae-scripting.docsforadobe.dev/text/textdocument/#textdocument-boxtext",
+            tooltip: "[RO] Text Type: 0 for Point Text, 1 for Paragraph Box Text (isParagraphText / boxText)",
             expression: "try {\n    var st = text.sourceText;\n    if (typeof st.isParagraphText !== 'undefined') {\n        st.isParagraphText ? 1 : 0;\n    } else if (typeof st.isPointText !== 'undefined') {\n        st.isPointText ? 0 : 1;\n    } else if (st.style && typeof st.style.boxText !== 'undefined') {\n        st.style.boxText ? 1 : 0;\n    } else if (typeof st.boxText !== 'undefined') {\n        st.boxText ? 1 : 0;\n    } else if (st.style && st.style.boxTextSize && st.style.boxTextSize[0] > 0) {\n        1;\n    } else if (st.value && typeof st.value.boxText !== 'undefined') {\n        st.value.boxText ? 1 : 0;\n    } else {\n        0;\n    }\n} catch (err) {\n    0;\n}",
             evalStatic: function (layer, textDoc, rect) {
                 if (!textDoc) return 0;
@@ -247,12 +159,14 @@
         {
             id: "box_is_box",
             category: "box",
-            label: "Is Paragraph Box Text (0/1) (Checkbox)",
+            access: "RO",
+            label: "[RO] Is Paragraph Box Text (0/1)",
             effectName: "Is Paragraph Box Text",
             matchName: "ADBE Checkbox Control",
             type: "checkbox",
             defaultChecked: true,
-            tooltip: "Checkbox value: 0 (unchecked) if Point Text, 1 (checked) if Box Text",
+            docUrl: "https://ae-scripting.docsforadobe.dev/text/textdocument/#textdocument-boxtext",
+            tooltip: "[RO] Checkbox: 0 (unchecked) if Point Text, 1 (checked) if Paragraph Box Text",
             expression: "try {\n    var st = text.sourceText;\n    if (typeof st.isParagraphText !== 'undefined') {\n        st.isParagraphText ? 1 : 0;\n    } else if (typeof st.isPointText !== 'undefined') {\n        st.isPointText ? 0 : 1;\n    } else if (st.style && typeof st.style.boxText !== 'undefined') {\n        st.style.boxText ? 1 : 0;\n    } else if (typeof st.boxText !== 'undefined') {\n        st.boxText ? 1 : 0;\n    } else if (st.style && st.style.boxTextSize && st.style.boxTextSize[0] > 0) {\n        1;\n    } else if (st.value && typeof st.value.boxText !== 'undefined') {\n        st.value.boxText ? 1 : 0;\n    } else {\n        0;\n    }\n} catch (err) {\n    0;\n}",
             evalStatic: function (layer, textDoc, rect) {
                 if (!textDoc) return 0;
@@ -262,69 +176,475 @@
             }
         },
         {
-            id: "align_index",
+            id: "box_overflow",
             category: "box",
-            label: "Alignment (0:Left, 1:Ctr, 2:Rgt, 3:Full)",
+            access: "RO",
+            label: "[RO] Box Overflow (Overset)",
+            effectName: "Box Overflow",
+            matchName: "ADBE Checkbox Control",
+            type: "checkbox",
+            defaultChecked: false,
+            docUrl: "https://ae-scripting.docsforadobe.dev/text/textdocument/#textdocument-boxoverflow",
+            tooltip: "[RO] TextDocument.boxOverflow — Returns true if text overflows paragraph box frame (AE 24.6+)",
+            expression: "try {\n    var st = text.sourceText;\n    if (typeof st.boxOverflow !== 'undefined') {\n        st.boxOverflow ? 1 : 0;\n    } else if (st.style && typeof st.style.boxOverflow !== 'undefined') {\n        st.style.boxOverflow ? 1 : 0;\n    } else if (st.style && st.style.boxText && st.style.boxTextSize) {\n        var r = sourceRectAtTime(time, false);\n        (r.height > st.style.boxTextSize[1] || r.width > st.style.boxTextSize[0]) ? 1 : 0;\n    } else {\n        0;\n    }\n} catch (err) {\n    0;\n}",
+            evalStatic: function (layer, textDoc, rect) {
+                if (textDoc && typeof textDoc.boxOverflow !== "undefined") return textDoc.boxOverflow ? 1 : 0;
+                if (textDoc && textDoc.boxText && textDoc.boxTextSize && rect) {
+                    return (rect.height > textDoc.boxTextSize[1] || rect.width > textDoc.boxTextSize[0]) ? 1 : 0;
+                }
+                return 0;
+            }
+        },
+        {
+            id: "box_width",
+            category: "box",
+            access: "RW",
+            label: "[R/W] Paragraph Box Width",
+            effectName: "Box Text Width",
+            matchName: "ADBE Slider Control",
+            type: "slider",
+            defaultChecked: true,
+            docUrl: "https://ae-scripting.docsforadobe.dev/text/textdocument/#textdocument-boxtextsize",
+            tooltip: "[R/W] TextDocument.boxTextSize[0] — Width of paragraph text box frame in pixels",
+            expression: "try {\n    var st = text.sourceText;\n    if (st && st.style && st.style.boxText && st.style.boxTextSize) {\n        st.style.boxTextSize[0];\n    } else {\n        sourceRectAtTime(time, false).width;\n    }\n} catch (err) {\n    sourceRectAtTime(time, false).width;\n}",
+            evalStatic: function (layer, textDoc, rect) {
+                if (textDoc && textDoc.boxText && textDoc.boxTextSize) return textDoc.boxTextSize[0];
+                return rect ? rect.width : 0;
+            }
+        },
+        {
+            id: "box_height",
+            category: "box",
+            access: "RW",
+            label: "[R/W] Paragraph Box Height",
+            effectName: "Box Text Height",
+            matchName: "ADBE Slider Control",
+            type: "slider",
+            defaultChecked: true,
+            docUrl: "https://ae-scripting.docsforadobe.dev/text/textdocument/#textdocument-boxtextsize",
+            tooltip: "[R/W] TextDocument.boxTextSize[1] — Height of paragraph text box frame in pixels",
+            expression: "try {\n    var st = text.sourceText;\n    if (st && st.style && st.style.boxText && st.style.boxTextSize) {\n        st.style.boxTextSize[1];\n    } else {\n        sourceRectAtTime(time, false).height;\n    }\n} catch (err) {\n    sourceRectAtTime(time, false).height;\n}",
+            evalStatic: function (layer, textDoc, rect) {
+                if (textDoc && textDoc.boxText && textDoc.boxTextSize) return textDoc.boxTextSize[1];
+                return rect ? rect.height : 0;
+            }
+        },
+        {
+            id: "box_size",
+            category: "box",
+            access: "RW",
+            label: "[R/W] Paragraph Box Size [W, H]",
+            effectName: "Box Text Size [W, H]",
+            matchName: "ADBE Point Control",
+            type: "point",
+            defaultChecked: true,
+            docUrl: "https://ae-scripting.docsforadobe.dev/text/textdocument/#textdocument-boxtextsize",
+            tooltip: "[R/W] TextDocument.boxTextSize — 2D Point [width, height] of paragraph box",
+            expression: "try {\n    var st = text.sourceText;\n    if (st && st.style && st.style.boxText && st.style.boxTextSize) {\n        st.style.boxTextSize;\n    } else {\n        var r = sourceRectAtTime(time, false);\n        [r.width, r.height];\n    }\n} catch (err) {\n    var r = sourceRectAtTime(time, false);\n    [r.width, r.height];\n}",
+            evalStatic: function (layer, textDoc, rect) {
+                if (textDoc && textDoc.boxText && textDoc.boxTextSize) return textDoc.boxTextSize;
+                return rect ? [rect.width, rect.height] : [0, 0];
+            }
+        },
+        {
+            id: "box_inset_spacing",
+            category: "box",
+            access: "RW",
+            label: "[R/W] Box Inset Spacing (px)",
+            effectName: "Box Inset Spacing",
+            matchName: "ADBE Slider Control",
+            type: "slider",
+            defaultChecked: false,
+            docUrl: "https://ae-scripting.docsforadobe.dev/text/textdocument/#textdocument-boxinsetspacing",
+            tooltip: "[R/W] TextDocument.boxInsetSpacing — Padding / margin inset inside paragraph box (AE 24.6+)",
+            expression: "try {\n    var st = text.sourceText;\n    (typeof st.boxInsetSpacing !== 'undefined') ? st.boxInsetSpacing : (st.style && typeof st.style.boxInsetSpacing !== 'undefined' ? st.style.boxInsetSpacing : 0);\n} catch (err) {\n    0;\n}",
+            evalStatic: function (layer, textDoc) {
+                return (textDoc && typeof textDoc.boxInsetSpacing !== "undefined") ? textDoc.boxInsetSpacing : 0;
+            }
+        },
+        {
+            id: "box_vertical_align",
+            category: "box",
+            access: "RW",
+            label: "[R/W] Box Vertical Alignment (0..3)",
+            effectName: "Box Vertical Alignment",
+            matchName: "ADBE Slider Control",
+            type: "slider",
+            defaultChecked: false,
+            docUrl: "https://ae-scripting.docsforadobe.dev/text/textdocument/#textdocument-boxverticalalignment",
+            tooltip: "[R/W] TextDocument.boxVerticalAlignment — 0:Top (7512), 1:Center (7513), 2:Bottom (7514), 3:Justify (7515) (AE 24.6+)",
+            expression: "try {\n    var st = text.sourceText;\n    var va = (typeof st.boxVerticalAlignment !== 'undefined') ? st.boxVerticalAlignment : (st.style && typeof st.style.boxVerticalAlignment !== 'undefined' ? st.style.boxVerticalAlignment : 0);\n    if (typeof BoxVerticalAlignment !== 'undefined') {\n        if (va === BoxVerticalAlignment.CENTER) 1;\n        else if (va === BoxVerticalAlignment.BOTTOM) 2;\n        else if (va === BoxVerticalAlignment.JUSTIFY) 3;\n        else 0;\n    } else {\n        if (va == 7513) 1; else if (va == 7514) 2; else if (va == 7515) 3; else 0;\n    }\n} catch (err) {\n    0;\n}",
+            evalStatic: function (layer, textDoc) {
+                if (!textDoc || typeof textDoc.boxVerticalAlignment === "undefined") return 0;
+                var va = textDoc.boxVerticalAlignment;
+                return (va == 7513) ? 1 : ((va == 7514) ? 2 : ((va == 7515) ? 3 : 0));
+            }
+        },
+        {
+            id: "box_first_baseline",
+            category: "box",
+            access: "RW",
+            label: "[R/W] Box First Baseline Align (0..6)",
+            effectName: "Box First Baseline Align",
+            matchName: "ADBE Slider Control",
+            type: "slider",
+            defaultChecked: false,
+            docUrl: "https://ae-scripting.docsforadobe.dev/text/textdocument/#textdocument-boxfirstbaselinealignment",
+            tooltip: "[R/W] TextDocument.boxFirstBaselineAlignment — Baseline offset policy (0:Ascent, 1:Cap, 2:Leading, 3:X-Height, 4:Low-Cap, 5:Fixed, 6:Prop) (AE 24.6+)",
+            expression: "try {\n    var st = text.sourceText;\n    var ba = (typeof st.boxFirstBaselineAlignment !== 'undefined') ? st.boxFirstBaselineAlignment : (st.style && typeof st.style.boxFirstBaselineAlignment !== 'undefined' ? st.style.boxFirstBaselineAlignment : 0);\n    (ba >= 7612 && ba <= 7618) ? (ba - 7612) : 0;\n} catch (err) {\n    0;\n}",
+            evalStatic: function (layer, textDoc) {
+                if (!textDoc || typeof textDoc.boxFirstBaselineAlignment === "undefined") return 0;
+                var ba = textDoc.boxFirstBaselineAlignment;
+                return (ba >= 7612 && ba <= 7618) ? (ba - 7612) : 0;
+            }
+        },
+        {
+            id: "box_auto_fit",
+            category: "box",
+            access: "RW",
+            label: "[R/W] Box Auto-Fit Policy (0..2)",
+            effectName: "Box Auto-Fit Policy",
+            matchName: "ADBE Slider Control",
+            type: "slider",
+            defaultChecked: false,
+            docUrl: "https://ae-scripting.docsforadobe.dev/text/textdocument/#textdocument-boxautofitpolicy",
+            tooltip: "[R/W] TextDocument.boxAutoFitPolicy — 0:None (7712), 1:Fit Font to Box (7713), 2:Fit Box to Text (7714) (AE 24.6+)",
+            expression: "try {\n    var st = text.sourceText;\n    var af = (typeof st.boxAutoFitPolicy !== 'undefined') ? st.boxAutoFitPolicy : (st.style && typeof st.style.boxAutoFitPolicy !== 'undefined' ? st.style.boxAutoFitPolicy : 0);\n    if (af == 7713) 1; else if (af == 7714) 2; else 0;\n} catch (err) {\n    0;\n}",
+            evalStatic: function (layer, textDoc) {
+                if (!textDoc || typeof textDoc.boxAutoFitPolicy === "undefined") return 0;
+                var af = textDoc.boxAutoFitPolicy;
+                return (af == 7713) ? 1 : ((af == 7714) ? 2 : 0);
+            }
+        },
+        {
+            id: "line_orientation",
+            category: "box",
+            access: "RW",
+            label: "[R/W] Line Orientation (0:H, 1:V-RTL, 2:V-LTR)",
+            effectName: "Line Orientation",
+            matchName: "ADBE Slider Control",
+            type: "slider",
+            defaultChecked: false,
+            docUrl: "https://ae-scripting.docsforadobe.dev/text/textdocument/#textdocument-lineorientation",
+            tooltip: "[R/W] TextDocument.lineOrientation — 0:Horizontal (7312), 1:Vertical RTL (7313), 2:Vertical LTR (7314) (AE 24.2+)",
+            expression: "try {\n    var st = text.sourceText;\n    var lo = (typeof st.lineOrientation !== 'undefined') ? st.lineOrientation : (st.style && typeof st.style.lineOrientation !== 'undefined' ? st.style.lineOrientation : 0);\n    if (lo == 7313) 1; else if (lo == 7314) 2; else 0;\n} catch (err) {\n    0;\n}",
+            evalStatic: function (layer, textDoc) {
+                if (!textDoc || typeof textDoc.lineOrientation === "undefined") return 0;
+                var lo = textDoc.lineOrientation;
+                return (lo == 7313) ? 1 : ((lo == 7314) ? 2 : 0);
+            }
+        },
+
+        // --- Visual Glyphs Bounds (sourceRectAtTime) ---
+        {
+            id: "sr_width",
+            category: "bounds",
+            access: "RO",
+            label: "[RO] Text Width (sourceRect)",
+            effectName: "Text Width (sourceRect)",
+            matchName: "ADBE Slider Control",
+            type: "slider",
+            defaultChecked: true,
+            docUrl: "https://ae-scripting.docsforadobe.dev/layers/layer/#layer-sourcerectattime",
+            tooltip: "[RO] sourceRectAtTime(time, false).width — Dynamic width of text glyphs / bounds",
+            expression: "sourceRectAtTime(time, false).width;",
+            evalStatic: function (layer, textDoc, rect) { return rect ? rect.width : 0; }
+        },
+        {
+            id: "sr_height",
+            category: "bounds",
+            access: "RO",
+            label: "[RO] Text Height (sourceRect)",
+            effectName: "Text Height (sourceRect)",
+            matchName: "ADBE Slider Control",
+            type: "slider",
+            defaultChecked: true,
+            docUrl: "https://ae-scripting.docsforadobe.dev/layers/layer/#layer-sourcerectattime",
+            tooltip: "[RO] sourceRectAtTime(time, false).height — Dynamic height of text glyphs / bounds",
+            expression: "sourceRectAtTime(time, false).height;",
+            evalStatic: function (layer, textDoc, rect) { return rect ? rect.height : 0; }
+        },
+        {
+            id: "sr_size",
+            category: "bounds",
+            access: "RO",
+            label: "[RO] Visual Size [W, H]",
+            effectName: "Visual Size [W, H]",
+            matchName: "ADBE Point Control",
+            type: "point",
+            defaultChecked: true,
+            docUrl: "https://ae-scripting.docsforadobe.dev/layers/layer/#layer-sourcerectattime",
+            tooltip: "[RO] 2D Point [width, height] from sourceRectAtTime",
+            expression: "var r = sourceRectAtTime(time, false);\n[r.width, r.height];",
+            evalStatic: function (layer, textDoc, rect) { return rect ? [rect.width, rect.height] : [0, 0]; }
+        },
+        {
+            id: "sr_left",
+            category: "bounds",
+            access: "RO",
+            label: "[RO] Text Left Offset (X Min)",
+            effectName: "Text Left (sourceRect)",
+            matchName: "ADBE Slider Control",
+            type: "slider",
+            defaultChecked: true,
+            docUrl: "https://ae-scripting.docsforadobe.dev/layers/layer/#layer-sourcerectattime",
+            tooltip: "[RO] sourceRectAtTime(time, false).left — Horizontal distance from origin to text start",
+            expression: "sourceRectAtTime(time, false).left;",
+            evalStatic: function (layer, textDoc, rect) { return rect ? rect.left : 0; }
+        },
+        {
+            id: "sr_top",
+            category: "bounds",
+            access: "RO",
+            label: "[RO] Text Top Offset (Y Min / Baseline)",
+            effectName: "Text Top (sourceRect)",
+            matchName: "ADBE Slider Control",
+            type: "slider",
+            defaultChecked: true,
+            docUrl: "https://ae-scripting.docsforadobe.dev/layers/layer/#layer-sourcerectattime",
+            tooltip: "[RO] sourceRectAtTime(time, false).top — Vertical distance from origin to top of text",
+            expression: "sourceRectAtTime(time, false).top;",
+            evalStatic: function (layer, textDoc, rect) { return rect ? rect.top : 0; }
+        },
+        {
+            id: "sr_center",
+            category: "bounds",
+            access: "RO",
+            label: "[RO] Visual Center Offset [X, Y]",
+            effectName: "Visual Center Offset",
+            matchName: "ADBE Point Control",
+            type: "point",
+            defaultChecked: true,
+            docUrl: "https://ae-scripting.docsforadobe.dev/layers/layer/#layer-sourcerectattime",
+            tooltip: "[RO] Visual center point coordinates [left + width/2, top + height/2]",
+            expression: "var r = sourceRectAtTime(time, false);\n[r.left + r.width / 2, r.top + r.height / 2];",
+            evalStatic: function (layer, textDoc, rect) {
+                return rect ? [rect.left + rect.width / 2, rect.top + rect.height / 2] : [0, 0];
+            }
+        },
+        {
+            id: "sr_min_corner",
+            category: "bounds",
+            access: "RO",
+            label: "[RO] Min Corner [Left, Top]",
+            effectName: "Min Corner [Left, Top]",
+            matchName: "ADBE Point Control",
+            type: "point",
+            defaultChecked: false,
+            docUrl: "https://ae-scripting.docsforadobe.dev/layers/layer/#layer-sourcerectattime",
+            tooltip: "[RO] Top-Left boundary coordinate [left, top]",
+            expression: "var r = sourceRectAtTime(time, false);\n[r.left, r.top];",
+            evalStatic: function (layer, textDoc, rect) { return rect ? [rect.left, rect.top] : [0, 0]; }
+        },
+        {
+            id: "sr_max_corner",
+            category: "bounds",
+            access: "RO",
+            label: "[RO] Max Corner [Right, Bottom]",
+            effectName: "Max Corner [Right, Bottom]",
+            matchName: "ADBE Point Control",
+            type: "point",
+            defaultChecked: false,
+            docUrl: "https://ae-scripting.docsforadobe.dev/layers/layer/#layer-sourcerectattime",
+            tooltip: "[RO] Bottom-Right boundary coordinate [left + width, top + height]",
+            expression: "var r = sourceRectAtTime(time, false);\n[r.left + r.width, r.top + r.height];",
+            evalStatic: function (layer, textDoc, rect) {
+                return rect ? [rect.left + rect.width, rect.top + rect.height] : [0, 0];
+            }
+        },
+
+        // =====================================================================
+        // CATEGORY: PARAGRAPH & ALIGNMENT
+        // =====================================================================
+        {
+            id: "align_index",
+            category: "align",
+            access: "RW",
+            label: "[R/W] Paragraph Alignment (0..3)",
             effectName: "Alignment Index",
             matchName: "ADBE Slider Control",
             type: "slider",
             defaultChecked: true,
-            tooltip: "Paragraph justification index (0 = Left, 1 = Center, 2 = Right, 3 = Justified)",
+            docUrl: "https://ae-scripting.docsforadobe.dev/text/textdocument/#textdocument-justification",
+            tooltip: "[R/W] Paragraph justification: 0:Left, 1:Center, 2:Right, 3:Justified",
             expression: "try {\n    var j = text.sourceText.style.justification;\n    if (typeof ParagraphJustification !== 'undefined') {\n        if (j === ParagraphJustification.CENTER_JUSTIFY) 1;\n        else if (j === ParagraphJustification.RIGHT_JUSTIFY) 2;\n        else if (j === ParagraphJustification.LEFT_JUSTIFY) 0;\n        else 3;\n    } else {\n        if (j == 7414) 1; else if (j == 7413) 2; else 0;\n    }\n} catch (err) {\n    0;\n}",
             evalStatic: function (layer, textDoc, rect) {
                 if (!textDoc || typeof textDoc.justification === "undefined") return 0;
                 var j = textDoc.justification;
-                if (typeof ParagraphJustification !== "undefined") {
-                    if (j === ParagraphJustification.CENTER_JUSTIFY) return 1;
-                    if (j === ParagraphJustification.RIGHT_JUSTIFY) return 2;
-                    if (j === ParagraphJustification.LEFT_JUSTIFY) return 0;
-                    return 3;
-                }
                 return (j == 7414) ? 1 : ((j == 7413) ? 2 : 0);
             }
         },
         {
             id: "align_ratio",
-            category: "box",
-            label: "Alignment Ratio (0..0.5..1.0)",
+            category: "align",
+            access: "RW",
+            label: "[R/W] Alignment Ratio (0..0.5..1.0)",
             effectName: "Alignment Ratio",
             matchName: "ADBE Slider Control",
             type: "slider",
             defaultChecked: true,
-            tooltip: "Normalized justification factor: 0.0 (Left), 0.5 (Center), 1.0 (Right)",
+            docUrl: "https://ae-scripting.docsforadobe.dev/text/textdocument/#textdocument-justification",
+            tooltip: "[R/W] Normalized justification factor: 0.0 (Left), 0.5 (Center), 1.0 (Right)",
             expression: "try {\n    var j = text.sourceText.style.justification;\n    if (typeof ParagraphJustification !== 'undefined') {\n        if (j === ParagraphJustification.CENTER_JUSTIFY) 0.5;\n        else if (j === ParagraphJustification.RIGHT_JUSTIFY) 1.0;\n        else 0.0;\n    } else {\n        if (j == 7414) 0.5; else if (j == 7413) 1.0; else 0.0;\n    }\n} catch (err) {\n    0.0;\n}",
             evalStatic: function (layer, textDoc, rect) {
                 if (!textDoc || typeof textDoc.justification === "undefined") return 0;
                 var j = textDoc.justification;
-                if (typeof ParagraphJustification !== "undefined") {
-                    if (j === ParagraphJustification.CENTER_JUSTIFY) return 0.5;
-                    if (j === ParagraphJustification.RIGHT_JUSTIFY) return 1.0;
-                    return 0.0;
-                }
                 return (j == 7414) ? 0.5 : ((j == 7413) ? 1.0 : 0.0);
             }
         },
         {
+            id: "first_line_indent",
+            category: "align",
+            access: "RW",
+            label: "[R/W] First Line Indent (px)",
+            effectName: "First Line Indent (px)",
+            matchName: "ADBE Slider Control",
+            type: "slider",
+            defaultChecked: false,
+            docUrl: "https://ae-scripting.docsforadobe.dev/text/textdocument/#textdocument-firstlineindent",
+            tooltip: "[R/W] TextDocument.firstLineIndent — First line indent in pixels (AE 24.0+)",
+            expression: "try {\n    var st = text.sourceText;\n    (typeof st.firstLineIndent !== 'undefined') ? st.firstLineIndent : (st.style && typeof st.style.firstLineIndent !== 'undefined' ? st.style.firstLineIndent : 0);\n} catch (err) {\n    0;\n}",
+            evalStatic: function (layer, textDoc) {
+                return (textDoc && typeof textDoc.firstLineIndent !== "undefined") ? textDoc.firstLineIndent : 0;
+            }
+        },
+        {
+            id: "start_indent",
+            category: "align",
+            access: "RW",
+            label: "[R/W] Start / Left Indent (px)",
+            effectName: "Start Indent (px)",
+            matchName: "ADBE Slider Control",
+            type: "slider",
+            defaultChecked: false,
+            docUrl: "https://ae-scripting.docsforadobe.dev/text/textdocument/#textdocument-startindent",
+            tooltip: "[R/W] TextDocument.startIndent — Left / start margin indent in pixels (AE 24.0+)",
+            expression: "try {\n    var st = text.sourceText;\n    (typeof st.startIndent !== 'undefined') ? st.startIndent : (st.style && typeof st.style.startIndent !== 'undefined' ? st.style.startIndent : 0);\n} catch (err) {\n    0;\n}",
+            evalStatic: function (layer, textDoc) {
+                return (textDoc && typeof textDoc.startIndent !== "undefined") ? textDoc.startIndent : 0;
+            }
+        },
+        {
+            id: "end_indent",
+            category: "align",
+            access: "RW",
+            label: "[R/W] End / Right Indent (px)",
+            effectName: "End Indent (px)",
+            matchName: "ADBE Slider Control",
+            type: "slider",
+            defaultChecked: false,
+            docUrl: "https://ae-scripting.docsforadobe.dev/text/textdocument/#textdocument-endindent",
+            tooltip: "[R/W] TextDocument.endIndent — Right / end margin indent in pixels (AE 24.0+)",
+            expression: "try {\n    var st = text.sourceText;\n    (typeof st.endIndent !== 'undefined') ? st.endIndent : (st.style && typeof st.style.endIndent !== 'undefined' ? st.style.endIndent : 0);\n} catch (err) {\n    0;\n}",
+            evalStatic: function (layer, textDoc) {
+                return (textDoc && typeof textDoc.endIndent !== "undefined") ? textDoc.endIndent : 0;
+            }
+        },
+        {
+            id: "space_before",
+            category: "align",
+            access: "RW",
+            label: "[R/W] Space Before Paragraph (px)",
+            effectName: "Space Before (px)",
+            matchName: "ADBE Slider Control",
+            type: "slider",
+            defaultChecked: false,
+            docUrl: "https://ae-scripting.docsforadobe.dev/text/textdocument/#textdocument-spacebefore",
+            tooltip: "[R/W] TextDocument.spaceBefore — Vertical space added before paragraph in pixels (AE 24.0+)",
+            expression: "try {\n    var st = text.sourceText;\n    (typeof st.spaceBefore !== 'undefined') ? st.spaceBefore : (st.style && typeof st.style.spaceBefore !== 'undefined' ? st.style.spaceBefore : 0);\n} catch (err) {\n    0;\n}",
+            evalStatic: function (layer, textDoc) {
+                return (textDoc && typeof textDoc.spaceBefore !== "undefined") ? textDoc.spaceBefore : 0;
+            }
+        },
+        {
+            id: "space_after",
+            category: "align",
+            access: "RW",
+            label: "[R/W] Space After Paragraph (px)",
+            effectName: "Space After (px)",
+            matchName: "ADBE Slider Control",
+            type: "slider",
+            defaultChecked: false,
+            docUrl: "https://ae-scripting.docsforadobe.dev/text/textdocument/#textdocument-spaceafter",
+            tooltip: "[R/W] TextDocument.spaceAfter — Vertical space added after paragraph in pixels (AE 24.0+)",
+            expression: "try {\n    var st = text.sourceText;\n    (typeof st.spaceAfter !== 'undefined') ? st.spaceAfter : (st.style && typeof st.style.spaceAfter !== 'undefined' ? st.style.spaceAfter : 0);\n} catch (err) {\n    0;\n}",
+            evalStatic: function (layer, textDoc) {
+                return (textDoc && typeof textDoc.spaceAfter !== "undefined") ? textDoc.spaceAfter : 0;
+            }
+        },
+        {
+            id: "auto_hyphenate",
+            category: "align",
+            access: "RW",
+            label: "[R/W] Auto Hyphenation",
+            effectName: "Auto Hyphenation",
+            matchName: "ADBE Checkbox Control",
+            type: "checkbox",
+            defaultChecked: false,
+            docUrl: "https://ae-scripting.docsforadobe.dev/text/textdocument/#textdocument-autohyphenate",
+            tooltip: "[R/W] TextDocument.autoHyphenate — Automatic word hyphenation enabled (AE 24.0+)",
+            expression: "try {\n    var st = text.sourceText;\n    var h = (typeof st.autoHyphenate !== 'undefined') ? st.autoHyphenate : (st.style && typeof st.style.autoHyphenate !== 'undefined' ? st.style.autoHyphenate : false);\n    h ? 1 : 0;\n} catch (err) {\n    0;\n}",
+            evalStatic: function (layer, textDoc) {
+                return (textDoc && textDoc.autoHyphenate) ? 1 : 0;
+            }
+        },
+        {
+            id: "hanging_roman",
+            category: "align",
+            access: "RW",
+            label: "[R/W] Hanging Roman Punctuation",
+            effectName: "Hanging Roman",
+            matchName: "ADBE Checkbox Control",
+            type: "checkbox",
+            defaultChecked: false,
+            docUrl: "https://ae-scripting.docsforadobe.dev/text/textdocument/#textdocument-hangingroman",
+            tooltip: "[R/W] TextDocument.hangingRoman — Punctuation hangs outside paragraph margins (AE 24.0+)",
+            expression: "try {\n    var st = text.sourceText;\n    var hr = (typeof st.hangingRoman !== 'undefined') ? st.hangingRoman : (st.style && typeof st.style.hangingRoman !== 'undefined' ? st.style.hangingRoman : false);\n    hr ? 1 : 0;\n} catch (err) {\n    0;\n}",
+            evalStatic: function (layer, textDoc) {
+                return (textDoc && textDoc.hangingRoman) ? 1 : 0;
+            }
+        },
+        {
+            id: "every_line_composer",
+            category: "align",
+            access: "RW",
+            label: "[R/W] Every-Line Composer",
+            effectName: "Every-Line Composer",
+            matchName: "ADBE Checkbox Control",
+            type: "checkbox",
+            defaultChecked: false,
+            docUrl: "https://ae-scripting.docsforadobe.dev/text/textdocument/#textdocument-everylinecomposer",
+            tooltip: "[R/W] TextDocument.everyLineComposer — Multi-line paragraph optimizer vs single-line (AE 24.0+)",
+            expression: "try {\n    var st = text.sourceText;\n    var elc = (typeof st.everyLineComposer !== 'undefined') ? st.everyLineComposer : (st.style && typeof st.style.everyLineComposer !== 'undefined' ? st.style.everyLineComposer : false);\n    elc ? 1 : 0;\n} catch (err) {\n    0;\n}",
+            evalStatic: function (layer, textDoc) {
+                return (textDoc && textDoc.everyLineComposer) ? 1 : 0;
+            }
+        },
+        {
             id: "indent_left",
-            category: "box",
-            label: "First Line Indent / Left Margin",
+            category: "align",
+            access: "RO",
+            label: "[RO] Visual Left Indent (px)",
             effectName: "Indent / Left Margin",
             matchName: "ADBE Slider Control",
             type: "slider",
             defaultChecked: true,
-            tooltip: "Horizontal offset to the beginning of text glyphs (measures paragraph indent)",
+            docUrl: "https://ae-scripting.docsforadobe.dev/layers/layer/#layer-sourcerectattime",
+            tooltip: "[RO] Horizontal offset to the beginning of text glyphs (measures paragraph visual indent)",
             expression: "try {\n    sourceRectAtTime(time, false).left;\n} catch (err) {\n    0;\n}",
             evalStatic: function (layer, textDoc, rect) { return rect ? rect.left : 0; }
         },
         {
             id: "indent_right_spare",
-            category: "box",
-            label: "Box Right Margin (Spare Width)",
+            category: "align",
+            access: "RO",
+            label: "[RO] Box Right Margin (Spare Width)",
             effectName: "Box Right Margin (Spare)",
             matchName: "ADBE Slider Control",
             type: "slider",
             defaultChecked: true,
-            tooltip: "Remaining horizontal whitespace in paragraph box before line wraps",
+            docUrl: "https://ae-scripting.docsforadobe.dev/text/textdocument/#textdocument-boxtextsize",
+            tooltip: "[RO] Remaining horizontal whitespace in paragraph box before line wraps",
             expression: "try {\n    var st = text.sourceText;\n    var r = sourceRectAtTime(time, false);\n    if (st && st.style && st.style.boxText && st.style.boxTextSize) {\n        Math.max(0, st.style.boxTextSize[0] - (r.left + r.width));\n    } else {\n        0;\n    }\n} catch (err) {\n    0;\n}",
             evalStatic: function (layer, textDoc, rect) {
                 if (textDoc && textDoc.boxText && textDoc.boxTextSize && rect) {
@@ -335,39 +655,47 @@
         },
         {
             id: "baseline_offset",
-            category: "box",
-            label: "Baseline Offset (Top Margin)",
+            category: "align",
+            access: "RO",
+            label: "[RO] Baseline Offset (Top Margin)",
             effectName: "Baseline Offset (Top)",
             matchName: "ADBE Slider Control",
             type: "slider",
             defaultChecked: true,
-            tooltip: "Vertical ascent / distance from baseline to top of box",
+            docUrl: "https://ae-scripting.docsforadobe.dev/layers/layer/#layer-sourcerectattime",
+            tooltip: "[RO] Vertical ascent / distance from baseline to top of box",
             expression: "try {\n    sourceRectAtTime(time, false).top;\n} catch (err) {\n    0;\n}",
             evalStatic: function (layer, textDoc, rect) { return rect ? rect.top : 0; }
         },
 
-        // --- Category 3: Typography & Style ---
+        // =====================================================================
+        // CATEGORY: CHARACTER & TYPOGRAPHY STYLE
+        // =====================================================================
         {
             id: "typo_font_size",
             category: "typo",
-            label: "Font Size (px)",
+            access: "RW",
+            label: "[R/W] Font Size (px)",
             effectName: "Font Size (px)",
             matchName: "ADBE Slider Control",
             type: "slider",
             defaultChecked: false,
-            tooltip: "Layer font size in pixels (text.sourceText.style.fontSize)",
+            docUrl: "https://ae-scripting.docsforadobe.dev/text/textdocument/#textdocument-fontsize",
+            tooltip: "[R/W] Layer font size in pixels (text.sourceText.style.fontSize)",
             expression: "try {\n    text.sourceText.style.fontSize;\n} catch (err) {\n    0;\n}",
             evalStatic: function (layer, textDoc) { return textDoc ? textDoc.fontSize : 0; }
         },
         {
             id: "typo_leading",
             category: "typo",
-            label: "Leading (Line Spacing)",
+            access: "RW",
+            label: "[R/W] Leading (Line Spacing)",
             effectName: "Leading (Line Spacing)",
             matchName: "ADBE Slider Control",
             type: "slider",
             defaultChecked: false,
-            tooltip: "Leading / line-height in pixels",
+            docUrl: "https://ae-scripting.docsforadobe.dev/text/textdocument/#textdocument-leading",
+            tooltip: "[R/W] Leading / line-height in pixels",
             expression: "try {\n    var s = text.sourceText.style;\n    s.autoLeading ? (s.fontSize * 1.2) : s.leading;\n} catch (err) {\n    0;\n}",
             evalStatic: function (layer, textDoc) {
                 if (!textDoc) return 0;
@@ -377,36 +705,42 @@
         {
             id: "typo_tracking",
             category: "typo",
-            label: "Tracking",
+            access: "RW",
+            label: "[R/W] Tracking (Letter Spacing)",
             effectName: "Tracking",
             matchName: "ADBE Slider Control",
             type: "slider",
             defaultChecked: false,
-            tooltip: "Letter tracking (spacing between glyphs)",
+            docUrl: "https://ae-scripting.docsforadobe.dev/text/textdocument/#textdocument-tracking",
+            tooltip: "[R/W] Letter tracking (spacing between glyphs in 1/1000 em)",
             expression: "try {\n    text.sourceText.style.tracking;\n} catch (err) {\n    0;\n}",
             evalStatic: function (layer, textDoc) { return textDoc ? textDoc.tracking : 0; }
         },
         {
             id: "typo_baseline_shift",
             category: "typo",
-            label: "Baseline Shift",
+            access: "RW",
+            label: "[R/W] Baseline Shift",
             effectName: "Baseline Shift",
             matchName: "ADBE Slider Control",
             type: "slider",
             defaultChecked: false,
-            tooltip: "Vertical baseline shift in pixels",
+            docUrl: "https://ae-scripting.docsforadobe.dev/text/textdocument/#textdocument-baselineshift",
+            tooltip: "[R/W] Vertical baseline shift in pixels",
             expression: "try {\n    text.sourceText.style.baselineShift;\n} catch (err) {\n    0;\n}",
             evalStatic: function (layer, textDoc) { return textDoc ? textDoc.baselineShift : 0; }
         },
         {
             id: "typo_stroke_width",
             category: "typo",
-            label: "Stroke Width",
+            access: "RW",
+            label: "[R/W] Stroke Width",
             effectName: "Text Stroke Width",
             matchName: "ADBE Slider Control",
             type: "slider",
             defaultChecked: false,
-            tooltip: "Character stroke outline width in pixels",
+            docUrl: "https://ae-scripting.docsforadobe.dev/text/textdocument/#textdocument-strokewidth",
+            tooltip: "[R/W] Character stroke outline width in pixels",
             expression: "try {\n    var s = text.sourceText.style;\n    s.applyStroke ? s.strokeWidth : 0;\n} catch (err) {\n    0;\n}",
             evalStatic: function (layer, textDoc) {
                 if (!textDoc) return 0;
@@ -416,12 +750,14 @@
         {
             id: "typo_fill_color",
             category: "typo",
-            label: "Fill Color",
+            access: "RW",
+            label: "[R/W] Fill Color",
             effectName: "Text Fill Color",
             matchName: "ADBE Color Control",
             type: "color",
             defaultChecked: false,
-            tooltip: "Live text fill color [R, G, B, A]",
+            docUrl: "https://ae-scripting.docsforadobe.dev/text/textdocument/#textdocument-fillcolor",
+            tooltip: "[R/W] Live text fill color [R, G, B, A]",
             expression: "try {\n    var s = text.sourceText.style;\n    s.applyFill ? s.fillColor : [1, 1, 1, 1];\n} catch (err) {\n    [1, 1, 1, 1];\n}",
             evalStatic: function (layer, textDoc) {
                 if (textDoc && textDoc.applyFill && textDoc.fillColor) {
@@ -434,12 +770,14 @@
         {
             id: "typo_stroke_color",
             category: "typo",
-            label: "Stroke Color",
+            access: "RW",
+            label: "[R/W] Stroke Color",
             effectName: "Text Stroke Color",
             matchName: "ADBE Color Control",
             type: "color",
             defaultChecked: false,
-            tooltip: "Live text stroke color [R, G, B, A]",
+            docUrl: "https://ae-scripting.docsforadobe.dev/text/textdocument/#textdocument-strokecolor",
+            tooltip: "[R/W] Live text stroke color [R, G, B, A]",
             expression: "try {\n    var s = text.sourceText.style;\n    s.applyStroke ? s.strokeColor : [0, 0, 0, 1];\n} catch (err) {\n    [0, 0, 0, 1];\n}",
             evalStatic: function (layer, textDoc) {
                 if (textDoc && textDoc.applyStroke && textDoc.strokeColor) {
@@ -450,16 +788,41 @@
             }
         },
 
-        // --- Category 4: Counters & Metrics ---
+        // =====================================================================
+        // CATEGORY: COUNTERS & CONTENT METRICS
+        // =====================================================================
+        {
+            id: "cnt_lines",
+            category: "counters",
+            access: "RO",
+            label: "[RO] Composed Line Count (Slider)",
+            effectName: "Amount of Text Lines",
+            matchName: "ADBE Slider Control",
+            type: "slider",
+            defaultChecked: true,
+            docUrl: "https://ae-scripting.docsforadobe.dev/text/textdocument/#textdocument-composedlinecount",
+            tooltip: "[RO] TextDocument.composedLineCount — Exact number of composed/wrapped lines in paragraph box (AE 24.3+)",
+            expression: "try {\n    var st = text.sourceText;\n    if (typeof st.composedLineCount === 'number') {\n        st.composedLineCount;\n    } else if (st.style && typeof st.style.composedLineCount === 'number') {\n        st.style.composedLineCount;\n    } else if (st.style && st.style.boxText) {\n        var l = st.style.leading;\n        if (st.style.autoLeading || l <= 0) l = st.style.fontSize * 1.2;\n        var r = sourceRectAtTime(time, false);\n        Math.max(1, Math.round(r.height / l));\n    } else {\n        var str = String(st.value || st || '');\n        str.length === 0 ? 0 : str.split(/\\r\\n|\\r|\\n/).length;\n    }\n} catch (err) {\n    try {\n        var str = String(text.sourceText.value || text.sourceText || '');\n        str.length === 0 ? 0 : str.split(/\\r\\n|\\r|\\n/).length;\n    } catch(e) { 0; }\n}",
+            evalStatic: function (layer, textDoc) {
+                if (textDoc && typeof textDoc.composedLineCount === "number") return textDoc.composedLineCount;
+                if ($.global.AE_TEXT_BOX_MEMORY && typeof $.global.AE_TEXT_BOX_MEMORY.composedLineCount === "number") {
+                    return $.global.AE_TEXT_BOX_MEMORY.composedLineCount;
+                }
+                var s = textDoc ? String(textDoc.text || "") : "";
+                return s.length === 0 ? 0 : s.split(/\r\n|\r|\n/).length;
+            }
+        },
         {
             id: "cnt_words",
             category: "counters",
-            label: "Amount of Words (Slider)",
+            access: "RO",
+            label: "[RO] Amount of Words (Slider)",
             effectName: "Amount of Words",
             matchName: "ADBE Slider Control",
             type: "slider",
             defaultChecked: true,
-            tooltip: "Slider Control showing total amount of words detected in the text box",
+            docUrl: "https://ae-scripting.docsforadobe.dev/text/textdocument/#textdocument-text",
+            tooltip: "[RO] Total amount of words detected in the text box",
             expression: "try {\n    var str = String(text.sourceText.value || text.sourceText || '').replace(/^\\s+|\\s+$/g, '');\n    str.length === 0 ? 0 : str.split(/\\s+/).length;\n} catch (err) {\n    0;\n}",
             evalStatic: function (layer, textDoc) {
                 if ($.global.AE_TEXT_BOX_MEMORY && typeof $.global.AE_TEXT_BOX_MEMORY.totalWords === "number") {
@@ -470,32 +833,34 @@
             }
         },
         {
-            id: "cnt_lines",
+            id: "cnt_paragraphs",
             category: "counters",
-            label: "Amount of Text Lines (Slider)",
-            effectName: "Amount of Text Lines",
+            access: "RO",
+            label: "[RO] Paragraph Count (Hard Returns)",
+            effectName: "Paragraph Count",
             matchName: "ADBE Slider Control",
             type: "slider",
-            defaultChecked: true,
-            tooltip: "Slider Control showing total amount of text lines (including wrapped paragraph lines)",
-            expression: "try {\n    var st = text.sourceText;\n    var r = sourceRectAtTime(time, false);\n    if (st && st.style && st.style.boxText) {\n        var l = st.style.leading;\n        if (st.style.autoLeading || l <= 0) l = st.style.fontSize * 1.2;\n        Math.max(1, Math.round(r.height / l));\n    } else {\n        var str = String(st.value || st || '');\n        str.length === 0 ? 0 : str.split(/\\r\\n|\\r|\\n/).length;\n    }\n} catch (err) {\n    try {\n        var str = String(text.sourceText.value || text.sourceText || '');\n        str.length === 0 ? 0 : str.split(/\\r\\n|\\r|\\n/).length;\n    } catch(e) { 0; }\n}",
+            defaultChecked: false,
+            docUrl: "https://ae-scripting.docsforadobe.dev/text/textdocument/#textdocument-paragraphcount",
+            tooltip: "[RO] TextDocument.paragraphCount — Number of paragraphs separated by hard returns (AE 24.3+)",
+            expression: "try {\n    var st = text.sourceText;\n    if (typeof st.paragraphCount === 'number') {\n        st.paragraphCount;\n    } else if (st.style && typeof st.style.paragraphCount === 'number') {\n        st.style.paragraphCount;\n    } else {\n        var str = String(st.value || st || '').replace(/^\\s+|\\s+$/g, '');\n        str.length === 0 ? 0 : str.split(/\\r\\n|\\r|\\n/).length;\n    }\n} catch (err) {\n    0;\n}",
             evalStatic: function (layer, textDoc) {
-                if ($.global.AE_TEXT_BOX_MEMORY && typeof $.global.AE_TEXT_BOX_MEMORY.totalLines === "number") {
-                    return $.global.AE_TEXT_BOX_MEMORY.totalLines;
-                }
-                var s = textDoc ? String(textDoc.text || "") : "";
+                if (textDoc && typeof textDoc.paragraphCount === "number") return textDoc.paragraphCount;
+                var s = textDoc ? String(textDoc.text || "").replace(/^\s+|\s+$/g, "") : "";
                 return s.length === 0 ? 0 : s.split(/\r\n|\r|\n/).length;
             }
         },
         {
             id: "cnt_chars",
             category: "counters",
-            label: "Character Count",
+            access: "RO",
+            label: "[RO] Character Count",
             effectName: "Character Count",
             matchName: "ADBE Slider Control",
             type: "slider",
             defaultChecked: false,
-            tooltip: "Total character count of the text string",
+            docUrl: "https://ae-scripting.docsforadobe.dev/text/textdocument/#textdocument-text",
+            tooltip: "[RO] Total character count of the text string",
             expression: "try {\n    String(text.sourceText.value || text.sourceText || '').length;\n} catch (err) {\n    0;\n}",
             evalStatic: function (layer, textDoc) {
                 return textDoc ? String(textDoc.text || "").length : 0;
@@ -504,12 +869,14 @@
         {
             id: "metric_max_line",
             category: "counters",
-            label: "Longest Line Width (px)",
+            access: "RO",
+            label: "[RO] Longest Line Width (px)",
             effectName: "Longest Line Width (px)",
             matchName: "ADBE Slider Control",
             type: "slider",
             defaultChecked: false,
-            tooltip: "Maximum pixel width among all lines in the text box",
+            docUrl: "https://ae-scripting.docsforadobe.dev/layers/layer/#layer-sourcerectattime",
+            tooltip: "[RO] Maximum pixel width among all lines in the text box",
             expression: "sourceRectAtTime(time, false).width;",
             evalStatic: function (layer, textDoc, rect) {
                 if ($.global.AE_TEXT_BOX_MEMORY && $.global.AE_TEXT_BOX_MEMORY.maxLineWidth) {
@@ -519,16 +886,20 @@
             }
         },
 
-        // --- Category 5: Responsive Rigging Utilities ---
+        // =====================================================================
+        // CATEGORY: RESPONSIVE RIGGING UTILITIES
+        // =====================================================================
         {
             id: "rig_padding",
             category: "rigging",
-            label: "Box Padding [X, Y]",
+            access: "RW",
+            label: "[R/W] Box Padding [X, Y]",
             effectName: "Box Padding [X, Y]",
             matchName: "ADBE Point Control",
             type: "point",
             defaultChecked: false,
-            tooltip: "Customizable 2D Padding [X, Y] (Default: [40, 20])",
+            docUrl: "https://ae-scripting.docsforadobe.dev/layers/layer/#layer-sourcerectattime",
+            tooltip: "[R/W] Customizable 2D Padding [X, Y] for dynamic background card (Default: [40, 20])",
             expression: null,
             defaultVal: [40, 20],
             evalStatic: function () { return [40, 20]; }
@@ -536,12 +907,14 @@
         {
             id: "rig_padded_size",
             category: "rigging",
-            label: "Total Padded Size [W, H]",
+            access: "RO",
+            label: "[RO] Total Padded Size [W, H]",
             effectName: "Total Padded Size [W, H]",
             matchName: "ADBE Point Control",
             type: "point",
             defaultChecked: false,
-            tooltip: "Calculates [sourceRect.width + padX*2, sourceRect.height + padY*2]",
+            docUrl: "https://ae-scripting.docsforadobe.dev/layers/layer/#layer-sourcerectattime",
+            tooltip: "[RO] Calculates [sourceRect.width + padX*2, sourceRect.height + padY*2]",
             expression: "try {\n    var r = sourceRectAtTime(time, false);\n    var pad = [40, 20];\n    try {\n        pad = effect('Box Padding [X, Y]')('Point');\n    } catch (e1) {\n        try { pad = effect('[Prop] Box Padding [X, Y]')('Point'); } catch (e2) {}\n    }\n    [r.width + pad[0] * 2, r.height + pad[1] * 2];\n} catch (err) {\n    var r = sourceRectAtTime(time, false);\n    [r.width + 80, r.height + 40];\n}",
             evalStatic: function (layer, textDoc, rect) {
                 return rect ? [rect.width + 80, rect.height + 40] : [100, 50];
@@ -589,6 +962,7 @@
      *   1. Array with each word detected in the text box.
      *   2. Array with the width in pixels of each word.
      *   3. Array with the width in pixels of each text line.
+     *   4. Real-time box overflow, composed lines, and paragraph counts.
      */
     function measureAndStoreTextMetrics(comp, layer) {
         if (!comp || !layer) return null;
@@ -618,8 +992,24 @@
                 font: textDoc.font || "",
                 boxWidth: 0,
                 boxHeight: 0,
+                boxOverflow: 0,
+                boxInsetSpacing: (typeof textDoc.boxInsetSpacing !== "undefined") ? textDoc.boxInsetSpacing : 0,
+                boxVerticalAlignment: (typeof textDoc.boxVerticalAlignment !== "undefined") ? textDoc.boxVerticalAlignment : 7512,
+                boxFirstBaselineAlignment: (typeof textDoc.boxFirstBaselineAlignment !== "undefined") ? textDoc.boxFirstBaselineAlignment : 7612,
+                boxAutoFitPolicy: (typeof textDoc.boxAutoFitPolicy !== "undefined") ? textDoc.boxAutoFitPolicy : 7712,
+                lineOrientation: (typeof textDoc.lineOrientation !== "undefined") ? textDoc.lineOrientation : 7312,
                 totalWords: 0,
                 totalLines: 0,
+                composedLineCount: 0,
+                paragraphCount: 0,
+                firstLineIndent: (typeof textDoc.firstLineIndent !== "undefined") ? textDoc.firstLineIndent : 0,
+                startIndent: (typeof textDoc.startIndent !== "undefined") ? textDoc.startIndent : 0,
+                endIndent: (typeof textDoc.endIndent !== "undefined") ? textDoc.endIndent : 0,
+                spaceBefore: (typeof textDoc.spaceBefore !== "undefined") ? textDoc.spaceBefore : 0,
+                spaceAfter: (typeof textDoc.spaceAfter !== "undefined") ? textDoc.spaceAfter : 0,
+                autoHyphenate: Boolean(textDoc.autoHyphenate),
+                hangingRoman: Boolean(textDoc.hangingRoman),
+                everyLineComposer: Boolean(textDoc.everyLineComposer),
                 maxLineWidth: 0,
                 maxWordWidth: 0,
                 timestamp: (new Date()).getTime()
@@ -763,6 +1153,22 @@
         }
 
         var isBoxVal = isBox ? 1 : 0;
+        var rActual = getSourceRect(layer);
+        var isOverflow = 0;
+        if (textDoc && typeof textDoc.boxOverflow !== "undefined") {
+            isOverflow = textDoc.boxOverflow ? 1 : 0;
+        } else if (isBox && boxHeight > 0 && rActual) {
+            isOverflow = (rActual.height > boxHeight || rActual.width > boxWidth) ? 1 : 0;
+        }
+
+        var compLineCount = (textDoc && typeof textDoc.composedLineCount === "number")
+            ? textDoc.composedLineCount
+            : lines.length;
+
+        var hardParaCount = (textDoc && typeof textDoc.paragraphCount === "number")
+            ? textDoc.paragraphCount
+            : (fullText.split(/\r\n|\r|\n/).length);
+
         var memoryStore = {
             layerName: layer.name,
             layerIndex: layer.index,
@@ -779,8 +1185,24 @@
             font: textDoc.font || "",
             boxWidth: boxWidth,
             boxHeight: boxHeight,
+            boxOverflow: isOverflow,
+            boxInsetSpacing: (typeof textDoc.boxInsetSpacing !== "undefined") ? textDoc.boxInsetSpacing : 0,
+            boxVerticalAlignment: (typeof textDoc.boxVerticalAlignment !== "undefined") ? textDoc.boxVerticalAlignment : 7512,
+            boxFirstBaselineAlignment: (typeof textDoc.boxFirstBaselineAlignment !== "undefined") ? textDoc.boxFirstBaselineAlignment : 7612,
+            boxAutoFitPolicy: (typeof textDoc.boxAutoFitPolicy !== "undefined") ? textDoc.boxAutoFitPolicy : 7712,
+            lineOrientation: (typeof textDoc.lineOrientation !== "undefined") ? textDoc.lineOrientation : 7312,
             totalWords: words.length,
             totalLines: lines.length,
+            composedLineCount: compLineCount,
+            paragraphCount: hardParaCount,
+            firstLineIndent: (typeof textDoc.firstLineIndent !== "undefined") ? textDoc.firstLineIndent : 0,
+            startIndent: (typeof textDoc.startIndent !== "undefined") ? textDoc.startIndent : 0,
+            endIndent: (typeof textDoc.endIndent !== "undefined") ? textDoc.endIndent : 0,
+            spaceBefore: (typeof textDoc.spaceBefore !== "undefined") ? textDoc.spaceBefore : 0,
+            spaceAfter: (typeof textDoc.spaceAfter !== "undefined") ? textDoc.spaceAfter : 0,
+            autoHyphenate: Boolean(textDoc.autoHyphenate),
+            hangingRoman: Boolean(textDoc.hangingRoman),
+            everyLineComposer: Boolean(textDoc.everyLineComposer),
             maxLineWidth: maxLW,
             maxWordWidth: maxWW,
             timestamp: (new Date()).getTime()
@@ -957,44 +1379,27 @@
         return shapeLayer;
     }
 
-    // =========================================================================
-    // DUMMY TEXT FIELD (100 WORDS OF LOREM IPSUM)
-    // =========================================================================
-    var LOREM_IPSUM_100 =
-        "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do\n" +
-        "eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad\n" +
-        "minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip\n" +
-        "ex ea commodo consequat. Duis aute irure dolor in reprehenderit in\n" +
-        "voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur\n" +
-        "sint occaecat cupidatat non proident, sunt in culpa qui officia\n" +
-        "deserunt mollit anim id est laborum. Sed ut perspiciatis unde omnis\n" +
-        "iste natus error sit voluptatem accusantium doloremque laudantium,\n" +
-        "totam rem aperiam, eaque ipsa quae ab illo inventore veritatis et\n" +
-        "quasi architecto beatae vitae dicta sunt explicabo.";
-
-    function createDummyLoremTextLayer(comp) {
+    function createDummyTextLayer(comp) {
         if (!comp) return null;
+        var dummyName = "Selected Text Layer (Demo)";
+        var existing = null;
+        try {
+            existing = comp.layer(dummyName);
+        } catch (eFind) {}
+        if (existing) return existing;
 
-        var dummyLayer = comp.layers.addText(LOREM_IPSUM_100);
-        dummyLayer.name = "Dummy Text Field (100 Words Lorem Ipsum)";
-        dummyLayer.transform.position.setValue([comp.width / 2, comp.height / 2, 0]);
+        var dummyLayer = comp.layers.addText("Lorem ipsum dolor sit amet,\nconsectetur adipiscing elit.\nSed do eiusmod tempor.");
+        dummyLayer.name = dummyName;
+        dummyLayer.property("Transform").property("Position").setValue([comp.width / 2, comp.height / 2]);
 
         try {
-            var textProp = dummyLayer.property("ADBE Text Properties") || dummyLayer.property("Text");
-            var docProp = textProp ? (textProp.property("ADBE Text Document") || dummyLayer.property("Source Text")) : dummyLayer.property("Source Text");
+            var docProp = dummyLayer.property("Source Text");
             if (docProp) {
                 var doc = docProp.value;
                 if (doc) {
-                    doc.text = LOREM_IPSUM_100;
-                    doc.fontSize = 24;
-                    doc.font = "ArialMT";
-                    doc.fillColor = [0.92, 0.94, 0.98];
+                    doc.fontSize = 36;
                     doc.applyFill = true;
-                    doc.applyStroke = false;
-                    doc.leading = 36;
-                    doc.justification = (typeof ParagraphJustification !== "undefined")
-                        ? ParagraphJustification.LEFT_JUSTIFY
-                        : 7412;
+                    doc.fillColor = [1, 1, 1];
                     try {
                         if (typeof doc.setBoxTextSize === "function") {
                             doc.setBoxTextSize([820, 420]);
@@ -1005,7 +1410,6 @@
             }
         } catch (eDoc) {}
 
-        // Deselect other layers and select this dummy layer
         try {
             for (var i = 1; i <= comp.layers.length; i++) {
                 comp.layers[i].selected = false;
@@ -1048,18 +1452,10 @@
         textLayer1.property("Source Text").setValue(txtDoc1);
         textLayer1.property("Transform").property("Position").setValue([960, 380]);
 
-        var boxStr = "This is an After Effects paragraph text box. It wraps words automatically inside a rectangular boundary.\n" +
-            "With this panel, its live box width, height, first-line indent, and alignment are instantly exposed as Effects!";
-        var textLayer2;
-        if (typeof comp.layers.addBoxText === "function") {
-            try {
-                textLayer2 = comp.layers.addBoxText([720, 200], boxStr);
-            } catch (eBox) {
-                textLayer2 = comp.layers.addText(boxStr);
-            }
-        } else {
-            textLayer2 = comp.layers.addText(boxStr);
-        }
+        var textLayer2 = comp.layers.addText(
+            "This is an After Effects paragraph text box. It wraps words automatically inside a rectangular boundary.\n" +
+            "With this panel, its live box width, height, first-line indent, and alignment are instantly exposed as Effects!"
+        );
         textLayer2.name = "Demo 2 - Paragraph Box Text";
         var txtDoc2 = textLayer2.property("Source Text").value;
         txtDoc2.fontSize = 28;
@@ -1090,64 +1486,53 @@
     // =========================================================================
     // 4. SCRIPTUI USER INTERFACE BUILDER
     // =========================================================================
-    // =========================================================================
-    // 4. SCRIPTUI USER INTERFACE BUILDER
-    // =========================================================================
     function buildUI(thisObj) {
-        var win = (thisObj instanceof Panel)
+        var isPanel = (typeof Panel !== "undefined" && thisObj instanceof Panel);
+        var win = isPanel
             ? thisObj
-            : new Window("palette", SCRIPT_NAME + " " + SCRIPT_VERSION, undefined, { resizeable: true });
-        if (!(thisObj instanceof Panel)) {
+            : (typeof Window !== "undefined" ? new Window("palette", SCRIPT_NAME + " " + SCRIPT_VERSION, undefined, { resizeable: true }) : null);
+        if (!win) return null;
+        if (!isPanel) {
             win.text = SCRIPT_NAME + " " + SCRIPT_VERSION;
         }
 
         win.orientation = "column";
         win.alignChildren = ["fill", "top"];
-        win.spacing = 8;
-        win.margins = 10;
-        win.preferredSize = [440, 480];
-
-        win.textMemoryStore = $memGlobal.AE_TEXT_BOX_MEMORY;
+        win.spacing = 6;
+        win.margins = 8;
+        win.preferredSize = [460, 520];
 
         // ---------------------------------------------------------------------
-        // Header
+        // Header Banner & Preset Quick-Select Toolbar
         // ---------------------------------------------------------------------
-        var pnlHeader = win.add("panel", undefined, undefined);
-        pnlHeader.orientation = "column";
-        pnlHeader.alignChildren = ["fill", "top"];
-        pnlHeader.spacing = 2;
-        pnlHeader.margins = [8, 6, 8, 6];
+        var grpHeader = win.add("group");
+        grpHeader.orientation = "column";
+        grpHeader.alignChildren = ["fill", "top"];
+        grpHeader.spacing = 2;
 
-        var lblTitle = pnlHeader.add("statictext", undefined, "⚡ " + SCRIPT_NAME + " " + SCRIPT_VERSION);
+        var lblTitle = grpHeader.add("statictext", undefined, "✨ " + SCRIPT_NAME + " " + SCRIPT_VERSION);
         try {
-            lblTitle.graphics.font = ScriptUI.newFont("Verdana", "BOLD", 13);
-        } catch (e) {}
+            lblTitle.graphics.font = ScriptUI.newFont("Verdana", "BOLD", 12);
+        } catch (eFont) {}
 
-        var lblDesc = pnlHeader.add(
-            "statictext",
-            undefined,
-            "Check or uncheck properties below to show or hide their effects on the timeline in real-time."
-        );
+        var lblSub = grpHeader.add("statictext", undefined, "Expose native AE text & box properties to interactive timeline effects.");
 
-        // ---------------------------------------------------------------------
-        // Quick Presets & Sync Toolbar
-        // ---------------------------------------------------------------------
         var grpToolbar = win.add("group");
         grpToolbar.orientation = "row";
         grpToolbar.alignChildren = ["fill", "center"];
-        grpToolbar.spacing = 4;
+        grpToolbar.spacing = 5;
 
-        var btnPresetCommon = grpToolbar.add("button", undefined, "★ Common");
-        btnPresetCommon.helpTip = "Select standard width, height, word count, line count, alignment & indents";
+        var btnPresetAll = grpToolbar.add("button", undefined, "Check All");
+        btnPresetAll.helpTip = "Selects all property checkboxes across all tabs";
 
-        var btnPresetAll = grpToolbar.add("button", undefined, "☑ All");
-        btnPresetAll.helpTip = "Select all properties to show as effects";
+        var btnPresetNone = grpToolbar.add("button", undefined, "None");
+        btnPresetNone.helpTip = "Clears all property checkboxes across all tabs";
 
-        var btnPresetNone = grpToolbar.add("button", undefined, "☐ None");
-        btnPresetNone.helpTip = "Deselect all properties";
+        var btnPresetCommon = grpToolbar.add("button", undefined, "Common");
+        btnPresetCommon.helpTip = "Selects core essentials: Text Type, Box Size, Overflow, Alignment, Indents, and Counters";
 
         var btnReadTimeline = grpToolbar.add("button", undefined, "🔄 Read Timeline");
-        btnReadTimeline.helpTip = "Inspects selected layer and sets checkboxes to match effects currently in timeline";
+        btnReadTimeline.helpTip = "Inspects selected layer and sets checkboxes to match effects currently active in timeline";
 
         // ---------------------------------------------------------------------
         // Tabbed Panel: Categorized Property Checkboxes + In-Memory Store
@@ -1162,11 +1547,16 @@
             PROPERTY_DEFS_MAP[PROPERTY_DEFS[pd].id] = PROPERTY_DEFS[pd];
         }
 
-        // Helper to add checkbox and wire live timeline show/hide toggle
+        // Helper to add checkbox and wire live timeline show/hide toggle with tooltip & link
         function addCheckboxItem(container, def) {
             var chk = container.add("checkbox", undefined, def.label);
             chk.value = def.defaultChecked;
-            chk.helpTip = (def.tooltip || "") + " (Toggling shows or hides this effect in the timeline)";
+            var tip = (def.tooltip || def.label);
+            if (def.docUrl) {
+                tip += "\nDocs: " + def.docUrl;
+            }
+            tip += "\n(Toggling shows or hides this effect in the timeline)";
+            chk.helpTip = tip;
             chk.alignment = ["fill", "top"];
             checkboxMap[def.id] = chk;
 
@@ -1187,41 +1577,90 @@
         tabBox.spacing = 6;
         tabBox.margins = 8;
 
-        // Box & Dimensions Properties Panel
-        var pnlSR = tabBox.add("panel", undefined, "📐 Box & Dimensions (Show/Hide in Timeline)");
+        // Paragraph Box Frame Properties Panel
+        var pnlBoxFrame = tabBox.add("panel", undefined, "📐 Paragraph Box & Frame Properties");
+        pnlBoxFrame.orientation = "column";
+        pnlBoxFrame.alignChildren = ["fill", "top"];
+        pnlBoxFrame.spacing = 3;
+
+        var boxFrameProps = [
+            "text_type", "box_is_box", "box_overflow",
+            "box_width", "box_height", "box_size",
+            "box_inset_spacing", "box_vertical_align",
+            "box_first_baseline", "box_auto_fit", "line_orientation"
+        ];
+        for (var bfi = 0; bfi < boxFrameProps.length; bfi++) {
+            var bfDef = PROPERTY_DEFS_MAP[boxFrameProps[bfi]];
+            if (bfDef) addCheckboxItem(pnlBoxFrame, bfDef);
+        }
+
+        // Visual Glyphs Bounds Panel
+        var pnlSR = tabBox.add("panel", undefined, "📐 Visual Glyphs Bounds (sourceRectAtTime)");
         pnlSR.orientation = "column";
         pnlSR.alignChildren = ["fill", "top"];
         pnlSR.spacing = 3;
 
-        var boxProps = ["text_type", "box_is_box", "sr_width", "sr_height", "box_width", "box_height", "sr_size", "box_size", "sr_left", "sr_top"];
-        for (var bi = 0; bi < boxProps.length; bi++) {
-            var bDef = PROPERTY_DEFS_MAP[boxProps[bi]];
-            if (bDef) addCheckboxItem(pnlSR, bDef);
+        var srProps = ["sr_width", "sr_height", "sr_size", "sr_left", "sr_top", "sr_center", "sr_min_corner", "sr_max_corner"];
+        for (var sri = 0; sri < srProps.length; sri++) {
+            var srDef = PROPERTY_DEFS_MAP[srProps[sri]];
+            if (srDef) addCheckboxItem(pnlSR, srDef);
         }
 
         // =====================================================================
-        // TAB 2: 📝 ALIGNMENT, INDENT & STYLE
+        // TAB 2: 📝 PARAGRAPH & ALIGNMENT
         // =====================================================================
-        var tabAlign = tpanel.add("tab", undefined, "📝 Alignment");
+        var tabAlign = tpanel.add("tab", undefined, "📝 Paragraph");
         tabAlign.orientation = "column";
         tabAlign.alignChildren = ["fill", "top"];
         tabAlign.spacing = 6;
         tabAlign.margins = 8;
 
-        // Alignment, Indent & Styling Panel
-        var pnlAlign = tabAlign.add("panel", undefined, "📝 Alignment, Indent & Style (Show/Hide in Timeline)");
+        // Alignment & Margins Panel
+        var pnlAlign = tabAlign.add("panel", undefined, "📝 Alignment & Margin Indents");
         pnlAlign.orientation = "column";
         pnlAlign.alignChildren = ["fill", "top"];
         pnlAlign.spacing = 3;
 
-        var alignProps = ["align_index", "align_ratio", "indent_left", "indent_right_spare", "baseline_offset", "typo_font_size", "typo_leading"];
+        var alignProps = ["align_index", "align_ratio", "first_line_indent", "start_indent", "end_indent", "indent_left", "indent_right_spare", "baseline_offset"];
         for (var ai = 0; ai < alignProps.length; ai++) {
             var aDef = PROPERTY_DEFS_MAP[alignProps[ai]];
             if (aDef) addCheckboxItem(pnlAlign, aDef);
         }
 
+        // Spacing & Paragraph Formatting Panel
+        var pnlSpacing = tabAlign.add("panel", undefined, "📝 Paragraph Spacing & Composers");
+        pnlSpacing.orientation = "column";
+        pnlSpacing.alignChildren = ["fill", "top"];
+        pnlSpacing.spacing = 3;
+
+        var spacingProps = ["space_before", "space_after", "auto_hyphenate", "hanging_roman", "every_line_composer"];
+        for (var spi = 0; spi < spacingProps.length; spi++) {
+            var spDef = PROPERTY_DEFS_MAP[spacingProps[spi]];
+            if (spDef) addCheckboxItem(pnlSpacing, spDef);
+        }
+
         // =====================================================================
-        // TAB 3: 🔢 WORD & LINE COUNTERS
+        // TAB 3: 🎨 CHARACTER & STYLE
+        // =====================================================================
+        var tabStyle = tpanel.add("tab", undefined, "🎨 Style");
+        tabStyle.orientation = "column";
+        tabStyle.alignChildren = ["fill", "top"];
+        tabStyle.spacing = 6;
+        tabStyle.margins = 8;
+
+        var pnlStyle = tabStyle.add("panel", undefined, "🎨 Character & Typography Properties");
+        pnlStyle.orientation = "column";
+        pnlStyle.alignChildren = ["fill", "top"];
+        pnlStyle.spacing = 3;
+
+        var typoProps = ["typo_font_size", "typo_leading", "typo_tracking", "typo_baseline_shift", "typo_stroke_width", "typo_fill_color", "typo_stroke_color"];
+        for (var ti = 0; ti < typoProps.length; ti++) {
+            var tDef = PROPERTY_DEFS_MAP[typoProps[ti]];
+            if (tDef) addCheckboxItem(pnlStyle, tDef);
+        }
+
+        // =====================================================================
+        // TAB 4: 🔢 WORD, LINE & PARAGRAPH COUNTERS
         // =====================================================================
         var tabCounters = tpanel.add("tab", undefined, "🔢 Counters");
         tabCounters.orientation = "column";
@@ -1229,44 +1668,22 @@
         tabCounters.spacing = 6;
         tabCounters.margins = 8;
 
-        // Word & Line Count Sliders Panel
-        var pnlCounters = tabCounters.add("panel", undefined, "🔢 Word & Line Counters (Timeline Sliders & Live Readouts)");
+        // Word, Line & Paragraph Counters Panel
+        var pnlCounters = tabCounters.add("panel", undefined, "🔢 Counters (Timeline Sliders & Live Readouts)");
         pnlCounters.orientation = "column";
         pnlCounters.alignChildren = ["fill", "top"];
         pnlCounters.spacing = 5;
 
-        // Row for Amount of Words: Checkbox + Scrubbable Slider + Count Input
-        var grpWordRow = pnlCounters.add("group");
-        grpWordRow.orientation = "row";
-        grpWordRow.alignment = ["fill", "center"];
-        grpWordRow.spacing = 6;
-        var chkWordsDef = PROPERTY_DEFS_MAP["cnt_words"];
-        var chkWordAmount = grpWordRow.add("checkbox", undefined, "Amount of Words:");
-        chkWordAmount.value = true;
-        chkWordAmount.preferredSize = [135, -1];
-        chkWordAmount.helpTip = "Shows or hides 'Amount of Words' Slider Control in the timeline";
-        checkboxMap["cnt_words"] = chkWordAmount;
-
-        var sldWordAmount = grpWordRow.add("slider", undefined, 0, 0, 500);
-        sldWordAmount.alignment = ["fill", "center"];
-        var txtWordAmount = grpWordRow.add("edittext", undefined, "0");
-        txtWordAmount.characters = 4;
-        txtWordAmount.readonly = true;
-
-        chkWordAmount.onClick = function () {
-            if (chkWordsDef) syncPropertyToTimeline(chkWordsDef, chkWordAmount.value);
-        };
-
-        // Row for Amount of Text Lines: Checkbox + Scrubbable Slider + Count Input
+        // Row for Amount of Text Lines (Composed Lines): Checkbox + Scrub Slider + Readout
         var grpLineRow = pnlCounters.add("group");
         grpLineRow.orientation = "row";
         grpLineRow.alignment = ["fill", "center"];
         grpLineRow.spacing = 6;
         var chkLinesDef = PROPERTY_DEFS_MAP["cnt_lines"];
-        var chkLineAmount = grpLineRow.add("checkbox", undefined, "Amount of Text Lines:");
+        var chkLineAmount = grpLineRow.add("checkbox", undefined, "Composed Lines:");
         chkLineAmount.value = true;
         chkLineAmount.preferredSize = [135, -1];
-        chkLineAmount.helpTip = "Shows or hides 'Amount of Text Lines' Slider Control in the timeline";
+        chkLineAmount.helpTip = "[RO] Shows or hides 'Amount of Text Lines' (composedLineCount) Slider Control in the timeline\nDocs: " + (chkLinesDef ? chkLinesDef.docUrl : "");
         checkboxMap["cnt_lines"] = chkLineAmount;
 
         var sldLineAmount = grpLineRow.add("slider", undefined, 0, 0, 100);
@@ -1279,16 +1696,60 @@
             if (chkLinesDef) syncPropertyToTimeline(chkLinesDef, chkLineAmount.value);
         };
 
+        // Row for Amount of Words: Checkbox + Scrub Slider + Readout
+        var grpWordRow = pnlCounters.add("group");
+        grpWordRow.orientation = "row";
+        grpWordRow.alignment = ["fill", "center"];
+        grpWordRow.spacing = 6;
+        var chkWordsDef = PROPERTY_DEFS_MAP["cnt_words"];
+        var chkWordAmount = grpWordRow.add("checkbox", undefined, "Amount of Words:");
+        chkWordAmount.value = true;
+        chkWordAmount.preferredSize = [135, -1];
+        chkWordAmount.helpTip = "[RO] Shows or hides 'Amount of Words' Slider Control in the timeline\nDocs: " + (chkWordsDef ? chkWordsDef.docUrl : "");
+        checkboxMap["cnt_words"] = chkWordAmount;
+
+        var sldWordAmount = grpWordRow.add("slider", undefined, 0, 0, 500);
+        sldWordAmount.alignment = ["fill", "center"];
+        var txtWordAmount = grpWordRow.add("edittext", undefined, "0");
+        txtWordAmount.characters = 4;
+        txtWordAmount.readonly = true;
+
+        chkWordAmount.onClick = function () {
+            if (chkWordsDef) syncPropertyToTimeline(chkWordsDef, chkWordAmount.value);
+        };
+
+        // Row for Paragraph Count: Checkbox + Scrub Slider + Readout
+        var grpParaRow = pnlCounters.add("group");
+        grpParaRow.orientation = "row";
+        grpParaRow.alignment = ["fill", "center"];
+        grpParaRow.spacing = 6;
+        var chkParaDef = PROPERTY_DEFS_MAP["cnt_paragraphs"];
+        var chkParaAmount = grpParaRow.add("checkbox", undefined, "Paragraph Count:");
+        chkParaAmount.value = false;
+        chkParaAmount.preferredSize = [135, -1];
+        chkParaAmount.helpTip = "[RO] Shows or hides 'Paragraph Count' (paragraphCount) Slider Control in the timeline\nDocs: " + (chkParaDef ? chkParaDef.docUrl : "");
+        checkboxMap["cnt_paragraphs"] = chkParaAmount;
+
+        var sldParaAmount = grpParaRow.add("slider", undefined, 0, 0, 100);
+        sldParaAmount.alignment = ["fill", "center"];
+        var txtParaAmount = grpParaRow.add("edittext", undefined, "0");
+        txtParaAmount.characters = 4;
+        txtParaAmount.readonly = true;
+
+        chkParaAmount.onClick = function () {
+            if (chkParaDef) syncPropertyToTimeline(chkParaDef, chkParaAmount.value);
+        };
+
         // Extra counter metrics: Longest Line Width & Characters
         var grpExtraCounters = pnlCounters.add("group");
         grpExtraCounters.orientation = "row";
         grpExtraCounters.alignment = ["fill", "center"];
         grpExtraCounters.spacing = 8;
-        if (PROPERTY_DEFS_MAP["cnt_longest_line"]) addCheckboxItem(grpExtraCounters, PROPERTY_DEFS_MAP["cnt_longest_line"]);
+        if (PROPERTY_DEFS_MAP["metric_max_line"]) addCheckboxItem(grpExtraCounters, PROPERTY_DEFS_MAP["metric_max_line"]);
         if (PROPERTY_DEFS_MAP["cnt_chars"]) addCheckboxItem(grpExtraCounters, PROPERTY_DEFS_MAP["cnt_chars"]);
 
         // =====================================================================
-        // TAB 4: 💾 IN-MEMORY WORDS & LINES STORE
+        // TAB 5: 💾 IN-MEMORY WORDS & LINES STORE
         // =====================================================================
         var tabMemory = tpanel.add("tab", undefined, "💾 Store");
         tabMemory.orientation = "column";
@@ -1304,7 +1765,7 @@
         var lblMemHeader = pnlMemStats.add(
             "statictext",
             undefined,
-            "Target: (None) | Words: 0 | Lines: 0 | Max Line: 0 px"
+            "Target: (None) | Type: Point | Words: 0 | Lines: 0 | Overset: No"
         );
 
         var grpMemViews = pnlMemStats.add("group");
@@ -1314,6 +1775,7 @@
         var rdoViewWords = grpMemViews.add("radiobutton", undefined, "Words & Widths");
         var rdoViewLines = grpMemViews.add("radiobutton", undefined, "Lines & Widths");
         var rdoViewJSON = grpMemViews.add("radiobutton", undefined, "JSON Arrays");
+        var rdoViewFull = grpMemViews.add("radiobutton", undefined, "Full Metrics");
         rdoViewWords.value = true;
 
         var txtMemDisplay = pnlMemStats.add("edittext", undefined, "// No text layer measured yet.\n// Select a text layer and click 'Measure Selected Text'.", {
@@ -1328,7 +1790,7 @@
         grpMemBtns.spacing = 6;
 
         var btnMeasure = grpMemBtns.add("button", undefined, "🔍 Measure Selected Text");
-        btnMeasure.helpTip = "Measures words and lines pixel widths and updates the sliders & memory store";
+        btnMeasure.helpTip = "Measures words and lines pixel widths, overflow, and updates the sliders & memory store";
 
         var btnCopyMem = grpMemBtns.add("button", undefined, "📋 Copy JSON");
         btnCopyMem.helpTip = "Copies in-memory words, wordWidths, and lineWidths arrays to clipboard";
@@ -1337,7 +1799,7 @@
         btnPrintConsole.helpTip = "Prints formatted word and line width tables to ExtendScript console";
 
         // =====================================================================
-        // TAB 5: ⚙️ RIGGING & EXECUTION OPTIONS
+        // TAB 6: ⚙️ RIGGING OPTIONS & DOCUMENTATION
         // =====================================================================
         var tabOptions = tpanel.add("tab", undefined, "⚙️ Options");
         tabOptions.orientation = "column";
@@ -1388,6 +1850,34 @@
         var btnRemove = grpOptionBtns.add("button", undefined, "🗑️ Remove All Effects");
         btnRemove.helpTip = "Removes any previously added property effects from selected layers";
 
+        // Documentation & Links Panel
+        var pnlDocs = tabOptions.add("panel", undefined, "📖 Documentation & Reference Links");
+        pnlDocs.orientation = "column";
+        pnlDocs.alignChildren = ["fill", "top"];
+        pnlDocs.spacing = 4;
+
+        var lblLegend = pnlDocs.add("statictext", undefined, "Legend: [RO] = Read-Only by layout engine | [R/W] = Read / Write");
+        try {
+            lblLegend.graphics.font = ScriptUI.newFont("Verdana", "BOLD", 9);
+        } catch (eF2) {}
+
+        var grpDocBtns = pnlDocs.add("group");
+        grpDocBtns.orientation = "row";
+        grpDocBtns.alignChildren = ["fill", "center"];
+        grpDocBtns.spacing = 6;
+
+        var btnOpenTextDoc = grpDocBtns.add("button", undefined, "🌐 TextDocument API");
+        btnOpenTextDoc.helpTip = "Opens the official Adobe After Effects TextDocument Scripting Reference: " + DOC_TEXTDOC_URL;
+        btnOpenTextDoc.onClick = function () { openExternalURL(DOC_TEXTDOC_URL); };
+
+        var btnOpenChangelog = grpDocBtns.add("button", undefined, "🌐 AE Changelog");
+        btnOpenChangelog.helpTip = "Opens the Adobe AE Scripting Changelog: " + DOC_CHANGELOG_URL;
+        btnOpenChangelog.onClick = function () { openExternalURL(DOC_CHANGELOG_URL); };
+
+        var btnOpenGuide = grpDocBtns.add("button", undefined, "📄 Differences Guide");
+        btnOpenGuide.helpTip = "Opens the comprehensive AE vs Web JS Text Rendering Differences documentation: " + DOC_DIFFERENCES_URL;
+        btnOpenGuide.onClick = function () { openExternalURL(DOC_DIFFERENCES_URL); };
+
         tpanel.selection = 0; // Tab 1 (Box) active by default
 
         // ---------------------------------------------------------------------
@@ -1402,7 +1892,7 @@
         btnApply.preferredSize = [-1, 34];
         btnApply.helpTip = "Builds and applies all currently checked property effects to selected text layers";
 
-        var lblStatus = win.add("statictext", undefined, "Ready. Check/uncheck any property to show/hide that effect in the timeline.");
+        var lblStatus = win.add("statictext", undefined, "Ready. Hover over any checkbox for explanation & documentation links.");
         lblStatus.alignment = ["fill", "bottom"];
         try {
             lblStatus.graphics.font = ScriptUI.newFont("Verdana", "REGULAR", 10);
@@ -1458,181 +1948,169 @@
                 return;
             }
 
-            var targetLayers = [];
-            if (comp.selectedLayers && comp.selectedLayers.length > 0) {
-                targetLayers = comp.selectedLayers;
-            } else {
+            var layers = comp.selectedLayers;
+            if (!layers || layers.length === 0) {
+                var foundText = null;
                 for (var li = 1; li <= comp.layers.length; li++) {
                     if (isTextLayer(comp.layers[li])) {
-                        targetLayers.push(comp.layers[li]);
+                        foundText = comp.layers[li];
+                        foundText.selected = true;
                         break;
                     }
                 }
-                if (targetLayers.length === 0 && comp.layers.length > 0) {
-                    targetLayers.push(comp.layers[1]);
+                if (!foundText) {
+                    foundText = createDummyTextLayer(comp);
                 }
+                layers = [foundText];
             }
 
-            if (targetLayers.length === 0) {
-                var dummyLyr = createDummyLoremTextLayer(comp);
-                if (dummyLyr) {
-                    targetLayers.push(dummyLyr);
-                } else {
-                    setStatus("Please select a text layer in the timeline.", true);
-                    return;
-                }
-            }
-
-            if (app.beginUndoGroup) {
-                app.beginUndoGroup((isChecked ? "Show " : "Hide ") + def.effectName + " Effect");
-            }
-
-            var prefix = (chkPrefix && chkPrefix.value) ? "[Prop]" : "";
+            var options = getOptions();
+            var prefix = options.usePrefix ? "[Prop]" : "";
             var targetName = prefix ? (prefix + " " + def.effectName) : def.effectName;
-            var isExpr = (rdoLive && rdoLive.value);
 
-            for (var i = 0; i < targetLayers.length; i++) {
-                var layer = targetLayers[i];
-                var fxGroup = layer.property("ADBE Effect Parade") || layer.property("Effects");
-                if (!fxGroup) continue;
+            app.beginUndoGroup("Toggle Effect: " + def.effectName);
+            try {
+                for (var i = 0; i < layers.length; i++) {
+                    var layer = layers[i];
+                    var fxGroup = layer.property("ADBE Effect Parade") || layer.property("Effects");
+                    if (!fxGroup) continue;
 
-                var existingFx = fxGroup.property(targetName) || fxGroup.property(def.effectName);
+                    var existingFx = fxGroup.property(targetName) || fxGroup.property(def.effectName);
 
-                if (isChecked) {
-                    // SHOW / ADD / ENABLE EFFECT
-                    if (!existingFx) {
-                        try {
-                            existingFx = fxGroup.addProperty(def.matchName);
-                            if (existingFx) existingFx.name = targetName;
-                        } catch (eAdd) {}
-                    }
-                    if (existingFx) {
-                        existingFx.enabled = true;
-                        var ctrl = existingFx.property(1);
-                        if (ctrl) {
-                            if (isExpr && def.expression) {
-                                try { ctrl.expression = def.expression; } catch (eExp) {}
-                            } else {
-                                try {
-                                    ctrl.expression = "";
-                                    var textDoc = getTextDocument(layer);
-                                    var rect = getSourceRect(layer);
-                                    var sVal = (typeof def.evalStatic === "function")
-                                        ? def.evalStatic(layer, textDoc, rect)
-                                        : def.defaultVal;
-                                    if (sVal !== null && typeof sVal !== "undefined") {
-                                        ctrl.setValue(sVal);
-                                    }
-                                } catch (eVal) {}
-                            }
+                    if (isChecked) {
+                        if (existingFx) {
+                            existingFx.enabled = true;
+                        } else {
+                            var singleMap = {};
+                            singleMap[def.id] = true;
+                            applyPropertiesToLayer(comp, layer, singleMap, options);
+                        }
+                    } else {
+                        if (existingFx) {
+                            existingFx.enabled = false;
                         }
                     }
-                } else {
-                    // HIDE / DISABLE / REMOVE EFFECT FROM TIMELINE
-                    if (existingFx) {
-                        try { existingFx.enabled = false; } catch (eEn) {}
-                        try {
-                            if (existingFx.remove) existingFx.remove();
-                        } catch (eRm) {}
-                    }
                 }
-
-                // If text layer, measure & store in memory
-                if (isTextLayer(layer)) {
-                    measureAndStoreTextMetrics(comp, layer);
-                }
-            }
-
-            if (app.endUndoGroup) {
+                setStatus((isChecked ? "Showed: " : "Hidden: ") + def.effectName + " in timeline.");
+            } catch (syncErr) {
+                setStatus("Error toggling " + def.effectName + ": " + syncErr.toString(), true);
+            } finally {
                 app.endUndoGroup();
             }
-
-            refreshMemoryDisplay();
-
-            var verb = isChecked ? "👁️ Shown in Timeline: " : "🚫 Hidden from Timeline: ";
-            setStatus(verb + def.effectName);
         }
 
         // ---------------------------------------------------------------------
-        // Memory Display Refresh
+        // In-Memory Store Refresh & Formatting Handlers
         // ---------------------------------------------------------------------
         function refreshMemoryDisplay() {
             var mem = $.global.AE_TEXT_BOX_MEMORY;
-            if (!mem || !mem.words) {
-                lblMemHeader.text = "Target: (None) | Words: 0 | Lines: 0";
-                txtMemDisplay.text = "// No text data in memory.";
-                sldWordAmount.value = 0;
+            if (!mem || !mem.words || mem.words.length === 0) {
+                lblMemHeader.text = "Target: (None) | Type: Point | Words: 0 | Lines: 0 | Overset: No";
+                txtMemDisplay.text = "// No text layer measured yet.\n// Select a text layer and click 'Measure Selected Text'.";
                 txtWordAmount.text = "0";
-                sldLineAmount.value = 0;
                 txtLineAmount.text = "0";
+                txtParaAmount.text = "0";
+                sldWordAmount.value = 0;
+                sldLineAmount.value = 0;
+                sldParaAmount.value = 0;
                 return;
             }
 
-            var wCount = mem.totalWords || 0;
-            var lCount = mem.totalLines || 0;
+            lblMemHeader.text = "Layer: '" + (mem.layerName || "Layer") + "' | " +
+                (mem.textTypeName || (mem.textType ? "Box Text" : "Point Text")) +
+                " | Words: " + mem.totalWords +
+                " | Lines: " + (mem.composedLineCount || mem.totalLines) +
+                " | Overset: " + (mem.boxOverflow ? "YES" : "NO");
 
-            if (wCount > sldWordAmount.maxvalue) sldWordAmount.maxvalue = wCount + 50;
-            sldWordAmount.value = wCount;
-            txtWordAmount.text = String(wCount);
-
-            if (lCount > sldLineAmount.maxvalue) sldLineAmount.maxvalue = lCount + 20;
-            sldLineAmount.value = lCount;
-            txtLineAmount.text = String(lCount);
-
-            var typeStr = (mem.textTypeName || (mem.isBoxText ? "Box Text" : "Point Text")) + " (" + (mem.isBoxText || 0) + ")";
-            lblMemHeader.text = "Layer: '" + (mem.layerName || "Unnamed") +
-                "' | " + typeStr +
-                " | Words: " + wCount +
-                " | Lines: " + lCount +
-                " | Max Line: " + mem.maxLineWidth + " px";
+            txtWordAmount.text = String(mem.totalWords);
+            txtLineAmount.text = String(mem.composedLineCount || mem.totalLines);
+            txtParaAmount.text = String(mem.paragraphCount || 1);
+            sldWordAmount.value = Math.min(500, mem.totalWords);
+            sldLineAmount.value = Math.min(100, (mem.composedLineCount || mem.totalLines));
+            sldParaAmount.value = Math.min(100, (mem.paragraphCount || 1));
 
             if (rdoViewWords.value) {
-                var wLines = ["// DETECTED WORDS & PIXEL WIDTHS (" + wCount + " total):"];
-                for (var wi = 0; wi < mem.words.length; wi++) {
-                    wLines.push("[" + wi + "] \"" + mem.words[wi] + "\" -> " + mem.wordWidths[wi] + " px");
+                var outW = "// WORDS AND WIDTHS (IN PIXELS) FOR: '" + mem.layerName + "'\n";
+                outW += "// Total Words: " + mem.totalWords + " | Space Width: " + mem.spaceWidth + " px\n";
+                outW += "--------------------------------------------------------\n";
+                outW += "INDEX | WORD                         | WIDTH (PX)\n";
+                outW += "--------------------------------------------------------\n";
+                for (var w = 0; w < mem.words.length; w++) {
+                    var idx = (w + 1 < 10 ? "0" : "") + (w + 1);
+                    var wordStr = mem.words[w];
+                    while (wordStr.length < 28) wordStr += " ";
+                    outW += "[" + idx + "] | " + wordStr + " | " + mem.wordWidths[w] + " px\n";
                 }
-                txtMemDisplay.text = wLines.join("\n");
+                txtMemDisplay.text = outW;
             } else if (rdoViewLines.value) {
-                var lLines = ["// DETECTED LINES & PIXEL WIDTHS (" + lCount + " total):"];
-                for (var li = 0; li < mem.lines.length; li++) {
-                    lLines.push("Line " + (li + 1) + " (" + mem.lineWidths[li] + " px): \"" + mem.lines[li] + "\"");
+                var outL = "// LINES AND WIDTHS (IN PIXELS) FOR: '" + mem.layerName + "'\n";
+                outL += "// Total Lines: " + (mem.composedLineCount || mem.totalLines) + " | Box Text: " + (mem.isBoxText ? "YES" : "NO") + "\n";
+                outL += "--------------------------------------------------------\n";
+                outL += "LINE | TEXT                           | WIDTH (PX)\n";
+                outL += "--------------------------------------------------------\n";
+                for (var l = 0; l < mem.lines.length; l++) {
+                    var lIdx = (l + 1 < 10 ? "0" : "") + (l + 1);
+                    var lineStr = mem.lines[l];
+                    if (lineStr.length > 30) lineStr = lineStr.substring(0, 27) + "...";
+                    while (lineStr.length < 30) lineStr += " ";
+                    outL += "[" + lIdx + "] | " + lineStr + " | " + mem.lineWidths[l] + " px\n";
                 }
-                txtMemDisplay.text = lLines.join("\n");
+                txtMemDisplay.text = outL;
+            } else if (rdoViewJSON.value) {
+                var jsonStr = "{\n" +
+                    '  "layerName": "' + mem.layerName + '",\n' +
+                    '  "textType": ' + mem.textType + ',\n' +
+                    '  "textTypeName": "' + (mem.textTypeName || (mem.textType ? "Box Text" : "Point Text")) + '",\n' +
+                    '  "boxOverflow": ' + mem.boxOverflow + ',\n' +
+                    '  "composedLineCount": ' + (mem.composedLineCount || mem.totalLines) + ',\n' +
+                    '  "paragraphCount": ' + (mem.paragraphCount || 1) + ',\n' +
+                    '  "words": ' + arrayToJSON(mem.words) + ',\n' +
+                    '  "wordWidths": ' + arrayToJSON(mem.wordWidths) + ',\n' +
+                    '  "lines": ' + arrayToJSON(mem.lines) + ',\n' +
+                    '  "lineWidths": ' + arrayToJSON(mem.lineWidths) + '\n' +
+                    "}";
+                txtMemDisplay.text = jsonStr;
             } else {
-                var jsonLines = [
-                    "{",
-                    "  \"layerName\": \"" + (mem.layerName || "") + "\",",
-                    "  \"textType\": " + (mem.textType || 0) + ",",
-                    "  \"isBoxText\": " + (mem.isBoxText || 0) + ",",
-                    "  \"textTypeName\": \"" + (mem.textTypeName || (mem.isBoxText ? "Box Text" : "Point Text")) + "\",",
-                    "  \"totalWords\": " + wCount + ",",
-                    "  \"totalLines\": " + lCount + ",",
-                    "  \"words\": " + (function() {
-                        var q = [];
-                        for (var i = 0; i < mem.words.length; i++) q.push('\"' + mem.words[i].replace(/"/g, '\\"') + '\"');
-                        return "[" + q.join(", ") + "]";
-                    })() + ",",
-                    "  \"wordWidths\": [" + mem.wordWidths.join(", ") + "],",
-                    "  \"lines\": " + (function() {
-                        var q = [];
-                        for (var i = 0; i < mem.lines.length; i++) q.push('\"' + mem.lines[i].replace(/"/g, '\\"') + '\"');
-                        return "[" + q.join(", ") + "]";
-                    })() + ",",
-                    "  \"lineWidths\": [" + mem.lineWidths.join(", ") + "],",
-                    "  \"maxLineWidth\": " + mem.maxLineWidth + ",",
-                    "  \"maxWordWidth\": " + mem.maxWordWidth + ",",
-                    "  \"spaceWidth\": " + mem.spaceWidth + ",",
-                    "  \"fontSize\": " + mem.fontSize + ",",
-                    "  \"timestamp\": " + mem.timestamp,
-                    "}"
-                ];
-                txtMemDisplay.text = jsonLines.join("\n");
+                var fullMetrics = "// COMPREHENSIVE TEXT METRICS (AE 24+ EXTENDED)\n" +
+                    "Layer Name: " + mem.layerName + "\n" +
+                    "Text Type: " + (mem.textType ? "1 (Box Text)" : "0 (Point Text)") + "\n" +
+                    "Box Overflow: " + (mem.boxOverflow ? "YES (Overset)" : "NO") + "\n" +
+                    "Composed Line Count: " + (mem.composedLineCount || mem.totalLines) + "\n" +
+                    "Paragraph Count: " + (mem.paragraphCount || 1) + "\n" +
+                    "Box Inset Spacing: " + mem.boxInsetSpacing + " px\n" +
+                    "Box Vertical Align: " + mem.boxVerticalAlignment + "\n" +
+                    "Line Orientation: " + mem.lineOrientation + "\n" +
+                    "First Line Indent: " + mem.firstLineIndent + " px\n" +
+                    "Start Indent: " + mem.startIndent + " px\n" +
+                    "End Indent: " + mem.endIndent + " px\n" +
+                    "Space Before: " + mem.spaceBefore + " px | Space After: " + mem.spaceAfter + " px\n" +
+                    "Auto Hyphenate: " + mem.autoHyphenate + " | Hanging Roman: " + mem.hangingRoman + "\n" +
+                    "Every-Line Composer: " + mem.everyLineComposer + "\n" +
+                    "Max Line Width: " + mem.maxLineWidth + " px\n" +
+                    "Max Word Width: " + mem.maxWordWidth + " px";
+                txtMemDisplay.text = fullMetrics;
             }
+        }
+
+        function arrayToJSON(arr) {
+            if (!arr || arr.length === 0) return "[]";
+            var out = "[";
+            for (var i = 0; i < arr.length; i++) {
+                if (typeof arr[i] === "string") {
+                    out += '"' + arr[i].replace(/"/g, '\\"') + '"';
+                } else {
+                    out += arr[i];
+                }
+                if (i < arr.length - 1) out += ", ";
+            }
+            out += "]";
+            return out;
         }
 
         rdoViewWords.onClick = refreshMemoryDisplay;
         rdoViewLines.onClick = refreshMemoryDisplay;
         rdoViewJSON.onClick = refreshMemoryDisplay;
+        rdoViewFull.onClick = refreshMemoryDisplay;
 
         // ---------------------------------------------------------------------
         // Preset Toolbar Handlers
@@ -1660,13 +2138,13 @@
             setCheckboxes(function (def) {
                 return (def.id === "text_type" ||
                         def.id === "box_is_box" ||
+                        def.id === "box_overflow" ||
                         def.id === "sr_width" ||
                         def.id === "sr_height" ||
                         def.id === "box_width" ||
                         def.id === "box_height" ||
                         def.id === "align_index" ||
-                        def.id === "indent_left" ||
-                        def.id === "indent_right_spare" ||
+                        def.id === "first_line_indent" ||
                         def.id === "cnt_words" ||
                         def.id === "cnt_lines");
             });
@@ -1712,51 +2190,34 @@
         // Action Button Handlers
         // ---------------------------------------------------------------------
         btnApply.onClick = function () {
-            var selInfo = getSelectedDefIds();
             var comp = app.project ? app.project.activeItem : null;
             if (!comp || !(comp instanceof CompItem)) {
-                var answer = confirm("No active composition found.\nWould you like to create a Demo Comp with sample text layers?");
-                if (answer) {
-                    app.beginUndoGroup("Create Text Properties Demo Comp");
-                    try {
-                        createDemoEnvironment(selInfo.map, getOptions());
-                        refreshMemoryDisplay();
-                        setStatus("Created demo composition and applied effects!");
-                    } catch (demoErr) {
-                        setStatus("Error: " + demoErr.toString(), true);
-                    } finally {
-                        app.endUndoGroup();
-                    }
-                }
+                alert("Please select or open a composition first.");
                 return;
             }
 
-            var layers = comp.selectedLayers;
-            if (!layers || layers.length === 0) {
-                // If no selection, target first text layer
-                for (var li = 1; li <= comp.layers.length; li++) {
-                    if (isTextLayer(comp.layers[li])) {
-                        layers = [comp.layers[li]];
-                        break;
-                    }
-                }
-            }
-
-            if (!layers || layers.length === 0) {
-                alert("Please select one or more text layers in the comp.");
+            var selectedLayers = comp.selectedLayers;
+            if (!selectedLayers || selectedLayers.length === 0) {
+                alert("Please select at least one text layer in the active composition.");
                 return;
             }
 
-            app.beginUndoGroup("Apply All Checked Effects");
+            var selInfo = getSelectedDefIds();
+            if (selInfo.count === 0) {
+                alert("Please check at least one property to apply.");
+                return;
+            }
+
+            var options = getOptions();
             var totalAdded = 0;
             var processedLayers = 0;
-            var opts = getOptions();
 
+            app.beginUndoGroup("Apply Text & Box Properties to Effects");
             try {
-                for (var l = 0; l < layers.length; l++) {
-                    var target = layers[l];
-                    var res = applyPropertiesToLayer(comp, target, selInfo.map, opts);
-                    if (res.success) {
+                for (var i = 0; i < selectedLayers.length; i++) {
+                    var layer = selectedLayers[i];
+                    var res = applyPropertiesToLayer(comp, layer, selInfo.map, options);
+                    if (res && res.success) {
                         totalAdded += res.count;
                         processedLayers++;
                     }
@@ -1772,18 +2233,22 @@
 
         btnRemove.onClick = function () {
             var comp = app.project ? app.project.activeItem : null;
-            if (!comp || !(comp instanceof CompItem)) return;
-            var layers = comp.selectedLayers;
-            if (!layers || layers.length === 0) return;
-
+            if (!comp || !comp.selectedLayers || comp.selectedLayers.length === 0) {
+                alert("Please select a text layer first.");
+                return;
+            }
             app.beginUndoGroup("Remove Property Effects");
-            var totalRemoved = 0;
             try {
-                for (var l = 0; l < layers.length; l++) {
-                    totalRemoved += removePropertyEffects(layers[l]);
+                var removed = 0;
+                for (var i = 0; i < comp.selectedLayers.length; i++) {
+                    removed += removePropertyEffects(comp.selectedLayers[i]);
                 }
-                setCheckboxes(function () { return false; });
-                setStatus("Removed " + totalRemoved + " property effect(s).");
+                for (var id in checkboxMap) {
+                    if (checkboxMap.hasOwnProperty(id)) {
+                        checkboxMap[id].value = false;
+                    }
+                }
+                setStatus("Removed " + removed + " property effect(s).");
             } catch (err) {
                 setStatus("Error removing effects: " + err.toString(), true);
             } finally {
@@ -1824,153 +2289,115 @@
 
         btnMeasure.onClick = function () {
             var comp = app.project ? app.project.activeItem : null;
-            if (!comp || !comp.selectedLayers || comp.selectedLayers.length === 0 || !isTextLayer(comp.selectedLayers[0])) {
-                alert("Please select a Text Layer to measure.");
+            if (!comp || !comp.selectedLayers || comp.selectedLayers.length === 0) {
+                alert("Please select a text layer in the active composition.");
                 return;
             }
-            app.beginUndoGroup("Measure Text Metrics");
+            var layer = comp.selectedLayers[0];
+            if (!isTextLayer(layer)) {
+                alert("Selected layer is not a text layer.");
+                return;
+            }
+            app.beginUndoGroup("Measure Selected Text");
             try {
-                var mem = measureAndStoreTextMetrics(comp, comp.selectedLayers[0]);
-                refreshMemoryDisplay();
-                tpanel.selection = 3; // Switch to Store tab (Tab index 3)
-                setStatus("Measured " + mem.totalWords + " words and " + mem.totalLines + " lines into memory!");
+                var store = measureAndStoreTextMetrics(comp, layer);
+                if (store) {
+                    refreshMemoryDisplay();
+                    setStatus("Measured '" + layer.name + "': " + store.totalWords + " words, " + (store.composedLineCount || store.totalLines) + " lines, overset: " + (store.boxOverflow ? "YES" : "NO"));
+                }
             } catch (measErr) {
-                setStatus("Error: " + measErr.toString(), true);
+                setStatus("Measurement error: " + measErr.toString(), true);
             } finally {
                 app.endUndoGroup();
             }
         };
 
         btnCopyMem.onClick = function () {
-            refreshMemoryDisplay();
-            var textToCopy = txtMemDisplay.text;
-            if (!textToCopy) return;
+            var mem = $.global.AE_TEXT_BOX_MEMORY;
+            if (!mem || !mem.words) {
+                alert("No in-memory data to copy. Click 'Measure Selected Text' first.");
+                return;
+            }
+            var jsonStr = "{\n" +
+                '  "layerName": "' + mem.layerName + '",\n' +
+                '  "textType": ' + mem.textType + ',\n' +
+                '  "textTypeName": "' + (mem.textTypeName || (mem.textType ? "Box Text" : "Point Text")) + '",\n' +
+                '  "boxOverflow": ' + mem.boxOverflow + ',\n' +
+                '  "composedLineCount": ' + (mem.composedLineCount || mem.totalLines) + ',\n' +
+                '  "paragraphCount": ' + (mem.paragraphCount || 1) + ',\n' +
+                '  "boxInsetSpacing": ' + mem.boxInsetSpacing + ',\n' +
+                '  "words": ' + arrayToJSON(mem.words) + ',\n' +
+                '  "wordWidths": ' + arrayToJSON(mem.wordWidths) + ',\n' +
+                '  "lines": ' + arrayToJSON(mem.lines) + ',\n' +
+                '  "lineWidths": ' + arrayToJSON(mem.lineWidths) + '\n' +
+                "}";
 
-            var dlg = new Window("dialog", "In-Memory Text Metrics (Copy)", undefined, { resizeable: true });
-            dlg.orientation = "column";
-            dlg.alignChildren = ["fill", "top"];
-            dlg.spacing = 8;
-            dlg.margins = 12;
+            try {
+                var tempComp = app.project ? app.project.activeItem : null;
+                if (!tempComp && app.project && app.project.items) {
+                    for (var i = 1; i <= app.project.items.length; i++) {
+                        if (app.project.items[i] instanceof CompItem) {
+                            tempComp = app.project.items[i];
+                            break;
+                        }
+                    }
+                }
+                if (tempComp && typeof tempComp.layers.addText === "function") {
+                    var clipLayer = tempComp.layers.addText(jsonStr);
+                    clipLayer.property("Source Text").selected = true;
+                    app.executeCommand(19); // Copy command
+                    clipLayer.remove();
+                    setStatus("JSON copied to clipboard!");
+                    return;
+                }
+            } catch (eClip) {}
 
-            dlg.add("statictext", undefined, "Press Ctrl+A then Ctrl+C to copy arrays to clipboard:");
-            var copyBox = dlg.add("edittext", undefined, textToCopy, { multiline: true });
-            copyBox.preferredSize = [480, 240];
-
-            var grpDlgBtns = dlg.add("group");
-            grpDlgBtns.alignment = ["right", "bottom"];
-            var btnClose = grpDlgBtns.add("button", undefined, "Close", { name: "ok" });
-            btnClose.onClick = function () { dlg.close(); };
-
-            dlg.center();
-            dlg.show();
+            setStatus("JSON ready in display box. (Clipboard auto-copy fallback)");
         };
 
         btnPrintConsole.onClick = function () {
             var mem = $.global.AE_TEXT_BOX_MEMORY;
-            if (!mem || !mem.words) {
-                alert("No text metrics stored in memory yet.");
+            if (!mem || !mem.words || mem.words.length === 0) {
+                alert("No in-memory data available. Click 'Measure Selected Text' first.");
                 return;
             }
-
-            $.writeln("=================================================================");
-            $.writeln("AE IN-MEMORY TEXT BOX METRICS REPORT");
-            $.writeln("=================================================================");
-            $.writeln("Layer Name:   " + mem.layerName);
-            $.writeln("Text Type:    " + (mem.textTypeName || (mem.isBoxText ? "Box Text" : "Point Text")) + " (" + (mem.isBoxText || 0) + ")");
-            $.writeln("Total Words:  " + mem.totalWords);
-            $.writeln("Total Lines:  " + mem.totalLines);
-            $.writeln("Max Line W:   " + mem.maxLineWidth + " px");
-            $.writeln("Max Word W:   " + mem.maxWordWidth + " px");
-            $.writeln("Space Width:  " + mem.spaceWidth + " px");
-            $.writeln("-----------------------------------------------------------------");
-            $.writeln("1. WORDS ARRAY & WIDTHS:");
-            for (var w = 0; w < mem.words.length; w++) {
-                $.writeln("  [" + w + "] \"" + mem.words[w] + "\" -> " + mem.wordWidths[w] + " px");
+            if (typeof $.writeln === "function") {
+                $.writeln("=======================================================");
+                $.writeln("IN-MEMORY METRICS FOR: " + mem.layerName);
+                $.writeln("Text Type: " + mem.textTypeName + " | Overset: " + (mem.boxOverflow ? "YES" : "NO"));
+                $.writeln("Total Words: " + mem.totalWords + " | Composed Lines: " + (mem.composedLineCount || mem.totalLines));
+                $.writeln("Paragraphs: " + (mem.paragraphCount || 1) + " | Inset: " + mem.boxInsetSpacing + " px");
+                $.writeln("-------------------------------------------------------");
+                $.writeln("WORDS & WIDTHS (PX):");
+                for (var w = 0; w < mem.words.length; w++) {
+                    $.writeln("  [" + (w + 1) + "] " + mem.words[w] + " -> " + mem.wordWidths[w] + " px");
+                }
+                $.writeln("-------------------------------------------------------");
+                $.writeln("LINES & WIDTHS (PX):");
+                for (var l = 0; l < mem.lines.length; l++) {
+                    $.writeln("  [" + (l + 1) + "] " + mem.lines[l] + " -> " + mem.lineWidths[l] + " px");
+                }
+                $.writeln("=======================================================");
+                setStatus("Metrics printed to console!");
             }
-            $.writeln("-----------------------------------------------------------------");
-            $.writeln("2. LINES ARRAY & WIDTHS:");
-            for (var l = 0; l < mem.lines.length; l++) {
-                $.writeln("  Line " + (l + 1) + " (" + mem.lineWidths[l] + " px): \"" + mem.lines[l] + "\"");
-            }
-            $.writeln("=================================================================");
-            setStatus("Printed text metrics to ExtendScript Console ($.writeln).");
         };
 
-        // Window resize handlers
-        win.layout.layout(true);
+        // Window resize handler
         win.onResizing = win.onResize = function () {
             this.layout.resize();
         };
 
-        // Check if a text layer is selected when this .JSX is ran; if not, create dummy text field with 100 words of Lorem Ipsum
-        try {
-            var currComp = app.project ? app.project.activeItem : null;
-            if (!currComp || !(currComp instanceof CompItem)) {
-                if (app.project && app.project.items) {
-                    for (var cIdx = 1; cIdx <= app.project.items.length; cIdx++) {
-                        if (app.project.items[cIdx] instanceof CompItem) {
-                            currComp = app.project.items[cIdx];
-                            break;
-                        }
-                    }
-                }
-                if (!currComp && app.project && app.project.items && app.project.items.addComp) {
-                    currComp = app.project.items.addComp("Text Properties Comp", 1920, 1080, 1.0, 10.0, 30.0);
-                }
-            }
-
-            if (currComp) {
-                var selectedTextLayer = null;
-                if (currComp.selectedLayers && currComp.selectedLayers.length > 0) {
-                    for (var sIdx = 0; sIdx < currComp.selectedLayers.length; sIdx++) {
-                        if (isTextLayer(currComp.selectedLayers[sIdx])) {
-                            selectedTextLayer = currComp.selectedLayers[sIdx];
-                            break;
-                        }
-                    }
-                }
-
-                if (!selectedTextLayer) {
-                    // No text layer was selected when JSX is ran -> create dummy text field with 100 words of Lorem Ipsum
-                    selectedTextLayer = createDummyLoremTextLayer(currComp);
-                    if (selectedTextLayer) {
-                        var initSel = getSelectedDefIds();
-                        applyPropertiesToLayer(currComp, selectedTextLayer, initSel.map, getOptions());
-                        measureAndStoreTextMetrics(currComp, selectedTextLayer);
-                        refreshMemoryDisplay();
-                        setStatus("Created dummy text field with 100 words of Lorem Ipsum.");
-                    }
-                } else {
-                    // A text layer is already selected -> measure it and show its metrics
-                    measureAndStoreTextMetrics(currComp, selectedTextLayer);
-                    refreshMemoryDisplay();
-                    setStatus("Ready. Active text layer: '" + selectedTextLayer.name + "'.");
-                }
-            }
-        } catch (eInit) {}
-
+        win.layout.layout(true);
         return win;
     }
 
-
     // =========================================================================
-    // 5. INITIALIZATION & EXECUTION
+    // 5. ENTRY POINT & EXECUTION
     // =========================================================================
-    var panel = buildUI(thisObj);
-    if (panel) {
-        try {
-            if (typeof $ !== "undefined" && typeof $.global !== "undefined") {
-                $.global.aeTextPropertiesPal = panel;
-            }
-        } catch (eG) {}
-
-        if (panel instanceof Window) {
-            panel.center();
-            panel.show();
-        } else if (panel && panel.layout) {
-            panel.layout.layout(true);
-            panel.layout.resize();
-        }
+    var myUI = buildUI(thisObj);
+    if (myUI && typeof Window !== "undefined" && myUI instanceof Window) {
+        myUI.center();
+        myUI.show();
     }
 
 })(this);

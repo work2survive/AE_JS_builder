@@ -617,3 +617,96 @@ When developing tools or emulators that interface with After Effects typography:
 - [x] **Store alignment state in Effect Controls**: Embed slider/point controls on layers to persist alignment configuration.
 - [x] **Bump cache busters across all assets**: Update `?v=X.Y.Z` in `index.html` to prevent browsers from executing cached manifests.
 
+
+
+---
+
+## 18. Modern After Effects Text Properties & Scripting Changelog (AE 24.0 through CC 2026+)
+
+With the release of After Effects 24.0, 24.2, 24.3, 24.6, and CC 2025/2026, Adobe significantly overhauled the `TextDocument` DOM and JS Expression Engine, adding native properties for paragraph box overflow, insets, vertical alignment, first baseline alignment, auto-fit policies, line orientation, paragraph indentation, paragraph spacing, and composed line/paragraph counters.
+
+### 18.1 Comprehensive Properties Specification Matrix
+
+| Property Name | Access | Data Type | AE Version | Expressions Engine (`text.sourceText`) | ExtendScript DOM (`TextDocument`) | Web JS / Canvas Equivalent | Official Adobe Documentation Link |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :--- |
+| **`text_type`** | `[RO]` | Integer `0` / `1` | All | `st.isParagraphText ? 1 : 0` (AE 25+) | `textDoc.boxText ? 1 : 0` | Check if canvas renderer wraps text to bounding box | [TextDocument.boxText](https://ae-scripting.docsforadobe.dev/text/textdocument/#textdocument-boxtext) |
+| **`box_is_box`** | `[RO]` | Boolean | All | `st.isParagraphText` (AE 25+) | `textDoc.boxText` | `Boolean(boxWidth > 0)` | [TextDocument.boxText](https://ae-scripting.docsforadobe.dev/text/textdocument/#textdocument-boxtext) |
+| **`box_overflow`** | `[RO]` | Boolean | **AE 24.6+** | `st.boxOverflow` / `st.style.boxOverflow` | `textDoc.boxOverflow` | `measuredHeight > boxHeight \|\| measuredWidth > boxWidth` | [TextDocument.boxOverflow](https://ae-scripting.docsforadobe.dev/text/textdocument/#textdocument-boxoverflow) |
+| **`box_width`** | `[R/W]` | Float (px) | All | `st.style.boxTextSize[0]` | `textDoc.boxTextSize[0]` | Maximum wrapping width `maxWidth` in Canvas | [TextDocument.boxTextSize](https://ae-scripting.docsforadobe.dev/text/textdocument/#textdocument-boxtextsize) |
+| **`box_height`** | `[R/W]` | Float (px) | All | `st.style.boxTextSize[1]` | `textDoc.boxTextSize[1]` | Maximum box height `maxHeight` in Canvas | [TextDocument.boxTextSize](https://ae-scripting.docsforadobe.dev/text/textdocument/#textdocument-boxtextsize) |
+| **`box_size`** | `[R/W]` | `[Float, Float]` | All | `st.style.boxTextSize` | `textDoc.boxTextSize` | `[boxWidth, boxHeight]` 2D boundary | [TextDocument.boxTextSize](https://ae-scripting.docsforadobe.dev/text/textdocument/#textdocument-boxtextsize) |
+| **`box_inset_spacing`** | `[R/W]` | Float (px) | **AE 24.6+** | `st.boxInsetSpacing` | `textDoc.boxInsetSpacing` | CSS `padding` or Canvas coordinate inset offset | [TextDocument.boxInsetSpacing](https://ae-scripting.docsforadobe.dev/text/textdocument/#textdocument-boxinsetspacing) |
+| **`box_vertical_align`**| `[R/W]` | Enum / Int | **AE 24.6+** | `st.boxVerticalAlignment` | `textDoc.boxVerticalAlignment` | CSS `align-items` / Canvas Y-offset calculation | [TextDocument.boxVerticalAlignment](https://ae-scripting.docsforadobe.dev/text/textdocument/#textdocument-boxverticalalignment) |
+| **`box_first_baseline`**| `[R/W]` | Enum / Int | **AE 24.6+** | `st.boxFirstBaselineAlignment` | `textDoc.boxFirstBaselineAlignment` | Canvas `ctx.textBaseline = alphabetic/top` | [TextDocument.boxFirstBaselineAlignment](https://ae-scripting.docsforadobe.dev/text/textdocument/#textdocument-boxfirstbaselinealignment) |
+| **`box_auto_fit`** | `[R/W]` | Enum / Int | **AE 24.6+** | `st.boxAutoFitPolicy` | `textDoc.boxAutoFitPolicy` | Dynamic font-scale down loop to fit box | [TextDocument.boxAutoFitPolicy](https://ae-scripting.docsforadobe.dev/text/textdocument/#textdocument-boxautofitpolicy) |
+| **`line_orientation`** | `[R/W]` | Enum / Int | **AE 24.2+** | `st.lineOrientation` | `textDoc.lineOrientation` | CSS `writing-mode: vertical-rl` / Canvas vertical rendering | [TextDocument.lineOrientation](https://ae-scripting.docsforadobe.dev/text/textdocument/#textdocument-lineorientation) |
+| **`first_line_indent`** | `[R/W]` | Float (px) | **AE 24.0+** | `st.firstLineIndent` | `textDoc.firstLineIndent` | CSS `text-indent` / First line X-offset in Canvas | [TextDocument.firstLineIndent](https://ae-scripting.docsforadobe.dev/text/textdocument/#textdocument-firstlineindent) |
+| **`start_indent`** | `[R/W]` | Float (px) | **AE 24.0+** | `st.startIndent` | `textDoc.startIndent` | CSS `margin-left` (LTR) / Canvas line left margin | [TextDocument.startIndent](https://ae-scripting.docsforadobe.dev/text/textdocument/#textdocument-startindent) |
+| **`end_indent`** | `[R/W]` | Float (px) | **AE 24.0+** | `st.endIndent` | `textDoc.endIndent` | CSS `margin-right` / Right boundary margin | [TextDocument.endIndent](https://ae-scripting.docsforadobe.dev/text/textdocument/#textdocument-endindent) |
+| **`space_before`** | `[R/W]` | Float (px) | **AE 24.0+** | `st.spaceBefore` | `textDoc.spaceBefore` | CSS `margin-top` / Extra Y-delta before paragraph | [TextDocument.spaceBefore](https://ae-scripting.docsforadobe.dev/text/textdocument/#textdocument-spacebefore) |
+| **`space_after`** | `[R/W]` | Float (px) | **AE 24.0+** | `st.spaceAfter` | `textDoc.spaceAfter` | CSS `margin-bottom` / Extra Y-delta after paragraph | [TextDocument.spaceAfter](https://ae-scripting.docsforadobe.dev/text/textdocument/#textdocument-spaceafter) |
+| **`auto_hyphenate`** | `[R/W]` | Boolean | **AE 24.0+** | `st.autoHyphenate` | `textDoc.autoHyphenate` | CSS `hyphens: auto` / Hyphenation dictionary shaper | [TextDocument.autoHyphenate](https://ae-scripting.docsforadobe.dev/text/textdocument/#textdocument-autohyphenate) |
+| **`hanging_roman`** | `[R/W]` | Boolean | **AE 24.0+** | `st.hangingRoman` | `textDoc.hangingRoman` | CSS `hanging-punctuation: first last` | [TextDocument.hangingRoman](https://ae-scripting.docsforadobe.dev/text/textdocument/#textdocument-hangingroman) |
+| **`every_line_composer`**| `[R/W]`| Boolean | **AE 24.0+** | `st.everyLineComposer` | `textDoc.everyLineComposer` | Knuth-Plass multi-line optimization algorithm | [TextDocument.everyLineComposer](https://ae-scripting.docsforadobe.dev/text/textdocument/#textdocument-everylinecomposer) |
+| **`composedLineCount`** | `[RO]` | Integer | **AE 24.3+** | `st.composedLineCount` | `textDoc.composedLineCount` | Calculated array length `wrappedLines.length` | [TextDocument.composedLineCount](https://ae-scripting.docsforadobe.dev/text/textdocument/#textdocument-composedlinecount) |
+| **`paragraphCount`** | `[RO]` | Integer | **AE 24.3+** | `st.paragraphCount` | `textDoc.paragraphCount` | `text.split(/\r\n|\r|\n/).length` | [TextDocument.paragraphCount](https://ae-scripting.docsforadobe.dev/text/textdocument/#textdocument-paragraphcount) |
+
+### 18.2 Paragraph Box Dimensions, Overflow & Insets
+- **`boxOverflow` [RO]**:
+  Returns `true` when the rendered typography exceeds the height or width of the bounding paragraph frame. This is invaluable for responsive kinetic typography rigs (e.g. automatically shrinking font size when overset occurs).
+- **`boxInsetSpacing` [R/W]**:
+  Specifies the internal padding offset in pixels between the box frame borders and the text glyphs.
+- **`boxAutoFitPolicy` [R/W]**:
+  - `7712` (`BoxAutoFitPolicy.NONE`): Fixed box and fixed font size.
+  - `7713` (`BoxAutoFitPolicy.FIT_FONT_SIZE_TO_BOX`): Dynamically scales down font size until all text fits within the box frame without overflow.
+  - `7714` (`BoxAutoFitPolicy.FIT_BOX_TO_TEXT`): Automatically adjusts the box frame dimensions to hug the rendered text content.
+
+### 18.3 Vertical Alignment & Baseline Policies
+- **`boxVerticalAlignment` [R/W]**:
+  - `7512` (`BoxVerticalAlignment.TOP`): Text lines stack downward from the top inset margin.
+  - `7513` (`BoxVerticalAlignment.CENTER`): Text block is vertically centered inside `boxTextSize[1]`.
+  - `7514` (`BoxVerticalAlignment.BOTTOM`): Text block rests on the bottom inset margin.
+  - `7515` (`BoxVerticalAlignment.JUSTIFY`): Leading expands dynamically to distribute lines evenly across the full box height.
+- **`boxFirstBaselineAlignment` [R/W]**:
+  Controls the vertical distance between the top of the box and the baseline of the first line of text.
+  - `7612` (`ASCENT`): Font ascender height.
+  - `7613` (`CAP_HEIGHT`): Font cap-height.
+  - `7614` (`LEADING`): Font leading value.
+  - `7615` (`X_HEIGHT`): Lowercase x-height.
+  - `7616` (`LOW_CAP`): Small-caps baseline.
+  - `7617` (`FIXED`): Minimum fixed offset defined by `boxFirstBaselineAlignmentMinimum`.
+  - `7618` (`PROPORTIONAL`): Proportional scaling based on font metrics.
+
+### 18.4 Text Orientation & Writing Modes
+- **`lineOrientation` [R/W]**:
+  - `7312` (`LineOrientation.HORIZONTAL`): Standard horizontal text layout (LTR / RTL).
+  - `7313` (`LineOrientation.VERTICAL_RIGHT_TO_LEFT`): Traditional East Asian vertical layout flowing columns right-to-left.
+  - `7314` (`LineOrientation.VERTICAL_LEFT_TO_RIGHT`): Vertical layout flowing columns left-to-right (Mongolian).
+
+### 18.5 Paragraph Formatting, Indents & Spacing
+- **`firstLineIndent` [R/W]**: Horizontal indentation in pixels applied only to the first line of each paragraph.
+- **`startIndent` [R/W]**: Margin offset in pixels applied to the left (or reading start) of all lines in the paragraph.
+- **`endIndent` [R/W]**: Margin offset in pixels applied to the right (or reading end) of all lines in the paragraph.
+- **`spaceBefore` [R/W]**: Additional vertical whitespace in pixels preceding the first line of a paragraph.
+- **`spaceAfter` [R/W]**: Additional vertical whitespace in pixels succeeding the last line of a paragraph.
+
+### 18.6 Hyphenation & Composers
+- **`autoHyphenate` [R/W]**: Enables or disables dictionary-based hyphenation at line breaks.
+- **`hangingRoman` [R/W]**: Hangs punctuation marks (quotes, hyphens, periods) outside the paragraph box margin to preserve visual margin alignment.
+- **`everyLineComposer` [R/W]**: When `true`, uses the multi-line Knuth-Plass global optimizer to distribute hyphenation and justification evenly across entire paragraphs rather than line-by-line greedy fitting.
+
+### 18.7 Composed Line & Paragraph Counters
+- **`composedLineCount` [RO]**:
+  Returns the exact total count of composed lines generated by After Effects, including lines resulting from automatic paragraph box wrapping. This completely supersedes hacky height-divided-by-leading expression estimates.
+- **`paragraphCount` [RO]**:
+  Returns the count of distinct paragraphs separated by hard carriage returns (`\r`, `\n`).
+
+### 18.8 Official Adobe Documentation & API Reference Links
+1. **Adobe After Effects Scripting Guide — TextDocument**:  
+   https://ae-scripting.docsforadobe.dev/text/textdocument/
+2. **Adobe After Effects Scripting Guide — Changelog**:  
+   https://ae-scripting.docsforadobe.dev/introduction/changelog/
+3. **Adobe After Effects Expressions Language Reference — Text Properties**:  
+   https://helpx.adobe.com/after-effects/using/expression-language-reference.html#text_properties
+4. **Layer `sourceRectAtTime()` API Specification**:  
+   https://ae-scripting.docsforadobe.dev/layers/layer/#layer-sourcerectattime
