@@ -1431,10 +1431,9 @@
             return super.property(nameOrIndex);
         }
 
-        // Calculate 4x4 World Transformation Matrix at given time
-        getWorldMatrix(time, fallbackZeroScale = false) {
+        // Calculate 4x4 transform of this layer in parent/world space (excluding local anchor offset)
+        getParentSpaceMatrix(time, fallbackZeroScale = false) {
             const t = this.transform;
-            const anchor = t.anchorPoint.getValueAtTime(time);
             const pos    = t.position.getValueAtTime(time);
             let scale    = t.scale.getValueAtTime(time);
             if (fallbackZeroScale && scale && scale[0] === 0 && scale[1] === 0) {
@@ -1452,17 +1451,15 @@
 
             // 2. Rotations (AE Order: Orientation then X, Y, Z Rotation)
             if (this._threeDLayer) {
-                // Orientation in AE applies composite matrix R = Rx * Ry * Rz
-                if (orient[0]) m = Mat4.rotateX(m, orient[0] * DEG2RAD);
-                if (orient[1]) m = Mat4.rotateY(m, orient[1] * DEG2RAD);
-                if (orient[2]) m = Mat4.rotateZ(m, orient[2] * DEG2RAD);
-
-                // Individual 3D Rotations (X, then Y, then Z)
+                if (orient) {
+                    if (orient[0]) m = Mat4.rotateX(m, orient[0] * DEG2RAD);
+                    if (orient[1]) m = Mat4.rotateY(m, orient[1] * DEG2RAD);
+                    if (orient[2]) m = Mat4.rotateZ(m, orient[2] * DEG2RAD);
+                }
                 if (xRot) m = Mat4.rotateX(m, xRot * DEG2RAD);
                 if (yRot) m = Mat4.rotateY(m, yRot * DEG2RAD);
                 if (zRot) m = Mat4.rotateZ(m, zRot * DEG2RAD);
             } else {
-                // 2D Rotation
                 if (zRot) m = Mat4.rotateZ(m, zRot * DEG2RAD);
             }
 
@@ -1472,20 +1469,31 @@
             const sz = this._threeDLayer ? ((scale[2] !== undefined ? scale[2] : 100) / 100) : 1;
             m = Mat4.scale(m, [sx, sy, sz]);
 
-            // 4. Translate by negative Anchor Point
-            m = Mat4.translate(m, [
+            // 4. Prepend parent's transform hierarchy
+            if (this.parent && this.parent instanceof Layer) {
+                const parentMatrix = (typeof this.parent.getParentSpaceMatrix === 'function')
+                    ? this.parent.getParentSpaceMatrix(time, fallbackZeroScale)
+                    : this.parent.getWorldMatrix(time, fallbackZeroScale);
+                m = Mat4.multiply(parentMatrix, m);
+            }
+
+            return m;
+        }
+
+        // Calculate 4x4 World Transformation Matrix at given time for layer contents
+        getWorldMatrix(time, fallbackZeroScale = false) {
+            const parentM = this.getParentSpaceMatrix(time, fallbackZeroScale);
+            const t = this.transform;
+            const anchor = t.anchorPoint.getValueAtTime(time);
+
+            // Translate by negative Anchor Point for layer content
+            const anchorM = Mat4.translate(Mat4.identity(), [
                 -(anchor[0] || 0),
                 -(anchor[1] || 0),
                 this._threeDLayer ? -(anchor[2] || 0) : 0
             ]);
 
-            // 5. Parent transformation hierarchy
-            if (this.parent && this.parent instanceof Layer) {
-                const parentMatrix = this.parent.getWorldMatrix(time, fallbackZeroScale);
-                m = Mat4.multiply(parentMatrix, m);
-            }
-
-            return m;
+            return Mat4.multiply(parentM, anchorM);
         }
 
         // Concatenated opacity (layer * parent)
@@ -1555,6 +1563,12 @@
             super(name, containingComp);
             this.matchName = 'ADBE AV Layer';
         }
+
+        sourceRectAtTime(time, includeExtents) {
+            const w = (this.source && typeof this.source.width === 'number') ? this.source.width : (typeof this.width === 'number' ? this.width : 0);
+            const h = (this.source && typeof this.source.height === 'number') ? this.source.height : (typeof this.height === 'number' ? this.height : 0);
+            return { top: 0, left: 0, width: w, height: h };
+        }
     }
 
     class ShapeLayer extends AVLayer {
@@ -1569,6 +1583,102 @@
         property(nameOrIndex) {
             if (nameOrIndex === 'Contents' || nameOrIndex === 'ADBE Root Vectors Group') return this.contents;
             return super.property(nameOrIndex);
+        }
+
+        sourceRectAtTime(time, includeExtents) {
+            const t = (time !== undefined) ? time : 0;
+            let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+            let found = false;
+
+            function scanGroup(grp, parentPos = [0, 0], parentScale = [1, 1]) {
+                if (!grp || !grp.properties) return;
+                let grpPos = [0, 0];
+                let grpScale = [1, 1];
+                const tr = grp.property ? (grp.property('Transform') || grp.property('ADBE Vector Transform Group')) : null;
+                if (tr) {
+                    const pProp = tr.property('Position') || tr.property('ADBE Vector Position');
+                    const sProp = tr.property('Scale') || tr.property('ADBE Vector Scale');
+                    if (pProp) {
+                        const pv = pProp.getValueAtTime ? pProp.getValueAtTime(t) : pProp.value;
+                        if (Array.isArray(pv)) grpPos = [pv[0], pv[1]];
+                    }
+                    if (sProp) {
+                        const sv = sProp.getValueAtTime ? sProp.getValueAtTime(t) : sProp.value;
+                        if (Array.isArray(sv)) grpScale = [sv[0] / 100, sv[1] / 100];
+                    }
+                }
+                const curX = parentPos[0] + grpPos[0];
+                const curY = parentPos[1] + grpPos[1];
+                const curScaleX = parentScale[0] * grpScale[0];
+                const curScaleY = parentScale[1] * grpScale[1];
+
+                for (let i = 0; i < grp.properties.length; i++) {
+                    const p = grp.properties[i];
+                    if (p instanceof VectorShapeRect) {
+                        const szProp = p.property('Size') || p.property('ADBE Vector Rect Size') || p.size;
+                        const posProp = p.property('Position') || p.property('ADBE Vector Rect Position') || p.position;
+                        const sz = szProp ? (szProp.getValueAtTime ? szProp.getValueAtTime(t) : szProp.value) : [100, 100];
+                        const pos = posProp ? (posProp.getValueAtTime ? posProp.getValueAtTime(t) : posProp.value) : [0, 0];
+                        const w = (sz[0] || 0) * curScaleX;
+                        const h = (sz[1] || 0) * curScaleY;
+                        const cx = curX + (pos[0] || 0) * curScaleX;
+                        const cy = curY + (pos[1] || 0) * curScaleY;
+                        minX = Math.min(minX, cx - w / 2); maxX = Math.max(maxX, cx + w / 2);
+                        minY = Math.min(minY, cy - h / 2); maxY = Math.max(maxY, cy + h / 2);
+                        found = true;
+                    } else if (p instanceof VectorShapeEllipse) {
+                        const szProp = p.property('Size') || p.property('ADBE Vector Ellipse Size') || p.size;
+                        const posProp = p.property('Position') || p.property('ADBE Vector Ellipse Position') || p.position;
+                        const sz = szProp ? (szProp.getValueAtTime ? szProp.getValueAtTime(t) : szProp.value) : [100, 100];
+                        const pos = posProp ? (posProp.getValueAtTime ? posProp.getValueAtTime(t) : posProp.value) : [0, 0];
+                        const w = (sz[0] || 0) * curScaleX;
+                        const h = (sz[1] || 0) * curScaleY;
+                        const cx = curX + (pos[0] || 0) * curScaleX;
+                        const cy = curY + (pos[1] || 0) * curScaleY;
+                        minX = Math.min(minX, cx - w / 2); maxX = Math.max(maxX, cx + w / 2);
+                        minY = Math.min(minY, cy - h / 2); maxY = Math.max(maxY, cy + h / 2);
+                        found = true;
+                    } else if (p instanceof VectorShapeStar) {
+                        const rProp = p.property('Outer Radius') || p.property('ADBE Vector Star Outer Radius') || p.outerRadius;
+                        const posProp = p.property('Position') || p.property('ADBE Vector Star Position') || p.position;
+                        const r = rProp ? (rProp.getValueAtTime ? rProp.getValueAtTime(t) : rProp.value) : 50;
+                        const pos = posProp ? (posProp.getValueAtTime ? posProp.getValueAtTime(t) : posProp.value) : [0, 0];
+                        const rx = r * curScaleX;
+                        const ry = r * curScaleY;
+                        const cx = curX + (pos[0] || 0) * curScaleX;
+                        const cy = curY + (pos[1] || 0) * curScaleY;
+                        minX = Math.min(minX, cx - rx); maxX = Math.max(maxX, cx + rx);
+                        minY = Math.min(minY, cy - ry); maxY = Math.max(maxY, cy + ry);
+                        found = true;
+                    } else if (p instanceof VectorShapePath) {
+                        const pathProp = p.property('ADBE Vector Shape') || p.property('Path') || p.path;
+                        const shp = pathProp ? (pathProp.getValueAtTime ? pathProp.getValueAtTime(t) : pathProp.value) : null;
+                        if (shp && shp.vertices && shp.vertices.length > 0) {
+                            shp.vertices.forEach(v => {
+                                const vx = curX + v[0] * curScaleX;
+                                const vy = curY + v[1] * curScaleY;
+                                minX = Math.min(minX, vx); maxX = Math.max(maxX, vx);
+                                minY = Math.min(minY, vy); maxY = Math.max(maxY, vy);
+                                found = true;
+                            });
+                        }
+                    } else if (p instanceof PropertyGroup) {
+                        scanGroup(p, [curX, curY], [curScaleX, curScaleY]);
+                    }
+                }
+            }
+
+            if (this.contents) scanGroup(this.contents);
+
+            if (!found) {
+                return { top: 0, left: 0, width: 0, height: 0 };
+            }
+            return {
+                top: minY,
+                left: minX,
+                width: maxX - minX,
+                height: maxY - minY
+            };
         }
     }
 
