@@ -1147,10 +1147,9 @@
             ];
         }
 
-        // 2. Precomposition dimensions with margin to enclose highlight padding/thickness
-        var padMargin = 30;
-        var precompW = Math.max(100, Math.round(origBounds.width + (padMargin * 2)));
-        var precompH = Math.max(60, Math.round(origBounds.height + (padMargin * 2)));
+        // 2. Precomposition dimensions: exactly matching original text box dimensions
+        var precompW = Math.max(4, Math.round(origBounds.width));
+        var precompH = Math.max(4, Math.round(origBounds.height));
 
         var precompIndices = [];
         for (var i = 0; i < layersToPrecompose.length; i++) {
@@ -1171,12 +1170,13 @@
         }
         if (!newComp) return null;
 
+        // Set precomp size strictly to original text box dimensions
         newComp.width = precompW;
         newComp.height = precompH;
 
-        // 4. Inside newComp: Adjust inner layers so content top-left is placed at [padMargin, padMargin]
-        var shiftX = padMargin - origBounds.left;
-        var shiftY = padMargin - origBounds.top;
+        // 4. Inside newComp: Adjust inner layers so content visual top-left is placed at [0, 0]
+        var shiftX = -origBounds.left;
+        var shiftY = -origBounds.top;
 
         var numInner = (typeof newComp.numLayers !== "undefined") ? newComp.numLayers : newComp.layers.length;
         for (var ni = 1; ni <= numInner; ni++) {
@@ -1214,10 +1214,19 @@
 
         if (precompLayer) {
             try { precompLayer.comment = "AE_HIGHLIGHT_CHILD"; } catch (ePC) {}
+            // Enable continuous rasterization/collapse transformation to prevent highlight clipping
+            try { precompLayer.collapseTransformation = true; } catch (eCT) {}
 
-            var targetA = [padMargin, padMargin];
-            var deltaAx = (targetA[0] - padMargin) * sx;
-            var deltaAy = (targetA[1] - padMargin) * sy;
+            var just = props.justification || "left";
+            var targetA = [0, 0];
+            if (just === "center") {
+                targetA = [precompW / 2, 0];
+            } else if (just === "right") {
+                targetA = [precompW, 0];
+            }
+
+            var deltaAx = targetA[0] * sx;
+            var deltaAy = targetA[1] * sy;
             var pDeltaX = deltaAx * cosA - deltaAy * sinA;
             var pDeltaY = deltaAx * sinA + deltaAy * cosA;
 
