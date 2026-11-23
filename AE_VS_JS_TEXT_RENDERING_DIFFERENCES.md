@@ -462,6 +462,7 @@ In web environments serving JSX tools dynamically via GitHub Pages:
 
 ---
 
+<<<<<<< HEAD
 ## 15. Dynamic `sourceRectAtTime()` Live Expression Bounding Boxes
 
 To visualize, debug, or dynamically parent backgrounds to text in real time, rigging live bounding boxes via shape layer expressions is the industry standard in both native AE and the Web Emulator.
@@ -502,7 +503,96 @@ try {
 
 ---
 
-## 16. Summary Checklist for Future Repositories
+## 16. Universal 9-Point Zero-Shift Anchor Alignment Architecture (`AE_Align_Anchor_Point.jsx`)
+
+Anchoring text layers and precompositions dynamically without visual displacement requires addressing the interplay between After Effects' typographic coordinate system, affine transform matrices, and layer parenting hierarchies. This section documents the zero-shift alignment engine based on `AE_Align_Anchor_Point.jsx` and incorporated into `AE_Text_Precomp.jsx`.
+
+### 16.1 Affine Zero-Shift Mathematical Model
+
+When shifting a layer's anchor point from $\mathbf{A}_{\text{orig}} = [A_x, A_y]$ to a target coordinate $\mathbf{A}_{\text{target}} = [A'_x, A'_y]$, the visual content on screen displaces unless the layer's position $\mathbf{P}$ is compensated.
+
+1. **Local Delta**:
+   $$\Delta \mathbf{A} = [A'_x - A_x, \; A'_y - A_y]$$
+
+2. **Scale and Rotation Transformation**:
+   In local layer coordinates, the displacement scaled by the layer's scale factor $\mathbf{S} = [s_x, s_y] = [\text{scale}[0]/100, \; \text{scale}[1]/100]$ is:
+   $$\Delta \mathbf{P}_{\text{local}} = [\Delta A_x \cdot s_x, \; \Delta A_y \cdot s_y]$$
+
+   Accounting for layer rotation $\theta$ (in radians $\theta = \text{rot} \cdot \pi / 180$):
+   $$\Delta P_x = \Delta \mathbf{P}_{\text{local}}[0] \cos\theta - \Delta \mathbf{P}_{\text{local}}[1] \sin\theta$$
+   $$\Delta P_y = \Delta \mathbf{P}_{\text{local}}[0] \sin\theta + \Delta \mathbf{P}_{\text{local}}[1] \cos\theta$$
+
+3. **Parent Hierarchy Compensation**:
+   If the layer has a parent layer `layer.parent`, the composition-space position $\mathbf{P}_{\text{comp}} = \mathbf{P}_{\text{world}} + [\Delta P_x, \Delta P_y]$ must be converted back to the parent's local coordinate space:
+   $$\mathbf{P}_{\text{final}} = \begin{cases}
+   \text{origParent.fromComp}(\mathbf{P}_{\text{comp}}) & \text{if parent exists} \\
+   \mathbf{P}_{\text{comp}} & \text{otherwise}
+   \end{cases}$$
+
+### 16.2 Bounding Box Duality: `sourceRectAtTime()` vs `Stated Dimensions`
+
+After Effects evaluates boundaries differently depending on whether dynamic glyph paths or nominal box boundaries are used:
+
+| Method | Characteristics | When to Use |
+| :--- | :--- | :--- |
+| **`sourceRectAtTime(time, false)`** | Evaluates the tight bounding box of visible rendered pixels/vectors at the given composition time. Shrinks or grows dynamically as text changes. | Organic text boxes, point text, dynamic typography badges, animated subtitle banners. |
+| **`Stated Dimensions`** | Evaluates nominal declared dimensions: `doc.boxTextSize`, `doc.boxTextPos`, `layer.source.width/height`, or shape rectangle vector sizes. Constant regardless of inner text content. | Paragraph text boxes (preserving user box bounds), fixed UI cards, precompositions, solids. |
+
+#### Paragraph Box Text Top-Left Reference:
+In native After Effects, Paragraph (Box) Text layers have an intrinsic offset stored in `boxTextPos`:
+- `boxTextPos[0]` = horizontal offset from insertion anchor to left margin (typically 0).
+- `boxTextPos[1]` = vertical offset from insertion anchor to top margin (typically $-\text{ascenderHeight} \approx -0.78 \times \text{fontSize}$).
+Therefore, the true top-left corner of the stated box text in local coordinates is:
+$$\mathbf{X}_{\text{top-left}} = [ \text{doc.boxTextPos}[0], \; \text{doc.boxTextPos}[1] ]$$
+Using $[0, 0]$ for box text alignment targets the **first line's baseline**, NOT the top of the box!
+
+### 16.3 9-Point Alignment Preset Matrix
+
+The 9 alignment presets evaluate horizontal ($X$) and vertical ($Y$) anchors from bounds $[L, T, W, H]$:
+
+$$\mathbf{A}_{\text{target}}(X_{\text{mode}}, Y_{\text{mode}}) = \left[ L + f_x(X_{\text{mode}}) \cdot W, \; T + f_y(Y_{\text{mode}}) \cdot H \right]$$
+
+where:
+- $f_x(\text{Left}) = 0.0, \quad f_x(\text{Center}) = 0.5, \quad f_x(\text{Right}) = 1.0$
+- $f_y(\text{Top}) = 0.0, \quad f_y(\text{Center}) = 0.5, \quad f_y(\text{Bottom}) = 1.0$
+
+### 16.4 Content-Relative vs Canvas-Relative Reference Frames in Precomps
+
+When precomposing text with padding $p$, two reference frames are available for anchor placement:
+
+1. **Text Content Box Reference** (`anchorReference = "content"`):
+   - Bounds: $[L, T, W, H] = [p, p, W_{\text{text}}, H_{\text{text}}]$.
+   - Top-Left anchor: $[p, p]$.
+   - Center anchor: $[p + W_{\text{text}}/2, \; p + H_{\text{text}}/2]$.
+   - Ideal for kinetic text animators where secondary scaling or rotation must pivot directly around the typography itself, ignoring asymmetric padding.
+
+2. **Precomp Canvas / Card Reference** (`anchorReference = "canvas"`):
+   - Bounds: $[L, T, W, H] = [0, 0, W_{\text{precomp}}, H_{\text{precomp}}]$.
+   - Top-Left anchor: $[0, 0]$.
+   - Center anchor: $[W_{\text{precomp}}/2, \; H_{\text{precomp}}/2]$.
+   - Ideal for UI cards, dialog bubbles, and motion graphics plates where the outer boundary of the background card governs layout alignment.
+
+### 16.5 Procedural Guideline Anchor Reticle (`attachAnchorCross`)
+
+To assist animators in visually verifying anchor alignment without affecting renders:
+1. A vector shape layer is generated procedural with a crosshair (horizontal bar, vertical bar, center pivot dot, and outer reticle ring).
+2. The reticle layer is parented directly to the target layer with:
+   $$\text{crossLayer.transform.anchorPoint} = [0, 0, 0]$$
+   $$\text{crossLayer.transform.position} = [0, 0, 0]$$
+3. Because child layers evaluate local $[0, 0]$ at their parent's anchor point, the crosshair is permanently pinned to the parent's pivot point across all keyframed animations.
+4. Setting `crossLayer.guideLayer = true` ensures it is visible in the viewport but completely excluded from After Effects renders and exports.
+
+### 16.6 State Persistence via Effect Controls
+
+To prevent loss of semantic alignment intent across script sessions, effect slider controls are attached to the layer (`ADBE Effect Parade`):
+- `Anchor Align X`: Slider control storing $0$ (Left), $1$ (Center), or $2$ (Right).
+- `Anchor Align Y`: Slider control storing $0$ (Top), $1$ (Center), or $2$ (Bottom).
+- `Anchor Bounds Mode`: Slider control storing $0$ (`sourceRect`) or $1$ (`stated`).
+- `Anchor Base Point`: 2D Point control storing $[\mathbf{A}_{\text{base}}[0], \mathbf{A}_{\text{base}}[1]]$ for scale-safe dynamic expressions.
+
+---
+
+## 17. Summary Checklist for Future Repositories
 
 When developing tools or emulators that interface with After Effects typography:
 - [x] **Identify text layer mode**: Check if `doc.boxText === true` or Point Text.
@@ -521,5 +611,9 @@ When developing tools or emulators that interface with After Effects typography:
 - [x] **Measure space character differentially**: Compute `spaceWidth = measure("A A") - measure("AA")` for sub-pixel word spacing.
 - [x] **Synchronize layout metrics with Canvas 2D in Web**: Use `ctx.measureText()` in browser JS emulators to eliminate layout vs. SVG rendering drift.
 - [x] **Compensate anchor points via `toComp()` & `fromComp()`**: Pinned layer positions must counter anchor shifts across parent hierarchies.
+- [x] **Implement 9-point zero-shift affine invariance**: Scale and rotation-compensate anchor point modifications using local and parent matrices.
+- [x] **Support dual bounds methods**: Offer both dynamic `sourceRectAtTime()` and nominal `stated` box dimensions.
+- [x] **Provide non-rendering reticle guides**: Use `guideLayer = true` parented at $[0, 0]$ to visualize anchor points in viewports.
+- [x] **Store alignment state in Effect Controls**: Embed slider/point controls on layers to persist alignment configuration.
 - [x] **Bump cache busters across all assets**: Update `?v=X.Y.Z` in `index.html` to prevent browsers from executing cached manifests.
 

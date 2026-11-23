@@ -608,7 +608,243 @@
     }
 
     // -------------------------------------------------------------------------
-    // 4. Bézier Rounded Rectangle Path Computation (AE_Extruded_Round_corners)
+    // 4. Geometry & Anchor Point Helpers (AE_Align_Anchor_Point coherent)
+    // -------------------------------------------------------------------------
+    var COLOR_PRESETS = {
+        "Cyan":   [0.0, 0.95, 0.95],
+        "Red":    [1.0, 0.25, 0.25],
+        "Yellow": [1.0, 0.85, 0.15],
+        "Green":  [0.2, 0.90, 0.40],
+        "White":  [1.0, 1.0, 1.0]
+    };
+
+    var ALIGN_X_INDICES = { "left": 0, "center": 1, "right": 2 };
+    var ALIGN_Y_INDICES = { "top": 0, "center": 1, "bottom": 2 };
+    var BOUNDS_MODE_INDICES = { "sourceRect": 0, "stated": 1, "content": 0, "canvas": 1 };
+
+    /**
+     * Obtains the dynamic bounding box via sourceRectAtTime(time, false) with Box Text fallback
+     */
+    function getLayerSourceRectBounds(layer, compTime) {
+        if (!layer) return { left: 0, top: 0, width: 100, height: 100 };
+        var t = (compTime !== undefined) ? compTime : 0;
+
+        if (typeof layer.sourceRectAtTime === "function") {
+            try {
+                var sr = layer.sourceRectAtTime(t, false);
+                if (sr && (sr.width !== 0 || sr.height !== 0 || sr.left !== 0 || sr.top !== 0)) {
+                    return { left: sr.left, top: sr.top, width: sr.width, height: sr.height };
+                }
+            } catch (eSR) {}
+        }
+
+        try {
+            var textProp = layer.property("ADBE Text Properties") || layer.property("Text");
+            if (textProp) {
+                var docProp = textProp.property("ADBE Text Document") || layer.property("Source Text");
+                if (docProp && docProp.value) {
+                    var doc = docProp.value;
+                    if (doc.boxText && doc.boxTextSize) {
+                        var bPos = doc.boxTextPos || [0, 0];
+                        return { left: bPos[0], top: bPos[1], width: doc.boxTextSize[0], height: doc.boxTextSize[1] };
+                    }
+                }
+            }
+        } catch (eText) {}
+
+        var w = 0, h = 0;
+        if (layer.source && typeof layer.source.width === "number" && typeof layer.source.height === "number") {
+            w = layer.source.width; h = layer.source.height;
+        } else if (typeof layer.width === "number" && typeof layer.height === "number") {
+            w = layer.width; h = layer.height;
+        }
+        if (w > 0 && h > 0) return { left: 0, top: 0, width: w, height: h };
+
+        var cW = (layer.containingComp && layer.containingComp.width) ? layer.containingComp.width : 1920;
+        var cH = (layer.containingComp && layer.containingComp.height) ? layer.containingComp.height : 1080;
+        return { left: 0, top: 0, width: cW, height: cH };
+    }
+
+    /**
+     * Obtains stated / nominal dimensions (declared box text width/height, solid size, or precomp dimensions)
+     */
+    function getLayerStatedBounds(layer) {
+        if (!layer) return { left: 0, top: 0, width: 100, height: 100 };
+
+        try {
+            var textProp = layer.property("ADBE Text Properties") || layer.property("Text");
+            if (textProp) {
+                var docProp = textProp.property("ADBE Text Document") || layer.property("Source Text");
+                if (docProp && docProp.value) {
+                    var doc = docProp.value;
+                    if (doc.boxText && doc.boxTextSize) {
+                        var bPos = doc.boxTextPos || [0, 0];
+                        return { left: bPos[0], top: bPos[1], width: doc.boxTextSize[0], height: doc.boxTextSize[1] };
+                    }
+                }
+            }
+        } catch (eBox) {}
+
+        if (layer.source && typeof layer.source.width === "number" && typeof layer.source.height === "number") {
+            return { left: 0, top: 0, width: layer.source.width, height: layer.source.height };
+        }
+        if (typeof layer.width === "number" && typeof layer.height === "number" && layer.width > 0 && layer.height > 0) {
+            return { left: 0, top: 0, width: layer.width, height: layer.height };
+        }
+
+        return getLayerSourceRectBounds(layer, 0);
+    }
+
+    /**
+     * Computes the target [X, Y] anchor coordinates based on bounds and alignment modes (AE_Align_Anchor_Point)
+     */
+    function computeTargetAnchor(bounds, xMode, yMode) {
+        var tx = bounds.left;
+        if (xMode === "center") {
+            tx = bounds.left + bounds.width / 2;
+        } else if (xMode === "right") {
+            tx = bounds.left + bounds.width;
+        }
+
+        var ty = bounds.top;
+        if (yMode === "center") {
+            ty = bounds.top + bounds.height / 2;
+        } else if (yMode === "bottom") {
+            ty = bounds.top + bounds.height;
+        }
+
+        return [tx, ty];
+    }
+
+    /**
+     * Creates or updates a vector cross shape layer parented to targetLayer at [0, 0] (Guide Layer)
+     */
+    function attachAnchorCross(comp, targetLayer, crossSize, isGuide, colorName) {
+        if (!comp || !targetLayer) return null;
+        crossSize = Number(crossSize) || 30;
+        var strokeW = Math.max(2, Math.round(crossSize / 15));
+        var col = COLOR_PRESETS[colorName] || COLOR_PRESETS["Cyan"];
+        var crossName = "Anchor_Cross_" + targetLayer.name;
+
+        var crossLayer = null;
+        var numL = (typeof comp.numLayers === "number") ? comp.numLayers : comp.layers.length;
+        for (var i = 1; i <= numL; i++) {
+            var candidate = (typeof comp.layer === "function") ? comp.layer(i) : (comp.layers[i] || comp.layers[i - 1]);
+            if (candidate && candidate.parent === targetLayer &&
+               (candidate.name === crossName || candidate.name === "Anchor_Cross" || candidate.name.indexOf("Anchor_Cross_") === 0)) {
+                crossLayer = candidate;
+                break;
+            }
+        }
+
+        if (!crossLayer) {
+            crossLayer = comp.layers.addShape();
+            crossLayer.name = crossName;
+        }
+
+        crossLayer.parent = null;
+
+        var contents = crossLayer.property("Contents") || crossLayer.property("ADBE Root Vectors Group");
+        while (contents && contents.numProperties > 0) {
+            contents.property(1).remove();
+        }
+
+        var grp = contents.addProperty("ADBE Vector Group");
+        grp.name = "Crosshair Shapes";
+        var grpContents = grp.property("Contents");
+
+        var rectH = grpContents.addProperty("ADBE Vector Shape - Rect");
+        rectH.name = "Horizontal Bar";
+        rectH.property("Size").setValue([crossSize, strokeW]);
+        rectH.property("Position").setValue([0, 0]);
+
+        var rectV = grpContents.addProperty("ADBE Vector Shape - Rect");
+        rectV.name = "Vertical Bar";
+        rectV.property("Size").setValue([strokeW, crossSize]);
+        rectV.property("Position").setValue([0, 0]);
+
+        var dot = grpContents.addProperty("ADBE Vector Shape - Ellipse");
+        dot.name = "Center Pivot Dot";
+        dot.property("Size").setValue([strokeW * 3.0, strokeW * 3.0]);
+        dot.property("Position").setValue([0, 0]);
+
+        var fill = grpContents.addProperty("ADBE Vector Graphic - Fill");
+        fill.property("Color").setValue(col);
+
+        var ring = grpContents.addProperty("ADBE Vector Shape - Ellipse");
+        ring.name = "Reticle Outer Ring";
+        ring.property("Size").setValue([crossSize * 0.72, crossSize * 0.72]);
+        ring.property("Position").setValue([0, 0]);
+
+        var ringStroke = grpContents.addProperty("ADBE Vector Graphic - Stroke");
+        ringStroke.property("Color").setValue(col);
+        ringStroke.property("Stroke Width").setValue(1.5);
+
+        crossLayer.guideLayer = Boolean(isGuide);
+        crossLayer.threeDLayer = Boolean(targetLayer.threeDLayer);
+        crossLayer.label = 14;
+
+        var is3D = targetLayer.threeDLayer;
+        crossLayer.transform.anchorPoint.setValue(is3D ? [0, 0, 0] : [0, 0]);
+        crossLayer.transform.position.setValue(is3D ? [0, 0, 0] : [0, 0]);
+        crossLayer.transform.scale.setValue(is3D ? [100, 100, 100] : [100, 100]);
+        if (crossLayer.transform.rotation) crossLayer.transform.rotation.setValue(0);
+
+        crossLayer.parent = targetLayer;
+        try { crossLayer.moveBefore(targetLayer); } catch (eMB) {}
+
+        return crossLayer;
+    }
+
+    /**
+     * Stores alignment state directly on targetLayer as effect slider controls
+     */
+    function storeAlignmentEffect(layer, xMode, yMode, boundsMethod, baseA) {
+        if (!layer) return;
+        try {
+            var fxParade = layer.property("ADBE Effect Parade") || layer.property("Effects");
+            if (!fxParade) return;
+
+            var xVal = ALIGN_X_INDICES[xMode] !== undefined ? ALIGN_X_INDICES[xMode] : 0;
+            var yVal = ALIGN_Y_INDICES[yMode] !== undefined ? ALIGN_Y_INDICES[yMode] : 0;
+            var bVal = BOUNDS_MODE_INDICES[boundsMethod] !== undefined ? BOUNDS_MODE_INDICES[boundsMethod] : 0;
+
+            var effX = fxParade.property("Anchor Align X") || fxParade.addProperty("ADBE Slider Control");
+            if (effX) {
+                effX.name = "Anchor Align X";
+                var pX = effX.property("ADBE Slider Control-0001") || effX.property(1);
+                if (pX) pX.setValue(xVal);
+            }
+
+            var effY = fxParade.property("Anchor Align Y") || fxParade.addProperty("ADBE Slider Control");
+            if (effY) {
+                effY.name = "Anchor Align Y";
+                var pY = effY.property("ADBE Slider Control-0001") || effY.property(1);
+                if (pY) pY.setValue(yVal);
+            }
+
+            var effB = fxParade.property("Anchor Bounds Mode") || fxParade.addProperty("ADBE Slider Control");
+            if (effB) {
+                effB.name = "Anchor Bounds Mode";
+                var pB = effB.property("ADBE Slider Control-0001") || effB.property(1);
+                if (pB) pB.setValue(bVal);
+            }
+
+            try {
+                if (baseA && typeof baseA[0] === "number") {
+                    var effBasePt = fxParade.property("Anchor Base Point") || fxParade.addProperty("ADBE Point Control");
+                    if (effBasePt) {
+                        effBasePt.name = "Anchor Base Point";
+                        var pBasePt = effBasePt.property("ADBE Point Control-0001") || effBasePt.property(1);
+                        if (pBasePt) pBasePt.setValue([baseA[0], baseA[1]]);
+                    }
+                }
+            } catch (eBasePt) {}
+        } catch (eStore) {}
+    }
+
+    // -------------------------------------------------------------------------
+    // 5. Bézier Rounded Rectangle Path Computation (AE_Extruded_Round_corners)
     // -------------------------------------------------------------------------
     function computeRoundRectPathData(w, h, rTL, rTR, rBR, rBL) {
         // W3C CSS Backgrounds and Borders Module Level 3 (§5.5 Corner Overlapping)
@@ -1007,31 +1243,13 @@
         }
 
         // ---------------------------------------------------------------------
-        // 1. Capture Original Text Box Reference Point BEFORE any modifications
+        // 1. Capture Original Layer Geometry & Reference Point (AE_Align_Anchor_Point)
         // ---------------------------------------------------------------------
         var origFs = metrics.fontSize || 28;
         var ascenderHeightInit = Math.round((origFs * 0.78) * 100) / 100;
-        var origBoxW = (metrics.detectedWidth && metrics.detectedWidth > 0) ? metrics.detectedWidth : ((metrics.isBoxText && metrics.boxWidth > 0) ? metrics.boxWidth : 400);
 
-        var origRefX = 0;
-        var origRefY = -ascenderHeightInit;
-        if (metrics.isBoxText) {
-            if (align === "center") {
-                origRefX = origBoxW / 2;
-            } else if (align === "right") {
-                origRefX = origBoxW;
-            } else {
-                origRefX = 0;
-            }
-        } else {
-            if (align === "center") {
-                origRefX = metrics.rect ? (metrics.rect.left + (metrics.rect.width / 2)) : 0;
-            } else if (align === "right") {
-                origRefX = metrics.rect ? (metrics.rect.left + metrics.rect.width) : 0;
-            } else {
-                origRefX = metrics.rect ? metrics.rect.left : 0;
-            }
-        }
+        var boundsMethod = options.boundsMethod || (metrics.isBoxText ? "stated" : "sourceRect");
+        var origBounds = (boundsMethod === "stated") ? getLayerStatedBounds(textLayer) : getLayerSourceRectBounds(textLayer, comp.time);
 
         var sx = (origScale && origScale.length > 0) ? (origScale[0] / 100.0) : 1.0;
         var sy = (origScale && origScale.length > 1) ? (origScale[1] / 100.0) : 1.0;
@@ -1039,30 +1257,25 @@
         var cosA = Math.cos(rad);
         var sinA = Math.sin(rad);
 
-        // Exact coordinate of original text reference point in parent/comp space:
-        var prefX = origPos[0];
-        var prefY = origPos[1];
-        var prefZ = (origPos.length > 2) ? origPos[2] : 0;
-
-        var compPoint = null;
+        // Exact composition-space coordinate of the visual top-left corner of the content:
+        var pContentTopLeft = null;
         try {
             if (typeof textLayer.toComp === "function") {
-                compPoint = textLayer.toComp([origRefX, origRefY, 0]);
-                if (!compPoint || compPoint.length < 2) {
-                    compPoint = textLayer.toComp([origRefX, origRefY]);
+                pContentTopLeft = textLayer.toComp([origBounds.left, origBounds.top, 0]);
+                if (!pContentTopLeft || pContentTopLeft.length < 2) {
+                    pContentTopLeft = textLayer.toComp([origBounds.left, origBounds.top]);
                 }
             }
         } catch (eTC) {}
 
-        if (compPoint && compPoint.length >= 2 && !isNaN(compPoint[0]) && !isNaN(compPoint[1])) {
-            prefX = compPoint[0];
-            prefY = compPoint[1];
-            if (compPoint.length > 2) prefZ = compPoint[2];
-        } else {
-            var dxOrig = (origRefX - origAnchor[0]) * sx;
-            var dyOrig = (origRefY - origAnchor[1]) * sy;
-            prefX = origPos[0] + (dxOrig * cosA - dyOrig * sinA);
-            prefY = origPos[1] + (dxOrig * sinA + dyOrig * cosA);
+        if (!pContentTopLeft || isNaN(pContentTopLeft[0]) || isNaN(pContentTopLeft[1])) {
+            var dxOrig = (origBounds.left - origAnchor[0]) * sx;
+            var dyOrig = (origBounds.top - origAnchor[1]) * sy;
+            pContentTopLeft = [
+                origPos[0] + (dxOrig * cosA - dyOrig * sinA),
+                origPos[1] + (dxOrig * sinA + dyOrig * cosA),
+                (origPos.length > 2 ? origPos[2] : 0)
+            ];
         }
 
         // ---------------------------------------------------------------------
@@ -1165,14 +1378,6 @@
         try {
             innerTextLayer = (typeof newComp.layer === "function") ? newComp.layer(1) : newComp.layers[0];
         } catch (eGetInner) {}
-
-        var innerRefX = padding;
-        if (align === "center") {
-            innerRefX = precompW / 2;
-        } else if (align === "right") {
-            innerRefX = precompW - padding;
-        }
-        var innerRefY = padding;
 
         var divideMode = options.divideMode || "none";
         var totalWordCount = 0;
@@ -1461,33 +1666,16 @@
                 var isInner3D = false;
                 try { isInner3D = !!innerTextLayer.threeDLayer; } catch (eInner3D) {}
 
-                var innerAnchorX = 0;
-                var innerAnchorY = 0;
+                var innerAnchorX = origBounds.left;
+                var innerAnchorY = origBounds.top;
                 var innerPosX = padding;
-                var innerPosY = padding + ascenderHeightInit;
+                var innerPosY = padding;
 
-                if (metrics.isBoxText) {
-                    if (align === "left") {
-                        innerAnchorX = 0;
-                        innerPosX = padding;
-                    } else if (align === "center") {
-                        innerAnchorX = textboxW / 2;
-                        innerPosX = precompW / 2;
+                if (!metrics.isBoxText) {
+                    if (align === "center") {
+                        innerPosX = padding + (textboxW - origBounds.width) / 2;
                     } else if (align === "right") {
-                        innerAnchorX = textboxW;
-                        innerPosX = precompW - padding;
-                    }
-                } else {
-                    // Point text
-                    if (align === "left") {
-                        innerAnchorX = metrics.rect ? metrics.rect.left : 0;
-                        innerPosX = padding;
-                    } else if (align === "center") {
-                        innerAnchorX = metrics.rect ? (metrics.rect.left + (metrics.rect.width / 2)) : 0;
-                        innerPosX = precompW / 2;
-                    } else if (align === "right") {
-                        innerAnchorX = metrics.rect ? (metrics.rect.left + metrics.rect.width) : 0;
-                        innerPosX = precompW - padding;
+                        innerPosX = precompW - padding - origBounds.width;
                     }
                 }
 
@@ -1563,26 +1751,50 @@
                 try { precompLayer.parent = origParent; } catch (ePar) {}
             }
 
-            var precompAnchorX = 0;
-            var precompAnchorY = 0;
-
-            if (options.autoAnchor) {
-                // Precomp anchor point matches the top of the text box (offset by padding)
-                precompAnchorX = innerRefX;
-                precompAnchorY = innerRefY;
-            } else {
-                // Center Anchor Point
-                precompAnchorX = precompW / 2;
-                precompAnchorY = precompH / 2;
+            var anchorAlignPreset = options.anchorAlign || "auto";
+            if (anchorAlignPreset === "auto") {
+                if (align === "center") anchorAlignPreset = "top-center";
+                else if (align === "right") anchorAlignPreset = "top-right";
+                else anchorAlignPreset = "top-left";
+            }
+            if (!options.autoAnchor) {
+                anchorAlignPreset = "center";
             }
 
-            // Zero-Shift compensation: offset precomp position by the difference between
-            // its anchor point and the internal text box reference point.
-            var dAx = (precompAnchorX - innerRefX) * sx;
-            var dAy = (precompAnchorY - innerRefY) * sy;
-            var finalPosX = prefX + (dAx * cosA - dAy * sinA);
-            var finalPosY = prefY + (dAx * sinA + dAy * cosA);
-            var finalPosZ = prefZ;
+            var alignPresetMap = {
+                "top-left":   { x: "left",   y: "top" },
+                "top-center": { x: "center", y: "top" },
+                "top-right":  { x: "right",  y: "top" },
+                "mid-left":   { x: "left",   y: "center" },
+                "center":     { x: "center", y: "center" },
+                "mid-right":  { x: "right",  y: "center" },
+                "bot-left":   { x: "left",   y: "bottom" },
+                "bot-center": { x: "center", y: "bottom" },
+                "bot-right":  { x: "right",  y: "bottom" }
+            };
+            var alignMode = alignPresetMap[anchorAlignPreset] || { x: "left", y: "top" };
+
+            var anchorRefBounds;
+            if (options.anchorReference === "canvas") {
+                anchorRefBounds = { left: 0, top: 0, width: precompW, height: precompH };
+            } else {
+                anchorRefBounds = { left: padding, top: padding, width: textboxW, height: textboxH };
+            }
+
+            var targetA = computeTargetAnchor(anchorRefBounds, alignMode.x, alignMode.y);
+
+            // Zero-Shift affine transformation:
+            // Inside newComp, the text content's top-left is at [padding, padding].
+            // In the parent composition, that content point was at pContentTopLeft.
+            // When precompLayer has anchor point targetA, its position in parent comp must be:
+            var deltaAx = (targetA[0] - padding) * sx;
+            var deltaAy = (targetA[1] - padding) * sy;
+            var pDeltaX = deltaAx * cosA - deltaAy * sinA;
+            var pDeltaY = deltaAx * sinA + deltaAy * cosA;
+
+            var finalPosX = pContentTopLeft[0] + pDeltaX;
+            var finalPosY = pContentTopLeft[1] + pDeltaY;
+            var finalPosZ = (pContentTopLeft.length > 2) ? pContentTopLeft[2] : 0;
 
             if (origParent && typeof origParent.fromComp === "function") {
                 try {
@@ -1601,15 +1813,15 @@
 
             try {
                 if (is3D) {
-                    precompLayer.transform.anchorPoint.setValue([precompAnchorX, precompAnchorY, 0]);
+                    precompLayer.transform.anchorPoint.setValue([targetA[0], targetA[1], 0]);
                     precompLayer.transform.position.setValue([finalPosX, finalPosY, finalPosZ]);
                 } else {
-                    precompLayer.transform.anchorPoint.setValue([precompAnchorX, precompAnchorY]);
+                    precompLayer.transform.anchorPoint.setValue([targetA[0], targetA[1]]);
                     precompLayer.transform.position.setValue([finalPosX, finalPosY]);
                 }
             } catch (ePrePos) {
                 try {
-                    precompLayer.transform.anchorPoint.setValue([precompAnchorX, precompAnchorY]);
+                    precompLayer.transform.anchorPoint.setValue([targetA[0], targetA[1]]);
                     precompLayer.transform.position.setValue([finalPosX, finalPosY]);
                 } catch (ePrePos2) {}
             }
@@ -1622,6 +1834,18 @@
                 if (precompLayer.transform.rotation) precompLayer.transform.rotation.setValue(origRot);
                 if (precompLayer.transform.zRotation) precompLayer.transform.zRotation.setValue(origRot);
             } catch (eSetRot) {}
+
+            // Attach Guide Crosshair Reticle if requested
+            if (options.createCross) {
+                try {
+                    attachAnchorCross(comp, precompLayer, options.crossSize || 30, true, options.crossColor || "Cyan");
+                } catch (eCross) {}
+            }
+
+            // Store Alignment State Effect Controls on the precomp layer
+            try {
+                storeAlignmentEffect(precompLayer, alignMode.x, alignMode.y, options.anchorReference || "content", targetA);
+            } catch (eStoreEff) {}
 
             try { precompLayer.selected = true; } catch (eSel) {}
         }
@@ -1908,29 +2132,66 @@
     };
 
     // --- Anchor Point Options Panel ---
-    var pnlAnchor = tabPrecomp.add("panel", undefined, "Anchor Point & Alignment");
+    var pnlAnchor = tabPrecomp.add("panel", undefined, "Anchor Point & Alignment (Zero-Shift Engine)");
     pnlAnchor.orientation = "column";
     pnlAnchor.alignChildren = ["fill", "top"];
     pnlAnchor.spacing = 8;
     pnlAnchor.margins = 10;
 
-    var chkAutoAnchor = pnlAnchor.add("checkbox", undefined, "automatic anchor point");
+    var chkAutoAnchor = pnlAnchor.add("checkbox", undefined, "Automatic Anchor Point Alignment");
     chkAutoAnchor.value = true;
-    chkAutoAnchor.helpTip = "Moves anchor point to the top of the text box (Top-Left, Top-Center, or Top-Right depending on alignment), offset by padding.";
+    chkAutoAnchor.helpTip = "Enables zero-shift anchor point positioning using the AE_Align_Anchor_Point engine.";
 
     var grpAlign = pnlAnchor.add("group");
     grpAlign.orientation = "row";
     grpAlign.alignment = ["fill", "top"];
-    var lblAlign = grpAlign.add("statictext", undefined, "Anchor Alignment:");
+    var lblAlign = grpAlign.add("statictext", undefined, "Preset Alignment:");
     lblAlign.preferredSize = [135, -1];
     var dropAlign = grpAlign.add("dropdownlist", undefined, [
-        "Auto-detect from Alignment",
-        "Force Top-Left",
-        "Force Top-Center",
-        "Force Top-Right"
+        "Auto-detect from Text Justification",
+        "Top-Left",
+        "Top-Center",
+        "Top-Right",
+        "Middle-Left",
+        "Center",
+        "Middle-Right",
+        "Bottom-Left",
+        "Bottom-Center",
+        "Bottom-Right"
     ]);
     dropAlign.selection = 0;
     dropAlign.alignment = ["fill", "center"];
+
+    // Reference Bounds (Text Content Box vs Precomp Canvas / Background Card)
+    var grpRef = pnlAnchor.add("group");
+    grpRef.orientation = "row";
+    grpRef.alignment = ["fill", "top"];
+    var lblRef = grpRef.add("statictext", undefined, "Anchor Reference:");
+    lblRef.preferredSize = [135, -1];
+    var radRefContent = grpRef.add("radiobutton", undefined, "Text Content Box");
+    var radRefCanvas = grpRef.add("radiobutton", undefined, "Precomp Canvas / Card");
+    radRefContent.value = true;
+    radRefContent.helpTip = "Aligns anchor relative to the text bounding box (offset by padding inside precomp).";
+    radRefCanvas.helpTip = "Aligns anchor relative to the overall precomp composition / card boundary [0, 0, W, H].";
+
+    // Reticle Crosshair Guide Layer
+    var grpCross = pnlAnchor.add("group");
+    grpCross.orientation = "row";
+    grpCross.alignment = ["fill", "top"];
+    var chkShowCross = grpCross.add("checkbox", undefined, "Anchor Reticle Guide Layer");
+    chkShowCross.value = false;
+    chkShowCross.helpTip = "Creates a guide-layer reticle crosshair pinned exactly to the anchor point.";
+    var lblCrossCol = grpCross.add("statictext", undefined, "Color:");
+    lblCrossCol.preferredSize = [45, -1];
+    var dropCrossCol = grpCross.add("dropdownlist", undefined, ["Cyan", "Red", "Yellow", "Green", "White"]);
+    dropCrossCol.selection = 0;
+    dropCrossCol.alignment = ["fill", "center"];
+
+    chkAutoAnchor.onClick = function() {
+        var en = chkAutoAnchor.value;
+        grpAlign.enabled = en;
+        grpRef.enabled = en;
+    };
 
     // =========================================================================
     // TAB 2: BACKGROUND
@@ -2191,13 +2452,29 @@
             var autoAnc = chkAutoAnchor.value;
             var padVal = parseFloat(txtPad.text) || 0;
 
-            var forceAlign = "auto";
+            var anchorAlign = "auto";
             if (dropAlign.selection) {
                 var selIdx = dropAlign.selection.index;
-                if (selIdx === 1) forceAlign = "left";
-                else if (selIdx === 2) forceAlign = "center";
-                else if (selIdx === 3) forceAlign = "right";
+                var presetNames = [
+                    "auto",
+                    "top-left",
+                    "top-center",
+                    "top-right",
+                    "mid-left",
+                    "center",
+                    "mid-right",
+                    "bot-left",
+                    "bot-center",
+                    "bot-right"
+                ];
+                if (selIdx >= 0 && selIdx < presetNames.length) {
+                    anchorAlign = presetNames[selIdx];
+                }
             }
+
+            var anchorRef = (radRefCanvas && radRefCanvas.value) ? "canvas" : "content";
+            var createCross = chkShowCross ? chkShowCross.value : false;
+            var crossColor = (dropCrossCol && dropCrossCol.selection) ? dropCrossCol.selection.text : "Cyan";
 
             var addBg = chkAddBg.value;
             var corners = {
@@ -2215,8 +2492,12 @@
                 padding: padVal,
                 autoHeight: autoH,
                 autoAnchor: autoAnc,
+                anchorAlign: anchorAlign,
+                anchorReference: anchorRef,
+                createCross: createCross,
+                crossColor: crossColor,
                 autoDetectWidth: chkAutoDetectWidth.value,
-                forceAlign: forceAlign,
+                forceAlign: "auto",
                 addBackground: addBg,
                 corners: corners,
                 bgColor: bgColor,
