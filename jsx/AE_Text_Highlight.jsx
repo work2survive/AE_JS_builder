@@ -1971,7 +1971,13 @@
         var w = boxW || 950;
         var h = boxH || 450;
         var f = fontName || "Georgia";
-        var a = align || "left";
+
+        // Randomize alignment if requested or unspecified
+        var alignOptions = ["left", "center", "right"];
+        var a = (align && typeof align === "string") ? align.toLowerCase() : "random";
+        if (a === "random" || a.indexOf("random") !== -1 || a === "") {
+            a = alignOptions[Math.floor(Math.random() * alignOptions.length)];
+        }
 
         var formattedText = wordWrapToBoxWidth(LOREM_IPSUM_RAW, w, 34, f, 0);
         var dummy = comp.layers.addText(formattedText);
@@ -2012,12 +2018,19 @@
         } catch (eStyling) {}
 
         // Center layer in composition
-        var posX = comp.width / 2;
-        if (a === "left") {
-            posX = Math.max(120, (comp.width - w) / 2);
-        } else if (a === "right") {
-            posX = comp.width / 2 + (w / 2);
-        }
+        var posX = Math.max(120, (comp.width - w) / 2);
+        try {
+            var propST = dummy.property("Source Text");
+            var isBox = false;
+            if (propST && propST.value && propST.value.boxText) isBox = true;
+            if (!isBox) {
+                if (a === "center") {
+                    posX = comp.width / 2;
+                } else if (a === "right") {
+                    posX = comp.width / 2 + (w / 2);
+                }
+            }
+        } catch (ePos) {}
         dummy.transform.position.setValue([posX, 200, 0]);
 
         // Deselect others and select dummy
@@ -2450,9 +2463,9 @@
         ddDummyFont.preferredSize = [110, 24];
 
         grpDummyRow1.add("statictext", undefined, "Align:");
-        var ddDummyAlign = grpDummyRow1.add("dropdownlist", undefined, ["Left", "Center", "Right"]);
+        var ddDummyAlign = grpDummyRow1.add("dropdownlist", undefined, ["Random (Shuffle)", "Left", "Center", "Right"]);
         ddDummyAlign.selection = 0;
-        ddDummyAlign.preferredSize = [75, 24];
+        ddDummyAlign.preferredSize = [120, 24];
 
         // Knowledge Base & Architectural References Panel
         var pnlRefs = tabAdv.add("panel", undefined, "Knowledge Base & References");
@@ -2528,7 +2541,7 @@
             if (app.beginUndoGroup) app.beginUndoGroup("Create Dummy Text Box");
             try {
                 var f = ddDummyFont.selection ? ddDummyFont.selection.text : "Georgia";
-                var a = ddDummyAlign.selection ? ddDummyAlign.selection.text.toLowerCase() : "left";
+                var a = ddDummyAlign.selection ? ddDummyAlign.selection.text.toLowerCase() : "random";
                 var dummy = createDummyTextBoxLayer(comp, f, a, 950, 450);
                 updateSelectionStatus();
             } catch (eD) {
@@ -2568,7 +2581,9 @@
                 // Auto create dummy if nothing selected
                 if (app.beginUndoGroup) app.beginUndoGroup("Auto-Generate Dummy & Build");
                 try {
-                    textLayer = createDummyTextBoxLayer(comp, "Georgia", "left", 950, 450);
+                    var f = (ddDummyFont && ddDummyFont.selection) ? ddDummyFont.selection.text : "Georgia";
+                    var a = (ddDummyAlign && ddDummyAlign.selection) ? ddDummyAlign.selection.text.toLowerCase() : "random";
+                    textLayer = createDummyTextBoxLayer(comp, f, a, 950, 450);
                 } catch (eCreate) {
                     alert("No text layer selected and unable to create dummy text.");
                     if (app.endUndoGroup) app.endUndoGroup();
