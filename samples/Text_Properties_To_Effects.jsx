@@ -1500,7 +1500,7 @@
         win.alignChildren = ["fill", "top"];
         win.spacing = 6;
         win.margins = 8;
-        win.preferredSize = [460, 520];
+        win.preferredSize = [500, 520];
 
         // ---------------------------------------------------------------------
         // Header Banner & Preset Quick-Select Toolbar
@@ -1568,6 +1568,37 @@
             return chk;
         }
 
+        // Helper to layout a list of property checkboxes into a clean 2-column grid
+        function addTwoColumnCheckboxGrid(container, propIdList) {
+            var grpCols = container.add("group");
+            grpCols.orientation = "row";
+            grpCols.alignChildren = ["fill", "top"];
+            grpCols.alignment = ["fill", "top"];
+            grpCols.spacing = 10;
+
+            var col1 = grpCols.add("group");
+            col1.orientation = "column";
+            col1.alignChildren = ["fill", "top"];
+            col1.alignment = ["fill", "top"];
+            col1.spacing = 3;
+
+            var col2 = grpCols.add("group");
+            col2.orientation = "column";
+            col2.alignChildren = ["fill", "top"];
+            col2.alignment = ["fill", "top"];
+            col2.spacing = 3;
+
+            var half = Math.ceil(propIdList.length / 2);
+            for (var i = 0; i < propIdList.length; i++) {
+                var targetCol = (i < half) ? col1 : col2;
+                var pDef = PROPERTY_DEFS_MAP[propIdList[i]];
+                if (pDef) {
+                    addCheckboxItem(targetCol, pDef);
+                }
+            }
+            return grpCols;
+        }
+
         // =====================================================================
         // TAB 1: 📐 BOX & DIMENSIONS
         // =====================================================================
@@ -1577,7 +1608,7 @@
         tabBox.spacing = 6;
         tabBox.margins = 8;
 
-        // Paragraph Box Frame Properties Panel
+        // Paragraph Box Frame Properties Panel (2 Columns)
         var pnlBoxFrame = tabBox.add("panel", undefined, "📐 Paragraph Box & Frame Properties");
         pnlBoxFrame.orientation = "column";
         pnlBoxFrame.alignChildren = ["fill", "top"];
@@ -1589,22 +1620,16 @@
             "box_inset_spacing", "box_vertical_align",
             "box_first_baseline", "box_auto_fit", "line_orientation"
         ];
-        for (var bfi = 0; bfi < boxFrameProps.length; bfi++) {
-            var bfDef = PROPERTY_DEFS_MAP[boxFrameProps[bfi]];
-            if (bfDef) addCheckboxItem(pnlBoxFrame, bfDef);
-        }
+        addTwoColumnCheckboxGrid(pnlBoxFrame, boxFrameProps);
 
-        // Visual Glyphs Bounds Panel
+        // Visual Glyphs Bounds Panel (2 Columns)
         var pnlSR = tabBox.add("panel", undefined, "📐 Visual Glyphs Bounds (sourceRectAtTime)");
         pnlSR.orientation = "column";
         pnlSR.alignChildren = ["fill", "top"];
         pnlSR.spacing = 3;
 
         var srProps = ["sr_width", "sr_height", "sr_size", "sr_left", "sr_top", "sr_center", "sr_min_corner", "sr_max_corner"];
-        for (var sri = 0; sri < srProps.length; sri++) {
-            var srDef = PROPERTY_DEFS_MAP[srProps[sri]];
-            if (srDef) addCheckboxItem(pnlSR, srDef);
-        }
+        addTwoColumnCheckboxGrid(pnlSR, srProps);
 
         // =====================================================================
         // TAB 2: 📝 PARAGRAPH & ALIGNMENT
@@ -1615,29 +1640,23 @@
         tabAlign.spacing = 6;
         tabAlign.margins = 8;
 
-        // Alignment & Margins Panel
+        // Alignment & Margins Panel (2 Columns)
         var pnlAlign = tabAlign.add("panel", undefined, "📝 Alignment & Margin Indents");
         pnlAlign.orientation = "column";
         pnlAlign.alignChildren = ["fill", "top"];
         pnlAlign.spacing = 3;
 
         var alignProps = ["align_index", "align_ratio", "first_line_indent", "start_indent", "end_indent", "indent_left", "indent_right_spare", "baseline_offset"];
-        for (var ai = 0; ai < alignProps.length; ai++) {
-            var aDef = PROPERTY_DEFS_MAP[alignProps[ai]];
-            if (aDef) addCheckboxItem(pnlAlign, aDef);
-        }
+        addTwoColumnCheckboxGrid(pnlAlign, alignProps);
 
-        // Spacing & Paragraph Formatting Panel
+        // Spacing & Paragraph Formatting Panel (2 Columns)
         var pnlSpacing = tabAlign.add("panel", undefined, "📝 Paragraph Spacing & Composers");
         pnlSpacing.orientation = "column";
         pnlSpacing.alignChildren = ["fill", "top"];
         pnlSpacing.spacing = 3;
 
         var spacingProps = ["space_before", "space_after", "auto_hyphenate", "hanging_roman", "every_line_composer"];
-        for (var spi = 0; spi < spacingProps.length; spi++) {
-            var spDef = PROPERTY_DEFS_MAP[spacingProps[spi]];
-            if (spDef) addCheckboxItem(pnlSpacing, spDef);
-        }
+        addTwoColumnCheckboxGrid(pnlSpacing, spacingProps);
 
         // =====================================================================
         // TAB 3: 🎨 CHARACTER & STYLE
@@ -1654,10 +1673,7 @@
         pnlStyle.spacing = 3;
 
         var typoProps = ["typo_font_size", "typo_leading", "typo_tracking", "typo_baseline_shift", "typo_stroke_width", "typo_fill_color", "typo_stroke_color"];
-        for (var ti = 0; ti < typoProps.length; ti++) {
-            var tDef = PROPERTY_DEFS_MAP[typoProps[ti]];
-            if (tDef) addCheckboxItem(pnlStyle, tDef);
-        }
+        addTwoColumnCheckboxGrid(pnlStyle, typoProps);
 
         // =====================================================================
         // TAB 4: 🔢 WORD, LINE & PARAGRAPH COUNTERS
