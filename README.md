@@ -23,6 +23,10 @@ Built to accelerate After Effects script and panel development (`.jsx`) without 
   4. Individual 3-axis rotation (`X`, `Y`, `Z Rotation`)
   5. Position translation (`X`, `Y`, `Z`)
   6. Hierarchical parenting chains (`layer.parent = master`)
+- **Anchor Point Transformation & Zero-Shift Compensation**:
+  - Implements the exact After Effects affine coordinate transformation:
+    $$\mathbf{X}_{\text{comp}} = \mathbf{P} + \mathbf{R}(\theta) \cdot \mathbf{S} \cdot (\mathbf{x}_{\text{layer}} - \mathbf{A})$$
+  - Adheres to the mathematical zero-shift invariance condition $\mathbf{P}_{\text{new}} = \mathbf{P}_{\text{base}} + \mathbf{R}(\theta) \cdot \mathbf{S} \cdot (\mathbf{A}_{\text{target}} - \mathbf{A}_{\text{base}})$ established in [AE-Align-AnchorPoint](https://github.com/work2survive/AE-Align-AnchorPoint/blob/main/README.md), ensuring that adjusting or animating anchor points never causes visual drift of layer content regardless of scale or rotation.
 - **2D & 3D Switching**: Toggle 3D Layer switch on any layer in real time.
 
 ### 2. Shape Layers & Vector Contents
@@ -180,6 +184,7 @@ The simulator automatically detects and loads standalone production-ready After 
 12. **[AE Align Anchor Point](https://github.com/work2survive/AE-Align-AnchorPoint)** (`jsx/AE_Align_Anchor_Point.jsx` - v1.1.0):
    - Professional ScriptUI alignment utility and live expression engine that aligns the anchor point of comps, text boxes (paragraph and point text), vector shapes, solids, footage, and nulls to Left, Center, or Right (X) and Top, Center, or Bottom (Y) with **zero visual jump or shift** of content on screen. Features dual calculation engines (`sourceRectAtTime()` rendered bounds vs. declared Stated Dimensions), a procedural guideline vector crosshair reticle linked as a child layer at `[0, 0]` (`guideLayer = true`), persistent state storage via effect slider controls, 3x3 quick-preset visual matrix, intelligent viewport-centered dummy box text generation, and one-time static bake capabilities.
    - **Repository**: [work2survive/AE-Align-AnchorPoint](https://github.com/work2survive/AE-Align-AnchorPoint)
+   - **Documentation**: [AE-Align-AnchorPoint/README.md](https://github.com/work2survive/AE-Align-AnchorPoint/blob/main/README.md)
    - **Live Demo**: [https://work2survive.github.io/AE_JS_builder/?jsx=AE_Align_Anchor_Point.jsx&autobuild=true](https://work2survive.github.io/AE_JS_builder/?jsx=AE_Align_Anchor_Point.jsx&autobuild=true)
 
 #### Built-in Samples (`samples/` Folder)
@@ -255,6 +260,7 @@ The production tools built and tested inside this simulator are also available a
 - **[AE Spiral Maker](https://github.com/work2survive/AE_spiral_maker)**: Procedural vector spiral generator featuring 5 mathematical spiral algorithms, native After Effects Stroke Taper integration for independent start and end stroke thicknesses, analytical cubic Bézier derivative tangents, and factory presets (v1.0).
 - **[AE Scripted Chat](https://github.com/work2survive/AE_scripted_Chat)**: Fully animated multi-message chat conversation generator with smart timestamps, real vs fake delays, auto-scrolling, and JSON conversation management (v1.0).
 - **[AE Get Emojis](https://github.com/work2survive/AE_Get_Emojis)**: Full-color vector emoji search, catalog indexer, and native After Effects shape layer generator supporting OpenMoji & Twemoji with emoticon parsing and bidirectional Unicode conversion (v1.0).
+- **[AE Align Anchor Point](https://github.com/work2survive/AE-Align-AnchorPoint)**: Zero-shift anchor point alignment panel and expression engine with guide layer reticle and mathematical compensation invariance (v1.1.0).
 
 ---
 
@@ -268,6 +274,16 @@ Every contribution helps keep these open-source After Effects tools free, mainta
 
 ---
 
-## 🤖 Acknowledgments
+## 🤖 Acknowledgments & Technical References
 
 Engineered, architected, and co-developed using **[Google DeepMind Antigravity](https://deepmind.google/)** agentic coding assistant.
+
+### Technical Standards & Engineering References
+
+1. **Text Rendering Engine & Differences Guide**:
+   - **Specification**: [`AE_VS_JS_TEXT_RENDERING_DIFFERENCES.md`](https://github.com/work2survive/AE_JS_builder/blob/main/AE_VS_JS_TEXT_RENDERING_DIFFERENCES.md)
+   - Comprehensive ground-truth calibration reference analyzing Point Text vs. Paragraph (Box) Text, ExtendScript `comp.layers.addText()` behavioral constraints, font ascent/descent ratios, negative `sourceRectAtTime().top` offsets, and horizontal justification mathematics.
+
+2. **Anchor Point Alignment & Zero-Shift Geometry**:
+   - **Specification**: [`AE-Align-AnchorPoint/README.md`](https://github.com/work2survive/AE-Align-AnchorPoint/blob/main/README.md)
+   - Mathematical derivation for zero-shift anchor point alignment without content displacement: $\mathbf{X}_{\text{comp}} = \mathbf{P} + \mathbf{R}(\theta) \cdot \mathbf{S} \cdot (\mathbf{x}_{\text{layer}} - \mathbf{A})$, dynamic bounding box measurement via `sourceRectAtTime()` vs stated dimensions, and non-renderable child guide layer reticles (`guideLayer = true`).

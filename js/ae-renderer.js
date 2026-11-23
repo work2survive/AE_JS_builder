@@ -2,6 +2,12 @@
  * Co-authored & architected with Google DeepMind Antigravity.
  * ae-renderer.js
  * 3D/2D Viewport Renderer, Interactive Camera (Orbit/Pan/Zoom), and SVG Shape Generator
+ *
+ * Technical References & Architecture Guides:
+ * - Text Rendering Engine & Discrepancy Guide:
+ *   https://github.com/work2survive/AE_JS_builder/blob/main/AE_VS_JS_TEXT_RENDERING_DIFFERENCES.md
+ * - Anchor Point Alignment & Zero-Shift Geometry:
+ *   https://github.com/work2survive/AE-Align-AnchorPoint/blob/main/README.md
  */
 
 (function(global) {
@@ -1350,6 +1356,9 @@
             return dParts.join(' ');
         }
 
+        // Render text content to SVG elements with accurate baseline ascent/descent,
+        // justification alignments, paragraph box wrapping, and faux styles.
+        // Reference: https://github.com/work2survive/AE_JS_builder/blob/main/AE_VS_JS_TEXT_RENDERING_DIFFERENCES.md
         renderTextContent(layer, time) {
             let txt = '';
             let textDoc = null;

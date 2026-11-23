@@ -2,6 +2,12 @@
  * Co-authored & architected with Google DeepMind Antigravity.
  * ae-core.js
  * After Effects Object Model, 3D Math, and Expression/Wiggle Engine
+ *
+ * Technical References & Architecture Guides:
+ * - Text Rendering Engine & Discrepancy Guide:
+ *   https://github.com/work2survive/AE_JS_builder/blob/main/AE_VS_JS_TEXT_RENDERING_DIFFERENCES.md
+ * - Anchor Point Mathematics & Zero-Shift Compensation:
+ *   https://github.com/work2survive/AE-Align-AnchorPoint/blob/main/README.md
  */
 
 (function(global) {
@@ -1166,6 +1172,9 @@
 
     // -------------------------------------------------------------
     // 6. Transform Group for Layers
+    // Evaluates 2D/3D affine transformation pipelines.
+    // Reference: Mathematical derivation for anchor point offset and zero-shift compensation:
+    // https://github.com/work2survive/AE-Align-AnchorPoint/blob/main/README.md
     // -------------------------------------------------------------
     class TransformGroup extends PropertyGroup {
         constructor(is3D = false) {
@@ -1469,7 +1478,11 @@
             return super.property(nameOrIndex);
         }
 
-        // Calculate 4x4 transform of this layer in parent/world space (excluding local anchor offset)
+        // Calculate 4x4 transform of this layer in parent/world space (excluding local anchor offset).
+        // Coordinates follow the After Effects affine transformation pipeline:
+        //   X_comp = P + R(theta) * S * (x_layer - A)
+        // Child layers positioned at [0, 0] inherit this origin (parent anchor point location).
+        // Reference: https://github.com/work2survive/AE-Align-AnchorPoint/blob/main/README.md
         getParentSpaceMatrix(time, fallbackZeroScale = false) {
             const t = this.transform;
             const pos    = t.position.getValueAtTime(time);
@@ -1824,6 +1837,12 @@
     // After Effects Typography & Box Text Calibration System
     // Standardizes baseline, ascent/descent, word wrapping, and
     // sourceRectAtTime boundaries to match native Adobe After Effects.
+    //
+    // Technical Standards & Guides:
+    // - Typography Differences, Point vs Box Text, and Metrics:
+    //   https://github.com/work2survive/AE_JS_builder/blob/main/AE_VS_JS_TEXT_RENDERING_DIFFERENCES.md
+    // - Bounds Calibration & Dynamic sourceRectAtTime Invariants:
+    //   https://github.com/work2survive/AE-Align-AnchorPoint/blob/main/README.md
     // -------------------------------------------------------------
     const AETextCalibration = {
         ascentRatio: 0.78,
@@ -2080,6 +2099,13 @@
             return lines;
         },
 
+        // Calculates exact dynamic bounding box { top, left, width, height }
+        // matching After Effects sourceRectAtTime(time, false) semantics.
+        // For Point text: origin is at baseline, yielding negative top: top = -ascent.
+        // For Paragraph text: origin is at box [0, 0].
+        // References:
+        // - https://github.com/work2survive/AE_JS_builder/blob/main/AE_VS_JS_TEXT_RENDERING_DIFFERENCES.md#4-the-sourcerectattime-dilemma
+        // - https://github.com/work2survive/AE-Align-AnchorPoint/blob/main/README.md#2-dual-calculation-engines
         computeSourceRect(layer, time) {
             let str = '';
             let textDoc = null;
