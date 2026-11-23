@@ -37,10 +37,13 @@
 //      - If a layer is already selected, immediately updates it with the new alignment.
 //
 // REPOSITORY:
-//   https://github.com/work2survive/AE_JS_builder
+//   https://github.com/work2survive/AE-Align-AnchorPoint
+//
+// LIVE DEMO:
+//   https://work2survive.github.io/AE_JS_builder/?jsx=AE_Align_Anchor_Point.jsx&autobuild=true
 //
 // DOCUMENTATION & MECHANICS:
-//   samples/AE_Align_Anchor_Point_README.md
+//   https://github.com/work2survive/AE-Align-AnchorPoint/blob/main/README.md
 // =============================================================================
 
 (function(thisObj) {
@@ -48,8 +51,8 @@
 
     var SCRIPT_NAME = "AE Align Anchor Point";
     var SCRIPT_VERSION = "v1.1.0";
-    var REPO_URL = "https://github.com/work2survive/AE_JS_builder";
-    var README_URL = "https://github.com/work2survive/AE_JS_builder/blob/main/samples/AE_Align_Anchor_Point_README.md";
+    var REPO_URL = "https://github.com/work2survive/AE-Align-AnchorPoint";
+    var README_URL = "https://github.com/work2survive/AE-Align-AnchorPoint/blob/main/README.md";
 
     // -------------------------------------------------------------------------
     // 1. Safe Environment & Console Logging
@@ -1075,7 +1078,7 @@
     grpFooter.alignChildren = ["center", "center"];
     grpFooter.margins = [0, 4, 0, 0];
 
-    var lblRepo = grpFooter.add("statictext", undefined, "GitHub: work2survive/AE_JS_builder");
+    var lblRepo = grpFooter.add("statictext", undefined, "GitHub: work2survive/AE-Align-AnchorPoint");
     lblRepo.helpTip = REPO_URL;
     lblRepo.onClick = function() {
         if (typeof window !== "undefined" && window.open) {

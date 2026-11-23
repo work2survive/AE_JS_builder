@@ -177,6 +177,11 @@ The simulator automatically detects and loads standalone production-ready After 
    - **Repository**: [work2survive/AE-text-precomp](https://github.com/work2survive/AE-text-precomp)
    - **Live Demo**: [https://work2survive.github.io/AE_JS_builder/?jsx=AE_Text_Precomp.jsx&autobuild=true](https://work2survive.github.io/AE_JS_builder/?jsx=AE_Text_Precomp.jsx&autobuild=true)
 
+12. **[AE Align Anchor Point](https://github.com/work2survive/AE-Align-AnchorPoint)** (`jsx/AE_Align_Anchor_Point.jsx` - v1.1.0):
+   - Professional ScriptUI alignment utility and live expression engine that aligns the anchor point of comps, text boxes (paragraph and point text), vector shapes, solids, footage, and nulls to Left, Center, or Right (X) and Top, Center, or Bottom (Y) with **zero visual jump or shift** of content on screen. Features dual calculation engines (`sourceRectAtTime()` rendered bounds vs. declared Stated Dimensions), a procedural guideline vector crosshair reticle linked as a child layer at `[0, 0]` (`guideLayer = true`), persistent state storage via effect slider controls, 3x3 quick-preset visual matrix, intelligent viewport-centered dummy box text generation, and one-time static bake capabilities.
+   - **Repository**: [work2survive/AE-Align-AnchorPoint](https://github.com/work2survive/AE-Align-AnchorPoint)
+   - **Live Demo**: [https://work2survive.github.io/AE_JS_builder/?jsx=AE_Align_Anchor_Point.jsx&autobuild=true](https://work2survive.github.io/AE_JS_builder/?jsx=AE_Align_Anchor_Point.jsx&autobuild=true)
+
 #### Built-in Samples (`samples/` Folder)
 
 The simulator includes built-in sample scripts located in [`samples/`](samples/) demonstrating ScriptUI, kinetic typography, expressions, and 3D primitives:
