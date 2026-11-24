@@ -66,6 +66,17 @@
             }
         }
 
+        get visible() {
+            return this._visible !== undefined ? this._visible : true;
+        }
+
+        set visible(val) {
+            this._visible = Boolean(val);
+            if (this.domElement) {
+                this.domElement.style.display = this._visible ? '' : 'none';
+            }
+        }
+
         notify(event) {
             if (event === 'onDraw' && typeof this.onDraw === 'function') {
                 this.onDraw();
@@ -242,6 +253,9 @@
                         el.style.padding = `${this.margins}px`;
                     }
                 }
+            }
+            if (this._visible === false) {
+                el.style.display = 'none';
             }
             if (this.preferredSize && this.preferredSize[0] > 0) {
                 el.style.width = `${this.preferredSize[0]}px`;

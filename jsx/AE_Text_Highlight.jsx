@@ -28,6 +28,14 @@
 //   6. AE Text Highlight Repository:
 //      https://github.com/work2survive/AE-Text-Highlight
 //
+// NEW IN v2.2.0:
+//   - Configurable Target Separator Engine: Allows using Newline (1 per line), Pipe (|), Semicolon (;),
+//     or Custom delimiters instead of forcing commas.
+//   - Full Support for Sentences with Commas: Phrases and sentences containing internal commas
+//     (e.g. "Slow living, peace of mind, body, and soul") are 100% preserved and highlighted intact.
+//   - Quick Separator Buttons: Added '+ ↵ Line', '+ | Pipe', and '+ Add Separator' buttons
+//     directly in the UI for effortless delimiter insertion at the text cursor.
+//
 // NEW IN v2.1.2:
 //   - Enhanced Text Layer Selection Detection: Added hierarchy traversal so selecting child helper
 //     layers (such as Anchor Cross) cleanly resolves to the parent text layer.
@@ -56,7 +64,7 @@
     "use strict";
 
     var SCRIPT_TITLE    = "AE Text Highlight";
-    var SCRIPT_VERSION  = "v2.1.2";
+    var SCRIPT_VERSION  = "v2.2.0";
     var GITHUB_REPO_URL = "https://github.com/work2survive/AE-Text-Highlight";
 
     // -------------------------------------------------------------------------
@@ -191,23 +199,72 @@
         return ("#" + rStr + gStr + bStr).toUpperCase();
     }
 
-    function sanitizeSearchTerm(term) {
+    function sanitizeSearchTerm(term, stripCommas) {
         if (!term) return "";
-        return trimStr(String(term).replace(/^[\s,"']+|[\s,"']+$/g, ""));
+        var s = trimStr(String(term));
+        if (stripCommas) {
+            return trimStr(s.replace(/^[\s,"']+|[\s,"']+$/g, ""));
+        }
+        return trimStr(s.replace(/^[\s"']+|[\s"']+$/g, ""));
     }
 
-    function parseHighlightTerms(rawStr) {
+    function parseHighlightTerms(rawStr, sepMode, customSep) {
         if (!rawStr) return [];
-        var lines = String(rawStr).split(/\r\n|\r|\n/);
+        var str = String(rawStr);
         var terms = [];
         var seen = {};
+
+        // If sepMode is not explicitly provided, auto-detect:
+        // Priority:
+        // 1. If contains '|', pipe mode (1)
+        // 2. If contains newline, newline mode (0)
+        // 3. If contains ';', semicolon mode (2)
+        // 4. If contains ',', comma mode (3)
+        // 5. Default: newline mode (0)
+        if (typeof sepMode !== "number") {
+            if (str.indexOf("|") !== -1) {
+                sepMode = 1;
+            } else if (str.indexOf("\n") !== -1 || str.indexOf("\r") !== -1) {
+                sepMode = 0;
+            } else if (str.indexOf(";") !== -1) {
+                sepMode = 2;
+            } else if (str.indexOf(",") !== -1) {
+                sepMode = 3;
+            } else {
+                sepMode = 0;
+            }
+        }
+
+        var lines = str.split(/\r\n|\r|\n/);
 
         for (var i = 0; i < lines.length; i++) {
             var line = trimStr(lines[i]);
             if (!line) continue;
-            var chunks = line.split(/,\s*(?=(?:[^"]*"[^"]*")*[^"]*$)/);
+
+            var chunks = [];
+            if (sepMode === 0) {
+                // Mode 0: Newline only (1 target per line). Sentences with internal commas are 100% preserved.
+                chunks = [line];
+            } else if (sepMode === 1) {
+                // Mode 1: Pipe (|) separator. Sentences with internal commas are 100% preserved.
+                chunks = line.split("|");
+            } else if (sepMode === 2) {
+                // Mode 2: Semicolon (;) separator. Sentences with internal commas are 100% preserved.
+                chunks = line.split(";");
+            } else if (sepMode === 3) {
+                // Mode 3: Comma (,) separator (legacy - splits on commas outside quotes)
+                chunks = line.split(/,\s*(?=(?:[^"]*"[^"]*")*[^"]*$)/);
+            } else if (sepMode === 4) {
+                // Mode 4: Custom separator
+                var sep = (customSep && customSep.length > 0) ? customSep : "/";
+                chunks = line.split(sep);
+            } else {
+                chunks = [line];
+            }
+
             for (var c = 0; c < chunks.length; c++) {
-                var clean = sanitizeSearchTerm(chunks[c]);
+                var stripCommas = (sepMode === 3);
+                var clean = sanitizeSearchTerm(chunks[c], stripCommas);
                 if (clean.length > 0 && !seen[clean.toLowerCase()]) {
                     seen[clean.toLowerCase()] = true;
                     terms.push(clean);
@@ -215,6 +272,39 @@
             }
         }
         return terms;
+    }
+
+    function insertTextAtCursor(editText, textToInsert) {
+        if (!editText) return;
+        try {
+            // HTML DOM (browser emulator)
+            var dom = editText.domElement || (editText._element);
+            if (dom && typeof dom.selectionStart === "number") {
+                var start = dom.selectionStart;
+                var end = dom.selectionEnd;
+                var val = dom.value || "";
+                dom.value = val.substring(0, start) + textToInsert + val.substring(end);
+                dom.selectionStart = dom.selectionEnd = start + textToInsert.length;
+                editText.text = dom.value;
+                dom.focus();
+                if (editText.onChanging) editText.onChanging();
+                if (editText.onChange) editText.onChange();
+                return;
+            }
+        } catch (eDOM) {}
+
+        try {
+            // Native ExtendScript ScriptUI textselection
+            if (typeof editText.textselection !== "undefined") {
+                editText.textselection = textToInsert;
+                return;
+            }
+        } catch (eSel) {}
+
+        // Fallback: append
+        var cur = editText.text || "";
+        editText.text = cur + textToInsert;
+        if (editText.onChange) editText.onChange();
     }
 
     function extractRandomWordsAndSentence(textStr) {
@@ -2548,12 +2638,47 @@
         pnlTargets.spacing = 4;
         pnlTargets.margins = [8, 6, 8, 6];
 
-        var lblTargetHelp = pnlTargets.add("statictext", undefined, "Enter words or phrases to highlight (1 per line or comma-separated):");
-        lblTargetHelp.alignment = ["fill", "top"];
+        var grpSep = pnlTargets.add("group");
+        grpSep.orientation = "row";
+        grpSep.alignChildren = ["left", "center"];
+        grpSep.alignment = ["fill", "top"];
+        grpSep.spacing = 4;
+
+        var lblSep = grpSep.add("statictext", undefined, "Separator:");
+        lblSep.preferredSize = [55, 20];
+
+        var ddlSeparator = grpSep.add("dropdownlist", undefined, [
+            "↵ Newline (1 per line)",
+            "| Pipe ( | )",
+            "; Semicolon ( ; )",
+            ", Comma (legacy)",
+            "Custom..."
+        ]);
+        ddlSeparator.selection = 0;
+        ddlSeparator.preferredSize = [125, 22];
+        ddlSeparator.helpTip = "Choose separator. 'Newline' and 'Pipe' safely preserve sentences with commas.";
+
+        var txtCustomSep = grpSep.add("edittext", undefined, "/");
+        txtCustomSep.preferredSize = [24, 20];
+        txtCustomSep.visible = false;
+        txtCustomSep.helpTip = "Custom separator character(s).";
+
+        var btnAddSep = grpSep.add("button", undefined, "+ ↵ Line");
+        btnAddSep.preferredSize = [-1, 22];
+        btnAddSep.helpTip = "Inserts the active separator into the target box at cursor.";
+
+        var btnInsertPipe = grpSep.add("button", undefined, "+ |");
+        btnInsertPipe.preferredSize = [28, 22];
+        btnInsertPipe.helpTip = "Inserts a Pipe delimiter ' | ' and sets separator to Pipe (preserves commas in sentences).";
+
+        var btnInsertNewline = grpSep.add("button", undefined, "+ ↵");
+        btnInsertNewline.preferredSize = [28, 22];
+        btnInsertNewline.helpTip = "Inserts a Newline and sets separator to Newline.";
 
         var txtTargets = pnlTargets.add("edittext", undefined, "ipsum\namet\nminim\ncommodo consequat", { multiline: true, wantReturn: true });
         txtTargets.alignment = ["fill", "top"];
         txtTargets.preferredSize = [-1, 75];
+        txtTargets.helpTip = "Enter words, phrases, or sentences to highlight. When using Newline or Pipe, sentences with commas are fully preserved.";
 
         var grpTargetHelpers = pnlTargets.add("group");
         grpTargetHelpers.orientation = "row";
@@ -2774,6 +2899,70 @@
             }
         };
 
+        function updateSepUI() {
+            var idx = ddlSeparator.selection ? ddlSeparator.selection.index : 0;
+            var isCustom = (idx === 4);
+            txtCustomSep.visible = isCustom;
+            try {
+                if (txtCustomSep.domElement) txtCustomSep.domElement.style.display = isCustom ? "" : "none";
+            } catch (eDOM) {}
+            if (idx === 0) {
+                btnAddSep.text = "+ ↵ Line";
+                btnAddSep.helpTip = "Inserts a Newline into targets at cursor.";
+            } else if (idx === 1) {
+                btnAddSep.text = "+ | Pipe";
+                btnAddSep.helpTip = "Inserts ' | ' into targets at cursor.";
+            } else if (idx === 2) {
+                btnAddSep.text = "+ ; Semi";
+                btnAddSep.helpTip = "Inserts '; ' into targets at cursor.";
+            } else if (idx === 3) {
+                btnAddSep.text = "+ , Comma";
+                btnAddSep.helpTip = "Inserts ', ' into targets at cursor (breaks sentences with commas).";
+            } else {
+                var c = txtCustomSep.text || "/";
+                btnAddSep.text = "+ " + c;
+                btnAddSep.helpTip = "Inserts custom separator '" + c + "' into targets at cursor.";
+            }
+            if (win && win.layout) win.layout.layout(true);
+        }
+
+        ddlSeparator.onChange = function () {
+            updateSepUI();
+        };
+
+        txtCustomSep.onChange = function () {
+            updateSepUI();
+        };
+
+        btnAddSep.onClick = function () {
+            var idx = ddlSeparator.selection ? ddlSeparator.selection.index : 0;
+            if (idx === 0) {
+                insertTextAtCursor(txtTargets, "\n");
+            } else if (idx === 1) {
+                insertTextAtCursor(txtTargets, " | ");
+            } else if (idx === 2) {
+                insertTextAtCursor(txtTargets, "; ");
+            } else if (idx === 3) {
+                insertTextAtCursor(txtTargets, ", ");
+            } else {
+                insertTextAtCursor(txtTargets, " " + (txtCustomSep.text || "/") + " ");
+            }
+        };
+
+        btnInsertPipe.onClick = function () {
+            ddlSeparator.selection = 1;
+            updateSepUI();
+            insertTextAtCursor(txtTargets, " | ");
+        };
+
+        btnInsertNewline.onClick = function () {
+            ddlSeparator.selection = 0;
+            updateSepUI();
+            insertTextAtCursor(txtTargets, "\n");
+        };
+
+        updateSepUI();
+
         btnRefresh.onClick = function () {
             updateSelectionStatus();
         };
@@ -2783,11 +2972,35 @@
             var textLayer = comp ? getSelectedTextLayer(comp) : null;
             var raw = textLayer ? getTextLayerString(textLayer) : LOREM_IPSUM_RAW;
             var auto = extractRandomWordsAndSentence(raw);
-            txtTargets.text = auto.words.concat([auto.sentence]).join("\n");
+            var sepIdx = ddlSeparator.selection ? ddlSeparator.selection.index : 0;
+            var termList = auto.words.concat([auto.sentence]);
+            if (sepIdx === 1) {
+                txtTargets.text = termList.join(" | ");
+            } else if (sepIdx === 2) {
+                txtTargets.text = termList.join("; ");
+            } else if (sepIdx === 3) {
+                txtTargets.text = termList.join(", ");
+            } else if (sepIdx === 4) {
+                txtTargets.text = termList.join(" " + (txtCustomSep.text || "/") + " ");
+            } else {
+                txtTargets.text = termList.join("\n");
+            }
         };
 
         btnDemo.onClick = function () {
-            txtTargets.text = "Slow living\npresent moment\nbalance";
+            var sepIdx = ddlSeparator.selection ? ddlSeparator.selection.index : 0;
+            var demoTerms = ["Slow living", "peace of mind, body, and soul", "present moment", "balance"];
+            if (sepIdx === 1) {
+                txtTargets.text = demoTerms.join(" | ");
+            } else if (sepIdx === 2) {
+                txtTargets.text = demoTerms.join("; ");
+            } else if (sepIdx === 3) {
+                txtTargets.text = '"Slow living", "peace of mind, body, and soul", "present moment", "balance"';
+            } else if (sepIdx === 4) {
+                txtTargets.text = demoTerms.join(" " + (txtCustomSep.text || "/") + " ");
+            } else {
+                txtTargets.text = demoTerms.join("\n");
+            }
         };
 
         btnClear.onClick = function () {
@@ -2834,12 +3047,24 @@
 
             try {
                 var rawTerms = txtTargets.text;
-                var terms = parseHighlightTerms(rawTerms);
+                var sepIdx = ddlSeparator.selection ? ddlSeparator.selection.index : 0;
+                var customSep = txtCustomSep.text || "/";
+                var terms = parseHighlightTerms(rawTerms, sepIdx, customSep);
                 if (terms.length === 0) {
                     var sampleRaw = getTextLayerString(textLayer) || LOREM_IPSUM_RAW;
                     var autoPick = extractRandomWordsAndSentence(sampleRaw);
                     terms = autoPick.words.concat([autoPick.sentence]);
-                    txtTargets.text = terms.join("\n");
+                    if (sepIdx === 1) {
+                        txtTargets.text = terms.join(" | ");
+                    } else if (sepIdx === 2) {
+                        txtTargets.text = terms.join("; ");
+                    } else if (sepIdx === 3) {
+                        txtTargets.text = terms.join(", ");
+                    } else if (sepIdx === 4) {
+                        txtTargets.text = terms.join(" " + customSep + " ");
+                    } else {
+                        txtTargets.text = terms.join("\n");
+                    }
                 }
                 var options = {
                     terms: terms,
@@ -2926,6 +3151,12 @@
         win.pickerText = pickerText;
         win.btnBuild = btnBuild;
         win.txtTargets = txtTargets;
+        win.ddlSeparator = ddlSeparator;
+        win.txtCustomSep = txtCustomSep;
+        win.btnAddSep = btnAddSep;
+        win.btnInsertPipe = btnInsertPipe;
+        win.btnInsertNewline = btnInsertNewline;
+        win.parseHighlightTerms = parseHighlightTerms;
         win.grpFooter = grpFooter;
         win.lblRepo = lblRepo;
         win.lblStatus = lblStatus;
