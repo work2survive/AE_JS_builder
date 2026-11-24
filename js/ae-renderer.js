@@ -1554,11 +1554,39 @@
                 let lastIndex = 0;
                 let match;
                 emojiRegex.lastIndex = 0;
+
+                // Detect if this text layer has color emoji vector children or hide-emoji text animators
+                let hideFontEmojis = false;
+                if (this.comp && this.comp.layers) {
+                    const allLayers = Array.isArray(this.comp.layers) ? this.comp.layers : (this.comp.layers._layers || []);
+                    hideFontEmojis = allLayers.some(l => l && l.parent === layer && (l.comment === 'AE_COLOR_EMOJI_CHILD' || (l.name && (l.name.indexOf('Color Emoji') !== -1 || l.name.indexOf('[Emoji]') !== -1))));
+                }
+                if (!hideFontEmojis) {
+                    try {
+                        const textProps = layer.property && (layer.property('ADBE Text Properties') || layer.property('Text'));
+                        const animators = textProps && (textProps.property('ADBE Text Animators') || textProps.property('Animators'));
+                        if (animators) {
+                            const count = animators.numProperties || (animators._list ? animators._list.length : 0);
+                            for (let ai = 1; ai <= count; ai++) {
+                                const a = animators.property ? animators.property(ai) : (animators._list ? animators._list[ai - 1] : null);
+                                if (a && a.name && (a.name.indexOf('Hide Font Emojis') !== -1 || a.name.indexOf('Hide Emojis') !== -1)) {
+                                    hideFontEmojis = true;
+                                    break;
+                                }
+                            }
+                        }
+                    } catch (eH) {}
+                }
+
                 while ((match = emojiRegex.exec(lineText)) !== null) {
                     if (match.index > lastIndex) {
                         parts.push(`<tspan font-family="${textFont}">${escapeXml(lineText.substring(lastIndex, match.index))}</tspan>`);
                     }
-                    parts.push(`<tspan font-family="${emojiFont}" font-size="${Math.round(fs * 1.05)}px">${escapeXml(match[0])}</tspan>`);
+                    if (hideFontEmojis) {
+                        parts.push(`<tspan font-family="${emojiFont}" font-size="${Math.round(fs * 1.05)}px" fill="transparent" fill-opacity="0" stroke="none" style="opacity: 0;">${escapeXml(match[0])}</tspan>`);
+                    } else {
+                        parts.push(`<tspan font-family="${emojiFont}" font-size="${Math.round(fs * 1.05)}px">${escapeXml(match[0])}</tspan>`);
+                    }
                     lastIndex = emojiRegex.lastIndex;
                 }
                 if (lastIndex < lineText.length) {
