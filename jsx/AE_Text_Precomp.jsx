@@ -50,9 +50,6 @@
 //   7. Integrated Interactive Color Picker:
 //      - Custom swatch button + hex input (#RRGGBB) compatible with AE native
 //        $.colorPicker, Windows OS color picker, and AE_JS_builder web emulator.
-//   8. Random Dummy Text Generator (20-30 Words):
-//      - If no text layer is selected or on request, creates a dummy layer with randomized
-//        font, alignment, font size (±15%), leading (±15%), text color, and 20-30 words.
 // =============================================================================
 
 (function(thisObj) {
@@ -118,81 +115,6 @@
         ];
     }
 
-    // Word pool for random 20-30 words dummy text
-    var LOREM_IPSUM_WORDS = [
-        "Lorem", "ipsum", "dolor", "sit", "amet,", "consectetur", "adipiscing", "elit,", "sed", "do",
-        "eiusmod", "tempor", "incididunt", "ut", "labore", "et", "dolore", "magna", "aliqua.", "Ut",
-        "enim", "ad", "minim", "veniam,", "quis", "nostrud", "exercitation", "ullamco", "laboris", "nisi",
-        "ut", "aliquip", "ex", "ea", "commodo", "consequat.", "Duis", "aute", "irure", "dolor",
-        "in", "reprehenderit", "in", "voluptate", "velit", "esse", "cillum", "dolore", "eu", "fugiat",
-        "nulla", "pariatur.", "Excepteur", "sint", "occaecat", "cupidatat", "non", "proident,", "sunt", "in",
-        "culpa", "qui", "officia", "deserunt", "mollit", "anim", "id", "est", "laborum."
-    ];
-
-    function getRandomDummyText(minWords, maxWords) {
-        var min = (typeof minWords === "number") ? minWords : 20;
-        var max = (typeof maxWords === "number") ? maxWords : 30;
-        var count = Math.floor(min + Math.random() * (max - min + 1));
-        var start = Math.floor(Math.random() * Math.max(1, LOREM_IPSUM_WORDS.length - count));
-        var words = [];
-        for (var i = 0; i < count; i++) {
-            words.push(LOREM_IPSUM_WORDS[(start + i) % LOREM_IPSUM_WORDS.length]);
-        }
-        var text = words.join(" ");
-        var lastChar = text.charAt(text.length - 1);
-        if (lastChar === ",") {
-            text = text.substring(0, text.length - 1) + ".";
-        } else if (lastChar !== "." && lastChar !== "!" && lastChar !== "?") {
-            text += ".";
-        }
-        return text.charAt(0).toUpperCase() + text.slice(1);
-    }
-
-    var DUMMY_TEXT_50 = getRandomDummyText(20, 30);
-    var LOREM_IPSUM_100 = DUMMY_TEXT_50; // Backwards-compatible alias
-
-    function wrapTextToWidth(text, maxWidth, fontSize) {
-        var charWidth = (fontSize || 28) * 0.52;
-        var maxCharsPerLine = Math.max(15, Math.floor(maxWidth / charWidth));
-        var words = text.split(/\s+/);
-        var lines = [];
-        var currentLine = "";
-        for (var i = 0; i < words.length; i++) {
-            var word = words[i];
-            if (currentLine.length === 0) {
-                currentLine = word;
-            } else if ((currentLine.length + 1 + word.length) <= maxCharsPerLine) {
-                currentLine += " " + word;
-            } else {
-                lines.push(currentLine);
-                currentLine = word;
-            }
-        }
-        if (currentLine.length > 0) {
-            lines.push(currentLine);
-        }
-        return lines.join("\n");
-    }
-
-    function formatPointTextWithLineBreaks(text, maxChars) {
-        var limit = maxChars || 42;
-        var words = text.split(/\s+/);
-        var lines = [];
-        var cur = "";
-        for (var i = 0; i < words.length; i++) {
-            var w = words[i];
-            if (cur.length === 0) {
-                cur = w;
-            } else if ((cur.length + 1 + w.length) <= limit) {
-                cur += " " + w;
-            } else {
-                lines.push(cur);
-                cur = w;
-            }
-        }
-        if (cur.length > 0) lines.push(cur);
-        return lines.join("\r");
-    }
 
     // High-precision measurement engine matching the browser SVG engine and AE calibrated tables
     function measureTextExact(str, fontSize, fontName) {
@@ -1081,220 +1003,6 @@
         };
     }
 
-    // Curated diverse fonts spanning Sans-Serif, Serif, Display, Monospace, and Modern
-    var DUMMY_FONTS_POOL = [
-        { ps: "ArialMT", name: "Arial" },
-        { ps: "Georgia", name: "Georgia" },
-        { ps: "TimesNewRomanPSMT", name: "Times New Roman" },
-        { ps: "TrebuchetMS", name: "Trebuchet MS" },
-        { ps: "Verdana", name: "Verdana" },
-        { ps: "CourierNewPSMT", name: "Courier New" },
-        { ps: "Impact", name: "Impact" },
-        { ps: "Tahoma", name: "Tahoma" },
-        { ps: "HelveticaNeue", name: "Helvetica Neue" },
-        { ps: "Helvetica", name: "Helvetica" },
-        { ps: "Palatino-Roman", name: "Palatino" },
-        { ps: "CenturyGothic", name: "Century Gothic" },
-        { ps: "Futura-Medium", name: "Futura" },
-        { ps: "GillSans", name: "Gill Sans" },
-        { ps: "Avenir-Medium", name: "Avenir" }
-    ];
-
-    function getRandomFontInfo() {
-        var pool = DUMMY_FONTS_POOL.slice(0);
-        for (var i = pool.length - 1; i > 0; i--) {
-            var j = Math.floor(Math.random() * (i + 1));
-            var temp = pool[i];
-            pool[i] = pool[j];
-            pool[j] = temp;
-        }
-
-        // In AE 24+, verify if font object exists in app.fonts environment
-        if (typeof app !== "undefined" && app.fonts && typeof app.fonts.getFontsByPostScriptName === "function") {
-            for (var k = 0; k < pool.length; k++) {
-                try {
-                    var found = app.fonts.getFontsByPostScriptName(pool[k].ps);
-                    if (found && found.length > 0) {
-                        return { fontObject: found[0], font: pool[k].ps, name: pool[k].name };
-                    }
-                } catch (eFCheck) {}
-            }
-        }
-
-        var pick = pool[0];
-        return { fontObject: null, font: pick.ps, name: pick.name };
-    }
-
-    // Curated high-visibility, aesthetic colors for dummy text
-    var DUMMY_COLORS_POOL = [
-        { name: "Snow White", rgb: [0.96, 0.96, 0.98] },
-        { name: "Warm Cream", rgb: [0.98, 0.94, 0.86] },
-        { name: "Electric Cyan", rgb: [0.35, 0.82, 0.98] },
-        { name: "Mint Aqua", rgb: [0.38, 0.94, 0.74] },
-        { name: "Sun Gold", rgb: [0.98, 0.86, 0.22] },
-        { name: "Pastel Coral", rgb: [0.98, 0.58, 0.50] },
-        { name: "Neon Lavender", rgb: [0.76, 0.62, 0.98] },
-        { name: "Spring Lime", rgb: [0.70, 0.94, 0.35] },
-        { name: "Bright Amber", rgb: [0.98, 0.65, 0.25] },
-        { name: "Rose Quartz", rgb: [0.98, 0.48, 0.72] }
-    ];
-
-    function getRandomTextColor() {
-        return DUMMY_COLORS_POOL[Math.floor(Math.random() * DUMMY_COLORS_POOL.length)];
-    }
-
-    function getRandomJustification() {
-        var aligns = [
-            { key: "left", name: "Left", val: (typeof ParagraphJustification !== "undefined" && typeof ParagraphJustification.LEFT_JUSTIFY !== "undefined" ? ParagraphJustification.LEFT_JUSTIFY : 7412) },
-            { key: "center", name: "Center", val: (typeof ParagraphJustification !== "undefined" && typeof ParagraphJustification.CENTER_JUSTIFY !== "undefined" ? ParagraphJustification.CENTER_JUSTIFY : 7414) },
-            { key: "right", name: "Right", val: (typeof ParagraphJustification !== "undefined" && typeof ParagraphJustification.RIGHT_JUSTIFY !== "undefined" ? ParagraphJustification.RIGHT_JUSTIFY : 7413) }
-        ];
-        return aligns[Math.floor(Math.random() * aligns.length)];
-    }
-
-    // -------------------------------------------------------------------------
-    // 5. Create Random Dummy Text Layer (Randomized Typography & 20-30 Words)
-    // -------------------------------------------------------------------------
-    function createDummyTextLayer(comp, targetW, targetH, autoHeight, pad) {
-        if (!comp) {
-            comp = app.project.activeItem;
-            if (!comp || !(comp instanceof CompItem)) {
-                comp = app.project.items.addComp("AE Text Precomp Demo", 1920, 1080, 1.0, 10.0, 30.0);
-                if (comp.openInViewer) comp.openInViewer();
-            }
-        }
-
-        var padVal = (typeof pad === "number") ? pad : 0;
-        var compW = (comp && typeof comp.width === "number") ? comp.width : 1920;
-
-        // Make random dummy text wider across composition
-        var baseTextW = Math.max(targetW ? targetW : 0, Math.round(compW * 0.62));
-        var widthVariation = 0.70 + (Math.random() * 0.60); // ±30% variation (0.70 to 1.30)
-        var textW = Math.min(compW - (padVal * 2) - 40, Math.round(baseTextW * widthVariation));
-        var textH = (autoHeight || !targetH) ? 360 : Math.max(20, targetH - (padVal * 2));
-
-        // Randomize whether created as Point Text or Paragraph (Box) Text (50/50 probability)
-        var isBoxTextMode = (Math.random() < 0.5);
-
-        // Randomize typography: font, alignment, font size (±15%), leading (±15%), and color
-        var fontPick = getRandomFontInfo();
-        var alignPick = getRandomJustification();
-        var colorPick = getRandomTextColor();
-
-        var baseFontSize = 28;
-        var sizeFactor = 0.85 + (Math.random() * 0.30); // ±15% variation
-        var randomizedFontSize = Math.round(baseFontSize * sizeFactor);
-
-        var baseLeading = randomizedFontSize * 1.35;
-        var leadingFactor = 0.85 + (Math.random() * 0.30); // ±15% variation
-        var randomizedLeading = Math.round(baseLeading * leadingFactor * 10) / 10;
-
-        // Random dummy text (20 to 30 words)
-        var rawDummyText = getRandomDummyText(20, 30);
-
-        // If Point Text: add line breaks so it does not stretch out or stick out of viewport
-        var dummyText = isBoxTextMode ? rawDummyText : formatPointTextWithLineBreaks(rawDummyText, 42);
-
-        var dummyLayer = comp.layers.addText(dummyText);
-        var typeLabel = isBoxTextMode ? "Box" : "Point";
-        dummyLayer.name = "Dummy Text - " + fontPick.name + " (" + typeLabel + ", " + alignPick.name + ", " + randomizedFontSize + "px, " + colorPick.name + ")";
-
-        var textProp = dummyLayer.property("Source Text");
-        var doc = null;
-        if (textProp) {
-            try {
-                doc = textProp.value;
-            } catch (eVal) {}
-        }
-
-        if (doc) {
-            doc.text = dummyText;
-            doc.fontSize = randomizedFontSize;
-            if (fontPick.fontObject) {
-                try { doc.fontObject = fontPick.fontObject; } catch (eFO) {}
-            }
-            if (fontPick.font) {
-                try { doc.font = fontPick.font; } catch (eF) {}
-            }
-            doc.fillColor = colorPick.rgb;
-            doc.applyFill = true;
-            doc.applyStroke = false;
-            doc.leading = randomizedLeading;
-            try {
-                doc.justification = alignPick.val;
-            } catch (eJ) {}
-
-            if (isBoxTextMode) {
-                try {
-                    if (typeof doc.setBoxTextSize === "function") {
-                        doc.setBoxTextSize([textW, textH]);
-                    } else if (typeof doc.boxText !== "undefined") {
-                        doc.boxText = true;
-                        doc.boxTextSize = [textW, textH];
-                    }
-                } catch (eBox) {}
-            } else {
-                try {
-                    if (typeof doc.boxText !== "undefined") {
-                        doc.boxText = false;
-                    }
-                } catch (ePt) {}
-            }
-
-            try {
-                textProp.setValue(doc);
-            } catch (eSet) {}
-        }
-
-        // If box text is requested but not supported by host engine, word wrap to fit width
-        if (isBoxTextMode) {
-            try {
-                var r = dummyLayer.sourceRectAtTime(0, false);
-                if (!r || r.width > (textW * 1.4)) {
-                    var wrapped = wrapTextToWidth(dummyText, textW, randomizedFontSize, fontPick.font);
-                    if (doc) {
-                        doc.text = wrapped;
-                        textProp.setValue(doc);
-                    }
-                }
-            } catch (eWrap) {}
-        }
-
-        // Place text in the middle of the viewport
-        try {
-            var checkDoc = dummyLayer.property("Source Text").value;
-            var isActuallyBox = false;
-            try {
-                if (checkDoc && checkDoc.boxText) isActuallyBox = true;
-            } catch (eB) {}
-
-            if (isActuallyBox) {
-                dummyLayer.transform.anchorPoint.setValue([textW / 2, textH / 2, 0]);
-                dummyLayer.transform.position.setValue([comp.width / 2, comp.height / 2, 0]);
-            } else {
-                var rNow = dummyLayer.sourceRectAtTime(0, false);
-                if (rNow && rNow.width > 0 && rNow.height > 0) {
-                    dummyLayer.transform.anchorPoint.setValue([rNow.left + rNow.width / 2, rNow.top + rNow.height / 2, 0]);
-                    dummyLayer.transform.position.setValue([comp.width / 2, comp.height / 2, 0]);
-                } else {
-                    dummyLayer.transform.anchorPoint.setValue([textW / 2, textH / 2, 0]);
-                    dummyLayer.transform.position.setValue([comp.width / 2, comp.height / 2, 0]);
-                }
-            }
-        } catch (eCenter) {
-            dummyLayer.transform.position.setValue([comp.width / 2, comp.height / 2, 0]);
-        }
-
-        // Select dummy layer
-        var totalL = (typeof comp.numLayers !== "undefined") ? comp.numLayers : comp.layers.length;
-        for (var i = 1; i <= totalL; i++) {
-            var l = (typeof comp.layer === "function") ? comp.layer(i) : comp.layers[i - 1];
-            if (l) l.selected = false;
-        }
-        dummyLayer.selected = true;
-
-        return dummyLayer;
-    }
 
     // -------------------------------------------------------------------------
     // 6. Create Background Card Layer (Procedural Bézier Rounded Rectangle)
@@ -1513,12 +1221,10 @@
         }
 
         var textLayer = getSelectedTextLayer(comp);
-        var createdDummy = false;
         var padding = (typeof options.padding === "number") ? Math.max(0, options.padding) : 0;
 
         if (!textLayer) {
-            textLayer = createDummyTextLayer(comp, options.width, options.height, options.autoHeight, padding);
-            createdDummy = true;
+            throw new Error("Please select a text layer in your active composition first.");
         }
 
         var metrics = getTextLayerMetrics(comp, textLayer);
@@ -2197,7 +1903,6 @@
             textboxWidth: textboxW,
             padding: padding,
             align: align,
-            createdDummy: createdDummy,
             name: precompName,
             divideMode: divideMode,
             wordCount: totalWordCount,
@@ -2672,9 +2377,6 @@
     btnDivideLines.preferredSize = [-1, 30];
     btnDivideLines.helpTip = "Creates a text layer for each line in matching position, then precomposes.";
 
-    var btnDummyOnly = pnlActions.add("button", undefined, "Create Random Dummy Text");
-    btnDummyOnly.preferredSize = [-1, 24];
-    btnDummyOnly.helpTip = "Creates a random dummy text layer (20-30 words) in the active composition without precomposing.";
 
     var lblFeedback = win.add("statictext", undefined, "Ready.");
     lblFeedback.alignment = ["fill", "bottom"];
@@ -2724,7 +2426,7 @@
             }
             return metrics;
         } else {
-            lblStatusText.text = "None selected (will create random dummy text)";
+            lblStatusText.text = "No text layer selected";
             btnAutoDetect.enabled = false;
             return null;
         }
@@ -2750,26 +2452,19 @@
         }
     };
 
-    btnDummyOnly.onClick = function() {
-        if (app.beginUndoGroup) app.beginUndoGroup("Create Random Dummy Text");
-        try {
-            var comp = app.project.activeItem;
-            var w = parseFloat(txtWidth.text) || 800;
-            var h = parseFloat(txtHeight.text) || 400;
-            var autoH = chkAutoHeight.value;
-            var padVal = parseFloat(txtPad.text) || 0;
-
-            var dummy = createDummyTextLayer(comp, w, h, autoH, padVal);
-            syncLayerDetection();
-            lblFeedback.text = "Created dummy layer: '" + dummy.name + "' with random dummy text (20-30 words).";
-        } catch (err) {
-            alert("Error creating dummy text layer:\n" + err.toString());
-        } finally {
-            if (app.endUndoGroup) app.endUndoGroup();
-        }
-    };
-
     function executePrecomp(divideMode) {
+        var comp = app.project.activeItem;
+        if (!comp || !(comp instanceof CompItem)) {
+            alert("No active composition found. Please open a composition and select a text layer.");
+            return;
+        }
+
+        var textLayer = getSelectedTextLayer(comp);
+        if (!textLayer) {
+            alert("Please select a text layer in your active composition first.");
+            return;
+        }
+
         var actionName = "AE Text Precomp";
         if (divideMode === "words") actionName = "AE Text Precomp (Divide by Words)";
         else if (divideMode === "lines") actionName = "AE Text Precomp (Divide by Lines)";
@@ -2846,9 +2541,6 @@
                 msg = "Precomposed '" + res.name + "' divided into " + (res.lineCount || 0) + " line layers [" + res.width + "x" + res.height + "px]";
             } else {
                 msg = "Precomposed '" + res.name + "' [" + res.width + "x" + res.height + "px, Padding: " + res.padding + "px, Textbox: " + res.textboxWidth + "px]";
-            }
-            if (res.createdDummy) {
-                msg += " (Generated random dummy text)";
             }
             lblFeedback.text = msg;
         } catch (err) {

@@ -32,9 +32,7 @@
 //   5. State Storage Effect:
 //      - Attaches "Anchor Alignment State" effect controls (Align X, Align Y, Bounds Mode)
 //        on the target layer storing exact alignment status.
-//   6. Intelligent Dummy Text Box Creation & Live Updating:
-//      - If nothing is selected, creates a dummy text box in the center of the viewport.
-//      - If a layer is already selected, immediately updates it with the new alignment.
+//   6. Real-Time Anchor Point Alignment & Dynamic Link Expressions.
 //
 // REPOSITORY:
 //   https://github.com/work2survive/AE-Align-AnchorPoint
@@ -745,248 +743,6 @@
         return true;
     }
 
-    // Curated diverse fonts spanning Sans-Serif, Serif, Display, Monospace, and Modern
-    var DUMMY_FONTS_POOL = [
-        { ps: "ArialMT", name: "Arial" },
-        { ps: "Georgia", name: "Georgia" },
-        { ps: "TimesNewRomanPSMT", name: "Times New Roman" },
-        { ps: "TrebuchetMS", name: "Trebuchet MS" },
-        { ps: "Verdana", name: "Verdana" },
-        { ps: "CourierNewPSMT", name: "Courier New" },
-        { ps: "Impact", name: "Impact" },
-        { ps: "Tahoma", name: "Tahoma" },
-        { ps: "HelveticaNeue", name: "Helvetica Neue" },
-        { ps: "Helvetica", name: "Helvetica" },
-        { ps: "Palatino-Roman", name: "Palatino" },
-        { ps: "CenturyGothic", name: "Century Gothic" },
-        { ps: "Futura-Medium", name: "Futura" },
-        { ps: "GillSans", name: "Gill Sans" },
-        { ps: "Avenir-Medium", name: "Avenir" }
-    ];
-
-    function getRandomFontInfo() {
-        var pool = DUMMY_FONTS_POOL.slice(0);
-        for (var i = pool.length - 1; i > 0; i--) {
-            var j = Math.floor(Math.random() * (i + 1));
-            var temp = pool[i];
-            pool[i] = pool[j];
-            pool[j] = temp;
-        }
-
-        if (typeof app !== "undefined" && app.fonts && typeof app.fonts.getFontsByPostScriptName === "function") {
-            for (var k = 0; k < pool.length; k++) {
-                try {
-                    var found = app.fonts.getFontsByPostScriptName(pool[k].ps);
-                    if (found && found.length > 0) {
-                        return { fontObject: found[0], font: pool[k].ps, name: pool[k].name };
-                    }
-                } catch (eFCheck) {}
-            }
-        }
-
-        var pick = pool[0];
-        return { fontObject: null, font: pick.ps, name: pick.name };
-    }
-
-    // Curated high-visibility, aesthetic colors for dummy text
-    var DUMMY_COLORS_POOL = [
-        { name: "Snow White", rgb: [0.96, 0.96, 0.98] },
-        { name: "Warm Cream", rgb: [0.98, 0.94, 0.86] },
-        { name: "Electric Cyan", rgb: [0.35, 0.82, 0.98] },
-        { name: "Mint Aqua", rgb: [0.38, 0.94, 0.74] },
-        { name: "Sun Gold", rgb: [0.98, 0.86, 0.22] },
-        { name: "Pastel Coral", rgb: [0.98, 0.58, 0.50] },
-        { name: "Neon Lavender", rgb: [0.76, 0.62, 0.98] },
-        { name: "Spring Lime", rgb: [0.70, 0.94, 0.35] },
-        { name: "Bright Amber", rgb: [0.98, 0.65, 0.25] },
-        { name: "Rose Quartz", rgb: [0.98, 0.48, 0.72] }
-    ];
-
-    function getRandomTextColor() {
-        return DUMMY_COLORS_POOL[Math.floor(Math.random() * DUMMY_COLORS_POOL.length)];
-    }
-
-    function getRandomJustification() {
-        var aligns = [
-            { key: "left", name: "Left", val: (typeof ParagraphJustification !== "undefined" && typeof ParagraphJustification.LEFT_JUSTIFY !== "undefined" ? ParagraphJustification.LEFT_JUSTIFY : 7412) },
-            { key: "center", name: "Center", val: (typeof ParagraphJustification !== "undefined" && typeof ParagraphJustification.CENTER_JUSTIFY !== "undefined" ? ParagraphJustification.CENTER_JUSTIFY : 7414) },
-            { key: "right", name: "Right", val: (typeof ParagraphJustification !== "undefined" && typeof ParagraphJustification.RIGHT_JUSTIFY !== "undefined" ? ParagraphJustification.RIGHT_JUSTIFY : 7413) }
-        ];
-        return aligns[Math.floor(Math.random() * aligns.length)];
-    }
-
-    function formatPointTextWithLineBreaks(text, maxChars) {
-        var limit = maxChars || 42;
-        var words = text.split(/\s+/);
-        var lines = [];
-        var cur = "";
-        for (var i = 0; i < words.length; i++) {
-            var w = words[i];
-            if (cur.length === 0) {
-                cur = w;
-            } else if ((cur.length + 1 + w.length) <= limit) {
-                cur += " " + w;
-            } else {
-                lines.push(cur);
-                cur = w;
-            }
-        }
-        if (cur.length > 0) lines.push(cur);
-        return lines.join("\r");
-    }
-
-    // Word pool for random 20-30 words dummy text
-    var LOREM_IPSUM_WORDS = [
-        "Lorem", "ipsum", "dolor", "sit", "amet,", "consectetur", "adipiscing", "elit,", "sed", "do",
-        "eiusmod", "tempor", "incididunt", "ut", "labore", "et", "dolore", "magna", "aliqua.", "Ut",
-        "enim", "ad", "minim", "veniam,", "quis", "nostrud", "exercitation", "ullamco", "laboris", "nisi",
-        "ut", "aliquip", "ex", "ea", "commodo", "consequat.", "Duis", "aute", "irure", "dolor",
-        "in", "reprehenderit", "in", "voluptate", "velit", "esse", "cillum", "dolore", "eu", "fugiat",
-        "nulla", "pariatur.", "Excepteur", "sint", "occaecat", "cupidatat", "non", "proident,", "sunt", "in",
-        "culpa", "qui", "officia", "deserunt", "mollit", "anim", "id", "est", "laborum."
-    ];
-
-    function getRandomDummyText(minWords, maxWords) {
-        var min = (typeof minWords === "number") ? minWords : 20;
-        var max = (typeof maxWords === "number") ? maxWords : 30;
-        var count = Math.floor(min + Math.random() * (max - min + 1));
-        var start = Math.floor(Math.random() * Math.max(1, LOREM_IPSUM_WORDS.length - count));
-        var words = [];
-        for (var i = 0; i < count; i++) {
-            words.push(LOREM_IPSUM_WORDS[(start + i) % LOREM_IPSUM_WORDS.length]);
-        }
-        var text = words.join(" ");
-        var lastChar = text.charAt(text.length - 1);
-        if (lastChar === ",") {
-            text = text.substring(0, text.length - 1) + ".";
-        } else if (lastChar !== "." && lastChar !== "!" && lastChar !== "?") {
-            text += ".";
-        }
-        return text.charAt(0).toUpperCase() + text.slice(1);
-    }
-
-    // -------------------------------------------------------------------------
-    // 7. Dummy Text Box & Demo Composition Generator
-    // -------------------------------------------------------------------------
-
-    /**
-     * Creates a dummy text layer (point or box) centered in the viewport with randomized typography
-     */
-    function createDummyTextBox(comp) {
-        if (!comp) return null;
-        var centerPos = [comp.width / 2, comp.height / 2, 0];
-        var compW = (comp && typeof comp.width === "number") ? comp.width : 1920;
-
-        // Make dummy text wider across composition
-        var baseBoxW = Math.max(700, Math.round(compW * 0.58));
-        var widthVariation = 0.70 + (Math.random() * 0.60); // ±30% variation (0.70 to 1.30)
-        var boxW = Math.min(compW - 80, Math.round(baseBoxW * widthVariation));
-        var boxH = 220;
-
-        // Randomize whether created as Point Text or Paragraph (Box) Text (50/50 probability)
-        var isBox = (Math.random() < 0.5);
-
-        // Random dummy text (20 to 30 words)
-        var rawDummy = getRandomDummyText(20, 30);
-
-        // If Point Text: add line breaks so it does not stretch out or stick out of viewport
-        var dummyText = isBox ? rawDummy : formatPointTextWithLineBreaks(rawDummy, 42);
-
-        var textLayer;
-        if (isBox && typeof comp.layers.addBoxText === "function") {
-            try {
-                textLayer = comp.layers.addBoxText([boxW, boxH], dummyText);
-            } catch (eB) {
-                textLayer = comp.layers.addText(dummyText);
-            }
-        } else {
-            textLayer = comp.layers.addText(dummyText);
-        }
-
-        // Randomize typography: font, alignment, font size (±15%), leading (±15%), and color
-        var fontPick = getRandomFontInfo();
-        var alignPick = getRandomJustification();
-        var colorPick = getRandomTextColor();
-
-        var baseFontSize = 24;
-        var sizeFactor = 0.85 + (Math.random() * 0.30); // ±15% variation
-        var randomizedFontSize = Math.round(baseFontSize * sizeFactor);
-
-        var baseLeading = randomizedFontSize * 1.35;
-        var leadingFactor = 0.85 + (Math.random() * 0.30); // ±15% variation
-        var randomizedLeading = Math.round(baseLeading * leadingFactor * 10) / 10;
-
-        var typeLabel = isBox ? "Box" : "Point";
-        textLayer.name = "Dummy Text - " + fontPick.name + " (" + typeLabel + ", " + alignPick.name + ", " + randomizedFontSize + "px, " + colorPick.name + ")";
-
-        var doc = textLayer.property("Source Text").value;
-        if (doc) {
-            doc.text = dummyText;
-            doc.fontSize = randomizedFontSize;
-            if (fontPick.fontObject) {
-                try { doc.fontObject = fontPick.fontObject; } catch (eFO) {}
-            }
-            if (fontPick.font) {
-                try { doc.font = fontPick.font; } catch (eF) {}
-            }
-            doc.fillColor = colorPick.rgb;
-            doc.applyFill = true;
-            doc.applyStroke = false;
-            doc.leading = randomizedLeading;
-            try {
-                doc.justification = alignPick.val;
-            } catch (eJ) {}
-
-            if (isBox) {
-                try {
-                    if (typeof doc.setBoxTextSize === "function") {
-                        doc.setBoxTextSize([boxW, boxH]);
-                    } else if (typeof doc.boxText !== "undefined") {
-                        doc.boxText = true;
-                        doc.boxTextSize = [boxW, boxH];
-                    }
-                } catch (eBox) {}
-            } else {
-                try {
-                    if (typeof doc.boxText !== "undefined") {
-                        doc.boxText = false;
-                    }
-                } catch (ePt) {}
-            }
-
-            textLayer.property("Source Text").setValue(doc);
-        }
-
-        // Place in the middle of the viewport
-        try {
-            var sr = textLayer.sourceRectAtTime(0, false);
-            var isActuallyBox = false;
-            try {
-                var dVal = textLayer.property("Source Text").value;
-                if (dVal && dVal.boxText) isActuallyBox = true;
-            } catch (eB2) {}
-            if (isActuallyBox) {
-                textLayer.transform.anchorPoint.setValue([boxW / 2, boxH / 2, 0]);
-            } else if (sr && sr.width > 0 && sr.height > 0) {
-                textLayer.transform.anchorPoint.setValue([sr.left + sr.width / 2, sr.top + sr.height / 2, 0]);
-            } else {
-                textLayer.transform.anchorPoint.setValue([boxW / 2, boxH / 2, 0]);
-            }
-        } catch (eSr) {
-            textLayer.transform.anchorPoint.setValue([boxW / 2, boxH / 2, 0]);
-        }
-        textLayer.transform.position.setValue(centerPos);
-
-        // Unselect all other layers, select dummy text layer
-        var numL = (typeof comp.numLayers === "number") ? comp.numLayers : comp.layers.length;
-        for (var i = 1; i <= numL; i++) {
-            var lyr = (typeof comp.layer === "function") ? comp.layer(i) : (comp.layers[i] || comp.layers[i - 1]);
-            if (lyr && lyr !== textLayer) lyr.selected = false;
-        }
-        textLayer.selected = true;
-
-        return textLayer;
-    }
 
     function createDemoComposition() {
         var comp = app.project.items.addComp("Anchor Point Demo", 1920, 1080, 1, 10, 30);
@@ -1001,7 +757,9 @@
         bgFill.property("Color").setValue([0.07, 0.08, 0.11]);
 
         // 2. Demo Box Text Layer in Center of Viewport
-        var textLayer = createDummyTextBox(comp);
+        var textLayer = comp.layers.addText("Anchor Point Alignment Demo");
+        textLayer.name = "Demo_Text_Layer";
+        textLayer.transform.position.setValue([comp.width / 2, comp.height / 2, 0]);
 
         // 3. Demo Vector Shape Layer (Rounded Card)
         var shapeLayer = comp.layers.addShape();
@@ -1247,9 +1005,6 @@
     grpSecondary.alignment = ["fill", "top"];
     grpSecondary.spacing = 6;
 
-    var btnCreateTextBox = grpSecondary.add("button", undefined, "📝 Create Random Dummy Text");
-    btnCreateTextBox.alignment = ["fill", "center"];
-    btnCreateTextBox.helpTip = "Creates a fresh random dummy text (20-30 words) in the center of the viewport.";
 
     var btnRemove = grpSecondary.add("button", undefined, "✕ Remove Crosshairs & Expressions");
     btnRemove.alignment = ["fill", "center"];
@@ -1350,13 +1105,10 @@
             }
 
             var sel = comp.selectedLayers;
-            var createdDummy = false;
-
-            // If nothing is selected, create a dummy text box in the center of the viewport!
             if (!sel || sel.length === 0) {
-                var dummyLyr = createDummyTextBox(comp);
-                sel = [dummyLyr];
-                createdDummy = true;
+                lblFeedback.text = "Please select at least one layer to align.";
+                alert("Please select at least one layer in your active composition first.");
+                return;
             }
 
             var xMode = getSelectedXMode();
@@ -1381,11 +1133,7 @@
             var modeStr = useExpr ? "Dynamic Expressions" : "Static Bake";
             var boundsStr = (boundsMethod === "stated") ? "Stated Dimensions" : "sourceRectAtTime()";
 
-            if (createdDummy) {
-                lblFeedback.text = "Created dummy text box in viewport center & aligned to " + alignStr + " (" + boundsStr + ").";
-            } else {
-                lblFeedback.text = "Updated " + count + " layer(s) to " + alignStr + " via " + modeStr + " (" + boundsStr + ").";
-            }
+            lblFeedback.text = "Updated " + count + " layer(s) to " + alignStr + " via " + modeStr + " (" + boundsStr + ").";
         } catch (err) {
             alert("Error aligning anchor point:\n" + (err.message || err.toString()));
         } finally {
@@ -1397,33 +1145,6 @@
         executeAlignment();
     };
 
-    btnCreateTextBox.onClick = function() {
-        if (app.beginUndoGroup) app.beginUndoGroup("Create Centered Text Box");
-        try {
-            var comp = app.project.activeItem;
-            if (!comp || !(comp instanceof CompItem)) {
-                comp = app.project.items.addComp("Anchor Point Workspace", 1920, 1080, 1, 10, 30);
-                if (typeof comp.openInViewer === "function") comp.openInViewer();
-            }
-            var textLayer = createDummyTextBox(comp);
-            var xMode = getSelectedXMode();
-            var yMode = getSelectedYMode();
-            var boundsMethod = getSelectedBoundsMethod();
-            var useExpr = rbModeExpr.value;
-            var addCross = chkAddCross.value;
-            var isGuide = chkGuide.value;
-            var crossSz = parseFloat(txtCrossSize.text) || 30;
-            var crossCol = ddlColor.selection ? ddlColor.selection.text : "Cyan";
-
-            alignLayerAnchorPoint(textLayer, xMode, yMode, boundsMethod, useExpr, addCross, isGuide, crossSz, crossCol);
-            syncLayerDetection();
-            lblFeedback.text = "Created new dummy text box at viewport center with anchor aligned.";
-        } catch (eTxt) {
-            alert("Error creating text box:\n" + eTxt.toString());
-        } finally {
-            if (app.endUndoGroup) app.endUndoGroup();
-        }
-    };
 
     btnRefresh.onClick = function() {
         syncLayerDetection();
@@ -1477,21 +1198,14 @@
         }
     };
 
-    // Initial check: if comp is empty, create dummy text box in center automatically
+    // Initial layer detection sync
     (function initialSetup() {
-        var comp = app.project.activeItem;
-        if (comp && comp instanceof CompItem) {
-            if (comp.layers.length === 0) {
-                createDummyTextBox(comp);
-            }
-        }
         syncLayerDetection();
     })();
 
     // Expose programmatic hooks on win object
     win.btnDemo = btnDemo;
     win.btnAlign = btnAlign;
-    win.btnCreateTextBox = btnCreateTextBox;
     win.btnTL = btnTL;
     win.btnTC = btnTC;
     win.btnTR = btnTR;
@@ -1506,7 +1220,6 @@
     win.rbBoundsStated = rbBoundsStated;
     win.executeAlignment = executeAlignment;
     win.createDemoComposition = createDemoComposition;
-    win.createDummyTextBox = createDummyTextBox;
     win.syncLayerDetection = syncLayerDetection;
     win.storeAlignmentEffect = storeAlignmentEffect;
     win.readAlignmentEffect = readAlignmentEffect;
