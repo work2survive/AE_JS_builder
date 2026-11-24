@@ -439,6 +439,45 @@
         return null;
     }
 
+    function selectSingleLayer(comp, targetLayer) {
+        if (!comp || !targetLayer) return;
+        var total = (typeof comp.numLayers !== "undefined") ? comp.numLayers : (comp.layers ? comp.layers.length : 0);
+        for (var i = 1; i <= total; i++) {
+            var l = (typeof comp.layer === "function") ? comp.layer(i) : (comp.layers[i] || comp.layers[i - 1]);
+            if (l) {
+                try { l.selected = false; } catch (eD) {}
+            }
+        }
+        try { targetLayer.selected = true; } catch (eS) {}
+        try {
+            if (comp.selectedLayers) {
+                if (Object.prototype.toString.call(comp.selectedLayers) === "[object Array]") {
+                    comp.selectedLayers.length = 0;
+                    comp.selectedLayers.push(targetLayer);
+                }
+            }
+        } catch (eSL) {}
+        try {
+            if (typeof window !== "undefined") {
+                if (typeof window.CustomEvent !== "undefined" && typeof window.dispatchEvent === "function") {
+                    window.dispatchEvent(new CustomEvent("ae-layer-selection-changed", { detail: { layer: targetLayer } }));
+                }
+                var allBars = document.querySelectorAll(".ae-layer-main-bar");
+                if (allBars && allBars.length > 0) {
+                    for (var b = 0; b < allBars.length; b++) {
+                        allBars[b].classList.remove("selected");
+                    }
+                    var idSelector = (typeof targetLayer._id !== "undefined") ? ('[data-layer-id="' + targetLayer._id + '"] .ae-layer-main-bar') : null;
+                    var layerRow = idSelector ? document.querySelector(idSelector) : null;
+                    if (!layerRow && typeof targetLayer.index !== "undefined") {
+                        layerRow = document.querySelector('[data-layer-index="' + (targetLayer.index - 1) + '"] .ae-layer-main-bar');
+                    }
+                    if (layerRow) layerRow.classList.add("selected");
+                }
+            }
+        } catch (eDOM) {}
+    }
+
     function getJustificationName(textDoc, textLayer) {
         if (textDoc && typeof textDoc.justification !== "undefined") {
             var j = textDoc.justification;
@@ -2361,13 +2400,8 @@
             dummy.transform.position.setValue(centerPos);
         }
 
-        // Deselect others and select dummy
-        var total = (typeof comp.numLayers !== "undefined") ? comp.numLayers : comp.layers.length;
-        for (var i = 1; i <= total; i++) {
-            var l = (typeof comp.layer === "function") ? comp.layer(i) : (comp.layers[i] || comp.layers[i - 1]);
-            if (l) l.selected = false;
-        }
-        dummy.selected = true;
+        // Always select the layer after random text creation
+        selectSingleLayer(comp, dummy);
 
         return dummy;
     }

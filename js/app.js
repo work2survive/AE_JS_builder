@@ -330,7 +330,7 @@
             }
 
             row.innerHTML = `
-                <div class="ae-layer-main-bar ${layer === selectedLayer ? 'selected' : ''}" style="padding-left: ${paddingLeftPx}px;">
+                <div class="ae-layer-main-bar ${(layer === selectedLayer || layer.selected) ? 'selected' : ''}" style="padding-left: ${paddingLeftPx}px;">
                     <span class="ae-twirl open" data-action="toggle-layer">&#9656;</span>
                     <span class="ae-color-tag" style="background-color: ${layer.colorLabel || (isPrecomp ? '#9b5de5' : '#e07a5f')};"></span>
                     <span class="ae-layer-num" title="Layer index">${displayNum}</span>
@@ -1645,6 +1645,13 @@
                 renderTimeline();
             };
         }
+
+        // Keep selectedLayer in sync with layer selection events
+        window.addEventListener('ae-layer-selection-changed', (e) => {
+            if (e.detail && e.detail.layer) {
+                selectedLayer = e.detail.layer;
+            }
+        });
 
         // Init 3D Viewport Renderer
         renderer = new AERenderer(comp, 'ae-viewport-panel');
