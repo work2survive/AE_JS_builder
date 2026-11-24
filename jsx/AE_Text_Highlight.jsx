@@ -2392,32 +2392,20 @@
             this.layout.resize();
         };
 
-        // ---------------------------------------------------------------------
-        // Header Banner
-        // ---------------------------------------------------------------------
-        var pnlHeader = win.add("panel");
-        pnlHeader.orientation = "row";
-        pnlHeader.alignChildren = ["fill", "center"];
-        pnlHeader.alignment = ["fill", "top"];
-        pnlHeader.spacing = 8;
-        pnlHeader.margins = [8, 6, 8, 6];
+        // --- Header ---
+        var pnlHeader = win.add("panel", undefined, SCRIPT_TITLE + " " + SCRIPT_VERSION);
+        pnlHeader.orientation = "column";
+        pnlHeader.alignChildren = ["fill", "top"];
+        pnlHeader.spacing = 3;
+        pnlHeader.margins = [10, 8, 10, 8];
 
-        var lblTitle = pnlHeader.add("statictext", undefined, "✨ " + SCRIPT_TITLE + " " + SCRIPT_VERSION);
-        lblTitle.alignment = ["left", "center"];
+        var lblSubTitle = pnlHeader.add("statictext", undefined, "Procedural Text Highlight Rigging Engine (Split & Calculation Methods)");
         try {
-            lblTitle.graphics.foregroundColor = lblTitle.graphics.newPen(win.graphics.PenType.SOLID_COLOR, [1.0, 0.45, 0.65, 1.0], 1);
+            lblSubTitle.graphics.foregroundColor = win.graphics.newPen(win.graphics.PenType.SOLID_COLOR, [0.35, 0.65, 0.95, 1], 1);
         } catch (eG1) {}
 
-        var btnHelp = pnlHeader.add("button", undefined, "GitHub ↗");
-        btnHelp.preferredSize = [70, 22];
-        btnHelp.alignment = ["right", "center"];
-        btnHelp.onClick = function () {
-            try {
-                if (typeof File !== "undefined") {
-                    File.openDialog || (new File(GITHUB_REPO_URL)).execute();
-                }
-            } catch (eOpen) {}
-        };
+        var lblRef = pnlHeader.add("statictext", undefined, "Zero-Shift Anchor Alignment & Font Metrics Coherent");
+        lblRef.helpTip = GITHUB_REPO_URL;
 
         // ---------------------------------------------------------------------
         // Highlight Engine Method Switch (Top of UI)
@@ -2677,6 +2665,25 @@
         pnlRefs.add("statictext", undefined, "5. Custom Rounded Rect & Color Pickers:\n   https://github.com/work2survive/AE_JS_builder/blob/main/jsx/custom_rounded_rect.jsx", { multiline: true });
         pnlRefs.add("statictext", undefined, "6. AE Text Highlight Repository:\n   https://github.com/work2survive/AE-Text-Highlight", { multiline: true });
 
+        // --- Link Footer ---
+        var grpFooter = win.add("group");
+        grpFooter.orientation = "row";
+        grpFooter.alignment = ["fill", "bottom"];
+        grpFooter.alignChildren = ["center", "center"];
+        grpFooter.margins = [0, 4, 0, 0];
+        var lblRepo = grpFooter.add("statictext", undefined, "GitHub: work2survive/AE-Text-Highlight");
+        lblRepo.helpTip = GITHUB_REPO_URL;
+        lblRepo.onClick = function () {
+            var url = GITHUB_REPO_URL;
+            if (typeof window !== "undefined" && window.open) {
+                window.open(url, "_blank");
+            } else if ($.os && $.os.indexOf("Windows") !== -1) {
+                system.callSystem('explorer "' + url + '"');
+            } else if (typeof system !== "undefined" && system.callSystem) {
+                system.callSystem('open "' + url + '"');
+            }
+        };
+
         // ---------------------------------------------------------------------
         // Interactive Logic & Event Listeners
         // ---------------------------------------------------------------------
@@ -2839,6 +2846,8 @@
         win.pickerText = pickerText;
         win.btnBuild = btnBuild;
         win.txtTargets = txtTargets;
+        win.grpFooter = grpFooter;
+        win.lblRepo = lblRepo;
 
         return win;
     }
