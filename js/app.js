@@ -8,13 +8,13 @@
     'use strict';
 
     // -------------------------------------------------------------
-    // Version Management (v1.2.15)
+    // Version Management (v1.2.16)
     // -------------------------------------------------------------
     function computeDailyVersion() {
-        return '1.2.15';
+        return '1.2.16';
     }
 
-    const APP_VERSION = '1.2.15';
+    const APP_VERSION = '1.2.16';
     global.EMULATOR_VERSION = APP_VERSION;
     global.AE_TEXT_GUIDE_URL = 'https://github.com/work2survive/AE_JS_builder/blob/main/AE_VS_JS_TEXT_RENDERING_DIFFERENCES.md';
     global.AE_ANCHOR_POINT_GUIDE_URL = 'https://github.com/work2survive/AE-Align-AnchorPoint/blob/main/README.md';
@@ -1552,25 +1552,65 @@
             layer.boxTextSize = null;
         }
 
-        // 7. Centering in Viewport (middle of comp)
-        // Compute bounding box using sourceRectAtTime to align visual center with viewport center
+        // 7. Randomize anchor point inside the text box area, then place text box in viewport center
         const rect = (typeof layer.sourceRectAtTime === 'function') ? layer.sourceRectAtTime(0, false) : null;
-        if (rect && typeof rect.left === 'number' && typeof rect.top === 'number') {
-            const anchorX = Math.round(rect.left + rect.width / 2);
-            const anchorY = Math.round(rect.top + rect.height / 2);
-            layer.transform.anchorPoint.setValue([anchorX, anchorY, 0]);
-        } else if (isBox) {
-            layer.transform.anchorPoint.setValue([Math.round(targetWidth / 2), Math.round(boxHeight / 2), 0]);
-        }
-        layer.transform.position.setValue([Math.round(comp.width / 2), Math.round(comp.height / 2), 0]);
+        const boxLeft = (rect && typeof rect.left === 'number') ? rect.left : 0;
+        const boxTop = (rect && typeof rect.top === 'number') ? rect.top : 0;
+        const boxWidth = (rect && typeof rect.width === 'number' && rect.width > 0) ? rect.width : targetWidth;
+        const boxHeightActual = (rect && typeof rect.height === 'number' && rect.height > 0) ? rect.height : (isBox ? boxHeight : 100);
 
-        // 8. Always selected after creation
+        // Random anchor point placed inside the area of the text box
+        const u = Math.random();
+        const v = Math.random();
+        const randAnchorX = Math.round(boxLeft + u * boxWidth);
+        const randAnchorY = Math.round(boxTop + v * boxHeightActual);
+        layer.transform.anchorPoint.setValue([randAnchorX, randAnchorY, 0]);
+
+        // Place the text box in the middle of the viewport
+        const boxCenterX = boxLeft + boxWidth / 2;
+        const boxCenterY = boxTop + boxHeightActual / 2;
+        const compCenterX = comp.width / 2;
+        const compCenterY = comp.height / 2;
+        const posX = Math.round(compCenterX + randAnchorX - boxCenterX);
+        const posY = Math.round(compCenterY + randAnchorY - boxCenterY);
+        layer.transform.position.setValue([posX, posY, 0]);
+
+        // 8. Create small simple red cross as child of the text layer (always anchor [0,0] and position [0,0])
+        const crossLayer = comp.layers.addShape();
+        crossLayer.name = 'Anchor Cross';
+        crossLayer.parent = layer;
+        crossLayer.threeDLayer = layer.threeDLayer;
+        crossLayer.transform.anchorPoint.setValue([0, 0, 0]);
+        crossLayer.transform.position.setValue([0, 0, 0]);
+
+        const crossGroup = crossLayer.property('Contents').addProperty('ADBE Vector Group');
+        crossGroup.name = 'Cross';
+        const groupContents = crossGroup.property('Contents');
+
+        // Horizontal bar of cross
+        const barH = groupContents.addProperty('ADBE Vector Shape - Rect');
+        barH.name = 'Cross Bar H';
+        barH.property('Size').setValue([16, 2]);
+        barH.property('Position').setValue([0, 0]);
+
+        // Vertical bar of cross
+        const barV = groupContents.addProperty('ADBE Vector Shape - Rect');
+        barV.name = 'Cross Bar V';
+        barV.property('Size').setValue([2, 16]);
+        barV.property('Position').setValue([0, 0]);
+
+        // Red fill
+        const fill = groupContents.addProperty('ADBE Vector Graphic - Fill');
+        fill.property('Color').setValue([1, 0, 0]); // Pure red
+
+        // 9. The text will be always selected after creation
         const allLayers = comp.layers._layers || comp.layers;
         if (allLayers && Array.isArray(allLayers)) {
             allLayers.forEach(l => {
                 l.selected = (l === layer);
             });
         }
+        crossLayer.selected = false;
         layer.selected = true;
         selectedLayer = layer;
 
@@ -1592,7 +1632,7 @@
         }, 50);
 
         window.dispatchEvent(new CustomEvent('ae-layer-selection-changed', { detail: { layer: layer } }));
-        appendConsole(`Created dummy ${typeLabel} layer "${layer.name}" (${fontName}, ${fontSize}px, ${alignChoice.name}, leading ${leading}px) centered at viewport [${Math.round(comp.width / 2)}, ${Math.round(comp.height / 2)}].`);
+        appendConsole(`Created dummy ${typeLabel} layer "${layer.name}" (${fontName}, ${fontSize}px, ${alignChoice.name}, leading ${leading}px) with randomized anchor point [${randAnchorX}, ${randAnchorY}] centered in viewport with red cross child.`);
         return layer;
     }
     global.createDummyTextLayer = createDummyTextLayer;
