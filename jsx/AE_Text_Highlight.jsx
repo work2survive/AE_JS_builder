@@ -2250,7 +2250,7 @@
 
         // 9. If Point Text: add line breaks formatted to maxCharsPerLine so it doesn't stick out of the viewport
         var approxCharW = fontSize * 0.54;
-        var maxCharsPerLine = Math.max(40, Math.floor((w * 0.95) / approxCharW));
+        var maxCharsPerLine = Math.max(35, Math.min(75, Math.floor((w * 0.85) / approxCharW)));
 
         var formattedText = isBox
             ? wordWrapToBoxWidth(rawDummy, w, fontSize, f, 0)
@@ -2963,31 +2963,20 @@
 
             var textLayer = getSelectedTextLayer(comp);
             if (!textLayer) {
-                // Auto create dummy if nothing selected
-                if (app.beginUndoGroup) app.beginUndoGroup("Auto-Generate Dummy & Build");
-                try {
-                    var f = (ddDummyFont && ddDummyFont.selection) ? ddDummyFont.selection.text : "Georgia";
-                    var a = (ddDummyAlign && ddDummyAlign.selection) ? ddDummyAlign.selection.text.toLowerCase() : "random";
-                    textLayer = createDummyTextBoxLayer(comp, f, a);
-                } catch (eCreate) {
-                    alert("No text layer selected and unable to create dummy text.");
-                    if (app.endUndoGroup) app.endUndoGroup();
-                    return;
-                }
-            } else {
-                if (app.beginUndoGroup) app.beginUndoGroup("Build Highlights");
+                alert("Please select a text layer first, or click '🎲 Create Dummy Text Box' to generate one.");
+                return;
             }
 
-            try {
-                var rawTerms = txtTargets.text;
-                var terms = parseHighlightTerms(rawTerms);
-                if (terms.length === 0) {
-                    var sampleRaw = getTextLayerString(textLayer) || LOREM_IPSUM_RAW;
-                    var autoPick = extractRandomWordsAndSentence(sampleRaw);
-                    terms = autoPick.words.concat([autoPick.sentence]);
-                    txtTargets.text = terms.join("\n");
-                }
+            var rawTerms = txtTargets.text;
+            var terms = parseHighlightTerms(rawTerms);
+            if (terms.length === 0) {
+                alert("Please enter target words or sentences to highlight, or click '🎲 Auto-Pick Terms'.");
+                return;
+            }
 
+            if (app.beginUndoGroup) app.beginUndoGroup("Build Highlights");
+
+            try {
                 var options = {
                     terms: terms,
                     highlightColor: pickerHighlight.getRgb(),
@@ -3048,6 +3037,9 @@
         win.createColorPickerGroup = createColorPickerGroup;
         win.pickerHighlight = pickerHighlight;
         win.pickerText = pickerText;
+        win.btnBuild = btnBuild;
+        win.btnCreateDummy = btnCreateDummy;
+        win.txtTargets = txtTargets;
 
         return win;
     }
