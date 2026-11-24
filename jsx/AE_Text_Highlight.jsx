@@ -1376,6 +1376,7 @@
                 }
                 addMirrorControl("ADBE Color Control", "Highlight Color", options.highlightColor);
                 addMirrorControl("ADBE Color Control", "Highlighted Text Color", options.highlightedTextColor);
+                addMirrorControl("ADBE Checkbox Control", "Change Highlighted Text Color", (options.changeTextColor !== false) ? 1 : 0);
                 addMirrorControl("ADBE Slider Control", "Highlight Opacity", options.opacity);
                 addMirrorControl("ADBE Slider Control", "Padding X", options.paddingX);
                 addMirrorControl("ADBE Slider Control", "Thickness Y", options.thicknessY);
@@ -1390,8 +1391,8 @@
                 if (innerShape) {
                     var innerFx = innerShape.property("ADBE Effect Parade") || innerShape.property("Effects");
                     var effectNames = [
-                        "Highlight Color", "Highlighted Text Color", "Highlight Opacity",
-                        "Padding X", "Thickness Y", "Roundness", "Offset X", "Offset Y"
+                        "Highlight Color", "Highlighted Text Color", "Change Highlighted Text Color",
+                        "Highlight Opacity", "Padding X", "Thickness Y", "Roundness", "Offset X", "Offset Y"
                     ];
                     for (var en = 0; en < effectNames.length; en++) {
                         var eName = effectNames[en];
@@ -1435,6 +1436,7 @@
         var terms = options.terms || [];
         var highlightColor = options.highlightColor || [1.0, 0.16, 0.43];
         var highlightedTextColor = options.highlightedTextColor || [1.0, 1.0, 1.0];
+        var changeTextColor = (options.changeTextColor !== false);
         var padX = (typeof options.paddingX === "number") ? options.paddingX : 6;
         var thickY = (typeof options.thicknessY === "number") ? options.thicknessY : 4;
         var roundness = (typeof options.roundness === "number") ? options.roundness : 6;
@@ -1572,7 +1574,7 @@
                     var segX = lineLeftX + prefixAdv;
 
                     var segLayer = comp.layers.addText(seg.text);
-                    var segColor = seg.isHighlight ? highlightedTextColor : props.fillColor;
+                    var segColor = (seg.isHighlight && changeTextColor) ? highlightedTextColor : props.fillColor;
                     applyTextDocCopy(segLayer, props.textDoc, seg.text, segColor);
 
                     segLayer.name = origLayer.name + " " + (seg.isHighlight ? "[HL-Target] " : "[HL-Text] ") + seg.text.substr(0, 16);
@@ -1621,6 +1623,7 @@
 
             addMasterControl("ADBE Color Control", "Highlight Color", highlightColor);
             addMasterControl("ADBE Color Control", "Highlighted Text Color", highlightedTextColor);
+            addMasterControl("ADBE Checkbox Control", "Change Highlighted Text Color", changeTextColor ? 1 : 0);
             addMasterControl("ADBE Slider Control", "Highlight Opacity", opacity);
             addMasterControl("ADBE Slider Control", "Padding X", padX);
             addMasterControl("ADBE Slider Control", "Thickness Y", thickY);
@@ -1693,10 +1696,16 @@
                     var txtProp = box.layer.property("Source Text");
                     if (txtProp) {
                         var shapeRef = 'thisComp.layer("' + shapeLayer.name.replace(/"/g, '\\"') + '")';
+                        var origColorStr = '[' + props.fillColor.join(', ') + ']';
                         txtProp.expression = [
                             'var doc = value;',
                             'try {',
-                            '    doc.fillColor = ' + shapeRef + '.effect("Highlighted Text Color")(1).value;',
+                            '    var en = ' + shapeRef + '.effect("Change Highlighted Text Color")(1).value;',
+                            '    if (en > 0) {',
+                            '        doc.fillColor = ' + shapeRef + '.effect("Highlighted Text Color")(1).value;',
+                            '    } else {',
+                            '        doc.fillColor = ' + origColorStr + ';',
+                            '    }',
                             '} catch(e) {}',
                             'doc;'
                         ].join('\n');
@@ -1733,6 +1742,7 @@
                 precomposeWithZeroShift(comp, origLayer, props, createdLayers, precompName, shapeLayer, {
                     highlightColor: highlightColor,
                     highlightedTextColor: highlightedTextColor,
+                    changeTextColor: changeTextColor,
                     opacity: opacity,
                     paddingX: padX,
                     thicknessY: thickY,
@@ -1783,6 +1793,7 @@
         var terms = options.terms || [];
         var highlightColor = options.highlightColor || [1.0, 0.16, 0.43];
         var highlightedTextColor = options.highlightedTextColor || [1.0, 1.0, 1.0];
+        var changeTextColor = (options.changeTextColor !== false);
         var padX = (typeof options.paddingX === "number") ? options.paddingX : 6;
         var thickY = (typeof options.thicknessY === "number") ? options.thicknessY : 4;
         var roundness = (typeof options.roundness === "number") ? options.roundness : 6;
@@ -1905,6 +1916,7 @@
 
             addMasterControl("ADBE Color Control", "Highlight Color", highlightColor);
             addMasterControl("ADBE Color Control", "Highlighted Text Color", highlightedTextColor);
+            addMasterControl("ADBE Checkbox Control", "Change Highlighted Text Color", changeTextColor ? 1 : 0);
             addMasterControl("ADBE Slider Control", "Highlight Opacity", opacity);
             addMasterControl("ADBE Slider Control", "Padding X", padX);
             addMasterControl("ADBE Slider Control", "Thickness Y", thickY);
@@ -1987,7 +1999,7 @@
                 }
             } catch (eMove) {}
 
-            // Color highlight on intact text layer via Text Animator (if supported)
+            // Color highlight on intact text layer via Text Animator (targeting strictly matched character ranges)
             try {
                 var textPropGroup = origLayer.property("ADBE Text Properties");
                 var animators = textPropGroup ? textPropGroup.property("ADBE Text Animators") : null;
@@ -1996,15 +2008,99 @@
                     if (existingAnim) {
                         try { existingAnim.remove(); } catch (eER) {}
                     }
-                    var anim = animators.addProperty("ADBE Text Animator");
-                    if (anim) {
-                        anim.name = "Highlight Text Color";
-                        var animProps = anim.property("ADBE Text Animator Properties");
-                        var fillProp = animProps ? animProps.addProperty("ADBE Text Fill Color") : null;
-                        if (fillProp) {
-                            fillProp.setValue(highlightedTextColor);
-                            var shapeRef = 'thisComp.layer("' + shapeLayer.name.replace(/"/g, '\\"') + '")';
-                            fillProp.expression = 'try { ' + shapeRef + '.effect("Highlighted Text Color")(1).value; } catch(e) { value; }';
+                    if (changeTextColor && terms.length > 0) {
+                        var fullText = getTextLayerString(origLayer);
+                        var lowerFull = fullText.toLowerCase();
+                        var targetRanges = [];
+
+                        for (var tIdx = 0; tIdx < terms.length; tIdx++) {
+                            var tTerm = terms[tIdx];
+                            if (!tTerm || tTerm.length === 0) continue;
+                            var lowerTerm = tTerm.toLowerCase();
+                            var searchStart = 0;
+                            while (searchStart < fullText.length) {
+                                var matchIdx = lowerFull.indexOf(lowerTerm, searchStart);
+                                if (matchIdx === -1) break;
+                                targetRanges.push({
+                                    start: matchIdx,
+                                    end: matchIdx + tTerm.length
+                                });
+                                searchStart = matchIdx + Math.max(1, tTerm.length);
+                            }
+                        }
+
+                        if (targetRanges.length > 0) {
+                            // Merge overlapping or adjacent ranges
+                            targetRanges.sort(function (a, b) { return a.start - b.start; });
+                            var mergedRanges = [];
+                            var currR = { start: targetRanges[0].start, end: targetRanges[0].end };
+                            for (var rIdx = 1; rIdx < targetRanges.length; rIdx++) {
+                                var nxtR = targetRanges[rIdx];
+                                if (nxtR.start <= currR.end) {
+                                    currR.end = Math.max(currR.end, nxtR.end);
+                                } else {
+                                    mergedRanges.push(currR);
+                                    currR = { start: nxtR.start, end: nxtR.end };
+                                }
+                            }
+                            mergedRanges.push(currR);
+
+                            var anim = animators.addProperty("ADBE Text Animator");
+                            if (anim) {
+                                anim.name = "Highlight Text Color";
+                                var animProps = anim.property("ADBE Text Animator Properties");
+                                var fillProp = animProps ? animProps.addProperty("ADBE Text Fill Color") : null;
+                                if (fillProp) {
+                                    fillProp.setValue(highlightedTextColor);
+                                    var shapeRef = 'thisComp.layer("' + shapeLayer.name.replace(/"/g, '\\"') + '")';
+                                    var origColorStr = '[' + props.fillColor.join(', ') + ']';
+                                    fillProp.expression = [
+                                        'var en = 1;',
+                                        'try { en = ' + shapeRef + '.effect("Change Highlighted Text Color")(1).value; } catch(e) {}',
+                                        'if (en > 0) {',
+                                        '    try { ' + shapeRef + '.effect("Highlighted Text Color")(1).value; } catch(e2) { value; }',
+                                        '} else {',
+                                        '    ' + origColorStr + ';',
+                                        '}'
+                                    ].join('\n');
+                                }
+
+                                var selectors = anim.property("ADBE Text Selectors") || anim.property("Selectors");
+                                if (selectors) {
+                                    var totalChars = Math.max(1, fullText.length);
+                                    for (var rg = 0; rg < mergedRanges.length; rg++) {
+                                        var mRange = mergedRanges[rg];
+                                        var sel = (rg === 0 && selectors.numProperties > 0)
+                                            ? selectors.property(1)
+                                            : selectors.addProperty("ADBE Text Selector");
+                                        if (sel) {
+                                            sel.name = "Range " + (rg + 1) + " (" + mRange.start + "-" + mRange.end + ")";
+                                            var adv = sel.property("ADBE Text Range Advanced");
+                                            var usedIndex = false;
+                                            if (adv) {
+                                                var uProp = adv.property("ADBE Text Range Units2");
+                                                if (uProp) {
+                                                    try {
+                                                        uProp.setValue(2); // 2 = Index
+                                                        usedIndex = true;
+                                                    } catch (eU) {}
+                                                }
+                                            }
+
+                                            var pStart = sel.property("ADBE Text Index Start") || sel.property("ADBE Text Percent Start") || sel.property("Start");
+                                            var pEnd = sel.property("ADBE Text Index End") || sel.property("ADBE Text Percent End") || sel.property("End");
+
+                                            if (usedIndex) {
+                                                if (pStart) pStart.setValue(mRange.start);
+                                                if (pEnd) pEnd.setValue(mRange.end);
+                                            } else {
+                                                if (pStart) pStart.setValue((mRange.start / totalChars) * 100);
+                                                if (pEnd) pEnd.setValue((mRange.end / totalChars) * 100);
+                                            }
+                                        }
+                                    }
+                                }
+                            }
                         }
                     }
                 }
@@ -2024,6 +2120,7 @@
                 precomposeWithZeroShift(comp, origLayer, props, precompLayers, precompName, shapeLayer, {
                     highlightColor: highlightColor,
                     highlightedTextColor: highlightedTextColor,
+                    changeTextColor: changeTextColor,
                     opacity: opacity,
                     paddingX: padX,
                     thicknessY: thickY,
@@ -2235,15 +2332,23 @@
     // 15. Interactive Color Picker Component
     // Reference: custom_rounded_rect.jsx & windows-color-picker.js
     // -------------------------------------------------------------------------
-    function createColorPickerGroup(parent, labelText, defaultHex, onChangeCallback) {
+    function createColorPickerGroup(parent, labelText, defaultHex, onChangeCallback, withCheckbox, defaultChecked) {
         var grp = parent.add("group");
         grp.orientation = "row";
         grp.alignChildren = ["left", "center"];
         grp.alignment = ["fill", "top"];
         grp.spacing = 8;
 
-        var lbl = grp.add("statictext", undefined, labelText);
-        lbl.preferredSize = [135, 22];
+        var chkBox = null;
+        var lbl = null;
+        if (withCheckbox) {
+            chkBox = grp.add("checkbox", undefined, labelText);
+            chkBox.preferredSize = [165, 22];
+            chkBox.value = (defaultChecked !== false);
+        } else {
+            lbl = grp.add("statictext", undefined, labelText);
+            lbl.preferredSize = [165, 22];
+        }
 
         var btnSwatch = grp.add("button", undefined, "");
         btnSwatch.preferredSize = [40, 22];
@@ -2256,12 +2361,30 @@
         var curHex = defaultHex || "#FF2A6D";
         var curRgb = hexToRgb(curHex);
 
+        function updateEnabledState() {
+            var isEn = chkBox ? chkBox.value : true;
+            btnSwatch.enabled = isEn;
+            txtHex.enabled = isEn;
+            refresh();
+        }
+
+        if (chkBox) {
+            chkBox.onClick = function () {
+                updateEnabledState();
+                if (typeof onChangeCallback === "function") {
+                    onChangeCallback(curRgb, curHex, chkBox.value);
+                }
+            };
+        }
+
         btnSwatch.onDraw = function () {
             try {
                 var g = this.graphics;
+                var isEn = chkBox ? chkBox.value : true;
                 var rgb = hexToRgb(curHex);
-                var brush = g.newBrush(g.BrushType.SOLID_COLOR, [rgb[0], rgb[1], rgb[2], 1.0]);
-                var pen = g.newPen(g.PenType.SOLID_COLOR, [0.3, 0.3, 0.3, 1.0], 1);
+                var alpha = isEn ? 1.0 : 0.4;
+                var brush = g.newBrush(g.BrushType.SOLID_COLOR, [rgb[0], rgb[1], rgb[2], alpha]);
+                var pen = g.newPen(g.PenType.SOLID_COLOR, isEn ? [0.3, 0.3, 0.3, 1.0] : [0.5, 0.5, 0.5, 0.5], 1);
                 g.newPath();
                 g.rectPath(0, 0, this.size ? this.size[0] : 40, this.size ? this.size[1] : 22);
                 g.fillPath(brush);
@@ -2276,9 +2399,11 @@
 
             try {
                 if (btnSwatch.domElement) {
+                    var isEn = chkBox ? chkBox.value : true;
                     btnSwatch.domElement.style.backgroundColor = curHex;
-                    btnSwatch.domElement.style.border = "1px solid #555";
-                    btnSwatch.domElement.style.cursor = "pointer";
+                    btnSwatch.domElement.style.border = isEn ? "1px solid #555" : "1px dashed #444";
+                    btnSwatch.domElement.style.opacity = isEn ? "1.0" : "0.45";
+                    btnSwatch.domElement.style.cursor = isEn ? "pointer" : "not-allowed";
                 }
             } catch (eDOM) {}
         }
@@ -2294,11 +2419,13 @@
             refresh();
 
             if (triggerChange !== false && typeof onChangeCallback === "function") {
-                onChangeCallback(curRgb, curHex);
+                onChangeCallback(curRgb, curHex, chkBox ? chkBox.value : true);
             }
         }
 
         btnSwatch.onClick = function () {
+            if (chkBox && !chkBox.value) return;
+
             // 1. Direct browser emulator Windows Color Picker support
             var fnPicker = null;
             if (typeof window !== "undefined" && typeof window.openWindowsColorPicker === "function") {
@@ -2355,6 +2482,7 @@
         };
 
         txtHex.onChange = function () {
+            if (chkBox && !chkBox.value) return;
             var val = this.text.replace(/^\s+|\s+$/g, "");
             if (val.indexOf("#") !== 0) val = "#" + val;
             if (/^#[0-9A-Fa-f]{6}$/.test(val)) {
@@ -2362,14 +2490,23 @@
             }
         };
 
-        // Initialize swatch appearance without triggering onChange
+        // Initialize swatch appearance and enabled state without triggering onChange
         setHex(defaultHex, false);
+        updateEnabledState();
 
         return {
             group: grp,
             button: btnSwatch,
             edittext: txtHex,
+            checkbox: chkBox,
             refresh: refresh,
+            isChecked: function () { return chkBox ? !!chkBox.value : true; },
+            setChecked: function (val) {
+                if (chkBox) {
+                    chkBox.value = !!val;
+                    updateEnabledState();
+                }
+            },
             getRgb: function () { return curRgb; },
             getHex: function () { return curHex; },
             setHex: function (h) { setHex(h, true); }
@@ -2577,8 +2714,8 @@
         pnlColors.spacing = 6;
         pnlColors.margins = [8, 6, 8, 6];
 
-        var pickerHighlight = createColorPickerGroup(pnlColors, "Highlight Box Fill:", "#FF2A6D");
-        var pickerText = createColorPickerGroup(pnlColors, "Highlighted Text Color:", "#FFFFFF");
+        var pickerHighlight = createColorPickerGroup(pnlColors, "Highlight Box Fill:", "#FF2A6D", null, false);
+        var pickerText = createColorPickerGroup(pnlColors, "Highlighted Text Color:", "#FFFFFF", null, true, true);
 
         // Curated Presets Row
         var grpPresetRow = pnlColors.add("group");
@@ -2841,6 +2978,7 @@
                     terms: terms,
                     highlightColor: pickerHighlight.getRgb(),
                     highlightedTextColor: pickerText.getRgb(),
+                    changeTextColor: pickerText.isChecked(),
                     paddingX: sldPadX.getValue(),
                     thicknessY: sldThickY.getValue(),
                     roundness: sldRound.getValue(),
@@ -2893,6 +3031,9 @@
         win.buildCalculationHighlightsRig = buildCalculationHighlightsRig;
         win.createDummyTextBoxLayer = createDummyTextBoxLayer;
         win.removeHighlightsAndRestoreOriginal = removeHighlightsAndRestoreOriginal;
+        win.createColorPickerGroup = createColorPickerGroup;
+        win.pickerHighlight = pickerHighlight;
+        win.pickerText = pickerText;
 
         return win;
     }
