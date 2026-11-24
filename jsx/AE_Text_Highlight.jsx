@@ -2987,26 +2987,42 @@
         btnBuild.onClick = function () {
             var comp = app.project ? app.project.activeItem : null;
             if (!comp || !(comp instanceof CompItem)) {
-                alert("Please open an active composition first.");
-                return;
+                if (app.project && app.project.items && typeof app.project.items.addComp === "function") {
+                    comp = app.project.items.addComp("AE Text Highlight Demo", 1920, 1080, 1.0, 10.0, 30.0);
+                    if (comp.openInViewer) comp.openInViewer();
+                } else {
+                    alert("Please open an active composition first.");
+                    return;
+                }
             }
 
             var textLayer = getSelectedTextLayer(comp);
             if (!textLayer) {
-                alert("Please select a text layer first, or click '🎲 Create Dummy Text Box' to generate one.");
-                return;
+                // If user clicks "build highlight" without any text being selected, or created before,
+                // only then we will create a new random text.
+                if (app.beginUndoGroup) app.beginUndoGroup("Auto-Generate Dummy & Build");
+                try {
+                    var f = (ddDummyFont && ddDummyFont.selection) ? ddDummyFont.selection.text : "Georgia";
+                    var a = (ddDummyAlign && ddDummyAlign.selection) ? ddDummyAlign.selection.text.toLowerCase() : "random";
+                    textLayer = createDummyTextBoxLayer(comp, f, a);
+                } catch (eCreate) {
+                    alert("Unable to create text layer: " + eCreate.toString());
+                    if (app.endUndoGroup) app.endUndoGroup();
+                    return;
+                }
+            } else {
+                if (app.beginUndoGroup) app.beginUndoGroup("Build Highlights");
             }
-
-            var rawTerms = txtTargets.text;
-            var terms = parseHighlightTerms(rawTerms);
-            if (terms.length === 0) {
-                alert("Please enter target words or sentences to highlight, or click '🎲 Auto-Pick Terms'.");
-                return;
-            }
-
-            if (app.beginUndoGroup) app.beginUndoGroup("Build Highlights");
 
             try {
+                var rawTerms = txtTargets.text;
+                var terms = parseHighlightTerms(rawTerms);
+                if (terms.length === 0) {
+                    var sampleRaw = getTextLayerString(textLayer) || LOREM_IPSUM_RAW;
+                    var autoPick = extractRandomWordsAndSentence(sampleRaw);
+                    terms = autoPick.words.concat([autoPick.sentence]);
+                    txtTargets.text = terms.join("\n");
+                }
                 var options = {
                     terms: terms,
                     highlightColor: pickerHighlight.getRgb(),
