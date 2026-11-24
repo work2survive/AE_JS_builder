@@ -147,6 +147,26 @@
         return lines.join("\n");
     }
 
+    function formatPointTextWithLineBreaks(text, maxChars) {
+        var limit = maxChars || 26;
+        var words = text.split(/\s+/);
+        var lines = [];
+        var cur = "";
+        for (var i = 0; i < words.length; i++) {
+            var w = words[i];
+            if (cur.length === 0) {
+                cur = w;
+            } else if ((cur.length + 1 + w.length) <= limit) {
+                cur += " " + w;
+            } else {
+                lines.push(cur);
+                cur = w;
+            }
+        }
+        if (cur.length > 0) lines.push(cur);
+        return lines.join("\r");
+    }
+
     // High-precision measurement engine matching the browser SVG engine and AE calibrated tables
     function measureTextExact(str, fontSize, fontName) {
         if (!str) return 0;
@@ -1120,11 +1140,16 @@
         }
 
         var padVal = (typeof pad === "number") ? pad : 30;
-        var totalW = targetW || 800;
-        var baseTextW = Math.max(20, totalW - (padVal * 2));
+        var compW = (comp && typeof comp.width === "number") ? comp.width : 1920;
+
+        // Make random dummy text wider across composition
+        var baseTextW = Math.max(targetW ? (targetW - padVal * 2) : 0, Math.round(compW * 0.62));
         var widthVariation = 0.70 + (Math.random() * 0.60); // ±30% variation (0.70 to 1.30)
-        var textW = Math.max(100, Math.round(baseTextW * widthVariation));
+        var textW = Math.min(compW - (padVal * 2) - 40, Math.round(baseTextW * widthVariation));
         var textH = (autoHeight || !targetH) ? 360 : Math.max(20, targetH - (padVal * 2));
+
+        // Randomize whether created as Point Text or Paragraph (Box) Text (50/50 probability)
+        var isBoxTextMode = (Math.random() < 0.5);
 
         // Randomize typography: font, alignment, font size (±15%), leading (±15%), and color
         var fontPick = getRandomFontInfo();
@@ -1139,9 +1164,15 @@
         var leadingFactor = 0.85 + (Math.random() * 0.30); // ±15% variation
         var randomizedLeading = Math.round(baseLeading * leadingFactor * 10) / 10;
 
-        var dummyText = DUMMY_TEXT_50.substring(0, 50);
+        // Base 50-character dummy text
+        var rawDummyText = DUMMY_TEXT_50.substring(0, 50);
+
+        // If Point Text: add line breaks so it does not stretch out or stick out of viewport
+        var dummyText = isBoxTextMode ? rawDummyText : formatPointTextWithLineBreaks(rawDummyText, 26);
+
         var dummyLayer = comp.layers.addText(dummyText);
-        dummyLayer.name = "Dummy Text - " + fontPick.name + " (" + alignPick.name + ", " + randomizedFontSize + "px, " + colorPick.name + ")";
+        var typeLabel = isBoxTextMode ? "Box" : "Point";
+        dummyLayer.name = "Dummy Text - " + fontPick.name + " (" + typeLabel + ", " + alignPick.name + ", " + randomizedFontSize + "px, " + colorPick.name + ")";
 
         var textProp = dummyLayer.property("Source Text");
         var doc = null;
@@ -1168,41 +1199,51 @@
                 doc.justification = alignPick.val;
             } catch (eJ) {}
 
-            try {
-                if (typeof doc.setBoxTextSize === "function") {
-                    doc.setBoxTextSize([textW, textH]);
-                } else if (typeof doc.boxText !== "undefined") {
-                    doc.boxText = true;
-                    doc.boxTextSize = [textW, textH];
-                }
-            } catch (eBox) {}
+            if (isBoxTextMode) {
+                try {
+                    if (typeof doc.setBoxTextSize === "function") {
+                        doc.setBoxTextSize([textW, textH]);
+                    } else if (typeof doc.boxText !== "undefined") {
+                        doc.boxText = true;
+                        doc.boxTextSize = [textW, textH];
+                    }
+                } catch (eBox) {}
+            } else {
+                try {
+                    if (typeof doc.boxText !== "undefined") {
+                        doc.boxText = false;
+                    }
+                } catch (ePt) {}
+            }
 
             try {
                 textProp.setValue(doc);
             } catch (eSet) {}
         }
 
-        // If box text is not supported by host engine, word wrap to fit width
-        try {
-            var r = dummyLayer.sourceRectAtTime(0, false);
-            if (!r || r.width > (textW * 1.4)) {
-                var wrapped = wrapTextToWidth(dummyText, textW, randomizedFontSize, fontPick.font);
-                if (doc) {
-                    doc.text = wrapped;
-                    textProp.setValue(doc);
-                }
-            }
-        } catch (eWrap) {}
-
-        // Place text box in the middle of the viewport
-        try {
-            var isBox = false;
+        // If box text is requested but not supported by host engine, word wrap to fit width
+        if (isBoxTextMode) {
             try {
-                var dNow = dummyLayer.property("Source Text").value;
-                if (dNow && dNow.boxText) isBox = true;
+                var r = dummyLayer.sourceRectAtTime(0, false);
+                if (!r || r.width > (textW * 1.4)) {
+                    var wrapped = wrapTextToWidth(dummyText, textW, randomizedFontSize, fontPick.font);
+                    if (doc) {
+                        doc.text = wrapped;
+                        textProp.setValue(doc);
+                    }
+                }
+            } catch (eWrap) {}
+        }
+
+        // Place text in the middle of the viewport
+        try {
+            var checkDoc = dummyLayer.property("Source Text").value;
+            var isActuallyBox = false;
+            try {
+                if (checkDoc && checkDoc.boxText) isActuallyBox = true;
             } catch (eB) {}
 
-            if (isBox) {
+            if (isActuallyBox) {
                 dummyLayer.transform.anchorPoint.setValue([textW / 2, textH / 2, 0]);
                 dummyLayer.transform.position.setValue([comp.width / 2, comp.height / 2, 0]);
             } else {

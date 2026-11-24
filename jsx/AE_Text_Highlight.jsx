@@ -2074,6 +2074,26 @@
         ];
     }
 
+    function formatPointTextWithLineBreaks(text, maxChars) {
+        var limit = maxChars || 26;
+        var words = text.split(/\s+/);
+        var lines = [];
+        var cur = "";
+        for (var i = 0; i < words.length; i++) {
+            var w = words[i];
+            if (cur.length === 0) {
+                cur = w;
+            } else if ((cur.length + 1 + w.length) <= limit) {
+                cur += " " + w;
+            } else {
+                lines.push(cur);
+                cur = w;
+            }
+        }
+        if (cur.length > 0) lines.push(cur);
+        return lines.join("\r");
+    }
+
     function createDummyTextBoxLayer(comp, fontName, align, boxW, boxH) {
         if (!comp) {
             comp = app.project.activeItem;
@@ -2083,10 +2103,14 @@
             }
         }
 
-        var baseBoxW = boxW || 950;
+        var compW = (comp && typeof comp.width === "number") ? comp.width : 1920;
+        var baseBoxW = Math.max(800, Math.round(compW * 0.60));
         var widthVariation = 0.70 + (Math.random() * 0.60); // ±30% variation (0.70 to 1.30)
-        var w = Math.max(100, Math.round(baseBoxW * widthVariation));
+        var w = Math.min(compW - 80, Math.round(baseBoxW * widthVariation));
         var h = boxH || 450;
+
+        // Randomize whether created as Point Text or Paragraph (Box) Text (50/50 probability)
+        var isBox = (Math.random() < 0.5);
 
         // 1. Randomize Font (or resolve specified font)
         var f = fontName;
@@ -2114,10 +2138,16 @@
         // 5. Randomize Text Color
         var textColor = getRandomTextColor();
 
-        var dummyText = "Lorem ipsum dolor sit amet, consectetur adipiscing".substring(0, 50);
-        var formattedText = wordWrapToBoxWidth(dummyText, w, fontSize, f, 0);
+        // Base 50-character dummy text
+        var rawDummy = "Lorem ipsum dolor sit amet, consectetur adipiscing".substring(0, 50);
+
+        // If Point Text: add line breaks so it does not stretch out or stick out of viewport
+        var dummyText = isBox ? rawDummy : formatPointTextWithLineBreaks(rawDummy, 26);
+        var formattedText = isBox ? wordWrapToBoxWidth(dummyText, w, fontSize, f, 0) : dummyText;
+
         var dummy = comp.layers.addText(formattedText);
-        dummy.name = "Dummy Text - " + f + " " + fontSize + "pt (" + a + ")";
+        var typeLabel = isBox ? "Box" : "Point";
+        dummy.name = "Dummy Text - " + f + " " + fontSize + "pt (" + typeLabel + ", " + a + ")";
 
         // Setup typography document
         try {
@@ -2128,6 +2158,7 @@
             if (prop) {
                 var doc = prop.value;
                 if (doc) {
+                    doc.text = formattedText;
                     doc.fontSize = fontSize;
                     doc.font = f;
                     doc.leading = leading;
@@ -2142,27 +2173,37 @@
                     } else {
                         doc.justification = (a === "center") ? 7414 : ((a === "right") ? 7413 : 7412);
                     }
-                    try {
-                        if (typeof doc.setBoxTextSize === "function") {
-                            doc.setBoxTextSize([w, h]);
-                        } else if (typeof doc.boxText !== "undefined") {
-                            doc.boxText = true;
-                            doc.boxTextSize = [w, h];
-                        }
-                    } catch (eBox) {}
+
+                    if (isBox) {
+                        try {
+                            if (typeof doc.setBoxTextSize === "function") {
+                                doc.setBoxTextSize([w, h]);
+                            } else if (typeof doc.boxText !== "undefined") {
+                                doc.boxText = true;
+                                doc.boxTextSize = [w, h];
+                            }
+                        } catch (eBox) {}
+                    } else {
+                        try {
+                            if (typeof doc.boxText !== "undefined") {
+                                doc.boxText = false;
+                            }
+                        } catch (ePt) {}
+                    }
+
                     prop.setValue(doc);
                 }
             }
         } catch (eStyling) {}
 
-        // Place text box in the middle of the viewport
+        // Place text in the middle of the viewport
         var centerPos = [comp.width / 2, comp.height / 2, 0];
         try {
             var propST = dummy.property("Source Text");
-            var isBox = false;
-            if (propST && propST.value && propST.value.boxText) isBox = true;
+            var isActuallyBox = false;
+            if (propST && propST.value && propST.value.boxText) isActuallyBox = true;
 
-            if (isBox) {
+            if (isActuallyBox) {
                 dummy.transform.anchorPoint.setValue([w / 2, h / 2, 0]);
                 dummy.transform.position.setValue(centerPos);
             } else {

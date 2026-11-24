@@ -815,24 +815,55 @@
         return aligns[Math.floor(Math.random() * aligns.length)];
     }
 
+    function formatPointTextWithLineBreaks(text, maxChars) {
+        var limit = maxChars || 26;
+        var words = text.split(/\s+/);
+        var lines = [];
+        var cur = "";
+        for (var i = 0; i < words.length; i++) {
+            var w = words[i];
+            if (cur.length === 0) {
+                cur = w;
+            } else if ((cur.length + 1 + w.length) <= limit) {
+                cur += " " + w;
+            } else {
+                lines.push(cur);
+                cur = w;
+            }
+        }
+        if (cur.length > 0) lines.push(cur);
+        return lines.join("\r");
+    }
+
     // -------------------------------------------------------------------------
     // 7. Dummy Text Box & Demo Composition Generator
     // -------------------------------------------------------------------------
 
     /**
-     * Creates a dummy text box centered in the viewport with randomized font, alignment, size, leading & color
+     * Creates a dummy text layer (point or box) centered in the viewport with randomized typography
      */
     function createDummyTextBox(comp) {
         if (!comp) return null;
         var centerPos = [comp.width / 2, comp.height / 2, 0];
-        var baseBoxW = 460;
+        var compW = (comp && typeof comp.width === "number") ? comp.width : 1920;
+
+        // Make dummy text wider across composition
+        var baseBoxW = Math.max(700, Math.round(compW * 0.58));
         var widthVariation = 0.70 + (Math.random() * 0.60); // ±30% variation (0.70 to 1.30)
-        var boxW = Math.max(100, Math.round(baseBoxW * widthVariation));
-        var boxH = 180;
-        var dummyText = "Lorem ipsum dolor sit amet, consectetur adipiscing".substring(0, 50);
+        var boxW = Math.min(compW - 80, Math.round(baseBoxW * widthVariation));
+        var boxH = 220;
+
+        // Randomize whether created as Point Text or Paragraph (Box) Text (50/50 probability)
+        var isBox = (Math.random() < 0.5);
+
+        // Base 50-character dummy text
+        var rawDummy = "Lorem ipsum dolor sit amet, consectetur adipiscing".substring(0, 50);
+
+        // If Point Text: add line breaks so it does not stretch out or stick out of viewport
+        var dummyText = isBox ? rawDummy : formatPointTextWithLineBreaks(rawDummy, 26);
 
         var textLayer;
-        if (typeof comp.layers.addBoxText === "function") {
+        if (isBox && typeof comp.layers.addBoxText === "function") {
             try {
                 textLayer = comp.layers.addBoxText([boxW, boxH], dummyText);
             } catch (eB) {
@@ -855,10 +886,12 @@
         var leadingFactor = 0.85 + (Math.random() * 0.30); // ±15% variation
         var randomizedLeading = Math.round(baseLeading * leadingFactor * 10) / 10;
 
-        textLayer.name = "Dummy Text - " + fontPick.name + " (" + alignPick.name + ", " + randomizedFontSize + "px, " + colorPick.name + ")";
+        var typeLabel = isBox ? "Box" : "Point";
+        textLayer.name = "Dummy Text - " + fontPick.name + " (" + typeLabel + ", " + alignPick.name + ", " + randomizedFontSize + "px, " + colorPick.name + ")";
 
         var doc = textLayer.property("Source Text").value;
         if (doc) {
+            doc.text = dummyText;
             doc.fontSize = randomizedFontSize;
             if (fontPick.fontObject) {
                 try { doc.fontObject = fontPick.fontObject; } catch (eFO) {}
@@ -873,18 +906,36 @@
             try {
                 doc.justification = alignPick.val;
             } catch (eJ) {}
+
+            if (isBox) {
+                try {
+                    if (typeof doc.setBoxTextSize === "function") {
+                        doc.setBoxTextSize([boxW, boxH]);
+                    } else if (typeof doc.boxText !== "undefined") {
+                        doc.boxText = true;
+                        doc.boxTextSize = [boxW, boxH];
+                    }
+                } catch (eBox) {}
+            } else {
+                try {
+                    if (typeof doc.boxText !== "undefined") {
+                        doc.boxText = false;
+                    }
+                } catch (ePt) {}
+            }
+
             textLayer.property("Source Text").setValue(doc);
         }
 
         // Place in the middle of the viewport
         try {
             var sr = textLayer.sourceRectAtTime(0, false);
-            var isBox = false;
+            var isActuallyBox = false;
             try {
                 var dVal = textLayer.property("Source Text").value;
-                if (dVal && dVal.boxText) isBox = true;
+                if (dVal && dVal.boxText) isActuallyBox = true;
             } catch (eB2) {}
-            if (isBox) {
+            if (isActuallyBox) {
                 textLayer.transform.anchorPoint.setValue([boxW / 2, boxH / 2, 0]);
             } else if (sr && sr.width > 0 && sr.height > 0) {
                 textLayer.transform.anchorPoint.setValue([sr.left + sr.width / 2, sr.top + sr.height / 2, 0]);
