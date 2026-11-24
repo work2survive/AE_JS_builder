@@ -2178,12 +2178,13 @@
     }
 
     function formatPointTextWithLineBreaks(text, maxChars) {
-        var limit = maxChars || 26;
-        var words = text.split(/\s+/);
+        var limit = maxChars || 75;
+        var words = text.replace(/[\r\n]+/g, " ").split(/\s+/);
         var lines = [];
         var cur = "";
         for (var i = 0; i < words.length; i++) {
             var w = words[i];
+            if (!w || w.length === 0) continue;
             if (cur.length === 0) {
                 cur = w;
             } else if ((cur.length + 1 + w.length) <= limit) {
@@ -2207,49 +2208,56 @@
         }
 
         var compW = (comp && typeof comp.width === "number") ? comp.width : 1920;
-        var baseBoxW = Math.max(800, Math.round(compW * 0.60));
-        var widthVariation = 0.70 + (Math.random() * 0.60); // ±30% variation (0.70 to 1.30)
-        var w = Math.min(compW - 80, Math.round(baseBoxW * widthVariation));
-        var h = boxH || 450;
+        var compH = (comp && typeof comp.height === "number") ? comp.height : 1080;
 
-        // Randomize whether created as Point Text or Paragraph (Box) Text (50/50 probability)
+        // 1. Make the random dummy text wider: spans 76% to 88% of the composition viewport
+        var widthRatio = 0.76 + (Math.random() * 0.12); // [0.76, 0.88]
+        var w = boxW ? Math.max(boxW, Math.round(compW * widthRatio)) : Math.round(compW * widthRatio);
+        w = Math.min(compW - 120, Math.max(900, w));
+        var h = boxH || Math.max(380, Math.round(compH * 0.45));
+
+        // 2. Randomize whether created as Point Text or Paragraph (Box) Text (50/50 probability)
         var isBox = (Math.random() < 0.5);
 
-        // 1. Randomize Font (or resolve specified font)
+        // 3. Randomize Font (or resolve specified font)
         var f = fontName;
         if (!f || typeof f !== "string" || f === "random" || f.indexOf("random") !== -1 || f.indexOf("Shuffle") !== -1 || f === "") {
             f = TYPICAL_FONTS[Math.floor(Math.random() * TYPICAL_FONTS.length)];
         }
 
-        // 2. Randomize Alignment
+        // 4. Randomize Alignment
         var alignOptions = ["left", "center", "right"];
         var a = (align && typeof align === "string") ? align.toLowerCase() : "random";
         if (a === "random" || a.indexOf("random") !== -1 || a.indexOf("shuffle") !== -1 || a === "") {
             a = alignOptions[Math.floor(Math.random() * alignOptions.length)];
         }
 
-        // 3. Randomize Size (±15% from base 34pt: range [29pt, 39pt])
+        // 5. Randomize Size (±15% from base 34pt: range [29pt, 39pt])
         var baseFontSize = 34;
         var sizeVariation = 1.0 + (Math.random() * 0.30 - 0.15); // [0.85, 1.15] (±15%)
         var fontSize = Math.max(18, Math.round(baseFontSize * sizeVariation));
 
-        // 4. Randomize Leading (±15% from default fontSize * 1.25)
+        // 6. Randomize Leading (±15% from default fontSize * 1.25)
         var baseLeading = fontSize * 1.25;
         var leadingVariation = 1.0 + (Math.random() * 0.30 - 0.15); // [0.85, 1.15] (±15%)
         var leading = Math.round(baseLeading * leadingVariation * 10) / 10;
 
-        // 5. Randomize Text Color
+        // 7. Randomize Text Color
         var textColor = getRandomTextColor();
 
-        // Base 50-character dummy text
-        var rawDummy = "Lorem ipsum dolor sit amet, consectetur adipiscing".substring(0, 50);
+        // 8. Substantial multi-sentence text so the paragraph and lines fill the wide span
+        var rawDummy = LOREM_IPSUM_RAW.substring(0, 420);
 
-        // If Point Text: add line breaks so it does not stretch out or stick out of viewport
-        var dummyText = isBox ? rawDummy : formatPointTextWithLineBreaks(rawDummy, 26);
-        var formattedText = isBox ? wordWrapToBoxWidth(dummyText, w, fontSize, f, 0) : dummyText;
+        // 9. If Point Text: add line breaks formatted to maxCharsPerLine so it doesn't stick out of the viewport
+        var approxCharW = fontSize * 0.54;
+        var maxCharsPerLine = Math.max(40, Math.floor((w * 0.95) / approxCharW));
+
+        var formattedText = isBox
+            ? wordWrapToBoxWidth(rawDummy, w, fontSize, f, 0)
+            : formatPointTextWithLineBreaks(rawDummy, maxCharsPerLine);
 
         var dummy = comp.layers.addText(formattedText);
-        var typeLabel = isBox ? "Box" : "Point";
+        var typeLabel = isBox ? "Box Text" : "Point Text";
         dummy.name = "Dummy Text - " + f + " " + fontSize + "pt (" + typeLabel + ", " + a + ")";
 
         // Setup typography document
@@ -2919,7 +2927,7 @@
             try {
                 var f = ddDummyFont.selection ? ddDummyFont.selection.text : "Georgia";
                 var a = ddDummyAlign.selection ? ddDummyAlign.selection.text.toLowerCase() : "random";
-                var dummy = createDummyTextBoxLayer(comp, f, a, 950, 450);
+                var dummy = createDummyTextBoxLayer(comp, f, a);
                 updateSelectionStatus();
             } catch (eD) {
                 alert("Error creating dummy text: " + eD.toString());
@@ -2960,7 +2968,7 @@
                 try {
                     var f = (ddDummyFont && ddDummyFont.selection) ? ddDummyFont.selection.text : "Georgia";
                     var a = (ddDummyAlign && ddDummyAlign.selection) ? ddDummyAlign.selection.text.toLowerCase() : "random";
-                    textLayer = createDummyTextBoxLayer(comp, f, a, 950, 450);
+                    textLayer = createDummyTextBoxLayer(comp, f, a);
                 } catch (eCreate) {
                     alert("No text layer selected and unable to create dummy text.");
                     if (app.endUndoGroup) app.endUndoGroup();
