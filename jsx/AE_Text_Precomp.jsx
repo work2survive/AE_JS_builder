@@ -221,37 +221,166 @@
         return total;
     }
 
-    function applyTextDocStyling(targetLayer, sampleDoc, textContent) {
+    function applyTextDocStyling(targetLayer, sampleDoc, textContent, sourceLayer) {
         if (!targetLayer) return;
         try {
             var prop = targetLayer.property("Source Text");
             if (!prop) return;
+
+            // Strategy 1: Direct native TextDocument assignment from source text layer
+            // Setting a cloned TextDocument directly preserves 100% font identity, fontObject,
+            // kerning, tracking, faux styles, and fills without triggering AE's font substitution.
+            var directDone = false;
+            try {
+                var docToSet = null;
+                if (sourceLayer && isTextLayer(sourceLayer)) {
+                    var sProp = sourceLayer.property("Source Text");
+                    if (sProp && sProp.value) {
+                        docToSet = sProp.value;
+                    }
+                } else if (sampleDoc && !sampleDoc.boxText) {
+                    docToSet = sampleDoc;
+                }
+
+                if (docToSet && !docToSet.boxText) {
+                    docToSet.text = textContent;
+                    prop.setValue(docToSet);
+                    var vCheck = prop.value;
+                    if (vCheck && vCheck.text === textContent) {
+                        directDone = true;
+                    }
+                }
+            } catch (eDir) {
+                directDone = false;
+            }
+
+            if (directDone) return;
+
+            // Strategy 2: Robust attribute-by-attribute transfer with FontObject priority
             var doc = prop.value;
             doc.text = textContent;
+
             if (sampleDoc) {
-                if (sampleDoc.font) {
-                    try { doc.font = sampleDoc.font; } catch (eF) {}
+                // 1. Font Object Assignment (AE 24+ - highest priority, avoids substitute proxies)
+                var fontApplied = false;
+                if (sampleDoc.fontObject) {
+                    try {
+                        doc.fontObject = sampleDoc.fontObject;
+                        fontApplied = true;
+                    } catch (eFO) {
+                        fontApplied = false;
+                    }
                 }
-                if (sampleDoc.fontSize) doc.fontSize = sampleDoc.fontSize;
+
+                // 2. Query Font Server via app.fonts if available (AE 24+)
+                if (!fontApplied && typeof app !== "undefined" && app.fonts) {
+                    try {
+                        if (sampleDoc.font && typeof app.fonts.getFontsByPostScriptName === "function") {
+                            var matchedFonts = app.fonts.getFontsByPostScriptName(sampleDoc.font);
+                            if (matchedFonts && matchedFonts.length > 0) {
+                                doc.fontObject = matchedFonts[0];
+                                fontApplied = true;
+                            }
+                        }
+                    } catch (eFMatch) {}
+
+                    if (!fontApplied && sampleDoc.fontFamily && typeof app.fonts.getFontsByFamilyNameAndStyleName === "function") {
+                        try {
+                            var matchedFonts2 = app.fonts.getFontsByFamilyNameAndStyleName(sampleDoc.fontFamily, sampleDoc.fontStyle || "Regular");
+                            if (matchedFonts2 && matchedFonts2.length > 0) {
+                                doc.fontObject = matchedFonts2[0];
+                                fontApplied = true;
+                            }
+                        } catch (eFMatch2) {}
+                    }
+                }
+
+                // 3. PostScript font name assignment (Standard across all AE versions)
+                if (!fontApplied && sampleDoc.font) {
+                    try {
+                        doc.font = sampleDoc.font;
+                        fontApplied = true;
+                    } catch (eF) {}
+                }
+
+                // 4. Font Size
+                if (typeof sampleDoc.fontSize === "number" && sampleDoc.fontSize > 0) {
+                    doc.fontSize = sampleDoc.fontSize;
+                }
+
+                // 5. Fill properties
+                if (typeof sampleDoc.applyFill !== "undefined") {
+                    doc.applyFill = sampleDoc.applyFill;
+                }
                 if (sampleDoc.applyFill && sampleDoc.fillColor) {
-                    doc.applyFill = true;
-                    doc.fillColor = sampleDoc.fillColor;
+                    try { doc.fillColor = sampleDoc.fillColor; } catch (eFC) {}
+                }
+
+                // 6. Stroke properties
+                if (typeof sampleDoc.applyStroke !== "undefined") {
+                    doc.applyStroke = sampleDoc.applyStroke;
                 }
                 if (sampleDoc.applyStroke && sampleDoc.strokeColor) {
-                    doc.applyStroke = true;
-                    doc.strokeColor = sampleDoc.strokeColor;
-                    doc.strokeWidth = sampleDoc.strokeWidth || 1;
+                    try { doc.strokeColor = sampleDoc.strokeColor; } catch (eSC) {}
+                    if (typeof sampleDoc.strokeWidth === "number") {
+                        doc.strokeWidth = sampleDoc.strokeWidth;
+                    }
                 }
+                if (typeof sampleDoc.strokeOverFill !== "undefined") {
+                    try { doc.strokeOverFill = sampleDoc.strokeOverFill; } catch (eSOF) {}
+                }
+
+                // 7. Typography spacing & scale
                 if (typeof sampleDoc.tracking !== "undefined") {
-                    doc.tracking = sampleDoc.tracking;
+                    try { doc.tracking = sampleDoc.tracking; } catch (eTr) {}
+                }
+                if (typeof sampleDoc.leading !== "undefined") {
+                    try { doc.leading = sampleDoc.leading; } catch (eLd) {}
+                }
+                if (typeof sampleDoc.autoLeading !== "undefined") {
+                    try { doc.autoLeading = sampleDoc.autoLeading; } catch (eAL) {}
                 }
                 if (typeof sampleDoc.baselineShift !== "undefined") {
-                    doc.baselineShift = sampleDoc.baselineShift;
+                    try { doc.baselineShift = sampleDoc.baselineShift; } catch (eBS) {}
                 }
-                if (typeof sampleDoc.allCaps !== "undefined") {
-                    doc.allCaps = sampleDoc.allCaps;
+                if (typeof sampleDoc.horizontalScale !== "undefined") {
+                    try { doc.horizontalScale = sampleDoc.horizontalScale; } catch (eHS) {}
+                }
+                if (typeof sampleDoc.verticalScale !== "undefined") {
+                    try { doc.verticalScale = sampleDoc.verticalScale; } catch (eVS) {}
+                }
+                if (typeof sampleDoc.tsume !== "undefined") {
+                    try { doc.tsume = sampleDoc.tsume; } catch (eTs) {}
+                }
+
+                // 8. Faux styles & Caps options
+                if (typeof sampleDoc.fontCapsOption !== "undefined") {
+                    try { doc.fontCapsOption = sampleDoc.fontCapsOption; } catch (eFCO) {}
+                } else if (typeof sampleDoc.allCaps !== "undefined") {
+                    try { doc.allCaps = sampleDoc.allCaps; } catch (eAC) {}
+                }
+                if (typeof sampleDoc.smallCaps !== "undefined") {
+                    try { doc.smallCaps = sampleDoc.smallCaps; } catch (eSmC) {}
+                }
+                if (typeof sampleDoc.fauxBold !== "undefined") {
+                    try { doc.fauxBold = sampleDoc.fauxBold; } catch (eFB) {}
+                }
+                if (typeof sampleDoc.fauxItalic !== "undefined") {
+                    try { doc.fauxItalic = sampleDoc.fauxItalic; } catch (eFI) {}
+                }
+                if (typeof sampleDoc.fontBaselineOption !== "undefined") {
+                    try { doc.fontBaselineOption = sampleDoc.fontBaselineOption; } catch (eFBO) {}
+                }
+
+                // 9. Kerning & Ligatures
+                if (typeof sampleDoc.autoKernType !== "undefined") {
+                    try { doc.autoKernType = sampleDoc.autoKernType; } catch (eAKT) {}
+                }
+                if (typeof sampleDoc.ligature !== "undefined") {
+                    try { doc.ligature = sampleDoc.ligature; } catch (eLig) {}
                 }
             }
+
             prop.setValue(doc);
         } catch (eStyle) {}
     }
@@ -1310,6 +1439,9 @@
             precompName = origName + " Comp";
         }
 
+        // Capture pristine TextDocument before precomposing
+        var precompOrigDoc = getTextDocument(textLayer);
+
         // Execute Precompose
         var newComp = comp.layers.precompose([textLayer.index], precompName, true);
         if (!newComp) {
@@ -1384,7 +1516,7 @@
         var totalLineCount = 1;
 
         if (innerTextLayer) {
-            var origDoc = getTextDocument(innerTextLayer);
+            var origDoc = getTextDocument(innerTextLayer) || precompOrigDoc;
             var fs = (origDoc && origDoc.fontSize) ? origDoc.fontSize : (metrics.fontSize || 28);
             var fn = (origDoc && origDoc.font) ? origDoc.font : (metrics.font || "ArialMT");
             var lineStep = (origDoc && origDoc.autoLeading) ? (fs * 1.2) : ((origDoc && origDoc.leading) ? origDoc.leading : (fs * 1.2));
@@ -1396,15 +1528,7 @@
                 try {
                     measureLayer = newComp.layers.addText("");
                     measureLayer.enabled = false;
-                    var mDoc = measureLayer.property("Source Text").value;
-                    mDoc.fontSize = fs;
-                    if (fn) {
-                        try { mDoc.font = fn; } catch (eFMeas) {}
-                    }
-                    if (origDoc && typeof origDoc.tracking !== "undefined") {
-                        mDoc.tracking = origDoc.tracking;
-                    }
-                    measureLayer.property("Source Text").setValue(mDoc);
+                    applyTextDocStyling(measureLayer, origDoc, "W", innerTextLayer);
                 } catch (eML) {
                     measureLayer = null;
                 }
@@ -1548,7 +1672,7 @@
                         var lineW = (measuredLineWidths.length > li) ? measuredLineWidths[li] : 0;
 
                         var lineLayer = newComp.layers.addText(lineStr);
-                        applyTextDocStyling(lineLayer, origDoc, lineStr);
+                        applyTextDocStyling(lineLayer, origDoc, lineStr, innerTextLayer);
                         lineLayer.name = "Line " + (li + 1) + ": " + (lineStr.length > 25 ? (lineStr.substr(0, 25) + "...") : lineStr);
 
                         var rLine = lineLayer.sourceRectAtTime(0, false);
@@ -1589,7 +1713,7 @@
                         for (var wi = 0; wi < lineWords.length; wi++) {
                             var wordText = lineWords[wi];
                             var wordLayer = newComp.layers.addText(wordText);
-                            applyTextDocStyling(wordLayer, origDoc, wordText);
+                            applyTextDocStyling(wordLayer, origDoc, wordText, innerTextLayer);
                             totalWordCount++;
                             wordLayer.name = "Word " + totalWordCount + ": " + wordText;
 

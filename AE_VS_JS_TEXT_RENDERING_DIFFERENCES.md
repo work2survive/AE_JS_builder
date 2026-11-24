@@ -592,7 +592,193 @@ To prevent loss of semantic alignment intent across script sessions, effect slid
 
 ---
 
-## 17. Summary Checklist for Future Repositories
+## 17. ExtendScript Text Document Cloning & Font Substitution Prevention
+
+When decomposing text layers into sub-strings in After Effects—such as in kinetic typography engines dividing text by lines (`divideMode === "lines"`) or words (`divideMode === "words"`)—scripting faces a critical font-binding trap where new layers unexpectedly revert to application defaults (e.g., ArialMT or MyriadPro) or substitute fonts.
+
+### 17.1 The PostScript Name vs. Font Object Architecture (AE 24.0+)
+
+Historically in ExtendScript, text typography was accessed through:
+- `TextDocument.font` (String): The PostScript name of the typeface (e.g., `"Poppins-SemiBold"`, `"HelveticaNeue-Light"`).
+
+According to the official Adobe After Effects Scripting Guide:
+> *"On write, there are very few restrictions on what can be supplied - if the underlying font management system does not have a matching Font object instance matching the supplied PostScript name a substitute instance will be created. You should use the Font object attribute for precise control."*
+
+Starting in After Effects 24.0 (CC 2024), Adobe introduced:
+- `TextDocument.fontObject` (Font object): Read/write attribute that binds directly to the specific font instance.
+- `app.fonts` (`FontsObject`): Provides access to the font environment, allowing enumeration and resolution via `getFontsByPostScriptName()` and `getFontsByFamilyNameAndStyleName()`.
+
+If a script creates a new text layer with `comp.layers.addText()` and sets `doc.font = sampleDoc.font` without updating `doc.fontObject`, one of two failures occurs:
+1. **Silent Fallback**: In AE 24+, `doc.fontObject` retains the application's default font (e.g., ArialMT). Because `fontObject` takes precedence over the PostScript string, setting `doc.font` alone is either ignored or overridden.
+2. **Substitute Instance Creation**: If the PostScript string cannot be unambiguously matched to the active font manager cache (common with OTF fonts, variable fonts, and Adobe Fonts / Typekit subscriptions), After Effects quietly fabricates an internal font proxy (`isSubstitute === true`), substituting an unrelated typeface without throwing a script exception.
+
+### 17.2 The `addText()` Kinetic Typography Trap
+
+When dividing text into lines or words:
+1. `comp.layers.addText(textContent)` initializes a new Point Text layer with the user's current Character Panel defaults.
+2. Reading `var doc = targetLayer.property("Source Text").value` returns a `TextDocument` pre-populated with those defaults.
+3. Cherry-picking only `doc.font` and `doc.fontSize` leaves all other properties (`fontObject`, `tracking`, `fauxBold`, `fauxItalic`, `fontCapsOption`, `ligature`, `autoKernType`, `strokeOverFill`) detached from the source layer.
+
+### 17.3 The Dual-Strategy Cloning Pattern
+
+To guarantee 100% typographic fidelity with zero font substitution, modern ExtendScript tools must employ a **dual-strategy cloning pattern**:
+
+```javascript
+function applyTextDocStyling(targetLayer, sampleDoc, textContent, sourceLayer) {
+    if (!targetLayer) return;
+    try {
+        var prop = targetLayer.property("Source Text");
+        if (!prop) return;
+
+        // Strategy 1: Direct native TextDocument assignment for Point Text
+        // Setting a cloned TextDocument directly preserves 100% font identity, fontObject,
+        // kerning, tracking, faux styles, and fills without triggering AE's font substitution.
+        var directDone = false;
+        try {
+            var docToSet = null;
+            if (sourceLayer && isTextLayer(sourceLayer)) {
+                var sProp = sourceLayer.property("Source Text");
+                if (sProp && sProp.value) docToSet = sProp.value;
+            } else if (sampleDoc && !sampleDoc.boxText) {
+                docToSet = sampleDoc;
+            }
+
+            if (docToSet && !docToSet.boxText) {
+                docToSet.text = textContent;
+                prop.setValue(docToSet);
+                var vCheck = prop.value;
+                if (vCheck && vCheck.text === textContent) {
+                    directDone = true;
+                }
+            }
+        } catch (eDir) {
+            directDone = false;
+        }
+
+        if (directDone) return;
+
+        // Strategy 2: Multi-Tier Attribute Transfer with FontObject Priority
+        var doc = prop.value;
+        doc.text = textContent;
+
+        if (sampleDoc) {
+            // Tier 1: Direct Font Object assignment (AE 24+ — zero substitution)
+            var fontApplied = false;
+            if (sampleDoc.fontObject) {
+                try {
+                    doc.fontObject = sampleDoc.fontObject;
+                    fontApplied = true;
+                } catch (eFO) { fontApplied = false; }
+            }
+
+            // Tier 2: Query Font Server via app.fonts (AE 24+)
+            if (!fontApplied && typeof app !== "undefined" && app.fonts) {
+                try {
+                    if (sampleDoc.font && typeof app.fonts.getFontsByPostScriptName === "function") {
+                        var matchedFonts = app.fonts.getFontsByPostScriptName(sampleDoc.font);
+                        if (matchedFonts && matchedFonts.length > 0) {
+                            doc.fontObject = matchedFonts[0];
+                            fontApplied = true;
+                        }
+                    }
+                } catch (eFMatch) {}
+
+                if (!fontApplied && sampleDoc.fontFamily && typeof app.fonts.getFontsByFamilyNameAndStyleName === "function") {
+                    try {
+                        var matchedFonts2 = app.fonts.getFontsByFamilyNameAndStyleName(
+                            sampleDoc.fontFamily, sampleDoc.fontStyle || "Regular"
+                        );
+                        if (matchedFonts2 && matchedFonts2.length > 0) {
+                            doc.fontObject = matchedFonts2[0];
+                            fontApplied = true;
+                        }
+                    } catch (eFMatch2) {}
+                }
+            }
+
+            // Tier 3: PostScript font name fallback (Legacy AE CS6 - CC 2023)
+            if (!fontApplied && sampleDoc.font) {
+                try {
+                    doc.font = sampleDoc.font;
+                    fontApplied = true;
+                } catch (eF) {}
+            }
+
+            // Typography Metrics & Character Attributes
+            if (typeof sampleDoc.fontSize === "number" && sampleDoc.fontSize > 0) doc.fontSize = sampleDoc.fontSize;
+            if (typeof sampleDoc.applyFill !== "undefined") doc.applyFill = sampleDoc.applyFill;
+            if (sampleDoc.applyFill && sampleDoc.fillColor) {
+                try { doc.fillColor = sampleDoc.fillColor; } catch (eFC) {}
+            }
+            if (typeof sampleDoc.applyStroke !== "undefined") doc.applyStroke = sampleDoc.applyStroke;
+            if (sampleDoc.applyStroke && sampleDoc.strokeColor) {
+                try {
+                    doc.strokeColor = sampleDoc.strokeColor;
+                    if (typeof sampleDoc.strokeWidth === "number") doc.strokeWidth = sampleDoc.strokeWidth;
+                } catch (eSC) {}
+            }
+            if (typeof sampleDoc.strokeOverFill !== "undefined") {
+                try { doc.strokeOverFill = sampleDoc.strokeOverFill; } catch (eSOF) {}
+            }
+            if (typeof sampleDoc.tracking !== "undefined") doc.tracking = sampleDoc.tracking;
+            if (typeof sampleDoc.leading !== "undefined") doc.leading = sampleDoc.leading;
+            if (typeof sampleDoc.autoLeading !== "undefined") doc.autoLeading = sampleDoc.autoLeading;
+            if (typeof sampleDoc.baselineShift !== "undefined") doc.baselineShift = sampleDoc.baselineShift;
+            if (typeof sampleDoc.horizontalScale !== "undefined") doc.horizontalScale = sampleDoc.horizontalScale;
+            if (typeof sampleDoc.verticalScale !== "undefined") doc.verticalScale = sampleDoc.verticalScale;
+            if (typeof sampleDoc.tsume !== "undefined") doc.tsume = sampleDoc.tsume;
+
+            // Faux Styles & OpenType
+            if (typeof sampleDoc.fontCapsOption !== "undefined") {
+                try { doc.fontCapsOption = sampleDoc.fontCapsOption; } catch (eFCO) {}
+            } else if (typeof sampleDoc.allCaps !== "undefined") {
+                try { doc.allCaps = sampleDoc.allCaps; } catch (eAC) {}
+            }
+            if (typeof sampleDoc.smallCaps !== "undefined") {
+                try { doc.smallCaps = sampleDoc.smallCaps; } catch (eSmC) {}
+            }
+            if (typeof sampleDoc.fauxBold !== "undefined") doc.fauxBold = sampleDoc.fauxBold;
+            if (typeof sampleDoc.fauxItalic !== "undefined") doc.fauxItalic = sampleDoc.fauxItalic;
+            if (typeof sampleDoc.fontBaselineOption !== "undefined") {
+                try { doc.fontBaselineOption = sampleDoc.fontBaselineOption; } catch (eFBO) {}
+            }
+            if (typeof sampleDoc.autoKernType !== "undefined") {
+                try { doc.autoKernType = sampleDoc.autoKernType; } catch (eAKT) {}
+            }
+            if (typeof sampleDoc.ligature !== "undefined") {
+                try { doc.ligature = sampleDoc.ligature; } catch (eLig) {}
+            }
+        }
+
+        prop.setValue(doc);
+    } catch (eStyle) {}
+}
+```
+
+### 17.4 Hidden Measurement Layer Font Synchronization
+
+Before dividing words and lines, kinetic layout engines instantiate a hidden measurement layer (`measureLayer.enabled = false`) to calculate individual word advances and differential space widths (`measure("A A") - measure("AA")`).
+
+If `measureLayer` is not explicitly styled via `applyTextDocStyling` before calling `measureLayer.sourceRectAtTime(0, false)`, all advance widths are computed against the application's default font. Consequently:
+- Word boundaries wrap at incorrect word counts.
+- Right-aligned or centered kinetic lines experience erratic visual jitter because `(textboxW - lineW) / 2` calculates with default font metrics while lines render with the true font.
+
+### 17.5 Pristine Document Capture Before Precomposing
+
+When calling `comp.layers.precompose([textLayer.index], ...)`, After Effects restructures the composition hierarchy and moves the text layer into the new precomp. To safeguard against any loss of document state or index shifts:
+```javascript
+// Pre-capture pristine TextDocument before precompose hierarchy mutation
+var precompOrigDoc = getTextDocument(textLayer);
+var newComp = comp.layers.precompose([textLayer.index], precompName, true);
+
+// Resolve inner text layer inside new comp
+var innerTextLayer = newComp.layer(1);
+var origDoc = getTextDocument(innerTextLayer) || precompOrigDoc;
+```
+
+---
+
+## 18. Summary Checklist for Future Repositories
 
 When developing tools or emulators that interface with After Effects typography:
 - [x] **Identify text layer mode**: Check if `doc.boxText === true` or Point Text.
@@ -615,6 +801,9 @@ When developing tools or emulators that interface with After Effects typography:
 - [x] **Support dual bounds methods**: Offer both dynamic `sourceRectAtTime()` and nominal `stated` box dimensions.
 - [x] **Provide non-rendering reticle guides**: Use `guideLayer = true` parented at $[0, 0]$ to visualize anchor points in viewports.
 - [x] **Store alignment state in Effect Controls**: Embed slider/point controls on layers to persist alignment configuration.
+- [x] **Assign `TextDocument.fontObject` in AE 24+**: Always prioritize `doc.fontObject = sampleDoc.fontObject` over `doc.font` to prevent AE's silent font substitution proxy creation.
+- [x] **Use multi-tier font resolution hierarchy**: Resolve fonts through `fontObject` -> `app.fonts.getFontsByPostScriptName` -> `app.fonts.getFontsByFamilyNameAndStyleName` -> PostScript `doc.font`.
+- [x] **Style measurement layers prior to `sourceRectAtTime`**: Ensure hidden measuring layers inherit exact font metrics to prevent word wrapping and padding misalignments.
 - [x] **Bump cache busters across all assets**: Update `?v=X.Y.Z` in `index.html` to prevent browsers from executing cached manifests.
 
 
