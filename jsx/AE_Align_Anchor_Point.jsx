@@ -1,6 +1,6 @@
 // Co-authored & architected with Google DeepMind Antigravity.
 // =============================================================================
-// ADOBE AFTER EFFECTS EXTENDSCRIPT & SCRIPTUI PANEL: AE ALIGN ANCHOR POINT v1.3.0
+// ADOBE AFTER EFFECTS EXTENDSCRIPT & SCRIPTUI PANEL: AE ALIGN ANCHOR POINT v1.1.0
 // =============================================================================
 //
 // PURPOSE:
@@ -26,13 +26,11 @@
 //          value + [(targetX - origA[0]) * s[0], (targetY - origA[1]) * s[1]];
 //   3. Stated Width & Height Option:
 //      - Uses declared box text width/height, solid size, or precomp dimensions.
-//   4. Vector Cross Indicator Child Layer:
-//      - Shape layer linked as a child layer with position [0, 0] and anchor point [0, 0].
-//      - Guideline layer (guideLayer = true) visible in working viewport, non-renderable in exports.
-//   5. State Storage Effect:
+//   4. State Storage Effect:
 //      - Attaches "Anchor Alignment State" effect controls (Align X, Align Y, Bounds Mode)
 //        on the target layer storing exact alignment status.
-//   6. Real-Time Anchor Point Alignment & Dynamic Link Expressions.
+//   5. 3x3 Quick Alignment Presets:
+//      - One-click alignment buttons for all 9 anchor positions.
 //
 // REPOSITORY:
 //   https://github.com/work2survive/AE-Align-AnchorPoint
@@ -48,7 +46,7 @@
     "use strict";
 
     var SCRIPT_NAME = "AE Align Anchor Point";
-    var SCRIPT_VERSION = "v1.2.0";
+    var SCRIPT_VERSION = "v1.1.0";
     var REPO_URL = "https://github.com/work2survive/AE-Align-AnchorPoint";
     var README_URL = "https://github.com/work2survive/AE-Align-AnchorPoint/blob/main/README.md";
 
@@ -524,132 +522,10 @@
     }
 
     // -------------------------------------------------------------------------
-    // 5. Vector Crosshair Child Indicator Builder
+    // 5. Core Alignment Execution Logic
     // -------------------------------------------------------------------------
 
-    var COLOR_PRESETS = {
-        "Cyan":   [0.0, 0.95, 0.95],
-        "Red":    [1.0, 0.25, 0.25],
-        "Yellow": [1.0, 0.85, 0.15],
-        "Green":  [0.2, 0.90, 0.40],
-        "White":  [1.0, 1.0, 1.0]
-    };
-
-    /**
-     * Creates or updates a vector cross shape layer parented to targetLayer at [0, 0]
-     * with anchor point [0, 0], marked as a guide layer (non-renderable).
-     */
-    function attachAnchorCross(comp, targetLayer, crossSize, isGuide, colorName) {
-        if (!comp || !targetLayer) return null;
-        crossSize = Number(crossSize) || 30;
-        var strokeW = Math.max(2, Math.round(crossSize / 15));
-        var col = COLOR_PRESETS[colorName] || COLOR_PRESETS["Cyan"];
-        var crossName = "Anchor_Cross_" + targetLayer.name;
-
-        // Check if an anchor cross already exists for this layer
-        var crossLayer = null;
-        var numL = (typeof comp.numLayers === "number") ? comp.numLayers : comp.layers.length;
-        for (var i = 1; i <= numL; i++) {
-            var candidate = (typeof comp.layer === "function") ? comp.layer(i) : (comp.layers[i] || comp.layers[i - 1]);
-            if (candidate && candidate.parent === targetLayer &&
-               (candidate.name === crossName || candidate.name === "Anchor_Cross" || candidate.name.indexOf("Anchor_Cross_") === 0)) {
-                crossLayer = candidate;
-                break;
-            }
-        }
-
-        if (!crossLayer) {
-            crossLayer = comp.layers.addShape();
-            crossLayer.name = crossName;
-        }
-
-        crossLayer.parent = null; // Unparent momentarily during vector setup
-
-        // Clear previous vector contents
-        var contents = crossLayer.property("Contents") || crossLayer.property("ADBE Root Vectors Group");
-        while (contents && contents.numProperties > 0) {
-            contents.property(1).remove();
-        }
-
-        // Build procedural crosshair vector group
-        var grp = contents.addProperty("ADBE Vector Group");
-        grp.name = "Crosshair Shapes";
-        var grpContents = grp.property("Contents");
-
-        // 1. Horizontal Bar
-        var rectH = grpContents.addProperty("ADBE Vector Shape - Rect");
-        rectH.name = "Horizontal Bar";
-        rectH.property("Size").setValue([crossSize, strokeW]);
-        rectH.property("Position").setValue([0, 0]);
-
-        // 2. Vertical Bar
-        var rectV = grpContents.addProperty("ADBE Vector Shape - Rect");
-        rectV.name = "Vertical Bar";
-        rectV.property("Size").setValue([strokeW, crossSize]);
-        rectV.property("Position").setValue([0, 0]);
-
-        // 3. Center Optical Dot
-        var dot = grpContents.addProperty("ADBE Vector Shape - Ellipse");
-        dot.name = "Center Pivot Dot";
-        dot.property("Size").setValue([strokeW * 3.0, strokeW * 3.0]);
-        dot.property("Position").setValue([0, 0]);
-
-        // 4. Fill Color
-        var fill = grpContents.addProperty("ADBE Vector Graphic - Fill");
-        fill.property("Color").setValue(col);
-
-        // 5. Outer Reticle Ring Stroke (for high visibility on any background)
-        var ring = grpContents.addProperty("ADBE Vector Shape - Ellipse");
-        ring.name = "Reticle Outer Ring";
-        ring.property("Size").setValue([crossSize * 0.72, crossSize * 0.72]);
-        ring.property("Position").setValue([0, 0]);
-
-        var ringStroke = grpContents.addProperty("ADBE Vector Graphic - Stroke");
-        ringStroke.property("Color").setValue(col);
-        ringStroke.property("Stroke Width").setValue(1.5);
-
-        // Properties & Transform
-        crossLayer.guideLayer = Boolean(isGuide);
-        crossLayer.threeDLayer = Boolean(targetLayer.threeDLayer);
-        crossLayer.label = 14; // Cyan label in AE
-
-        // Child position AND anchor point are ALWAYS locked to [0, 0]
-        var is3D = targetLayer.threeDLayer;
-        crossLayer.transform.anchorPoint.setValue(is3D ? [0, 0, 0] : [0, 0]);
-        crossLayer.transform.position.setValue(is3D ? [0, 0, 0] : [0, 0]);
-        crossLayer.transform.scale.setValue(is3D ? [100, 100, 100] : [100, 100]);
-        if (crossLayer.transform.rotation) crossLayer.transform.rotation.setValue(0);
-
-        // Link as child layer!
-        crossLayer.parent = targetLayer;
-        crossLayer.moveBefore(targetLayer); // Place visually right above target in timeline
-
-        return crossLayer;
-    }
-
-    /**
-     * Removes any existing anchor cross layers linked to targetLayer
-     */
-    function removeAnchorCross(comp, targetLayer) {
-        if (!comp || !targetLayer) return 0;
-        var removed = 0;
-        var numL = (typeof comp.numLayers === "number") ? comp.numLayers : comp.layers.length;
-        for (var i = numL; i >= 1; i--) {
-            var lyr = (typeof comp.layer === "function") ? comp.layer(i) : (comp.layers[i] || comp.layers[i - 1]);
-            if (lyr && lyr.parent === targetLayer &&
-               (lyr.name.indexOf("Anchor_Cross_") === 0 || lyr.name === "Anchor_Cross")) {
-                lyr.remove();
-                removed++;
-            }
-        }
-        return removed;
-    }
-
-    // -------------------------------------------------------------------------
-    // 6. Core Alignment Execution Logic
-    // -------------------------------------------------------------------------
-
-    function alignLayerAnchorPoint(layer, xMode, yMode, boundsMethod, useExpressions, createCross, isGuide, crossSize, crossColor) {
+    function alignLayerAnchorPoint(layer, xMode, yMode, boundsMethod, useExpressions) {
         if (!layer) return false;
         var comp = layer.containingComp;
         var curTime = comp ? comp.time : 0;
@@ -735,14 +611,12 @@
         // Store alignment status effect directly on the layer
         storeAlignmentEffect(layer, xMode, yMode, boundsMethod, baseA);
 
-        // Handle Anchor Cross Indicator Child Layer
-        if (createCross) {
-            attachAnchorCross(comp, layer, crossSize, isGuide, crossColor);
-        }
-
         return true;
     }
 
+    // -------------------------------------------------------------------------
+    // 6. Demo Composition Generator
+    // -------------------------------------------------------------------------
 
     function createDemoComposition() {
         var comp = app.project.items.addComp("Anchor Point Demo", 1920, 1080, 1, 10, 30);
@@ -757,9 +631,38 @@
         bgFill.property("Color").setValue([0.07, 0.08, 0.11]);
 
         // 2. Demo Box Text Layer in Center of Viewport
-        var textLayer = comp.layers.addText("Anchor Point Alignment Demo");
-        textLayer.name = "Demo_Text_Layer";
-        textLayer.transform.position.setValue([comp.width / 2, comp.height / 2, 0]);
+        var centerPos = [comp.width / 2, comp.height / 2, 0];
+        var boxW = 460;
+        var boxH = 180;
+        var demoText = "AE ALIGN ANCHOR POINT\nZero-shift live expressions dynamically anchor text to bounding boxes.";
+
+        var textLayer;
+        if (typeof comp.layers.addBoxText === "function") {
+            try {
+                textLayer = comp.layers.addBoxText([boxW, boxH], demoText);
+            } catch (eB) {
+                textLayer = comp.layers.addText(demoText);
+            }
+        } else {
+            textLayer = comp.layers.addText(demoText);
+        }
+
+        textLayer.name = "Demo_Box_Text";
+        textLayer.transform.position.setValue(centerPos);
+        textLayer.transform.anchorPoint.setValue([boxW / 2, boxH / 2, 0]);
+
+        var doc = textLayer.property("Source Text").value;
+        if (doc) {
+            doc.fontSize = 24;
+            doc.font = "Arial-BoldMT";
+            doc.fillColor = [1.0, 1.0, 1.0];
+            try {
+                doc.justification = (typeof ParagraphJustification !== "undefined" && ParagraphJustification.CENTER_JUSTIFY !== undefined)
+                    ? ParagraphJustification.CENTER_JUSTIFY
+                    : 7414;
+            } catch (eJ) {}
+            textLayer.property("Source Text").setValue(doc);
+        }
 
         // 3. Demo Vector Shape Layer (Rounded Card)
         var shapeLayer = comp.layers.addShape();
@@ -828,7 +731,7 @@
     pnlHeader.spacing = 4;
     pnlHeader.margins = [12, 10, 12, 10];
 
-    var lblSubTitle = pnlHeader.add("statictext", undefined, "Zero-Shift Anchor Aligner with State Effect & Crosshair Reticle");
+    var lblSubTitle = pnlHeader.add("statictext", undefined, "Zero-Shift Anchor Aligner with State Effect");
     try {
         lblSubTitle.graphics.foregroundColor = win.graphics.newPen(win.graphics.PenType.SOLID_COLOR, [0.35, 0.70, 0.95, 1], 1);
     } catch (ePen) {}
@@ -945,38 +848,6 @@
     btnBC.onClick = function() { setAlignSelection("center", "bottom"); executeAlignment(); };
     btnBR.onClick = function() { setAlignSelection("right", "bottom"); executeAlignment(); };
 
-    // --- Vector Cross Indicator Options Panel ---
-    var pnlCross = win.add("panel", undefined, "Anchor Cross Indicator (Child Layer at [0, 0])");
-    pnlCross.orientation = "column";
-    pnlCross.alignChildren = ["fill", "top"];
-    pnlCross.spacing = 6;
-    pnlCross.margins = 10;
-
-    var grpCrossChecks = pnlCross.add("group");
-    grpCrossChecks.orientation = "row";
-    grpCrossChecks.alignment = ["fill", "top"];
-    var chkAddCross = grpCrossChecks.add("checkbox", undefined, "Add Vector Cross Child at [0, 0]");
-    chkAddCross.value = true;
-    chkAddCross.helpTip = "Creates a vector crosshair parented to the target layer locked at position [0, 0] to indicate the anchor point.";
-
-    var chkGuide = grpCrossChecks.add("checkbox", undefined, "Guide Layer (Exclude from Render)");
-    chkGuide.value = true;
-    chkGuide.helpTip = "Sets the indicator layer as an AE Guide Layer so it is visible in the viewport but never appears in output renders.";
-
-    var grpCrossProps = pnlCross.add("group");
-    grpCrossProps.orientation = "row";
-    grpCrossProps.alignment = ["fill", "top"];
-    grpCrossProps.spacing = 10;
-
-    grpCrossProps.add("statictext", undefined, "Cross Size (px):");
-    var txtCrossSize = grpCrossProps.add("edittext", undefined, "30");
-    txtCrossSize.preferredSize = [45, 20];
-
-    grpCrossProps.add("statictext", undefined, "Color:");
-    var ddlColor = grpCrossProps.add("dropdownlist", undefined, ["Cyan", "Red", "Yellow", "Green", "White"]);
-    ddlColor.selection = 0;
-    ddlColor.preferredSize = [90, 20];
-
     // --- Execution Mode Panel ---
     var pnlMode = win.add("panel", undefined, "Execution Engine");
     pnlMode.orientation = "row";
@@ -1005,9 +876,9 @@
     grpSecondary.alignment = ["fill", "top"];
     grpSecondary.spacing = 6;
 
-
-    var btnRemove = grpSecondary.add("button", undefined, "✕ Remove Crosshairs & Expressions");
+    var btnRemove = grpSecondary.add("button", undefined, "✕ Clear Expressions");
     btnRemove.alignment = ["fill", "center"];
+    btnRemove.helpTip = "Clears active anchor point and position expressions from layers.";
 
     var btnDemo = grpSecondary.add("button", undefined, "➕ Create Demo Comp");
     btnDemo.alignment = ["fill", "center"];
@@ -1107,7 +978,7 @@
             var sel = comp.selectedLayers;
             if (!sel || sel.length === 0) {
                 lblFeedback.text = "Please select at least one layer to align.";
-                alert("Please select at least one layer in your active composition first.");
+                alert("Please select at least one layer to align its anchor point.");
                 return;
             }
 
@@ -1115,16 +986,12 @@
             var yMode = getSelectedYMode();
             var boundsMethod = getSelectedBoundsMethod();
             var useExpr = rbModeExpr.value;
-            var addCross = chkAddCross.value;
-            var isGuide = chkGuide.value;
-            var crossSz = parseFloat(txtCrossSize.text) || 30;
-            var crossCol = ddlColor.selection ? ddlColor.selection.text : "Cyan";
 
             var count = 0;
             for (var i = 0; i < sel.length; i++) {
                 var layer = sel[i];
-                if (!layer || layer.name.indexOf("Anchor_Cross_") === 0) continue;
-                alignLayerAnchorPoint(layer, xMode, yMode, boundsMethod, useExpr, addCross, isGuide, crossSz, crossCol);
+                if (!layer) continue;
+                alignLayerAnchorPoint(layer, xMode, yMode, boundsMethod, useExpr);
                 count++;
             }
 
@@ -1145,7 +1012,6 @@
         executeAlignment();
     };
 
-
     btnRefresh.onClick = function() {
         syncLayerDetection();
     };
@@ -1164,41 +1030,40 @@
     };
 
     btnRemove.onClick = function() {
-        if (app.beginUndoGroup) app.beginUndoGroup("Remove Anchor Crosshairs & Expressions");
+        if (app.beginUndoGroup) app.beginUndoGroup("Clear Alignment Expressions");
         try {
             var comp = app.project.activeItem;
             if (!comp) return;
             var sel = comp.selectedLayers;
-            var removedCount = 0;
+            var clearedCount = 0;
 
             if (sel && sel.length > 0) {
                 for (var s = 0; s < sel.length; s++) {
                     var sLyr = sel[s];
                     if (!sLyr) continue;
-                    removedCount += removeAnchorCross(comp, sLyr);
                     try { sLyr.transform.anchorPoint.expression = ""; } catch (eA) {}
                     try { sLyr.transform.position.expression = ""; } catch (eP) {}
+                    clearedCount++;
                 }
             } else {
                 var totalL = (typeof comp.numLayers === "number") ? comp.numLayers : comp.layers.length;
                 for (var i = totalL; i >= 1; i--) {
                     var lyr = (typeof comp.layer === "function") ? comp.layer(i) : (comp.layers[i] || comp.layers[i - 1]);
                     if (!lyr) continue;
-                    removedCount += removeAnchorCross(comp, lyr);
                     try { lyr.transform.anchorPoint.expression = ""; } catch (eA2) {}
                     try { lyr.transform.position.expression = ""; } catch (eP2) {}
+                    clearedCount++;
                 }
             }
 
-            lblFeedback.text = "Cleaned up " + removedCount + " crosshair layer(s) and cleared expressions.";
+            lblFeedback.text = "Cleared expressions on " + clearedCount + " layer(s).";
         } catch (eRem) {
-            alert("Error removing crosshairs:\n" + eRem.toString());
+            alert("Error clearing expressions:\n" + eRem.toString());
         } finally {
             if (app.endUndoGroup) app.endUndoGroup();
         }
     };
 
-    // Initial layer detection sync
     (function initialSetup() {
         syncLayerDetection();
     })();

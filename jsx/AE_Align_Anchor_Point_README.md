@@ -1,7 +1,7 @@
 # AE Align Anchor Point (ExtendScript & ScriptUI Tool)
 
 > **Co-authored & architected with Google DeepMind Antigravity.**  
-> *Zero-shift anchor point alignment for Adobe After Effects using dynamic expressions, scale-safe compensation, and locked vector crosshair indicators.*
+> *Zero-shift anchor point alignment for Adobe After Effects using dynamic expressions and scale-safe compensation.*
 
 ---
 
@@ -14,8 +14,6 @@ In Adobe After Effects, changing the **Anchor Point** of a layer (Text Box, Vect
 It accomplishes this through two workflows:
 1. **Dynamic Expression Linking**: Two linked, lightweight expressions on `Anchor Point` and `Position` that dynamically adapt via `sourceRectAtTime(time, false)` whenever text is edited, bounding boxes change, or the layer is scaled.
 2. **True One-Time Static Bake**: Direct calculation and application of static values with zero expression overhead.
-
-In addition, it attaches a **Vector Cross Indicator** as a child shape layer locked at position `[0, 0]`, visually highlighting the exact anchor point pivot at all times without appearing in final exports (as a Guide Layer).
 
 ---
 
@@ -106,26 +104,7 @@ value + [(target[0] - origA[0]) * s[0], (target[1] - origA[1]) * s[1]];
 
 ---
 
-## 4. The Vector Crosshair Child Indicator at [0, 0]
-
-### 4.1 Parenting Mechanics
-
-In Adobe After Effects, when Layer $B$ has `Layer B.parent = Layer A`:
-- The local coordinate system of Layer $B$ is rooted at Layer $A$'s **Anchor Point**.
-- When `Layer B.transform.position.setValue([0, 0])`, Layer $B$'s origin is placed precisely on Layer $A$'s Anchor Point.
-- Any movement, rotation, scaling, or expression-driven update of Layer $A$'s anchor point automatically translates Layer $B$ along with it.
-
-### 4.2 Crosshair Construction
-
-The indicator layer is generated procedurally:
-- **Shape Layer**: Created as `comp.layers.addShape()` named `Anchor_Cross_<TargetName>`.
-- **Vector Crosshair**: Two intersecting rectangular bars (`[crossSize, strokeWidth]` and `[strokeWidth, crossSize]`) and a central focal dot at `[0, 0]`.
-- **Guide Layer**: `crossLayer.guideLayer = true` ensures it is visible in the working canvas and simulator preview, but automatically excluded when rendering output movies in Adobe Media Encoder or AE Render Queue.
-- **Label Color**: Color Label set to Cyan (`#1abc9c`) for instant timeline recognition.
-
----
-
-## 5. One-Time Bake Mode (Static Execution)
+## 4. One-Time Bake Mode (Static Execution)
 
 If continuous expression evaluation is not needed (e.g., to maximize playback performance or simplify project handoffs):
 - Select **Bake to Static Values** in the UI.
@@ -135,7 +114,7 @@ If continuous expression evaluation is not needed (e.g., to maximize playback pe
 
 ---
 
-## 6. ScriptUI Interface & Feature Highlights
+## 5. ScriptUI Interface & Feature Highlights
 
 1. **Header & Status Panel**:
    - Displays script title, version, and active target layer metrics.
@@ -145,14 +124,12 @@ If continuous expression evaluation is not needed (e.g., to maximize playback pe
    - Radio buttons for Top, Center, and Bottom.
 4. **Quick 3×3 Visual Grid**:
    - 9 interactive buttons corresponding to the bounding box anchor points. Clicking any button updates the radio selectors and applies the alignment immediately.
-5. **Indicator Settings**:
-   - Toggle vector cross generation, choose crosshair size, and select indicator color (Cyan, Red, Yellow, Green, White).
-6. **One-Click Demo Generator**:
+5. **One-Click Demo Generator**:
    - A `Create Demo Comp` button generates an active composition with a Box Text layer, Vector Shape, Solid, and Precomp for immediate testing.
 
 ---
 
-## 7. Compatibility
+## 6. Compatibility
 
 - **Adobe After Effects**: CC 2014, CC 2015, CC 2018, CC 2019, 2020, 2021, 2022, 2023, 2024, 2025, 2026+.
 - **AE_JS_builder Web Emulator**: Fully simulated with ScriptUI, SVG vector rendering, and Canvas 2D font metric engine.

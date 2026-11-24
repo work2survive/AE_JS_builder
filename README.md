@@ -182,7 +182,7 @@ The simulator automatically detects and loads standalone production-ready After 
    - **Live Demo**: [https://work2survive.github.io/AE_JS_builder/?jsx=AE_Text_Precomp.jsx&autobuild=true](https://work2survive.github.io/AE_JS_builder/?jsx=AE_Text_Precomp.jsx&autobuild=true)
 
 12. **[AE Align Anchor Point](https://github.com/work2survive/AE-Align-AnchorPoint)** (`jsx/AE_Align_Anchor_Point.jsx` - v1.1.0):
-   - Professional ScriptUI alignment utility and live expression engine that aligns the anchor point of comps, text boxes (paragraph and point text), vector shapes, solids, footage, and nulls to Left, Center, or Right (X) and Top, Center, or Bottom (Y) with **zero visual jump or shift** of content on screen. Features dual calculation engines (`sourceRectAtTime()` rendered bounds vs. declared Stated Dimensions), a procedural guideline vector crosshair reticle linked as a child layer at `[0, 0]` (`guideLayer = true`), persistent state storage via effect slider controls, 3x3 quick-preset visual matrix, and one-time static bake capabilities.
+   - Professional ScriptUI alignment utility and live expression engine that aligns the anchor point of comps, text boxes (paragraph and point text), vector shapes, solids, footage, and nulls to Left, Center, or Right (X) and Top, Center, or Bottom (Y) with **zero visual jump or shift** of content on screen. Features dual calculation engines (`sourceRectAtTime()` rendered bounds vs. declared Stated Dimensions), persistent state storage via effect slider controls, 3x3 quick-preset visual matrix, and one-time static bake capabilities.
    - **Repository**: [work2survive/AE-Align-AnchorPoint](https://github.com/work2survive/AE-Align-AnchorPoint)
    - **Documentation**: [AE-Align-AnchorPoint/README.md](https://github.com/work2survive/AE-Align-AnchorPoint/blob/main/README.md)
    - **Live Demo**: [https://work2survive.github.io/AE_JS_builder/?jsx=AE_Align_Anchor_Point.jsx&autobuild=true](https://work2survive.github.io/AE_JS_builder/?jsx=AE_Align_Anchor_Point.jsx&autobuild=true)
@@ -260,7 +260,7 @@ The production tools built and tested inside this simulator are also available a
 - **[AE Spiral Maker](https://github.com/work2survive/AE_spiral_maker)**: Procedural vector spiral generator featuring 5 mathematical spiral algorithms, native After Effects Stroke Taper integration for independent start and end stroke thicknesses, analytical cubic Bézier derivative tangents, and factory presets (v1.0).
 - **[AE Scripted Chat](https://github.com/work2survive/AE_scripted_Chat)**: Fully animated multi-message chat conversation generator with smart timestamps, real vs fake delays, auto-scrolling, and JSON conversation management (v1.0).
 - **[AE Get Emojis](https://github.com/work2survive/AE_Get_Emojis)**: Full-color vector emoji search, catalog indexer, and native After Effects shape layer generator supporting OpenMoji & Twemoji with emoticon parsing and bidirectional Unicode conversion (v1.0).
-- **[AE Align Anchor Point](https://github.com/work2survive/AE-Align-AnchorPoint)**: Zero-shift anchor point alignment panel and expression engine with guide layer reticle and mathematical compensation invariance (v1.1.0).
+- **[AE Align Anchor Point](https://github.com/work2survive/AE-Align-AnchorPoint)**: Zero-shift anchor point alignment panel and expression engine with mathematical compensation invariance (v1.1.0).
 
 ---
 
@@ -286,4 +286,4 @@ Engineered, architected, and co-developed using **[Google DeepMind Antigravity](
 
 2. **Anchor Point Alignment & Zero-Shift Geometry**:
    - **Specification**: [`AE-Align-AnchorPoint/README.md`](https://github.com/work2survive/AE-Align-AnchorPoint/blob/main/README.md)
-   - Mathematical derivation for zero-shift anchor point alignment without content displacement: $\mathbf{X}_{\text{comp}} = \mathbf{P} + \mathbf{R}(\theta) \cdot \mathbf{S} \cdot (\mathbf{x}_{\text{layer}} - \mathbf{A})$, dynamic bounding box measurement via `sourceRectAtTime()` vs stated dimensions, and non-renderable child guide layer reticles (`guideLayer = true`).
+   - Mathematical derivation for zero-shift anchor point alignment without content displacement: $\mathbf{X}_{\text{comp}} = \mathbf{P} + \mathbf{R}(\theta) \cdot \mathbf{S} \cdot (\mathbf{x}_{\text{layer}} - \mathbf{A})$, and dynamic bounding box measurement via `sourceRectAtTime()` vs stated dimensions.
