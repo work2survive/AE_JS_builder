@@ -1,0 +1,8775 @@
+{
+  "version": "1.0.0",
+  "generator": "AE_Get_Emojis build_emoji_db.py",
+  "CoordinateSpace": "72x72 centered at [0,0] (-36..+36)",
+  "totalCount": 295,
+  "sources": [
+    {
+      "id": "openmoji_color",
+      "name": "OpenMoji Color (Handcrafted + Outlines)",
+      "repository": "https://github.com/hfg-gmuend/openmoji",
+      "license": "CC BY-SA 4.0",
+      "file": "emojis/openmoji_color.json"
+    },
+    {
+      "id": "twemoji_color",
+      "name": "Twemoji Color (Flat Vector)",
+      "repository": "https://github.com/jdecked/twemoji",
+      "license": "CC BY 4.0",
+      "file": "emojis/twemoji_color.json"
+    },
+    {
+      "id": "openmoji_flat",
+      "name": "OpenMoji Flat (Color Only, No Outlines)",
+      "repository": "https://github.com/hfg-gmuend/openmoji",
+      "license": "CC BY-SA 4.0",
+      "file": "emojis/openmoji_color.json"
+    },
+    {
+      "id": "openmoji_black",
+      "name": "OpenMoji Black (Line Art / Wireframe)",
+      "repository": "https://github.com/hfg-gmuend/openmoji",
+      "license": "CC BY-SA 4.0",
+      "file": "emojis/openmoji_black.json"
+    }
+  ],
+  "emojis": [
+    {
+      "index": 1,
+      "hexcode": "1F642",
+      "unicode": "U+1F642",
+      "unicodeInt": 128578,
+      "emoji": "🙂",
+      "name": "slightly smiling face",
+      "group": "smileys-emotion",
+      "subgroups": "face-smiling",
+      "tags": [
+        "face",
+        "happy",
+        "slightly",
+        "smile",
+        "smiling",
+        "satisfied"
+      ],
+      "emoticons": [
+        ":-)",
+        ":)",
+        ":-]",
+        ":]",
+        ":->",
+        ":>",
+        "8-)",
+        "8)",
+        ":-}",
+        ":}",
+        ":o)",
+        ":c)",
+        ":^)",
+        "=]",
+        "=)"
+      ],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 2,
+      "hexcode": "1F603",
+      "unicode": "U+1F603",
+      "unicodeInt": 128515,
+      "emoji": "😃",
+      "name": "grinning face with big eyes",
+      "group": "smileys-emotion",
+      "subgroups": "face-smiling",
+      "tags": [
+        "awesome",
+        "big",
+        "eyes",
+        "face",
+        "grin",
+        "grinning",
+        "happy",
+        "mouth",
+        "open",
+        "smile",
+        "smiling",
+        "teeth",
+        "yay"
+      ],
+      "emoticons": [
+        ":-D",
+        ":D",
+        "8-D",
+        "8D",
+        "=D",
+        "=3",
+        "B^D",
+        "c:",
+        "C:"
+      ],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 3,
+      "hexcode": "1F606",
+      "unicode": "U+1F606",
+      "unicodeInt": 128518,
+      "emoji": "😆",
+      "name": "grinning squinting face",
+      "group": "smileys-emotion",
+      "subgroups": "face-smiling",
+      "tags": [
+        "closed",
+        "eyes",
+        "face",
+        "grinning",
+        "haha",
+        "hahaha",
+        "happy",
+        "laugh",
+        "lol",
+        "mouth",
+        "open",
+        "rofl",
+        "smile",
+        "smiling",
+        "squinting"
+      ],
+      "emoticons": [
+        "x-D",
+        "xD",
+        "X-D",
+        "XD"
+      ],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 4,
+      "hexcode": "1F604",
+      "unicode": "U+1F604",
+      "unicodeInt": 128516,
+      "emoji": "😄",
+      "name": "grinning face with smiling eyes",
+      "group": "smileys-emotion",
+      "subgroups": "face-smiling",
+      "tags": [
+        "eye",
+        "eyes",
+        "face",
+        "grin",
+        "grinning",
+        "happy",
+        "laugh",
+        "lol",
+        "mouth",
+        "open",
+        "smile",
+        "smiling",
+        "teeth"
+      ],
+      "emoticons": [
+        ":-))",
+        ":))"
+      ],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 5,
+      "hexcode": "1F601",
+      "unicode": "U+1F601",
+      "unicodeInt": 128513,
+      "emoji": "😁",
+      "name": "beaming face with smiling eyes",
+      "group": "smileys-emotion",
+      "subgroups": "face-smiling",
+      "tags": [
+        "beaming",
+        "eye",
+        "eyes",
+        "face",
+        "grin",
+        "grinning",
+        "happy",
+        "nice",
+        "smile",
+        "smiling",
+        "teeth",
+        "mouth"
+      ],
+      "emoticons": [
+        "^_^",
+        "^-^",
+        "^.^",
+        "(^_^)",
+        "(^-^)"
+      ],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 6,
+      "hexcode": "1F602",
+      "unicode": "U+1F602",
+      "unicodeInt": 128514,
+      "emoji": "😂",
+      "name": "face with tears of joy",
+      "group": "smileys-emotion",
+      "subgroups": "face-smiling",
+      "tags": [
+        "crying",
+        "face",
+        "feels",
+        "funny",
+        "haha",
+        "happy",
+        "hehe",
+        "hilarious",
+        "joy",
+        "laugh",
+        "lmao",
+        "lol",
+        "rofl",
+        "roflmao",
+        "tear"
+      ],
+      "emoticons": [
+        ":'-)",
+        ":')",
+        ":'D",
+        ":'-D",
+        ":\"D"
+      ],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 7,
+      "hexcode": "1F923",
+      "unicode": "U+1F923",
+      "unicodeInt": 129315,
+      "emoji": "🤣",
+      "name": "rolling on the floor laughing",
+      "group": "smileys-emotion",
+      "subgroups": "face-smiling",
+      "tags": [
+        "crying",
+        "face",
+        "floor",
+        "funny",
+        "haha",
+        "happy",
+        "hehe",
+        "hilarious",
+        "joy",
+        "laugh",
+        "lmao",
+        "lol",
+        "rofl",
+        "roflmao",
+        "rolling",
+        "tear",
+        "tears"
+      ],
+      "emoticons": [
+        "ROFL",
+        "LMAO",
+        "XD!"
+      ],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 8,
+      "hexcode": "1F60A",
+      "unicode": "U+1F60A",
+      "unicodeInt": 128522,
+      "emoji": "😊",
+      "name": "smiling face with smiling eyes",
+      "group": "smileys-emotion",
+      "subgroups": "face-smiling",
+      "tags": [
+        "blush",
+        "eye",
+        "eyes",
+        "face",
+        "glad",
+        "satisfied",
+        "smile",
+        "smiling"
+      ],
+      "emoticons": [
+        "(◕‿◕)",
+        "(｡◕‿◕｡)",
+        "^^",
+        "^o^"
+      ],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 9,
+      "hexcode": "1F607",
+      "unicode": "U+1F607",
+      "unicodeInt": 128519,
+      "emoji": "😇",
+      "name": "smiling face with halo",
+      "group": "smileys-emotion",
+      "subgroups": "face-smiling",
+      "tags": [
+        "angel",
+        "angelic",
+        "angels",
+        "blessed",
+        "face",
+        "fairy",
+        "fairytale",
+        "fantasy",
+        "halo",
+        "happy",
+        "innocent",
+        "peaceful",
+        "smile",
+        "smiling",
+        "spirit",
+        "tale"
+      ],
+      "emoticons": [
+        "O:-)",
+        "O:)",
+        "0:-3",
+        "0:3",
+        "0:-)",
+        "0:)",
+        "0;^)"
+      ],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 10,
+      "hexcode": "1F608",
+      "unicode": "U+1F608",
+      "unicodeInt": 128520,
+      "emoji": "😈",
+      "name": "smiling face with horns",
+      "group": "smileys-emotion",
+      "subgroups": "face-negative",
+      "tags": [
+        "demon",
+        "devil",
+        "evil",
+        "face",
+        "fairy",
+        "fairytale",
+        "fantasy",
+        "horns",
+        "purple",
+        "shade",
+        "smile",
+        "smiling",
+        "tale",
+        "malicious",
+        "sardonic"
+      ],
+      "emoticons": [
+        ">:-)",
+        ">:)",
+        "}:-)",
+        "}:)",
+        "3:-)",
+        "3:)",
+        ">;-)",
+        ">;)"
+      ],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 11,
+      "hexcode": "1F609",
+      "unicode": "U+1F609",
+      "unicodeInt": 128521,
+      "emoji": "😉",
+      "name": "winking face",
+      "group": "smileys-emotion",
+      "subgroups": "face-smiling",
+      "tags": [
+        "face",
+        "flirt",
+        "heartbreaker",
+        "sexy",
+        "slide",
+        "tease",
+        "wink",
+        "winking",
+        "winks",
+        "eye"
+      ],
+      "emoticons": [
+        ";-)",
+        ";)",
+        "*-)",
+        "*)",
+        ";-]",
+        ";]",
+        ";^)",
+        ";>",
+        ":-,",
+        ";D",
+        ";3"
+      ],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 12,
+      "hexcode": "1F60B",
+      "unicode": "U+1F60B",
+      "unicodeInt": 128523,
+      "emoji": "😋",
+      "name": "face savoring food",
+      "group": "smileys-emotion",
+      "subgroups": "face-tongue",
+      "tags": [
+        "delicious",
+        "eat",
+        "face",
+        "food",
+        "full",
+        "hungry",
+        "savor",
+        "smile",
+        "smiling",
+        "tasty",
+        "um",
+        "yum",
+        "yummy",
+        "tongue"
+      ],
+      "emoticons": [
+        ":-9",
+        ":9"
+      ],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 13,
+      "hexcode": "1F60D",
+      "unicode": "U+1F60D",
+      "unicodeInt": 128525,
+      "emoji": "😍",
+      "name": "smiling face with heart-eyes",
+      "group": "smileys-emotion",
+      "subgroups": "face-affection",
+      "tags": [
+        "143",
+        "bae",
+        "eye",
+        "face",
+        "feels",
+        "heart-eyes",
+        "hearts",
+        "ily",
+        "kisses",
+        "love",
+        "romance",
+        "romantic",
+        "smile",
+        "xoxo",
+        "happy"
+      ],
+      "emoticons": [
+        "(♥_♥)",
+        "♥_♥",
+        "<3_<3",
+        "*❤️*"
+      ],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 14,
+      "hexcode": "1F60E",
+      "unicode": "U+1F60E",
+      "unicodeInt": 128526,
+      "emoji": "😎",
+      "name": "smiling face with sunglasses",
+      "group": "smileys-emotion",
+      "subgroups": "face-glasses",
+      "tags": [
+        "awesome",
+        "beach",
+        "bright",
+        "bro",
+        "chilling",
+        "cool",
+        "face",
+        "rad",
+        "relaxed",
+        "shades",
+        "slay",
+        "smile",
+        "style",
+        "sunglasses",
+        "swag",
+        "win"
+      ],
+      "emoticons": [
+        "B-)",
+        "B)",
+        "|;-)",
+        "8-)"
+      ],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 15,
+      "hexcode": "1F60F",
+      "unicode": "U+1F60F",
+      "unicodeInt": 128527,
+      "emoji": "😏",
+      "name": "smirking face",
+      "group": "smileys-emotion",
+      "subgroups": "face-neutral-skeptical",
+      "tags": [
+        "boss",
+        "dapper",
+        "face",
+        "flirt",
+        "homie",
+        "kidding",
+        "leer",
+        "shade",
+        "slick",
+        "sly",
+        "smirk",
+        "smug",
+        "snicker",
+        "suave",
+        "suspicious",
+        "swag"
+      ],
+      "emoticons": [
+        ":-J",
+        "( ͡° ͜ʖ ͡°)",
+        ";->"
+      ],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 16,
+      "hexcode": "1F610",
+      "unicode": "U+1F610",
+      "unicodeInt": 128528,
+      "emoji": "😐️",
+      "name": "neutral face",
+      "group": "smileys-emotion",
+      "subgroups": "face-neutral-skeptical",
+      "tags": [
+        "awkward",
+        "blank",
+        "deadpan",
+        "expressionless",
+        "face",
+        "fine",
+        "jealous",
+        "meh",
+        "neutral",
+        "oh",
+        "shade",
+        "straight",
+        "unamused",
+        "unhappy",
+        "unimpressed",
+        "whatever",
+        "poker face"
+      ],
+      "emoticons": [
+        ":-|",
+        ":|",
+        "._.",
+        "-_-"
+      ],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 17,
+      "hexcode": "1F611",
+      "unicode": "U+1F611",
+      "unicodeInt": 128529,
+      "emoji": "😑",
+      "name": "expressionless face",
+      "group": "smileys-emotion",
+      "subgroups": "face-neutral-skeptical",
+      "tags": [
+        "awkward",
+        "dead",
+        "expressionless",
+        "face",
+        "fine",
+        "inexpressive",
+        "jealous",
+        "meh",
+        "not",
+        "oh",
+        "omg",
+        "straight",
+        "uh",
+        "unhappy",
+        "unimpressed",
+        "whatever",
+        "unamused",
+        "annoyed"
+      ],
+      "emoticons": [
+        "=_=",
+        "-_-;",
+        "u_u",
+        "~_~"
+      ],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 18,
+      "hexcode": "1F612",
+      "unicode": "U+1F612",
+      "unicodeInt": 128530,
+      "emoji": "😒",
+      "name": "unamused face",
+      "group": "smileys-emotion",
+      "subgroups": "face-neutral-skeptical",
+      "tags": [
+        "...",
+        "bored",
+        "face",
+        "fine",
+        "jealous",
+        "jel",
+        "jelly",
+        "pissed",
+        "smh",
+        "ugh",
+        "uhh",
+        "unamused",
+        "unhappy",
+        "weird",
+        "whatever"
+      ],
+      "emoticons": [
+        "ಠ_ಠ",
+        ">_>",
+        "<_<",
+        "¬_¬"
+      ],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 19,
+      "hexcode": "1F615",
+      "unicode": "U+1F615",
+      "unicodeInt": 128533,
+      "emoji": "😕",
+      "name": "confused face",
+      "group": "smileys-emotion",
+      "subgroups": "face-concerned",
+      "tags": [
+        "befuddled",
+        "confused",
+        "confusing",
+        "dunno",
+        "face",
+        "frown",
+        "hm",
+        "meh",
+        "not",
+        "sad",
+        "sorry",
+        "sure"
+      ],
+      "emoticons": [
+        ":-/",
+        ":/",
+        ":-.",
+        ">:\\",
+        ">:/",
+        ":\\",
+        "=/",
+        "=\\",
+        ":L",
+        "=L"
+      ],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 20,
+      "hexcode": "1F616",
+      "unicode": "U+1F616",
+      "unicodeInt": 128534,
+      "emoji": "😖",
+      "name": "confounded face",
+      "group": "smileys-emotion",
+      "subgroups": "face-concerned",
+      "tags": [
+        "annoyed",
+        "confounded",
+        "confused",
+        "cringe",
+        "distraught",
+        "face",
+        "feels",
+        "frustrated",
+        "mad",
+        "sad"
+      ],
+      "emoticons": [
+        ":S",
+        ":-S",
+        ">_<",
+        ">.<"
+      ],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 21,
+      "hexcode": "1F618",
+      "unicode": "U+1F618",
+      "unicodeInt": 128536,
+      "emoji": "😘",
+      "name": "face blowing a kiss",
+      "group": "smileys-emotion",
+      "subgroups": "face-affection",
+      "tags": [
+        "adorbs",
+        "bae",
+        "blowing",
+        "face",
+        "flirt",
+        "heart",
+        "ily",
+        "kiss",
+        "love",
+        "lover",
+        "miss",
+        "muah",
+        "romantic",
+        "smooch",
+        "xoxo",
+        "you",
+        "happy"
+      ],
+      "emoticons": [
+        ":-*",
+        ":*",
+        ":x",
+        "^3^",
+        "( ˘ ³˘)♥"
+      ],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 22,
+      "hexcode": "1F61B",
+      "unicode": "U+1F61B",
+      "unicodeInt": 128539,
+      "emoji": "😛",
+      "name": "face with tongue",
+      "group": "smileys-emotion",
+      "subgroups": "face-tongue",
+      "tags": [
+        "awesome",
+        "cool",
+        "face",
+        "nice",
+        "party",
+        "stuck-out",
+        "sweet",
+        "tongue"
+      ],
+      "emoticons": [
+        ":-P",
+        ":P",
+        ":-p",
+        ":p",
+        ":-Þ",
+        ":Þ",
+        ":-þ",
+        ":þ",
+        ":-b",
+        ":b",
+        "d:",
+        "=p",
+        ">:P"
+      ],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 23,
+      "hexcode": "1F61C",
+      "unicode": "U+1F61C",
+      "unicodeInt": 128540,
+      "emoji": "😜",
+      "name": "winking face with tongue",
+      "group": "smileys-emotion",
+      "subgroups": "face-tongue",
+      "tags": [
+        "crazy",
+        "epic",
+        "eye",
+        "face",
+        "funny",
+        "joke",
+        "loopy",
+        "nutty",
+        "party",
+        "stuck-out",
+        "tongue",
+        "wacky",
+        "weirdo",
+        "wink",
+        "winking",
+        "yolo"
+      ],
+      "emoticons": [
+        ";P",
+        ";-P",
+        ";p",
+        ";-p"
+      ],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 24,
+      "hexcode": "1F61D",
+      "unicode": "U+1F61D",
+      "unicodeInt": 128541,
+      "emoji": "😝",
+      "name": "squinting face with tongue",
+      "group": "smileys-emotion",
+      "subgroups": "face-tongue",
+      "tags": [
+        "closed",
+        "eye",
+        "eyes",
+        "face",
+        "gross",
+        "horrible",
+        "omg",
+        "squinting",
+        "stuck-out",
+        "taste",
+        "tongue",
+        "whatever",
+        "yolo"
+      ],
+      "emoticons": [
+        "X-P",
+        "XP",
+        "x-p",
+        "xp"
+      ],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 25,
+      "hexcode": "1F61E",
+      "unicode": "U+1F61E",
+      "unicodeInt": 128542,
+      "emoji": "😞",
+      "name": "disappointed face",
+      "group": "smileys-emotion",
+      "subgroups": "face-concerned",
+      "tags": [
+        "awful",
+        "blame",
+        "dejected",
+        "disappointed",
+        "face",
+        "fail",
+        "losing",
+        "sad",
+        "unhappy"
+      ],
+      "emoticons": [
+        "v.v",
+        "v_v",
+        "._.;"
+      ],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 26,
+      "hexcode": "1F620",
+      "unicode": "U+1F620",
+      "unicodeInt": 128544,
+      "emoji": "😠",
+      "name": "angry face",
+      "group": "smileys-emotion",
+      "subgroups": "face-negative",
+      "tags": [
+        "anger",
+        "angry",
+        "blame",
+        "face",
+        "feels",
+        "frustrated",
+        "mad",
+        "maddening",
+        "rage",
+        "shade",
+        "unhappy",
+        "upset"
+      ],
+      "emoticons": [
+        ">:(",
+        ">:-(",
+        ":@"
+      ],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 27,
+      "hexcode": "1F621",
+      "unicode": "U+1F621",
+      "unicodeInt": 128545,
+      "emoji": "😡",
+      "name": "enraged face",
+      "group": "smileys-emotion",
+      "subgroups": "face-negative",
+      "tags": [
+        "anger",
+        "angry",
+        "enraged",
+        "face",
+        "feels",
+        "mad",
+        "maddening",
+        "pouting",
+        "rage",
+        "red",
+        "shade",
+        "unhappy",
+        "upset"
+      ],
+      "emoticons": [
+        "D:<",
+        "(╯°□°）╯︵ ┻━┻",
+        "┻━┻ ︵ヽ(`Д´)ﾉ︵ ┻━┻"
+      ],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 28,
+      "hexcode": "1F622",
+      "unicode": "U+1F622",
+      "unicodeInt": 128546,
+      "emoji": "😢",
+      "name": "crying face",
+      "group": "smileys-emotion",
+      "subgroups": "face-concerned",
+      "tags": [
+        "awful",
+        "cry",
+        "crying",
+        "face",
+        "feels",
+        "miss",
+        "sad",
+        "tear",
+        "triste",
+        "unhappy"
+      ],
+      "emoticons": [
+        ":'-(",
+        ":'(",
+        ":=(",
+        ";("
+      ],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 29,
+      "hexcode": "1F62D",
+      "unicode": "U+1F62D",
+      "unicodeInt": 128557,
+      "emoji": "😭",
+      "name": "loudly crying face",
+      "group": "smileys-emotion",
+      "subgroups": "face-concerned",
+      "tags": [
+        "bawling",
+        "cry",
+        "crying",
+        "face",
+        "loudly",
+        "sad",
+        "sob",
+        "tear",
+        "tears",
+        "unhappy"
+      ],
+      "emoticons": [
+        "T_T",
+        "ToT",
+        "T-T",
+        ";_;",
+        "Q_Q",
+        "QQ",
+        "😭"
+      ],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 30,
+      "hexcode": "1F626",
+      "unicode": "U+1F626",
+      "unicodeInt": 128550,
+      "emoji": "😦",
+      "name": "frowning face with open mouth",
+      "group": "smileys-emotion",
+      "subgroups": "face-concerned",
+      "tags": [
+        "caught",
+        "face",
+        "frown",
+        "frowning",
+        "guard",
+        "mouth",
+        "open",
+        "scared",
+        "scary",
+        "surprise",
+        "what",
+        "wow"
+      ],
+      "emoticons": [
+        "D:",
+        "D=",
+        "D;"
+      ],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 31,
+      "hexcode": "1F628",
+      "unicode": "U+1F628",
+      "unicodeInt": 128552,
+      "emoji": "😨",
+      "name": "fearful face",
+      "group": "smileys-emotion",
+      "subgroups": "face-concerned",
+      "tags": [
+        "afraid",
+        "anxious",
+        "blame",
+        "face",
+        "fear",
+        "fearful",
+        "scared",
+        "worried"
+      ],
+      "emoticons": [
+        "D-':",
+        "D8",
+        "DX"
+      ],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 32,
+      "hexcode": "1F62E",
+      "unicode": "U+1F62E",
+      "unicodeInt": 128558,
+      "emoji": "😮",
+      "name": "face with open mouth",
+      "group": "smileys-emotion",
+      "subgroups": "face-concerned",
+      "tags": [
+        "believe",
+        "face",
+        "forgot",
+        "mouth",
+        "omg",
+        "open",
+        "shocked",
+        "surprised",
+        "sympathy",
+        "unbelievable",
+        "unreal",
+        "whoa",
+        "wow",
+        "you"
+      ],
+      "emoticons": [
+        ":-O",
+        ":O",
+        ":-o",
+        ":o",
+        ":-0",
+        ":0",
+        "8-0",
+        ">:O",
+        "=O",
+        "=o",
+        "=0",
+        "O_O",
+        "o_o"
+      ],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 33,
+      "hexcode": "1F632",
+      "unicode": "U+1F632",
+      "unicodeInt": 128562,
+      "emoji": "😲",
+      "name": "astonished face",
+      "group": "smileys-emotion",
+      "subgroups": "face-concerned",
+      "tags": [
+        "astonished",
+        "cost",
+        "face",
+        "no",
+        "omg",
+        "shocked",
+        "totally",
+        "way"
+      ],
+      "emoticons": [
+        "0_0",
+        "O.O",
+        "o_O",
+        "O_o"
+      ],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 34,
+      "hexcode": "1F633",
+      "unicode": "U+1F633",
+      "unicodeInt": 128563,
+      "emoji": "😳",
+      "name": "flushed face",
+      "group": "smileys-emotion",
+      "subgroups": "face-concerned",
+      "tags": [
+        "amazed",
+        "awkward",
+        "crazy",
+        "dazed",
+        "dead",
+        "disbelief",
+        "embarrassed",
+        "face",
+        "flushed",
+        "geez",
+        "heat",
+        "hot",
+        "impressed",
+        "jeez",
+        "what",
+        "wow",
+        "red jaws"
+      ],
+      "emoticons": [
+        ":$",
+        ":-$",
+        "😳"
+      ],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 35,
+      "hexcode": "1F634",
+      "unicode": "U+1F634",
+      "unicodeInt": 128564,
+      "emoji": "😴",
+      "name": "sleeping face",
+      "group": "smileys-emotion",
+      "subgroups": "face-sleepy",
+      "tags": [
+        "bed",
+        "bedtime",
+        "face",
+        "good",
+        "goodnight",
+        "nap",
+        "night",
+        "sleep",
+        "sleeping",
+        "tired",
+        "whatever",
+        "yawn",
+        "zzz"
+      ],
+      "emoticons": [
+        "|-O",
+        "z_z",
+        "Z_Z",
+        "(-_-)zzz"
+      ],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 36,
+      "hexcode": "1F635",
+      "unicode": "U+1F635",
+      "unicodeInt": 128565,
+      "emoji": "😵",
+      "name": "face with crossed-out eyes",
+      "group": "smileys-emotion",
+      "subgroups": "face-unwell",
+      "tags": [
+        "crossed-out",
+        "dead",
+        "dizzy",
+        "eyes",
+        "face",
+        "feels",
+        "knocked",
+        "out",
+        "sick",
+        "tired",
+        "dead eyes"
+      ],
+      "emoticons": [
+        "%-)",
+        "%)",
+        "#-)",
+        "x_x",
+        "X_X",
+        "+_+"
+      ],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 37,
+      "hexcode": "1F636",
+      "unicode": "U+1F636",
+      "unicodeInt": 128566,
+      "emoji": "😶",
+      "name": "face without mouth",
+      "group": "smileys-emotion",
+      "subgroups": "face-neutral-skeptical",
+      "tags": [
+        "awkward",
+        "blank",
+        "expressionless",
+        "face",
+        "mouth",
+        "mouthless",
+        "mute",
+        "quiet",
+        "secret",
+        "silence",
+        "silent",
+        "speechless",
+        "shhh"
+      ],
+      "emoticons": [
+        ":-X",
+        ":X",
+        ":-#",
+        ":#",
+        ":-&",
+        ":&"
+      ],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 38,
+      "hexcode": "1F910",
+      "unicode": "U+1F910",
+      "unicodeInt": 129296,
+      "emoji": "🤐",
+      "name": "zipper-mouth face",
+      "group": "smileys-emotion",
+      "subgroups": "face-neutral-skeptical",
+      "tags": [
+        "face",
+        "keep",
+        "mouth",
+        "quiet",
+        "secret",
+        "shut",
+        "zip",
+        "zipper",
+        "zipper-mouth"
+      ],
+      "emoticons": [
+        ":-Z",
+        ":Z"
+      ],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 39,
+      "hexcode": "1F641",
+      "unicode": "U+1F641",
+      "unicodeInt": 128577,
+      "emoji": "🙁",
+      "name": "slightly frowning face",
+      "group": "smileys-emotion",
+      "subgroups": "face-concerned",
+      "tags": [
+        "face",
+        "frown",
+        "frowning",
+        "sad",
+        "slightly"
+      ],
+      "emoticons": [
+        ":-(",
+        ":(",
+        ":-c",
+        ":c",
+        ":-<",
+        ":<",
+        ":-[",
+        ":[",
+        ":-||",
+        ":{"
+      ],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 40,
+      "hexcode": "1F63A",
+      "unicode": "U+1F63A",
+      "unicodeInt": 128570,
+      "emoji": "😺",
+      "name": "grinning cat",
+      "group": "smileys-emotion",
+      "subgroups": "cat-face",
+      "tags": [
+        "animal",
+        "cat",
+        "face",
+        "grinning",
+        "mouth",
+        "open",
+        "smile",
+        "smiling"
+      ],
+      "emoticons": [
+        ":-3",
+        ":3",
+        "=3",
+        "x3",
+        "X3",
+        ">:3",
+        "uwu",
+        "UwU",
+        "owo",
+        "OwO"
+      ],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 41,
+      "hexcode": "1F911",
+      "unicode": "U+1F911",
+      "unicodeInt": 129297,
+      "emoji": "🤑",
+      "name": "money-mouth face",
+      "group": "smileys-emotion",
+      "subgroups": "face-tongue",
+      "tags": [
+        "face",
+        "money",
+        "money-mouth",
+        "mouth",
+        "paid",
+        "tongue",
+        "dollar"
+      ],
+      "emoticons": [
+        "$_$",
+        "($.$)"
+      ],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 42,
+      "hexcode": "1F929",
+      "unicode": "U+1F929",
+      "unicodeInt": 129321,
+      "emoji": "🤩",
+      "name": "star-struck",
+      "group": "smileys-emotion",
+      "subgroups": "face-affection",
+      "tags": [
+        "excited",
+        "eyes",
+        "face",
+        "grinning",
+        "smile",
+        "star",
+        "starry-eyed",
+        "wow",
+        "surprised"
+      ],
+      "emoticons": [
+        "*_*",
+        "*o*",
+        "☆_☆"
+      ],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 43,
+      "hexcode": "1F928",
+      "unicode": "U+1F928",
+      "unicodeInt": 129320,
+      "emoji": "🤨",
+      "name": "face with raised eyebrow",
+      "group": "smileys-emotion",
+      "subgroups": "face-neutral-skeptical",
+      "tags": [
+        "disapproval",
+        "disbelief",
+        "distrust",
+        "emoji",
+        "eyebrow",
+        "face",
+        "hmm",
+        "mild",
+        "raised",
+        "skeptic",
+        "skeptical",
+        "skepticism",
+        "surprise",
+        "what",
+        "suspicious"
+      ],
+      "emoticons": [
+        "',:-I",
+        "',:-l",
+        "🤨"
+      ],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 44,
+      "hexcode": "1F914",
+      "unicode": "U+1F914",
+      "unicodeInt": 129300,
+      "emoji": "🤔",
+      "name": "thinking face",
+      "group": "smileys-emotion",
+      "subgroups": "face-hand",
+      "tags": [
+        "chin",
+        "consider",
+        "face",
+        "hmm",
+        "ponder",
+        "pondering",
+        "thinking",
+        "wondering",
+        "hand",
+        "overthinking",
+        "frown",
+        "curious"
+      ],
+      "emoticons": [
+        ":thinking:",
+        ":?",
+        ":-?"
+      ],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 45,
+      "hexcode": "1F917",
+      "unicode": "U+1F917",
+      "unicodeInt": 129303,
+      "emoji": "🤗",
+      "name": "smiling face with open hands",
+      "group": "smileys-emotion",
+      "subgroups": "face-hand",
+      "tags": [
+        "face",
+        "hands",
+        "hug",
+        "hugging",
+        "open",
+        "smiling"
+      ],
+      "emoticons": [
+        "(づ｡◕‿‿◕｡)づ",
+        "༼ つ ◕_◕ ༽つ"
+      ],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 46,
+      "hexcode": "1F937",
+      "unicode": "U+1F937",
+      "unicodeInt": 129335,
+      "emoji": "🤷",
+      "name": "person shrugging",
+      "group": "people-body",
+      "subgroups": "person-gesture",
+      "tags": [
+        "doubt",
+        "dunno",
+        "guess",
+        "idk",
+        "ignorance",
+        "indifference",
+        "knows",
+        "maybe",
+        "person",
+        "shrug",
+        "shrugging",
+        "whatever",
+        "who",
+        "human",
+        "head",
+        "face"
+      ],
+      "emoticons": [
+        "¯\\_(ツ)_/¯",
+        "¯\\(°_o)/¯"
+      ],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 47,
+      "hexcode": "1F64C",
+      "unicode": "U+1F64C",
+      "unicodeInt": 128588,
+      "emoji": "🙌",
+      "name": "raising hands",
+      "group": "people-body",
+      "subgroups": "hands",
+      "tags": [
+        "celebration",
+        "gesture",
+        "hand",
+        "hands",
+        "hooray",
+        "praise",
+        "raised",
+        "raising",
+        "raising hands",
+        "arms in the air",
+        "banzai",
+        "Festivus miracle",
+        "hallelujah",
+        "praise hands",
+        "two hands"
+      ],
+      "emoticons": [
+        "\\o/",
+        "*\\0/*"
+      ],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 48,
+      "hexcode": "1FAE1",
+      "unicode": "U+1FAE1",
+      "unicodeInt": 129761,
+      "emoji": "🫡",
+      "name": "saluting face",
+      "group": "smileys-emotion",
+      "subgroups": "face-hand",
+      "tags": [
+        "face",
+        "good",
+        "luck",
+        "ma’am",
+        "ok",
+        "respect",
+        "salute",
+        "saluting",
+        "sir",
+        "troops",
+        "yes"
+      ],
+      "emoticons": [
+        "o7",
+        "<o/"
+      ],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 49,
+      "hexcode": "2764",
+      "unicode": "U+2764",
+      "unicodeInt": 10084,
+      "emoji": "❤️",
+      "name": "red heart",
+      "group": "smileys-emotion",
+      "subgroups": "heart",
+      "tags": [
+        "emotion",
+        "heart",
+        "love",
+        "red"
+      ],
+      "emoticons": [
+        "<3",
+        "<33",
+        ":heart:"
+      ],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 50,
+      "hexcode": "1F494",
+      "unicode": "U+1F494",
+      "unicodeInt": 128148,
+      "emoji": "💔",
+      "name": "broken heart",
+      "group": "smileys-emotion",
+      "subgroups": "heart",
+      "tags": [
+        "break",
+        "broken",
+        "crushed",
+        "emotion",
+        "heart",
+        "heartbroken",
+        "lonely",
+        "sad",
+        "heartbreak"
+      ],
+      "emoticons": [
+        "</3",
+        "<\\3"
+      ],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 51,
+      "hexcode": "1F339",
+      "unicode": "U+1F339",
+      "unicodeInt": 127801,
+      "emoji": "🌹",
+      "name": "rose",
+      "group": "animals-nature",
+      "subgroups": "plant-flower",
+      "tags": [
+        "beauty",
+        "elegant",
+        "flower",
+        "love",
+        "plant",
+        "red",
+        "valentine",
+        "rose",
+        "nature",
+        "present",
+        "valentines day"
+      ],
+      "emoticons": [
+        "@};-",
+        "@}->--",
+        "@}-;-'---",
+        "@>-->--"
+      ],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 52,
+      "hexcode": "1F918",
+      "unicode": "U+1F918",
+      "unicodeInt": 129304,
+      "emoji": "🤘",
+      "name": "sign of the horns",
+      "group": "people-body",
+      "subgroups": "hand-fingers-partial",
+      "tags": [
+        "finger",
+        "hand",
+        "horns",
+        "rock-on",
+        "sign",
+        "rock on",
+        "rock",
+        "devil",
+        "devil fingers",
+        "heavy",
+        "metal",
+        "heavy metal"
+      ],
+      "emoticons": [
+        "\\m/",
+        "\\,,/"
+      ],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 53,
+      "hexcode": "1F44D",
+      "unicode": "U+1F44D",
+      "unicodeInt": 128077,
+      "emoji": "👍️",
+      "name": "thumbs up",
+      "group": "people-body",
+      "subgroups": "hand-fingers-closed",
+      "tags": [
+        "+1",
+        "good",
+        "hand",
+        "like",
+        "thumb",
+        "up",
+        "yes",
+        "thumbs up"
+      ],
+      "emoticons": [
+        "(y)",
+        "(Y)",
+        ":+1:",
+        ":thumbsup:"
+      ],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 54,
+      "hexcode": "1F44E",
+      "unicode": "U+1F44E",
+      "unicodeInt": 128078,
+      "emoji": "👎️",
+      "name": "thumbs down",
+      "group": "people-body",
+      "subgroups": "hand-fingers-closed",
+      "tags": [
+        "-1",
+        "bad",
+        "dislike",
+        "down",
+        "good",
+        "hand",
+        "no",
+        "nope",
+        "thumb",
+        "thumbs",
+        "thumbs down",
+        "thumbs down sign"
+      ],
+      "emoticons": [
+        "(n)",
+        "(N)",
+        ":-1:",
+        ":thumbsdown:"
+      ],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 55,
+      "hexcode": "1F41F",
+      "unicode": "U+1F41F",
+      "unicodeInt": 128031,
+      "emoji": "🐟️",
+      "name": "fish",
+      "group": "animals-nature",
+      "subgroups": "animal-marine",
+      "tags": [
+        "animal",
+        "dinner",
+        "fishes",
+        "fishing",
+        "pisces",
+        "zodiac",
+        "swim",
+        "water"
+      ],
+      "emoticons": [
+        "><>",
+        "<><",
+        "<*)))>-{"
+      ],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 56,
+      "hexcode": "1F385",
+      "unicode": "U+1F385",
+      "unicodeInt": 127877,
+      "emoji": "🎅",
+      "name": "Santa Claus",
+      "group": "people-body",
+      "subgroups": "person-fantasy",
+      "tags": [
+        "celebration",
+        "christmas",
+        "claus",
+        "fairy",
+        "fantasy",
+        "father",
+        "holiday",
+        "merry",
+        "santa",
+        "tale",
+        "xmas",
+        "jolly",
+        "happy",
+        "saint nicholas",
+        "santa claus"
+      ],
+      "emoticons": [
+        "*<|:-)"
+      ],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 57,
+      "hexcode": "2615",
+      "unicode": "U+2615",
+      "unicodeInt": 9749,
+      "emoji": "☕️",
+      "name": "hot beverage",
+      "group": "food-drink",
+      "subgroups": "drink",
+      "tags": [
+        "beverage",
+        "cafe",
+        "caffeine",
+        "chai",
+        "coffee",
+        "drink",
+        "hot",
+        "morning",
+        "steaming",
+        "tea"
+      ],
+      "emoticons": [
+        "c[_]",
+        "c\\_/"
+      ],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 58,
+      "hexcode": "1F43B",
+      "unicode": "U+1F43B",
+      "unicodeInt": 128059,
+      "emoji": "🐻",
+      "name": "bear",
+      "group": "animals-nature",
+      "subgroups": "animal-mammal",
+      "tags": [
+        "animal",
+        "face",
+        "grizzly",
+        "growl",
+        "honey",
+        "brown"
+      ],
+      "emoticons": [
+        "ʕ•ᴥ•ʔ",
+        "⊂(￣(ｴ)￣)⊃"
+      ],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 59,
+      "hexcode": "1F480",
+      "unicode": "U+1F480",
+      "unicodeInt": 128128,
+      "emoji": "💀",
+      "name": "skull",
+      "group": "smileys-emotion",
+      "subgroups": "face-negative",
+      "tags": [
+        "body",
+        "dead",
+        "death",
+        "face",
+        "fairy",
+        "fairytale",
+        "i’m",
+        "lmao",
+        "monster",
+        "tale",
+        "yolo",
+        "skull"
+      ],
+      "emoticons": [
+        "8-X",
+        "8=X",
+        ":skull:"
+      ],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 60,
+      "hexcode": "1F525",
+      "unicode": "U+1F525",
+      "unicodeInt": 128293,
+      "emoji": "🔥",
+      "name": "fire",
+      "group": "travel-places",
+      "subgroups": "sky-weather",
+      "tags": [
+        "af",
+        "burn",
+        "flame",
+        "hot",
+        "lit",
+        "litaf",
+        "tool",
+        "fire",
+        "high temperature",
+        "glow"
+      ],
+      "emoticons": [
+        ":fire:"
+      ],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 61,
+      "hexcode": "1F4AF",
+      "unicode": "U+1F4AF",
+      "unicodeInt": 128175,
+      "emoji": "💯",
+      "name": "hundred points",
+      "group": "smileys-emotion",
+      "subgroups": "emotion",
+      "tags": [
+        "100",
+        "a+",
+        "agree",
+        "clearly",
+        "definitely",
+        "faithful",
+        "fleek",
+        "full",
+        "hundred",
+        "keep",
+        "perfect",
+        "point",
+        "score",
+        "true",
+        "truth",
+        "yup",
+        "excellent"
+      ],
+      "emoticons": [
+        ":100:",
+        "100%"
+      ],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 62,
+      "hexcode": "1F4A9",
+      "unicode": "U+1F4A9",
+      "unicodeInt": 128169,
+      "emoji": "💩",
+      "name": "pile of poo",
+      "group": "smileys-emotion",
+      "subgroups": "face-costume",
+      "tags": [
+        "bs",
+        "comic",
+        "doo",
+        "dung",
+        "face",
+        "fml",
+        "monster",
+        "pile",
+        "poo",
+        "poop",
+        "smelly",
+        "smh",
+        "stink",
+        "stinks",
+        "stinky",
+        "turd"
+      ],
+      "emoticons": [
+        ":poop:",
+        ":hankey:"
+      ],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 63,
+      "hexcode": "2728",
+      "unicode": "U+2728",
+      "unicodeInt": 10024,
+      "emoji": "✨️",
+      "name": "sparkles",
+      "group": "activities",
+      "subgroups": "event",
+      "tags": [
+        "*",
+        "magic",
+        "sparkle",
+        "star",
+        "beautiful"
+      ],
+      "emoticons": [
+        ":sparkles:",
+        "*+*"
+      ],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 64,
+      "hexcode": "1F680",
+      "unicode": "U+1F680",
+      "unicodeInt": 128640,
+      "emoji": "🚀",
+      "name": "rocket",
+      "group": "travel-places",
+      "subgroups": "transport-air",
+      "tags": [
+        "launch",
+        "rockets",
+        "space",
+        "travel",
+        "rocket",
+        "galaxy",
+        "adventure",
+        "alien",
+        "transportation"
+      ],
+      "emoticons": [
+        ":rocket:"
+      ],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 65,
+      "hexcode": "1F600",
+      "unicode": "U+1F600",
+      "unicodeInt": 128512,
+      "emoji": "😀",
+      "name": "grinning face",
+      "group": "smileys-emotion",
+      "subgroups": "face-smiling",
+      "tags": [
+        "cheerful",
+        "cheery",
+        "face",
+        "grin",
+        "grinning",
+        "happy",
+        "laugh",
+        "nice",
+        "smile",
+        "smiling",
+        "teeth"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 66,
+      "hexcode": "1F605",
+      "unicode": "U+1F605",
+      "unicodeInt": 128517,
+      "emoji": "😅",
+      "name": "grinning face with sweat",
+      "group": "smileys-emotion",
+      "subgroups": "face-smiling",
+      "tags": [
+        "cold",
+        "dejected",
+        "excited",
+        "face",
+        "grinning",
+        "mouth",
+        "nervous",
+        "open",
+        "smile",
+        "smiling",
+        "stress",
+        "stressed",
+        "sweat",
+        "laugh"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 67,
+      "hexcode": "1F643",
+      "unicode": "U+1F643",
+      "unicodeInt": 128579,
+      "emoji": "🙃",
+      "name": "upside-down face",
+      "group": "smileys-emotion",
+      "subgroups": "face-smiling",
+      "tags": [
+        "face",
+        "hehe",
+        "smile",
+        "upside-down",
+        "turn"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 68,
+      "hexcode": "1FAE0",
+      "unicode": "U+1FAE0",
+      "unicodeInt": 129760,
+      "emoji": "🫠",
+      "name": "melting face",
+      "group": "smileys-emotion",
+      "subgroups": "face-smiling",
+      "tags": [
+        "disappear",
+        "dissolve",
+        "embarrassed",
+        "face",
+        "haha",
+        "heat",
+        "hot",
+        "liquid",
+        "lol",
+        "melt",
+        "melting",
+        "sarcasm",
+        "sarcastic"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 69,
+      "hexcode": "1F970",
+      "unicode": "U+1F970",
+      "unicodeInt": 129392,
+      "emoji": "🥰",
+      "name": "smiling face with hearts",
+      "group": "smileys-emotion",
+      "subgroups": "face-affection",
+      "tags": [
+        "3",
+        "adore",
+        "crush",
+        "face",
+        "heart",
+        "hearts",
+        "ily",
+        "love",
+        "romance",
+        "smile",
+        "smiling",
+        "you"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 70,
+      "hexcode": "1F617",
+      "unicode": "U+1F617",
+      "unicodeInt": 128535,
+      "emoji": "😗",
+      "name": "kissing face",
+      "group": "smileys-emotion",
+      "subgroups": "face-affection",
+      "tags": [
+        "143",
+        "date",
+        "dating",
+        "face",
+        "flirt",
+        "ily",
+        "kiss",
+        "love",
+        "smooch",
+        "smooches",
+        "xoxo",
+        "you"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 71,
+      "hexcode": "1F61A",
+      "unicode": "U+1F61A",
+      "unicodeInt": 128538,
+      "emoji": "😚",
+      "name": "kissing face with closed eyes",
+      "group": "smileys-emotion",
+      "subgroups": "face-affection",
+      "tags": [
+        "143",
+        "bae",
+        "blush",
+        "closed",
+        "date",
+        "dating",
+        "eye",
+        "eyes",
+        "face",
+        "flirt",
+        "ily",
+        "kisses",
+        "kissing",
+        "smooches",
+        "xoxo",
+        "love",
+        "happy"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 72,
+      "hexcode": "1F619",
+      "unicode": "U+1F619",
+      "unicodeInt": 128537,
+      "emoji": "😙",
+      "name": "kissing face with smiling eyes",
+      "group": "smileys-emotion",
+      "subgroups": "face-affection",
+      "tags": [
+        "143",
+        "closed",
+        "date",
+        "dating",
+        "eye",
+        "eyes",
+        "face",
+        "flirt",
+        "ily",
+        "kiss",
+        "kisses",
+        "kissing",
+        "love",
+        "night",
+        "smile",
+        "smiling"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 73,
+      "hexcode": "1F972",
+      "unicode": "U+1F972",
+      "unicodeInt": 129394,
+      "emoji": "🥲",
+      "name": "smiling face with tear",
+      "group": "smileys-emotion",
+      "subgroups": "face-affection",
+      "tags": [
+        "face",
+        "glad",
+        "grateful",
+        "happy",
+        "joy",
+        "pain",
+        "proud",
+        "relieved",
+        "smile",
+        "smiley",
+        "smiling",
+        "tear",
+        "touched"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 74,
+      "hexcode": "1F92A",
+      "unicode": "U+1F92A",
+      "unicodeInt": 129322,
+      "emoji": "🤪",
+      "name": "zany face",
+      "group": "smileys-emotion",
+      "subgroups": "face-tongue",
+      "tags": [
+        "crazy",
+        "eye",
+        "eyes",
+        "face",
+        "goofy",
+        "large",
+        "small",
+        "zany"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 75,
+      "hexcode": "1F92D",
+      "unicode": "U+1F92D",
+      "unicodeInt": 129325,
+      "emoji": "🤭",
+      "name": "face with hand over mouth",
+      "group": "smileys-emotion",
+      "subgroups": "face-hand",
+      "tags": [
+        "face",
+        "giggle",
+        "giggling",
+        "hand",
+        "mouth",
+        "oops",
+        "realization",
+        "secret",
+        "shock",
+        "sudden",
+        "surprise",
+        "whoops",
+        "smile",
+        "covering"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 76,
+      "hexcode": "1F92B",
+      "unicode": "U+1F92B",
+      "unicodeInt": 129323,
+      "emoji": "🤫",
+      "name": "shushing face",
+      "group": "smileys-emotion",
+      "subgroups": "face-hand",
+      "tags": [
+        "face",
+        "quiet",
+        "shh",
+        "shush",
+        "shushing",
+        "hand",
+        "silent"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 77,
+      "hexcode": "1FAE5",
+      "unicode": "U+1FAE5",
+      "unicodeInt": 129765,
+      "emoji": "🫥",
+      "name": "dotted line face",
+      "group": "smileys-emotion",
+      "subgroups": "face-neutral-skeptical",
+      "tags": [
+        "depressed",
+        "disappear",
+        "dotted",
+        "face",
+        "hidden",
+        "hide",
+        "introvert",
+        "invisible",
+        "line",
+        "meh",
+        "whatever",
+        "wtv"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 78,
+      "hexcode": "1F644",
+      "unicode": "U+1F644",
+      "unicodeInt": 128580,
+      "emoji": "🙄",
+      "name": "face with rolling eyes",
+      "group": "smileys-emotion",
+      "subgroups": "face-neutral-skeptical",
+      "tags": [
+        "eyeroll",
+        "eyes",
+        "face",
+        "rolling",
+        "shade",
+        "ugh",
+        "whatever",
+        "annoyed"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 79,
+      "hexcode": "1F62C",
+      "unicode": "U+1F62C",
+      "unicodeInt": 128556,
+      "emoji": "😬",
+      "name": "grimacing face",
+      "group": "smileys-emotion",
+      "subgroups": "face-neutral-skeptical",
+      "tags": [
+        "awk",
+        "awkward",
+        "dentist",
+        "face",
+        "grimace",
+        "grimacing",
+        "grinning",
+        "smile",
+        "smiling"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 80,
+      "hexcode": "1F925",
+      "unicode": "U+1F925",
+      "unicodeInt": 129317,
+      "emoji": "🤥",
+      "name": "lying face",
+      "group": "smileys-emotion",
+      "subgroups": "face-neutral-skeptical",
+      "tags": [
+        "face",
+        "liar",
+        "lie",
+        "lying",
+        "pinocchio",
+        "nose",
+        "long"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 81,
+      "hexcode": "1F60C",
+      "unicode": "U+1F60C",
+      "unicodeInt": 128524,
+      "emoji": "😌",
+      "name": "relieved face",
+      "group": "smileys-emotion",
+      "subgroups": "face-sleepy",
+      "tags": [
+        "calm",
+        "face",
+        "peace",
+        "relief",
+        "relieved",
+        "zen"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 82,
+      "hexcode": "1F614",
+      "unicode": "U+1F614",
+      "unicodeInt": 128532,
+      "emoji": "😔",
+      "name": "pensive face",
+      "group": "smileys-emotion",
+      "subgroups": "face-sleepy",
+      "tags": [
+        "awful",
+        "bored",
+        "dejected",
+        "died",
+        "disappointed",
+        "face",
+        "losing",
+        "lost",
+        "pensive",
+        "sad",
+        "sucks"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 83,
+      "hexcode": "1F62A",
+      "unicode": "U+1F62A",
+      "unicodeInt": 128554,
+      "emoji": "😪",
+      "name": "sleepy face",
+      "group": "smileys-emotion",
+      "subgroups": "face-sleepy",
+      "tags": [
+        "crying",
+        "face",
+        "good",
+        "night",
+        "sad",
+        "sleep",
+        "sleeping",
+        "sleepy",
+        "tired",
+        "snot bubble",
+        "side-tear"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 84,
+      "hexcode": "1F924",
+      "unicode": "U+1F924",
+      "unicodeInt": 129316,
+      "emoji": "🤤",
+      "name": "drooling face",
+      "group": "smileys-emotion",
+      "subgroups": "face-sleepy",
+      "tags": [
+        "drooling",
+        "face",
+        "hungry",
+        "yummy"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 85,
+      "hexcode": "1F637",
+      "unicode": "U+1F637",
+      "unicodeInt": 128567,
+      "emoji": "😷",
+      "name": "face with medical mask",
+      "group": "smileys-emotion",
+      "subgroups": "face-unwell",
+      "tags": [
+        "cold",
+        "dentist",
+        "dermatologist",
+        "doctor",
+        "dr",
+        "face",
+        "germs",
+        "mask",
+        "medical",
+        "medicine",
+        "sick",
+        "ill"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 86,
+      "hexcode": "1F912",
+      "unicode": "U+1F912",
+      "unicodeInt": 129298,
+      "emoji": "🤒",
+      "name": "face with thermometer",
+      "group": "smileys-emotion",
+      "subgroups": "face-unwell",
+      "tags": [
+        "face",
+        "ill",
+        "sick",
+        "thermometer",
+        "fever"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 87,
+      "hexcode": "1F915",
+      "unicode": "U+1F915",
+      "unicodeInt": 129301,
+      "emoji": "🤕",
+      "name": "face with head-bandage",
+      "group": "smileys-emotion",
+      "subgroups": "face-unwell",
+      "tags": [
+        "bandage",
+        "face",
+        "head-bandage",
+        "hurt",
+        "injury",
+        "ouch",
+        "head"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 88,
+      "hexcode": "1F922",
+      "unicode": "U+1F922",
+      "unicodeInt": 129314,
+      "emoji": "🤢",
+      "name": "nauseated face",
+      "group": "smileys-emotion",
+      "subgroups": "face-unwell",
+      "tags": [
+        "face",
+        "gross",
+        "nasty",
+        "nauseated",
+        "sick",
+        "vomit",
+        "green"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 89,
+      "hexcode": "1F92E",
+      "unicode": "U+1F92E",
+      "unicodeInt": 129326,
+      "emoji": "🤮",
+      "name": "face vomiting",
+      "group": "smileys-emotion",
+      "subgroups": "face-unwell",
+      "tags": [
+        "barf",
+        "ew",
+        "face",
+        "gross",
+        "puke",
+        "sick",
+        "spew",
+        "throw",
+        "up",
+        "vomit",
+        "vomiting"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 90,
+      "hexcode": "1F927",
+      "unicode": "U+1F927",
+      "unicodeInt": 129319,
+      "emoji": "🤧",
+      "name": "sneezing face",
+      "group": "smileys-emotion",
+      "subgroups": "face-unwell",
+      "tags": [
+        "face",
+        "fever",
+        "flu",
+        "gesundheit",
+        "sick",
+        "sneeze",
+        "sneezing",
+        "tissue"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 91,
+      "hexcode": "1F975",
+      "unicode": "U+1F975",
+      "unicodeInt": 129397,
+      "emoji": "🥵",
+      "name": "hot face",
+      "group": "smileys-emotion",
+      "subgroups": "face-unwell",
+      "tags": [
+        "dying",
+        "face",
+        "feverish",
+        "heat",
+        "hot",
+        "panting",
+        "red-faced",
+        "stroke",
+        "sweating",
+        "tongue"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 92,
+      "hexcode": "1F976",
+      "unicode": "U+1F976",
+      "unicodeInt": 129398,
+      "emoji": "🥶",
+      "name": "cold face",
+      "group": "smileys-emotion",
+      "subgroups": "face-unwell",
+      "tags": [
+        "blue",
+        "blue-faced",
+        "cold",
+        "face",
+        "freezing",
+        "frostbite",
+        "icicles",
+        "subzero",
+        "teeth"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 93,
+      "hexcode": "1F974",
+      "unicode": "U+1F974",
+      "unicodeInt": 129396,
+      "emoji": "🥴",
+      "name": "woozy face",
+      "group": "smileys-emotion",
+      "subgroups": "face-unwell",
+      "tags": [
+        "dizzy",
+        "drunk",
+        "eyes",
+        "face",
+        "intoxicated",
+        "mouth",
+        "tipsy",
+        "uneven",
+        "wavy",
+        "woozy"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 94,
+      "hexcode": "1F92F",
+      "unicode": "U+1F92F",
+      "unicodeInt": 129327,
+      "emoji": "🤯",
+      "name": "exploding head",
+      "group": "smileys-emotion",
+      "subgroups": "face-unwell",
+      "tags": [
+        "blown",
+        "explode",
+        "exploding",
+        "head",
+        "mind",
+        "mindblown",
+        "no",
+        "shocked",
+        "way",
+        "explosion"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 95,
+      "hexcode": "1F920",
+      "unicode": "U+1F920",
+      "unicodeInt": 129312,
+      "emoji": "🤠",
+      "name": "cowboy hat face",
+      "group": "smileys-emotion",
+      "subgroups": "face-hat",
+      "tags": [
+        "cowboy",
+        "cowgirl",
+        "face",
+        "hat",
+        "howdy"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 96,
+      "hexcode": "1F973",
+      "unicode": "U+1F973",
+      "unicodeInt": 129395,
+      "emoji": "🥳",
+      "name": "partying face",
+      "group": "smileys-emotion",
+      "subgroups": "face-hat",
+      "tags": [
+        "bday",
+        "birthday",
+        "celebrate",
+        "celebration",
+        "excited",
+        "face",
+        "happy",
+        "hat",
+        "hooray",
+        "horn",
+        "party",
+        "partying"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 97,
+      "hexcode": "1F978",
+      "unicode": "U+1F978",
+      "unicodeInt": 129400,
+      "emoji": "🥸",
+      "name": "disguised face",
+      "group": "smileys-emotion",
+      "subgroups": "face-hat",
+      "tags": [
+        "disguise",
+        "eyebrow",
+        "face",
+        "glasses",
+        "incognito",
+        "moustache",
+        "mustache",
+        "nose",
+        "person",
+        "spy",
+        "tache",
+        "tash"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 98,
+      "hexcode": "1F913",
+      "unicode": "U+1F913",
+      "unicodeInt": 129299,
+      "emoji": "🤓",
+      "name": "nerd face",
+      "group": "smileys-emotion",
+      "subgroups": "face-glasses",
+      "tags": [
+        "brainy",
+        "clever",
+        "expert",
+        "face",
+        "geek",
+        "gifted",
+        "glasses",
+        "intelligent",
+        "nerd",
+        "smart",
+        "learning"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 99,
+      "hexcode": "1F9D0",
+      "unicode": "U+1F9D0",
+      "unicodeInt": 129488,
+      "emoji": "🧐",
+      "name": "face with monocle",
+      "group": "smileys-emotion",
+      "subgroups": "face-glasses",
+      "tags": [
+        "classy",
+        "face",
+        "fancy",
+        "monocle",
+        "rich",
+        "stuffy",
+        "wealthy",
+        "glasses",
+        "intelligent"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 100,
+      "hexcode": "1FAE4",
+      "unicode": "U+1FAE4",
+      "unicodeInt": 129764,
+      "emoji": "🫤",
+      "name": "face with diagonal mouth",
+      "group": "smileys-emotion",
+      "subgroups": "face-concerned",
+      "tags": [
+        "confused",
+        "confusion",
+        "diagonal",
+        "disappointed",
+        "doubt",
+        "doubtful",
+        "face",
+        "frustrated",
+        "frustration",
+        "meh",
+        "mouth",
+        "skeptical",
+        "unsure",
+        "whatever",
+        "wtv"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 101,
+      "hexcode": "1F61F",
+      "unicode": "U+1F61F",
+      "unicodeInt": 128543,
+      "emoji": "😟",
+      "name": "worried face",
+      "group": "smileys-emotion",
+      "subgroups": "face-concerned",
+      "tags": [
+        "anxious",
+        "butterflies",
+        "face",
+        "nerves",
+        "nervous",
+        "sad",
+        "stress",
+        "stressed",
+        "surprised",
+        "worried",
+        "worry"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 102,
+      "hexcode": "1F62F",
+      "unicode": "U+1F62F",
+      "unicodeInt": 128559,
+      "emoji": "😯",
+      "name": "hushed face",
+      "group": "smileys-emotion",
+      "subgroups": "face-concerned",
+      "tags": [
+        "epic",
+        "face",
+        "hushed",
+        "omg",
+        "stunned",
+        "surprised",
+        "whoa",
+        "woah"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 103,
+      "hexcode": "1F97A",
+      "unicode": "U+1F97A",
+      "unicodeInt": 129402,
+      "emoji": "🥺",
+      "name": "pleading face",
+      "group": "smileys-emotion",
+      "subgroups": "face-concerned",
+      "tags": [
+        "begging",
+        "big",
+        "eyes",
+        "face",
+        "mercy",
+        "not",
+        "pleading",
+        "please",
+        "pretty",
+        "puppy",
+        "sad",
+        "why"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 104,
+      "hexcode": "1F979",
+      "unicode": "U+1F979",
+      "unicodeInt": 129401,
+      "emoji": "🥹",
+      "name": "face holding back tears",
+      "group": "smileys-emotion",
+      "subgroups": "face-concerned",
+      "tags": [
+        "admiration",
+        "aww",
+        "back",
+        "cry",
+        "embarrassed",
+        "face",
+        "feelings",
+        "grateful",
+        "gratitude",
+        "holding",
+        "joy",
+        "please",
+        "proud",
+        "resist",
+        "sad",
+        "tears"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 105,
+      "hexcode": "1F627",
+      "unicode": "U+1F627",
+      "unicodeInt": 128551,
+      "emoji": "😧",
+      "name": "anguished face",
+      "group": "smileys-emotion",
+      "subgroups": "face-concerned",
+      "tags": [
+        "anguished",
+        "face",
+        "forgot",
+        "scared",
+        "scary",
+        "stressed",
+        "surprise",
+        "unhappy",
+        "what",
+        "wow"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 106,
+      "hexcode": "1F630",
+      "unicode": "U+1F630",
+      "unicodeInt": 128560,
+      "emoji": "😰",
+      "name": "anxious face with sweat",
+      "group": "smileys-emotion",
+      "subgroups": "face-concerned",
+      "tags": [
+        "anxious",
+        "blue",
+        "cold",
+        "eek",
+        "face",
+        "mouth",
+        "nervous",
+        "open",
+        "rushed",
+        "scared",
+        "sweat",
+        "yikes",
+        "worried",
+        "considerate"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 107,
+      "hexcode": "1F625",
+      "unicode": "U+1F625",
+      "unicodeInt": 128549,
+      "emoji": "😥",
+      "name": "sad but relieved face",
+      "group": "smileys-emotion",
+      "subgroups": "face-concerned",
+      "tags": [
+        "anxious",
+        "call",
+        "close",
+        "complicated",
+        "disappointed",
+        "face",
+        "not",
+        "relieved",
+        "sad",
+        "sweat",
+        "time",
+        "whew"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 108,
+      "hexcode": "1F631",
+      "unicode": "U+1F631",
+      "unicodeInt": 128561,
+      "emoji": "😱",
+      "name": "face screaming in fear",
+      "group": "smileys-emotion",
+      "subgroups": "face-concerned",
+      "tags": [
+        "epic",
+        "face",
+        "fear",
+        "fearful",
+        "munch",
+        "scared",
+        "scream",
+        "screamer",
+        "screaming",
+        "shocked",
+        "surprised",
+        "woah",
+        "open mouth"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 109,
+      "hexcode": "1F623",
+      "unicode": "U+1F623",
+      "unicodeInt": 128547,
+      "emoji": "😣",
+      "name": "persevering face",
+      "group": "smileys-emotion",
+      "subgroups": "face-concerned",
+      "tags": [
+        "concentrate",
+        "concentration",
+        "face",
+        "focus",
+        "headache",
+        "persevere",
+        "persevering",
+        "ouch"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 110,
+      "hexcode": "1F613",
+      "unicode": "U+1F613",
+      "unicodeInt": 128531,
+      "emoji": "😓",
+      "name": "downcast face with sweat",
+      "group": "smileys-emotion",
+      "subgroups": "face-concerned",
+      "tags": [
+        "close",
+        "cold",
+        "downcast",
+        "face",
+        "feels",
+        "headache",
+        "nervous",
+        "sad",
+        "scared",
+        "sweat",
+        "yikes"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 111,
+      "hexcode": "1F629",
+      "unicode": "U+1F629",
+      "unicodeInt": 128553,
+      "emoji": "😩",
+      "name": "weary face",
+      "group": "smileys-emotion",
+      "subgroups": "face-concerned",
+      "tags": [
+        "crying",
+        "face",
+        "fail",
+        "feels",
+        "hungry",
+        "mad",
+        "nooo",
+        "sad",
+        "sleepy",
+        "tired",
+        "unhappy",
+        "weary",
+        "distraught"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 112,
+      "hexcode": "1F62B",
+      "unicode": "U+1F62B",
+      "unicodeInt": 128555,
+      "emoji": "😫",
+      "name": "tired face",
+      "group": "smileys-emotion",
+      "subgroups": "face-concerned",
+      "tags": [
+        "cost",
+        "face",
+        "feels",
+        "nap",
+        "sad",
+        "sneeze",
+        "tired",
+        "exhausted"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 113,
+      "hexcode": "1F971",
+      "unicode": "U+1F971",
+      "unicodeInt": 129393,
+      "emoji": "🥱",
+      "name": "yawning face",
+      "group": "smileys-emotion",
+      "subgroups": "face-concerned",
+      "tags": [
+        "bedtime",
+        "bored",
+        "face",
+        "goodnight",
+        "nap",
+        "night",
+        "sleep",
+        "sleepy",
+        "tired",
+        "whatever",
+        "yawn",
+        "yawning",
+        "zzz"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 114,
+      "hexcode": "1F624",
+      "unicode": "U+1F624",
+      "unicodeInt": 128548,
+      "emoji": "😤",
+      "name": "face with steam from nose",
+      "group": "smileys-emotion",
+      "subgroups": "face-negative",
+      "tags": [
+        "anger",
+        "angry",
+        "face",
+        "feels",
+        "fume",
+        "fuming",
+        "furious",
+        "fury",
+        "mad",
+        "nose",
+        "steam",
+        "triumph",
+        "unhappy",
+        "won"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 115,
+      "hexcode": "1F92C",
+      "unicode": "U+1F92C",
+      "unicodeInt": 129324,
+      "emoji": "🤬",
+      "name": "face with symbols on mouth",
+      "group": "smileys-emotion",
+      "subgroups": "face-negative",
+      "tags": [
+        "censor",
+        "cursing",
+        "cussing",
+        "face",
+        "mad",
+        "mouth",
+        "pissed",
+        "swearing",
+        "symbols",
+        "angry"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 116,
+      "hexcode": "1F47F",
+      "unicode": "U+1F47F",
+      "unicodeInt": 128127,
+      "emoji": "👿",
+      "name": "angry face with horns",
+      "group": "smileys-emotion",
+      "subgroups": "face-negative",
+      "tags": [
+        "angry",
+        "demon",
+        "devil",
+        "evil",
+        "face",
+        "fairy",
+        "fairytale",
+        "fantasy",
+        "horns",
+        "imp",
+        "mischievous",
+        "purple",
+        "shade",
+        "tale",
+        "mean"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 117,
+      "hexcode": "1F921",
+      "unicode": "U+1F921",
+      "unicodeInt": 129313,
+      "emoji": "🤡",
+      "name": "clown face",
+      "group": "smileys-emotion",
+      "subgroups": "face-costume",
+      "tags": [
+        "clown",
+        "face"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 118,
+      "hexcode": "1F47B",
+      "unicode": "U+1F47B",
+      "unicodeInt": 128123,
+      "emoji": "👻",
+      "name": "ghost",
+      "group": "smileys-emotion",
+      "subgroups": "face-costume",
+      "tags": [
+        "boo",
+        "creature",
+        "excited",
+        "face",
+        "fairy",
+        "fairytale",
+        "fantasy",
+        "halloween",
+        "haunting",
+        "monster",
+        "scary",
+        "silly",
+        "tale",
+        "ghost"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 119,
+      "hexcode": "1F47D",
+      "unicode": "U+1F47D",
+      "unicodeInt": 128125,
+      "emoji": "👽️",
+      "name": "alien",
+      "group": "smileys-emotion",
+      "subgroups": "face-costume",
+      "tags": [
+        "creature",
+        "extraterrestrial",
+        "face",
+        "fairy",
+        "fairytale",
+        "fantasy",
+        "monster",
+        "space",
+        "tale",
+        "ufo",
+        "alien"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 120,
+      "hexcode": "1F47E",
+      "unicode": "U+1F47E",
+      "unicodeInt": 128126,
+      "emoji": "👾",
+      "name": "alien monster",
+      "group": "smileys-emotion",
+      "subgroups": "face-costume",
+      "tags": [
+        "alien",
+        "creature",
+        "extraterrestrial",
+        "face",
+        "fairy",
+        "fairytale",
+        "fantasy",
+        "game",
+        "gamer",
+        "games",
+        "monster",
+        "pixelated",
+        "space",
+        "tale",
+        "ufo"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 121,
+      "hexcode": "1F916",
+      "unicode": "U+1F916",
+      "unicodeInt": 129302,
+      "emoji": "🤖",
+      "name": "robot",
+      "group": "smileys-emotion",
+      "subgroups": "face-costume",
+      "tags": [
+        "face",
+        "monster"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 122,
+      "hexcode": "1F638",
+      "unicode": "U+1F638",
+      "unicodeInt": 128568,
+      "emoji": "😸",
+      "name": "grinning cat with smiling eyes",
+      "group": "smileys-emotion",
+      "subgroups": "cat-face",
+      "tags": [
+        "animal",
+        "cat",
+        "eye",
+        "eyes",
+        "face",
+        "grin",
+        "grinning",
+        "smile",
+        "smiling"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 123,
+      "hexcode": "1F639",
+      "unicode": "U+1F639",
+      "unicodeInt": 128569,
+      "emoji": "😹",
+      "name": "cat with tears of joy",
+      "group": "smileys-emotion",
+      "subgroups": "cat-face",
+      "tags": [
+        "animal",
+        "cat",
+        "face",
+        "joy",
+        "laugh",
+        "laughing",
+        "lol",
+        "tear",
+        "tears",
+        "smile"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 124,
+      "hexcode": "1F63B",
+      "unicode": "U+1F63B",
+      "unicodeInt": 128571,
+      "emoji": "😻",
+      "name": "smiling cat with heart-eyes",
+      "group": "smileys-emotion",
+      "subgroups": "cat-face",
+      "tags": [
+        "animal",
+        "cat",
+        "eye",
+        "face",
+        "heart",
+        "heart-eyes",
+        "love",
+        "smile",
+        "smiling",
+        "hearts",
+        "red"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 125,
+      "hexcode": "1F63C",
+      "unicode": "U+1F63C",
+      "unicodeInt": 128572,
+      "emoji": "😼",
+      "name": "cat with wry smile",
+      "group": "smileys-emotion",
+      "subgroups": "cat-face",
+      "tags": [
+        "animal",
+        "cat",
+        "face",
+        "ironic",
+        "smile",
+        "wry"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 126,
+      "hexcode": "1F63D",
+      "unicode": "U+1F63D",
+      "unicodeInt": 128573,
+      "emoji": "😽",
+      "name": "kissing cat",
+      "group": "smileys-emotion",
+      "subgroups": "cat-face",
+      "tags": [
+        "animal",
+        "cat",
+        "closed",
+        "eye",
+        "eyes",
+        "face",
+        "kiss",
+        "kissing"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 127,
+      "hexcode": "1F640",
+      "unicode": "U+1F640",
+      "unicodeInt": 128576,
+      "emoji": "🙀",
+      "name": "weary cat",
+      "group": "smileys-emotion",
+      "subgroups": "cat-face",
+      "tags": [
+        "animal",
+        "cat",
+        "face",
+        "oh",
+        "surprised",
+        "weary",
+        "wow"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 128,
+      "hexcode": "1F63F",
+      "unicode": "U+1F63F",
+      "unicodeInt": 128575,
+      "emoji": "😿",
+      "name": "crying cat",
+      "group": "smileys-emotion",
+      "subgroups": "cat-face",
+      "tags": [
+        "animal",
+        "cat",
+        "cry",
+        "crying",
+        "face",
+        "sad",
+        "tear",
+        "unhappy",
+        "depressed"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 129,
+      "hexcode": "1F63E",
+      "unicode": "U+1F63E",
+      "unicodeInt": 128574,
+      "emoji": "😾",
+      "name": "pouting cat",
+      "group": "smileys-emotion",
+      "subgroups": "cat-face",
+      "tags": [
+        "animal",
+        "cat",
+        "face",
+        "pouting",
+        "sad",
+        "angry"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 130,
+      "hexcode": "1F648",
+      "unicode": "U+1F648",
+      "unicodeInt": 128584,
+      "emoji": "🙈",
+      "name": "see-no-evil monkey",
+      "group": "smileys-emotion",
+      "subgroups": "monkey-face",
+      "tags": [
+        "embarrassed",
+        "evil",
+        "face",
+        "forbidden",
+        "forgot",
+        "gesture",
+        "hide",
+        "monkey",
+        "no",
+        "omg",
+        "prohibited",
+        "scared",
+        "secret",
+        "smh",
+        "watch"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 131,
+      "hexcode": "1F649",
+      "unicode": "U+1F649",
+      "unicodeInt": 128585,
+      "emoji": "🙉",
+      "name": "hear-no-evil monkey",
+      "group": "smileys-emotion",
+      "subgroups": "monkey-face",
+      "tags": [
+        "animal",
+        "ears",
+        "evil",
+        "face",
+        "forbidden",
+        "gesture",
+        "hear",
+        "listen",
+        "monkey",
+        "no",
+        "not",
+        "prohibited",
+        "secret",
+        "shh",
+        "tmi"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 132,
+      "hexcode": "1F64A",
+      "unicode": "U+1F64A",
+      "unicodeInt": 128586,
+      "emoji": "🙊",
+      "name": "speak-no-evil monkey",
+      "group": "smileys-emotion",
+      "subgroups": "monkey-face",
+      "tags": [
+        "animal",
+        "evil",
+        "face",
+        "forbidden",
+        "gesture",
+        "monkey",
+        "no",
+        "not",
+        "oops",
+        "prohibited",
+        "quiet",
+        "secret",
+        "speak",
+        "stealth"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 133,
+      "hexcode": "1F44B",
+      "unicode": "U+1F44B",
+      "unicodeInt": 128075,
+      "emoji": "👋",
+      "name": "waving hand",
+      "group": "people-body",
+      "subgroups": "hand-fingers-open",
+      "tags": [
+        "bye",
+        "cya",
+        "g2g",
+        "greetings",
+        "gtg",
+        "hand",
+        "hello",
+        "hey",
+        "hi",
+        "later",
+        "outtie",
+        "ttfn",
+        "ttyl",
+        "wave",
+        "yo",
+        "you",
+        "goodbye",
+        "waving hand sign"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 134,
+      "hexcode": "1F91A",
+      "unicode": "U+1F91A",
+      "unicodeInt": 129306,
+      "emoji": "🤚",
+      "name": "raised back of hand",
+      "group": "people-body",
+      "subgroups": "hand-fingers-open",
+      "tags": [
+        "back",
+        "backhand",
+        "hand",
+        "raised"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 135,
+      "hexcode": "1F590",
+      "unicode": "U+1F590",
+      "unicodeInt": 128400,
+      "emoji": "🖐️",
+      "name": "hand with fingers splayed",
+      "group": "people-body",
+      "subgroups": "hand-fingers-open",
+      "tags": [
+        "finger",
+        "fingers",
+        "hand",
+        "raised",
+        "splayed",
+        "stop",
+        "five hand",
+        "five"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 136,
+      "hexcode": "270B",
+      "unicode": "U+270B",
+      "unicodeInt": 9995,
+      "emoji": "✋️",
+      "name": "raised hand",
+      "group": "people-body",
+      "subgroups": "hand-fingers-open",
+      "tags": [
+        "5",
+        "five",
+        "hand",
+        "high",
+        "raised",
+        "stop",
+        "raise"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 137,
+      "hexcode": "1F596",
+      "unicode": "U+1F596",
+      "unicodeInt": 128406,
+      "emoji": "🖖",
+      "name": "vulcan salute",
+      "group": "people-body",
+      "subgroups": "hand-fingers-open",
+      "tags": [
+        "finger",
+        "hand",
+        "hands",
+        "salute",
+        "vulcan",
+        "fingers",
+        "star trek"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 138,
+      "hexcode": "1F44C",
+      "unicode": "U+1F44C",
+      "unicodeInt": 128076,
+      "emoji": "👌",
+      "name": "OK hand",
+      "group": "people-body",
+      "subgroups": "hand-fingers-partial",
+      "tags": [
+        "awesome",
+        "bet",
+        "dope",
+        "fleek",
+        "fosho",
+        "got",
+        "gotcha",
+        "hand",
+        "legit",
+        "ok",
+        "okay",
+        "pinch",
+        "rad",
+        "sure",
+        "sweet",
+        "three",
+        "perfect"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 139,
+      "hexcode": "1F90C",
+      "unicode": "U+1F90C",
+      "unicodeInt": 129292,
+      "emoji": "🤌",
+      "name": "pinched fingers",
+      "group": "people-body",
+      "subgroups": "hand-fingers-partial",
+      "tags": [
+        "fingers",
+        "gesture",
+        "hand",
+        "hold",
+        "huh",
+        "interrogation",
+        "patience",
+        "pinched",
+        "relax",
+        "sarcastic",
+        "ugh",
+        "what",
+        "zip"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 140,
+      "hexcode": "1F90F",
+      "unicode": "U+1F90F",
+      "unicodeInt": 129295,
+      "emoji": "🤏",
+      "name": "pinching hand",
+      "group": "people-body",
+      "subgroups": "hand-fingers-partial",
+      "tags": [
+        "amount",
+        "bit",
+        "fingers",
+        "hand",
+        "little",
+        "pinching",
+        "small",
+        "sort"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 141,
+      "hexcode": "270C",
+      "unicode": "U+270C",
+      "unicodeInt": 9996,
+      "emoji": "✌️",
+      "name": "victory hand",
+      "group": "people-body",
+      "subgroups": "hand-fingers-partial",
+      "tags": [
+        "hand",
+        "peace",
+        "v",
+        "victory",
+        "air quotes",
+        "quotes",
+        "peace sign",
+        "V sign"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 142,
+      "hexcode": "1F91E",
+      "unicode": "U+1F91E",
+      "unicodeInt": 129310,
+      "emoji": "🤞",
+      "name": "crossed fingers",
+      "group": "people-body",
+      "subgroups": "hand-fingers-partial",
+      "tags": [
+        "cross",
+        "crossed",
+        "finger",
+        "fingers",
+        "hand",
+        "luck",
+        "fingers crossed",
+        "good luck"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 143,
+      "hexcode": "1FAF0",
+      "unicode": "U+1FAF0",
+      "unicodeInt": 129776,
+      "emoji": "🫰",
+      "name": "hand with index finger and thumb crossed",
+      "group": "people-body",
+      "subgroups": "hand-fingers-partial",
+      "tags": [
+        "<3",
+        "crossed",
+        "expensive",
+        "finger",
+        "hand",
+        "heart",
+        "index",
+        "love",
+        "money",
+        "snap",
+        "thumb"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 144,
+      "hexcode": "1F91F",
+      "unicode": "U+1F91F",
+      "unicodeInt": 129311,
+      "emoji": "🤟",
+      "name": "love-you gesture",
+      "group": "people-body",
+      "subgroups": "hand-fingers-partial",
+      "tags": [
+        "fingers",
+        "gesture",
+        "hand",
+        "ily",
+        "love",
+        "love-you",
+        "three",
+        "you",
+        "heavy metal"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 145,
+      "hexcode": "1F919",
+      "unicode": "U+1F919",
+      "unicodeInt": 129305,
+      "emoji": "🤙",
+      "name": "call me hand",
+      "group": "people-body",
+      "subgroups": "hand-fingers-partial",
+      "tags": [
+        "call",
+        "hand",
+        "hang",
+        "loose",
+        "me",
+        "shaka",
+        "call me hand",
+        "phone",
+        "shaka sign",
+        "hang loose",
+        "right on"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 146,
+      "hexcode": "1F448",
+      "unicode": "U+1F448",
+      "unicodeInt": 128072,
+      "emoji": "👈️",
+      "name": "backhand index pointing left",
+      "group": "people-body",
+      "subgroups": "hand-single-finger",
+      "tags": [
+        "backhand",
+        "finger",
+        "hand",
+        "index",
+        "left",
+        "point",
+        "pointing",
+        "point left"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 147,
+      "hexcode": "1F449",
+      "unicode": "U+1F449",
+      "unicodeInt": 128073,
+      "emoji": "👉️",
+      "name": "backhand index pointing right",
+      "group": "people-body",
+      "subgroups": "hand-single-finger",
+      "tags": [
+        "backhand",
+        "finger",
+        "hand",
+        "index",
+        "point",
+        "pointing",
+        "right",
+        "point right"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 148,
+      "hexcode": "1F446",
+      "unicode": "U+1F446",
+      "unicodeInt": 128070,
+      "emoji": "👆️",
+      "name": "backhand index pointing up",
+      "group": "people-body",
+      "subgroups": "hand-single-finger",
+      "tags": [
+        "backhand",
+        "finger",
+        "hand",
+        "index",
+        "point",
+        "pointing",
+        "up",
+        "point up"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 149,
+      "hexcode": "1F447",
+      "unicode": "U+1F447",
+      "unicodeInt": 128071,
+      "emoji": "👇️",
+      "name": "backhand index pointing down",
+      "group": "people-body",
+      "subgroups": "hand-single-finger",
+      "tags": [
+        "backhand",
+        "down",
+        "finger",
+        "hand",
+        "index",
+        "point",
+        "pointing",
+        "point down"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 150,
+      "hexcode": "261D",
+      "unicode": "U+261D",
+      "unicodeInt": 9757,
+      "emoji": "☝️",
+      "name": "index pointing up",
+      "group": "people-body",
+      "subgroups": "hand-single-finger",
+      "tags": [
+        "finger",
+        "hand",
+        "index",
+        "point",
+        "pointing",
+        "this",
+        "up"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 151,
+      "hexcode": "1FAF5",
+      "unicode": "U+1FAF5",
+      "unicodeInt": 129781,
+      "emoji": "🫵",
+      "name": "index pointing at the viewer",
+      "group": "people-body",
+      "subgroups": "hand-single-finger",
+      "tags": [
+        "at",
+        "finger",
+        "hand",
+        "index",
+        "pointing",
+        "poke",
+        "viewer",
+        "you"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 152,
+      "hexcode": "270A",
+      "unicode": "U+270A",
+      "unicodeInt": 9994,
+      "emoji": "✊️",
+      "name": "raised fist",
+      "group": "people-body",
+      "subgroups": "hand-fingers-closed",
+      "tags": [
+        "clenched",
+        "fist",
+        "hand",
+        "punch",
+        "raised",
+        "solidarity"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 153,
+      "hexcode": "1F44A",
+      "unicode": "U+1F44A",
+      "unicodeInt": 128074,
+      "emoji": "👊",
+      "name": "oncoming fist",
+      "group": "people-body",
+      "subgroups": "hand-fingers-closed",
+      "tags": [
+        "absolutely",
+        "agree",
+        "boom",
+        "bro",
+        "bruh",
+        "bump",
+        "clenched",
+        "correct",
+        "fist",
+        "hand",
+        "knuckle",
+        "oncoming",
+        "pound",
+        "punch",
+        "rock",
+        "ttyl",
+        "oncoming fist",
+        "brofist"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 154,
+      "hexcode": "1F91B",
+      "unicode": "U+1F91B",
+      "unicodeInt": 129307,
+      "emoji": "🤛",
+      "name": "left-facing fist",
+      "group": "people-body",
+      "subgroups": "hand-fingers-closed",
+      "tags": [
+        "fist",
+        "left-facing",
+        "leftwards",
+        "left",
+        "left-facing fist"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 155,
+      "hexcode": "1F91C",
+      "unicode": "U+1F91C",
+      "unicodeInt": 129308,
+      "emoji": "🤜",
+      "name": "right-facing fist",
+      "group": "people-body",
+      "subgroups": "hand-fingers-closed",
+      "tags": [
+        "fist",
+        "right-facing",
+        "rightwards",
+        "right",
+        "right-facing fist"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 156,
+      "hexcode": "1F44F",
+      "unicode": "U+1F44F",
+      "unicodeInt": 128079,
+      "emoji": "👏",
+      "name": "clapping hands",
+      "group": "people-body",
+      "subgroups": "hands",
+      "tags": [
+        "applause",
+        "approval",
+        "awesome",
+        "clap",
+        "congrats",
+        "congratulations",
+        "excited",
+        "good",
+        "great",
+        "hand",
+        "homie",
+        "job",
+        "nice",
+        "prayed",
+        "well",
+        "yay",
+        "clapping hands",
+        "clapping",
+        "golf clap",
+        "round of applause"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 157,
+      "hexcode": "1FAF6",
+      "unicode": "U+1FAF6",
+      "unicodeInt": 129782,
+      "emoji": "🫶",
+      "name": "heart hands",
+      "group": "people-body",
+      "subgroups": "hands",
+      "tags": [
+        "<3",
+        "hands",
+        "heart",
+        "love",
+        "you"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 158,
+      "hexcode": "1F450",
+      "unicode": "U+1F450",
+      "unicodeInt": 128080,
+      "emoji": "👐",
+      "name": "open hands",
+      "group": "people-body",
+      "subgroups": "hands",
+      "tags": [
+        "hand",
+        "hands",
+        "hug",
+        "jazz",
+        "open",
+        "swerve",
+        "open hands",
+        "jazz hands"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 159,
+      "hexcode": "1F932",
+      "unicode": "U+1F932",
+      "unicodeInt": 129330,
+      "emoji": "🤲",
+      "name": "palms up together",
+      "group": "people-body",
+      "subgroups": "hands",
+      "tags": [
+        "cupped",
+        "dua",
+        "hands",
+        "palms",
+        "pray",
+        "prayer",
+        "together",
+        "up",
+        "wish",
+        "god"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 160,
+      "hexcode": "1F91D",
+      "unicode": "U+1F91D",
+      "unicodeInt": 129309,
+      "emoji": "🤝",
+      "name": "handshake",
+      "group": "people-body",
+      "subgroups": "hands",
+      "tags": [
+        "agreement",
+        "deal",
+        "hand",
+        "meeting",
+        "shake",
+        "shaking hands",
+        "hello",
+        "bye",
+        "goodbye"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 161,
+      "hexcode": "1F64F",
+      "unicode": "U+1F64F",
+      "unicodeInt": 128591,
+      "emoji": "🙏",
+      "name": "folded hands",
+      "group": "people-body",
+      "subgroups": "hands",
+      "tags": [
+        "appreciate",
+        "ask",
+        "beg",
+        "blessed",
+        "bow",
+        "cmon",
+        "five",
+        "folded",
+        "gesture",
+        "hand",
+        "high",
+        "please",
+        "pray",
+        "thanks",
+        "thx"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 162,
+      "hexcode": "270D",
+      "unicode": "U+270D",
+      "unicodeInt": 9997,
+      "emoji": "✍️",
+      "name": "writing hand",
+      "group": "people-body",
+      "subgroups": "hand-prop",
+      "tags": [
+        "hand",
+        "write",
+        "writing",
+        "writing hand"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 163,
+      "hexcode": "1F4AA",
+      "unicode": "U+1F4AA",
+      "unicodeInt": 128170,
+      "emoji": "💪",
+      "name": "flexed biceps",
+      "group": "people-body",
+      "subgroups": "body-parts",
+      "tags": [
+        "arm",
+        "beast",
+        "bench",
+        "biceps",
+        "bodybuilder",
+        "bro",
+        "curls",
+        "flex",
+        "gains",
+        "gym",
+        "jacked",
+        "muscle",
+        "press",
+        "ripped",
+        "strong",
+        "weightlift",
+        "flexed biceps",
+        "flexed",
+        "feats of strength",
+        "strength",
+        "feats"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 164,
+      "hexcode": "1F9E0",
+      "unicode": "U+1F9E0",
+      "unicodeInt": 129504,
+      "emoji": "🧠",
+      "name": "brain",
+      "group": "people-body",
+      "subgroups": "body-parts",
+      "tags": [
+        "intelligent",
+        "smart",
+        "brain",
+        "clever"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 165,
+      "hexcode": "1F440",
+      "unicode": "U+1F440",
+      "unicodeInt": 128064,
+      "emoji": "👀",
+      "name": "eyes",
+      "group": "people-body",
+      "subgroups": "body-parts",
+      "tags": [
+        "body",
+        "eye",
+        "face",
+        "googly",
+        "look",
+        "looking",
+        "omg",
+        "peep",
+        "see",
+        "seeing",
+        "eyes"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 166,
+      "hexcode": "1F441",
+      "unicode": "U+1F441",
+      "unicodeInt": 128065,
+      "emoji": "👁️",
+      "name": "eye",
+      "group": "people-body",
+      "subgroups": "body-parts",
+      "tags": [
+        "1",
+        "body",
+        "one",
+        "eye",
+        "face"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 167,
+      "hexcode": "1F444",
+      "unicode": "U+1F444",
+      "unicodeInt": 128068,
+      "emoji": "👄",
+      "name": "mouth",
+      "group": "people-body",
+      "subgroups": "body-parts",
+      "tags": [
+        "beauty",
+        "body",
+        "kiss",
+        "kissing",
+        "lips",
+        "lipstick",
+        "mouth"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 168,
+      "hexcode": "1F451",
+      "unicode": "U+1F451",
+      "unicodeInt": 128081,
+      "emoji": "👑",
+      "name": "crown",
+      "group": "objects",
+      "subgroups": "clothing",
+      "tags": [
+        "clothing",
+        "family",
+        "king",
+        "medieval",
+        "queen",
+        "royal",
+        "royalty",
+        "win",
+        "crone",
+        "gold"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 169,
+      "hexcode": "1F9E1",
+      "unicode": "U+1F9E1",
+      "unicodeInt": 129505,
+      "emoji": "🧡",
+      "name": "orange heart",
+      "group": "smileys-emotion",
+      "subgroups": "heart",
+      "tags": [
+        "143",
+        "heart",
+        "orange"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 170,
+      "hexcode": "1F49B",
+      "unicode": "U+1F49B",
+      "unicodeInt": 128155,
+      "emoji": "💛",
+      "name": "yellow heart",
+      "group": "smileys-emotion",
+      "subgroups": "heart",
+      "tags": [
+        "143",
+        "cardiac",
+        "emotion",
+        "heart",
+        "ily",
+        "love",
+        "yellow"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 171,
+      "hexcode": "1F49A",
+      "unicode": "U+1F49A",
+      "unicodeInt": 128154,
+      "emoji": "💚",
+      "name": "green heart",
+      "group": "smileys-emotion",
+      "subgroups": "heart",
+      "tags": [
+        "143",
+        "emotion",
+        "green",
+        "heart",
+        "ily",
+        "love",
+        "romantic"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 172,
+      "hexcode": "1F499",
+      "unicode": "U+1F499",
+      "unicodeInt": 128153,
+      "emoji": "💙",
+      "name": "blue heart",
+      "group": "smileys-emotion",
+      "subgroups": "heart",
+      "tags": [
+        "143",
+        "blue",
+        "emotion",
+        "heart",
+        "ily",
+        "love",
+        "romance"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 173,
+      "hexcode": "1F49C",
+      "unicode": "U+1F49C",
+      "unicodeInt": 128156,
+      "emoji": "💜",
+      "name": "purple heart",
+      "group": "smileys-emotion",
+      "subgroups": "heart",
+      "tags": [
+        "143",
+        "bestest",
+        "emotion",
+        "heart",
+        "ily",
+        "love",
+        "purple"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 174,
+      "hexcode": "1F5A4",
+      "unicode": "U+1F5A4",
+      "unicodeInt": 128420,
+      "emoji": "🖤",
+      "name": "black heart",
+      "group": "smileys-emotion",
+      "subgroups": "heart",
+      "tags": [
+        "black",
+        "evil",
+        "heart",
+        "wicked"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 175,
+      "hexcode": "1F90D",
+      "unicode": "U+1F90D",
+      "unicodeInt": 129293,
+      "emoji": "🤍",
+      "name": "white heart",
+      "group": "smileys-emotion",
+      "subgroups": "heart",
+      "tags": [
+        "143",
+        "heart",
+        "white"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 176,
+      "hexcode": "1F90E",
+      "unicode": "U+1F90E",
+      "unicodeInt": 129294,
+      "emoji": "🤎",
+      "name": "brown heart",
+      "group": "smileys-emotion",
+      "subgroups": "heart",
+      "tags": [
+        "143",
+        "brown",
+        "heart"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 177,
+      "hexcode": "1F495",
+      "unicode": "U+1F495",
+      "unicodeInt": 128149,
+      "emoji": "💕",
+      "name": "two hearts",
+      "group": "smileys-emotion",
+      "subgroups": "heart",
+      "tags": [
+        "143",
+        "anniversary",
+        "date",
+        "dating",
+        "emotion",
+        "heart",
+        "hearts",
+        "ily",
+        "kisses",
+        "love",
+        "loving",
+        "two",
+        "xoxo"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 178,
+      "hexcode": "1F496",
+      "unicode": "U+1F496",
+      "unicodeInt": 128150,
+      "emoji": "💖",
+      "name": "sparkling heart",
+      "group": "smileys-emotion",
+      "subgroups": "heart",
+      "tags": [
+        "143",
+        "emotion",
+        "excited",
+        "good",
+        "heart",
+        "ily",
+        "kisses",
+        "morning",
+        "night",
+        "sparkle",
+        "sparkling",
+        "xoxo",
+        "love",
+        "inlove"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 179,
+      "hexcode": "1F497",
+      "unicode": "U+1F497",
+      "unicodeInt": 128151,
+      "emoji": "💗",
+      "name": "growing heart",
+      "group": "smileys-emotion",
+      "subgroups": "heart",
+      "tags": [
+        "143",
+        "emotion",
+        "excited",
+        "growing",
+        "heart",
+        "heartpulse",
+        "ily",
+        "kisses",
+        "muah",
+        "nervous",
+        "pulse",
+        "xoxo",
+        "love",
+        "inlove"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 180,
+      "hexcode": "1F498",
+      "unicode": "U+1F498",
+      "unicodeInt": 128152,
+      "emoji": "💘",
+      "name": "heart with arrow",
+      "group": "smileys-emotion",
+      "subgroups": "heart",
+      "tags": [
+        "143",
+        "adorbs",
+        "arrow",
+        "cupid",
+        "date",
+        "emotion",
+        "heart",
+        "ily",
+        "love",
+        "romance",
+        "valentine",
+        "inlove"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 181,
+      "hexcode": "1F49D",
+      "unicode": "U+1F49D",
+      "unicodeInt": 128157,
+      "emoji": "💝",
+      "name": "heart with ribbon",
+      "group": "smileys-emotion",
+      "subgroups": "heart",
+      "tags": [
+        "143",
+        "anniversary",
+        "emotion",
+        "heart",
+        "ily",
+        "kisses",
+        "ribbon",
+        "valentine",
+        "xoxo",
+        "present",
+        "love"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 182,
+      "hexcode": "1F49E",
+      "unicode": "U+1F49E",
+      "unicodeInt": 128158,
+      "emoji": "💞",
+      "name": "revolving hearts",
+      "group": "smileys-emotion",
+      "subgroups": "heart",
+      "tags": [
+        "143",
+        "adorbs",
+        "anniversary",
+        "emotion",
+        "heart",
+        "hearts",
+        "revolving"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 183,
+      "hexcode": "1F48B",
+      "unicode": "U+1F48B",
+      "unicodeInt": 128139,
+      "emoji": "💋",
+      "name": "kiss mark",
+      "group": "smileys-emotion",
+      "subgroups": "emotion",
+      "tags": [
+        "dating",
+        "emotion",
+        "heart",
+        "kiss",
+        "kissing",
+        "lips",
+        "mark",
+        "romance",
+        "sexy",
+        "love"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 184,
+      "hexcode": "1F4A2",
+      "unicode": "U+1F4A2",
+      "unicodeInt": 128162,
+      "emoji": "💢",
+      "name": "anger symbol",
+      "group": "smileys-emotion",
+      "subgroups": "emotion",
+      "tags": [
+        "anger",
+        "angry",
+        "comic",
+        "mad",
+        "symbol",
+        "upset"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 185,
+      "hexcode": "1F4A5",
+      "unicode": "U+1F4A5",
+      "unicodeInt": 128165,
+      "emoji": "💥",
+      "name": "collision",
+      "group": "smileys-emotion",
+      "subgroups": "emotion",
+      "tags": [
+        "bomb",
+        "boom",
+        "collide",
+        "comic",
+        "explode",
+        "explosion"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 186,
+      "hexcode": "1F4AB",
+      "unicode": "U+1F4AB",
+      "unicodeInt": 128171,
+      "emoji": "💫",
+      "name": "dizzy",
+      "group": "smileys-emotion",
+      "subgroups": "emotion",
+      "tags": [
+        "comic",
+        "shining",
+        "shooting",
+        "star",
+        "stars",
+        "shootingstar"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 187,
+      "hexcode": "1F4A6",
+      "unicode": "U+1F4A6",
+      "unicodeInt": 128166,
+      "emoji": "💦",
+      "name": "sweat droplets",
+      "group": "smileys-emotion",
+      "subgroups": "emotion",
+      "tags": [
+        "comic",
+        "drip",
+        "droplet",
+        "droplets",
+        "drops",
+        "splashing",
+        "squirt",
+        "sweat",
+        "water",
+        "wet",
+        "work",
+        "workout"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 188,
+      "hexcode": "1F4A8",
+      "unicode": "U+1F4A8",
+      "unicodeInt": 128168,
+      "emoji": "💨",
+      "name": "dashing away",
+      "group": "smileys-emotion",
+      "subgroups": "emotion",
+      "tags": [
+        "away",
+        "cloud",
+        "comic",
+        "dash",
+        "dashing",
+        "fart",
+        "fast",
+        "go",
+        "gone",
+        "gotta",
+        "running",
+        "smoke"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 189,
+      "hexcode": "1F4A3",
+      "unicode": "U+1F4A3",
+      "unicodeInt": 128163,
+      "emoji": "💣️",
+      "name": "bomb",
+      "group": "objects",
+      "subgroups": "tool",
+      "tags": [
+        "boom",
+        "comic",
+        "dangerous",
+        "explosion",
+        "hot"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 190,
+      "hexcode": "1F4AC",
+      "unicode": "U+1F4AC",
+      "unicodeInt": 128172,
+      "emoji": "💬",
+      "name": "speech balloon",
+      "group": "smileys-emotion",
+      "subgroups": "emotion",
+      "tags": [
+        "balloon",
+        "bubble",
+        "comic",
+        "dialog",
+        "message",
+        "sms",
+        "speech",
+        "talk",
+        "text",
+        "typing"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 191,
+      "hexcode": "1F4AD",
+      "unicode": "U+1F4AD",
+      "unicodeInt": 128173,
+      "emoji": "💭",
+      "name": "thought balloon",
+      "group": "smileys-emotion",
+      "subgroups": "emotion",
+      "tags": [
+        "balloon",
+        "bubble",
+        "cartoon",
+        "cloud",
+        "comic",
+        "daydream",
+        "decisions",
+        "dream",
+        "idea",
+        "invent",
+        "invention",
+        "realize",
+        "think",
+        "thoughts",
+        "wonder"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 192,
+      "hexcode": "1F4A4",
+      "unicode": "U+1F4A4",
+      "unicodeInt": 128164,
+      "emoji": "💤",
+      "name": "ZZZ",
+      "group": "smileys-emotion",
+      "subgroups": "emotion",
+      "tags": [
+        "comic",
+        "good",
+        "goodnight",
+        "night",
+        "sleep",
+        "sleeping",
+        "sleepy",
+        "tired",
+        "zzz"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 193,
+      "hexcode": "1F31F",
+      "unicode": "U+1F31F",
+      "unicodeInt": 127775,
+      "emoji": "🌟",
+      "name": "glowing star",
+      "group": "travel-places",
+      "subgroups": "sky-weather",
+      "tags": [
+        "glittery",
+        "glow",
+        "glowing",
+        "night",
+        "shining",
+        "sparkle",
+        "star",
+        "win",
+        "shine",
+        "bright",
+        "small planet",
+        "sky",
+        "yellow",
+        "far away",
+        "constellation",
+        "shooting star",
+        "milky way"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 194,
+      "hexcode": "2B50",
+      "unicode": "U+2B50",
+      "unicodeInt": 11088,
+      "emoji": "⭐️",
+      "name": "star",
+      "group": "travel-places",
+      "subgroups": "sky-weather",
+      "tags": [
+        "astronomy",
+        "medium",
+        "stars",
+        "white",
+        "star",
+        "shine",
+        "small planet",
+        "sky",
+        "yellow",
+        "sparkle",
+        "far away"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 195,
+      "hexcode": "26A1",
+      "unicode": "U+26A1",
+      "unicodeInt": 9889,
+      "emoji": "⚡️",
+      "name": "high voltage",
+      "group": "travel-places",
+      "subgroups": "sky-weather",
+      "tags": [
+        "danger",
+        "electric",
+        "electricity",
+        "high",
+        "lightning",
+        "nature",
+        "thunder",
+        "thunderbolt",
+        "voltage",
+        "zap",
+        "high voltage",
+        "storm",
+        "current",
+        "volts",
+        "lights",
+        "light"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 196,
+      "hexcode": "2705",
+      "unicode": "U+2705",
+      "unicodeInt": 9989,
+      "emoji": "✅️",
+      "name": "check mark button",
+      "group": "symbols",
+      "subgroups": "other-symbol",
+      "tags": [
+        "button",
+        "check",
+        "checked",
+        "checkmark",
+        "complete",
+        "completed",
+        "done",
+        "fixed",
+        "mark",
+        "tick",
+        "✓",
+        "white",
+        "right",
+        "todo"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 197,
+      "hexcode": "274C",
+      "unicode": "U+274C",
+      "unicodeInt": 10060,
+      "emoji": "❌️",
+      "name": "cross mark",
+      "group": "symbols",
+      "subgroups": "other-symbol",
+      "tags": [
+        "cancel",
+        "cross",
+        "mark",
+        "multiplication",
+        "multiply",
+        "x",
+        "×",
+        "wrong"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 198,
+      "hexcode": "26A0",
+      "unicode": "U+26A0",
+      "unicodeInt": 9888,
+      "emoji": "⚠️",
+      "name": "warning",
+      "group": "symbols",
+      "subgroups": "warning",
+      "tags": [
+        "caution"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 199,
+      "hexcode": "2757",
+      "unicode": "U+2757",
+      "unicodeInt": 10071,
+      "emoji": "❗️",
+      "name": "red exclamation mark",
+      "group": "symbols",
+      "subgroups": "punctuation",
+      "tags": [
+        "!",
+        "exclamation",
+        "mark",
+        "punctuation",
+        "red"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 200,
+      "hexcode": "2753",
+      "unicode": "U+2753",
+      "unicodeInt": 10067,
+      "emoji": "❓️",
+      "name": "red question mark",
+      "group": "symbols",
+      "subgroups": "punctuation",
+      "tags": [
+        "?",
+        "mark",
+        "punctuation",
+        "question",
+        "red"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 201,
+      "hexcode": "1F6AB",
+      "unicode": "U+1F6AB",
+      "unicodeInt": 128683,
+      "emoji": "🚫",
+      "name": "prohibited",
+      "group": "symbols",
+      "subgroups": "warning",
+      "tags": [
+        "entry",
+        "forbidden",
+        "no",
+        "not",
+        "smoke"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 202,
+      "hexcode": "267B",
+      "unicode": "U+267B",
+      "unicodeInt": 9851,
+      "emoji": "♻️",
+      "name": "recycling symbol",
+      "group": "symbols",
+      "subgroups": "other-symbol",
+      "tags": [
+        "recycle",
+        "recycling",
+        "symbol",
+        "nature"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 203,
+      "hexcode": "1F3AF",
+      "unicode": "U+1F3AF",
+      "unicodeInt": 127919,
+      "emoji": "🎯",
+      "name": "bullseye",
+      "group": "activities",
+      "subgroups": "game",
+      "tags": [
+        "bull",
+        "dart",
+        "direct",
+        "entertainment",
+        "game",
+        "hit",
+        "target",
+        "dart board",
+        "archery",
+        "bullseye",
+        "darts"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 204,
+      "hexcode": "1F436",
+      "unicode": "U+1F436",
+      "unicodeInt": 128054,
+      "emoji": "🐶",
+      "name": "dog face",
+      "group": "animals-nature",
+      "subgroups": "animal-mammal",
+      "tags": [
+        "adorbs",
+        "animal",
+        "dog",
+        "face",
+        "pet",
+        "puppies",
+        "puppy",
+        "friend",
+        "doggy"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 205,
+      "hexcode": "1F431",
+      "unicode": "U+1F431",
+      "unicodeInt": 128049,
+      "emoji": "🐱",
+      "name": "cat face",
+      "group": "animals-nature",
+      "subgroups": "animal-mammal",
+      "tags": [
+        "animal",
+        "cat",
+        "face",
+        "kitten",
+        "kitty",
+        "pet",
+        "miau"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 206,
+      "hexcode": "1F42D",
+      "unicode": "U+1F42D",
+      "unicodeInt": 128045,
+      "emoji": "🐭",
+      "name": "mouse face",
+      "group": "animals-nature",
+      "subgroups": "animal-mammal",
+      "tags": [
+        "animal",
+        "face",
+        "mouse",
+        "cute",
+        "whiskers",
+        "tiny",
+        "rodent"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 207,
+      "hexcode": "1F430",
+      "unicode": "U+1F430",
+      "unicodeInt": 128048,
+      "emoji": "🐰",
+      "name": "rabbit face",
+      "group": "animals-nature",
+      "subgroups": "animal-mammal",
+      "tags": [
+        "animal",
+        "bunny",
+        "face",
+        "pet",
+        "rabbit",
+        "rodent",
+        "teeth",
+        "cute",
+        "ears",
+        "hopping",
+        "easter"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 208,
+      "hexcode": "1F98A",
+      "unicode": "U+1F98A",
+      "unicodeInt": 129418,
+      "emoji": "🦊",
+      "name": "fox",
+      "group": "animals-nature",
+      "subgroups": "animal-mammal",
+      "tags": [
+        "animal",
+        "face",
+        "smart",
+        "red",
+        "quick",
+        "intelligent"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 209,
+      "hexcode": "1F43C",
+      "unicode": "U+1F43C",
+      "unicodeInt": 128060,
+      "emoji": "🐼",
+      "name": "panda",
+      "group": "animals-nature",
+      "subgroups": "animal-mammal",
+      "tags": [
+        "animal",
+        "bamboo",
+        "face",
+        "kawaii",
+        "cute",
+        "japan"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 210,
+      "hexcode": "1F428",
+      "unicode": "U+1F428",
+      "unicodeInt": 128040,
+      "emoji": "🐨",
+      "name": "koala",
+      "group": "animals-nature",
+      "subgroups": "animal-mammal",
+      "tags": [
+        "animal",
+        "australia",
+        "bear",
+        "down",
+        "face",
+        "marsupial",
+        "under",
+        "grey",
+        "fluffy",
+        "eucalyptus",
+        "clingy"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 211,
+      "hexcode": "1F42F",
+      "unicode": "U+1F42F",
+      "unicodeInt": 128047,
+      "emoji": "🐯",
+      "name": "tiger face",
+      "group": "animals-nature",
+      "subgroups": "animal-mammal",
+      "tags": [
+        "animal",
+        "big",
+        "cat",
+        "face",
+        "predator",
+        "tiger",
+        "stripes",
+        "strong",
+        "wild"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 212,
+      "hexcode": "1F981",
+      "unicode": "U+1F981",
+      "unicodeInt": 129409,
+      "emoji": "🦁",
+      "name": "lion",
+      "group": "animals-nature",
+      "subgroups": "animal-mammal",
+      "tags": [
+        "alpha",
+        "animal",
+        "face",
+        "leo",
+        "mane",
+        "order",
+        "rawr",
+        "roar",
+        "safari",
+        "strong",
+        "zodiac",
+        "king",
+        "simba",
+        "royal",
+        "wild",
+        "cat"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 213,
+      "hexcode": "1F42E",
+      "unicode": "U+1F42E",
+      "unicodeInt": 128046,
+      "emoji": "🐮",
+      "name": "cow face",
+      "group": "animals-nature",
+      "subgroups": "animal-mammal",
+      "tags": [
+        "animal",
+        "cow",
+        "face",
+        "farm",
+        "milk",
+        "moo",
+        "beef",
+        "grass",
+        "dairy",
+        "horns",
+        "cheese"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 214,
+      "hexcode": "1F437",
+      "unicode": "U+1F437",
+      "unicodeInt": 128055,
+      "emoji": "🐷",
+      "name": "pig face",
+      "group": "animals-nature",
+      "subgroups": "animal-mammal",
+      "tags": [
+        "animal",
+        "bacon",
+        "face",
+        "farm",
+        "pig",
+        "pork",
+        "pink",
+        "meat",
+        "oink"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 215,
+      "hexcode": "1F438",
+      "unicode": "U+1F438",
+      "unicodeInt": 128056,
+      "emoji": "🐸",
+      "name": "frog",
+      "group": "animals-nature",
+      "subgroups": "animal-amphibian",
+      "tags": [
+        "animal",
+        "face",
+        "jump",
+        "green"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 216,
+      "hexcode": "1F435",
+      "unicode": "U+1F435",
+      "unicodeInt": 128053,
+      "emoji": "🐵",
+      "name": "monkey face",
+      "group": "animals-nature",
+      "subgroups": "animal-mammal",
+      "tags": [
+        "animal",
+        "banana",
+        "face",
+        "monkey",
+        "jungle",
+        "ape",
+        "evolution",
+        "primate",
+        "africa"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 217,
+      "hexcode": "1F414",
+      "unicode": "U+1F414",
+      "unicodeInt": 128020,
+      "emoji": "🐔",
+      "name": "chicken",
+      "group": "animals-nature",
+      "subgroups": "animal-bird",
+      "tags": [
+        "animal",
+        "bird",
+        "ornithology",
+        "egg"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 218,
+      "hexcode": "1F427",
+      "unicode": "U+1F427",
+      "unicodeInt": 128039,
+      "emoji": "🐧",
+      "name": "penguin",
+      "group": "animals-nature",
+      "subgroups": "animal-bird",
+      "tags": [
+        "animal",
+        "antarctica",
+        "bird",
+        "ornithology"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 219,
+      "hexcode": "1F989",
+      "unicode": "U+1F989",
+      "unicodeInt": 129417,
+      "emoji": "🦉",
+      "name": "owl",
+      "group": "animals-nature",
+      "subgroups": "animal-bird",
+      "tags": [
+        "animal",
+        "bird",
+        "ornithology",
+        "wise"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 220,
+      "hexcode": "1F984",
+      "unicode": "U+1F984",
+      "unicodeInt": 129412,
+      "emoji": "🦄",
+      "name": "unicorn",
+      "group": "animals-nature",
+      "subgroups": "animal-mammal",
+      "tags": [
+        "face",
+        "fabulous",
+        "magical",
+        "rainbow",
+        "schwäbisch",
+        "gmünd"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 221,
+      "hexcode": "1F41D",
+      "unicode": "U+1F41D",
+      "unicodeInt": 128029,
+      "emoji": "🐝",
+      "name": "honeybee",
+      "group": "animals-nature",
+      "subgroups": "animal-bug",
+      "tags": [
+        "animal",
+        "bee",
+        "bumblebee",
+        "honey",
+        "insect",
+        "nature",
+        "spring"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 222,
+      "hexcode": "1F98B",
+      "unicode": "U+1F98B",
+      "unicodeInt": 129419,
+      "emoji": "🦋",
+      "name": "butterfly",
+      "group": "animals-nature",
+      "subgroups": "animal-bug",
+      "tags": [
+        "insect",
+        "pretty"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 223,
+      "hexcode": "1F422",
+      "unicode": "U+1F422",
+      "unicodeInt": 128034,
+      "emoji": "🐢",
+      "name": "turtle",
+      "group": "animals-nature",
+      "subgroups": "animal-reptile",
+      "tags": [
+        "animal",
+        "terrapin",
+        "tortoise",
+        "slow",
+        "water",
+        "sand"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 224,
+      "hexcode": "1F419",
+      "unicode": "U+1F419",
+      "unicodeInt": 128025,
+      "emoji": "🐙",
+      "name": "octopus",
+      "group": "animals-nature",
+      "subgroups": "animal-marine",
+      "tags": [
+        "animal",
+        "creature",
+        "ocean",
+        "swim",
+        "water"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 225,
+      "hexcode": "1F42C",
+      "unicode": "U+1F42C",
+      "unicodeInt": 128044,
+      "emoji": "🐬",
+      "name": "dolphin",
+      "group": "animals-nature",
+      "subgroups": "animal-marine",
+      "tags": [
+        "animal",
+        "beach",
+        "flipper",
+        "ocean",
+        "cetacean",
+        "swim",
+        "water"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 226,
+      "hexcode": "1F433",
+      "unicode": "U+1F433",
+      "unicodeInt": 128051,
+      "emoji": "🐳",
+      "name": "spouting whale",
+      "group": "animals-nature",
+      "subgroups": "animal-marine",
+      "tags": [
+        "animal",
+        "beach",
+        "face",
+        "ocean",
+        "spouting",
+        "whale",
+        "cetacean",
+        "swim",
+        "water"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 227,
+      "hexcode": "1F996",
+      "unicode": "U+1F996",
+      "unicodeInt": 129430,
+      "emoji": "🦖",
+      "name": "T-Rex",
+      "group": "animals-nature",
+      "subgroups": "animal-reptile",
+      "tags": [
+        "dinosaur",
+        "rex",
+        "t",
+        "t-rex",
+        "tyrannosaurus"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 228,
+      "hexcode": "1F33B",
+      "unicode": "U+1F33B",
+      "unicodeInt": 127803,
+      "emoji": "🌻",
+      "name": "sunflower",
+      "group": "animals-nature",
+      "subgroups": "plant-flower",
+      "tags": [
+        "flower",
+        "outdoors",
+        "plant",
+        "sun",
+        "yellow",
+        "summer"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 229,
+      "hexcode": "1F338",
+      "unicode": "U+1F338",
+      "unicodeInt": 127800,
+      "emoji": "🌸",
+      "name": "cherry blossom",
+      "group": "animals-nature",
+      "subgroups": "plant-flower",
+      "tags": [
+        "blossom",
+        "cherry",
+        "flower",
+        "plant",
+        "spring",
+        "springtime",
+        "pink"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 230,
+      "hexcode": "1F340",
+      "unicode": "U+1F340",
+      "unicodeInt": 127808,
+      "emoji": "🍀",
+      "name": "four leaf clover",
+      "group": "animals-nature",
+      "subgroups": "plant-other",
+      "tags": [
+        "4",
+        "clover",
+        "four",
+        "four-leaf",
+        "irish",
+        "leaf",
+        "lucky",
+        "plant",
+        "luck",
+        "leaves",
+        "green"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 231,
+      "hexcode": "1F335",
+      "unicode": "U+1F335",
+      "unicodeInt": 127797,
+      "emoji": "🌵",
+      "name": "cactus",
+      "group": "animals-nature",
+      "subgroups": "plant-other",
+      "tags": [
+        "desert",
+        "drought",
+        "nature",
+        "plant",
+        "sun",
+        "warm",
+        "hot",
+        "texas"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 232,
+      "hexcode": "1F344",
+      "unicode": "U+1F344",
+      "unicodeInt": 127812,
+      "emoji": "🍄",
+      "name": "mushroom",
+      "group": "animals-nature",
+      "subgroups": "plant-other",
+      "tags": [
+        "fungus",
+        "toadstool",
+        "mushroom"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 233,
+      "hexcode": "1F34E",
+      "unicode": "U+1F34E",
+      "unicodeInt": 127822,
+      "emoji": "🍎",
+      "name": "red apple",
+      "group": "food-drink",
+      "subgroups": "food-fruit",
+      "tags": [
+        "apple",
+        "diet",
+        "food",
+        "fruit",
+        "health",
+        "red",
+        "ripe"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 234,
+      "hexcode": "1F34C",
+      "unicode": "U+1F34C",
+      "unicodeInt": 127820,
+      "emoji": "🍌",
+      "name": "banana",
+      "group": "food-drink",
+      "subgroups": "food-fruit",
+      "tags": [
+        "fruit",
+        "potassium",
+        "yellow"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 235,
+      "hexcode": "1F353",
+      "unicode": "U+1F353",
+      "unicodeInt": 127827,
+      "emoji": "🍓",
+      "name": "strawberry",
+      "group": "food-drink",
+      "subgroups": "food-fruit",
+      "tags": [
+        "berry",
+        "fruit"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 236,
+      "hexcode": "1F349",
+      "unicode": "U+1F349",
+      "unicodeInt": 127817,
+      "emoji": "🍉",
+      "name": "watermelon",
+      "group": "food-drink",
+      "subgroups": "food-fruit",
+      "tags": [
+        "fruit",
+        "melon",
+        "red"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 237,
+      "hexcode": "1F352",
+      "unicode": "U+1F352",
+      "unicodeInt": 127826,
+      "emoji": "🍒",
+      "name": "cherries",
+      "group": "food-drink",
+      "subgroups": "food-fruit",
+      "tags": [
+        "berries",
+        "cherry",
+        "fruit",
+        "red"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 238,
+      "hexcode": "1F351",
+      "unicode": "U+1F351",
+      "unicodeInt": 127825,
+      "emoji": "🍑",
+      "name": "peach",
+      "group": "food-drink",
+      "subgroups": "food-fruit",
+      "tags": [
+        "fruit",
+        "pink",
+        "red"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 239,
+      "hexcode": "1F34D",
+      "unicode": "U+1F34D",
+      "unicodeInt": 127821,
+      "emoji": "🍍",
+      "name": "pineapple",
+      "group": "food-drink",
+      "subgroups": "food-fruit",
+      "tags": [
+        "colada",
+        "fruit",
+        "pina",
+        "tropical"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 240,
+      "hexcode": "1F951",
+      "unicode": "U+1F951",
+      "unicodeInt": 129361,
+      "emoji": "🥑",
+      "name": "avocado",
+      "group": "food-drink",
+      "subgroups": "food-vegetable",
+      "tags": [
+        "food",
+        "fruit",
+        "avocado"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 241,
+      "hexcode": "1F336",
+      "unicode": "U+1F336",
+      "unicodeInt": 127798,
+      "emoji": "🌶️",
+      "name": "hot pepper",
+      "group": "food-drink",
+      "subgroups": "food-vegetable",
+      "tags": [
+        "hot",
+        "pepper",
+        "red"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 242,
+      "hexcode": "1F354",
+      "unicode": "U+1F354",
+      "unicodeInt": 127828,
+      "emoji": "🍔",
+      "name": "hamburger",
+      "group": "food-drink",
+      "subgroups": "food-prepared",
+      "tags": [
+        "burger",
+        "eat",
+        "fast",
+        "food",
+        "hungry"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 243,
+      "hexcode": "1F35F",
+      "unicode": "U+1F35F",
+      "unicodeInt": 127839,
+      "emoji": "🍟",
+      "name": "french fries",
+      "group": "food-drink",
+      "subgroups": "food-prepared",
+      "tags": [
+        "fast",
+        "food",
+        "french",
+        "fries"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 244,
+      "hexcode": "1F355",
+      "unicode": "U+1F355",
+      "unicodeInt": 127829,
+      "emoji": "🍕",
+      "name": "pizza",
+      "group": "food-drink",
+      "subgroups": "food-prepared",
+      "tags": [
+        "cheese",
+        "food",
+        "hungry",
+        "pepperoni",
+        "slice"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 245,
+      "hexcode": "1F32D",
+      "unicode": "U+1F32D",
+      "unicodeInt": 127789,
+      "emoji": "🌭",
+      "name": "hot dog",
+      "group": "food-drink",
+      "subgroups": "food-prepared",
+      "tags": [
+        "dog",
+        "frankfurter",
+        "hot",
+        "hotdog",
+        "sausage"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 246,
+      "hexcode": "1F32E",
+      "unicode": "U+1F32E",
+      "unicodeInt": 127790,
+      "emoji": "🌮",
+      "name": "taco",
+      "group": "food-drink",
+      "subgroups": "food-prepared",
+      "tags": [
+        "mexican"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 247,
+      "hexcode": "1F363",
+      "unicode": "U+1F363",
+      "unicodeInt": 127843,
+      "emoji": "🍣",
+      "name": "sushi",
+      "group": "food-drink",
+      "subgroups": "food-asian",
+      "tags": [
+        "food"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 248,
+      "hexcode": "1F35C",
+      "unicode": "U+1F35C",
+      "unicodeInt": 127836,
+      "emoji": "🍜",
+      "name": "steaming bowl",
+      "group": "food-drink",
+      "subgroups": "food-asian",
+      "tags": [
+        "bowl",
+        "chopsticks",
+        "food",
+        "noodle",
+        "pho",
+        "ramen",
+        "soup",
+        "steaming"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 249,
+      "hexcode": "1F369",
+      "unicode": "U+1F369",
+      "unicodeInt": 127849,
+      "emoji": "🍩",
+      "name": "doughnut",
+      "group": "food-drink",
+      "subgroups": "food-sweet",
+      "tags": [
+        "breakfast",
+        "dessert",
+        "donut",
+        "food",
+        "sweet"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 250,
+      "hexcode": "1F36A",
+      "unicode": "U+1F36A",
+      "unicodeInt": 127850,
+      "emoji": "🍪",
+      "name": "cookie",
+      "group": "food-drink",
+      "subgroups": "food-sweet",
+      "tags": [
+        "chip",
+        "chocolate",
+        "dessert",
+        "sweet"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 251,
+      "hexcode": "1F382",
+      "unicode": "U+1F382",
+      "unicodeInt": 127874,
+      "emoji": "🎂",
+      "name": "birthday cake",
+      "group": "food-drink",
+      "subgroups": "food-sweet",
+      "tags": [
+        "bday",
+        "birthday",
+        "cake",
+        "celebration",
+        "dessert",
+        "happy",
+        "pastry",
+        "sweet"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 252,
+      "hexcode": "1F370",
+      "unicode": "U+1F370",
+      "unicodeInt": 127856,
+      "emoji": "🍰",
+      "name": "shortcake",
+      "group": "food-drink",
+      "subgroups": "food-sweet",
+      "tags": [
+        "cake",
+        "dessert",
+        "pastry",
+        "slice",
+        "sweet"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 253,
+      "hexcode": "1F366",
+      "unicode": "U+1F366",
+      "unicodeInt": 127846,
+      "emoji": "🍦",
+      "name": "soft ice cream",
+      "group": "food-drink",
+      "subgroups": "food-sweet",
+      "tags": [
+        "cream",
+        "dessert",
+        "food",
+        "ice",
+        "icecream",
+        "restaurant",
+        "serve",
+        "soft",
+        "sweet"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 254,
+      "hexcode": "1F36B",
+      "unicode": "U+1F36B",
+      "unicodeInt": 127851,
+      "emoji": "🍫",
+      "name": "chocolate bar",
+      "group": "food-drink",
+      "subgroups": "food-sweet",
+      "tags": [
+        "bar",
+        "candy",
+        "chocolate",
+        "dessert",
+        "halloween",
+        "sweet",
+        "tooth"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 255,
+      "hexcode": "1F36D",
+      "unicode": "U+1F36D",
+      "unicodeInt": 127853,
+      "emoji": "🍭",
+      "name": "lollipop",
+      "group": "food-drink",
+      "subgroups": "food-sweet",
+      "tags": [
+        "candy",
+        "dessert",
+        "food",
+        "restaurant",
+        "sweet"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 256,
+      "hexcode": "1F37A",
+      "unicode": "U+1F37A",
+      "unicodeInt": 127866,
+      "emoji": "🍺",
+      "name": "beer mug",
+      "group": "food-drink",
+      "subgroups": "drink",
+      "tags": [
+        "alcohol",
+        "ale",
+        "bar",
+        "beer",
+        "booze",
+        "drink",
+        "drinking",
+        "drinks",
+        "mug",
+        "octoberfest",
+        "oktoberfest",
+        "pint",
+        "stein",
+        "summer",
+        "german",
+        "bavaria",
+        "party"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 257,
+      "hexcode": "1F37B",
+      "unicode": "U+1F37B",
+      "unicodeInt": 127867,
+      "emoji": "🍻",
+      "name": "clinking beer mugs",
+      "group": "food-drink",
+      "subgroups": "drink",
+      "tags": [
+        "alcohol",
+        "bar",
+        "beer",
+        "booze",
+        "bottoms",
+        "cheers",
+        "clink",
+        "clinking",
+        "drinking",
+        "drinks",
+        "mugs",
+        "german",
+        "party",
+        "bavaria"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 258,
+      "hexcode": "1F377",
+      "unicode": "U+1F377",
+      "unicodeInt": 127863,
+      "emoji": "🍷",
+      "name": "wine glass",
+      "group": "food-drink",
+      "subgroups": "drink",
+      "tags": [
+        "alcohol",
+        "bar",
+        "beverage",
+        "booze",
+        "club",
+        "drink",
+        "drinking",
+        "drinks",
+        "glass",
+        "restaurant",
+        "wine",
+        "classic"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 259,
+      "hexcode": "1F379",
+      "unicode": "U+1F379",
+      "unicodeInt": 127865,
+      "emoji": "🍹",
+      "name": "tropical drink",
+      "group": "food-drink",
+      "subgroups": "drink",
+      "tags": [
+        "alcohol",
+        "bar",
+        "booze",
+        "club",
+        "cocktail",
+        "drink",
+        "drinking",
+        "drinks",
+        "drunk",
+        "mai",
+        "party",
+        "tai",
+        "tropical",
+        "tropics",
+        "glass",
+        "summer"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 260,
+      "hexcode": "1F9CB",
+      "unicode": "U+1F9CB",
+      "unicodeInt": 129483,
+      "emoji": "🧋",
+      "name": "bubble tea",
+      "group": "food-drink",
+      "subgroups": "drink",
+      "tags": [
+        "boba",
+        "bubble",
+        "food",
+        "milk",
+        "pearl",
+        "tea"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 261,
+      "hexcode": "26BD",
+      "unicode": "U+26BD",
+      "unicodeInt": 9917,
+      "emoji": "⚽️",
+      "name": "soccer ball",
+      "group": "activities",
+      "subgroups": "sport",
+      "tags": [
+        "ball",
+        "football",
+        "futbol",
+        "soccer",
+        "sport",
+        "game",
+        "ball game",
+        "team sports"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 262,
+      "hexcode": "1F3C0",
+      "unicode": "U+1F3C0",
+      "unicodeInt": 127936,
+      "emoji": "🏀",
+      "name": "basketball",
+      "group": "activities",
+      "subgroups": "sport",
+      "tags": [
+        "ball",
+        "hoop",
+        "sport",
+        "basketball",
+        "orange ball",
+        "team sport",
+        "canadian sport",
+        "game"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 263,
+      "hexcode": "1F3C6",
+      "unicode": "U+1F3C6",
+      "unicodeInt": 127942,
+      "emoji": "🏆️",
+      "name": "trophy",
+      "group": "activities",
+      "subgroups": "award-medal",
+      "tags": [
+        "champion",
+        "champs",
+        "prize",
+        "slay",
+        "sport",
+        "victory",
+        "win",
+        "winning",
+        "trophy",
+        "championship",
+        "winner",
+        "gold cup",
+        "award"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 264,
+      "hexcode": "1F3AE",
+      "unicode": "U+1F3AE",
+      "unicodeInt": 127918,
+      "emoji": "🎮️",
+      "name": "video game",
+      "group": "activities",
+      "subgroups": "game",
+      "tags": [
+        "controller",
+        "entertainment",
+        "game",
+        "video",
+        "gamble"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 265,
+      "hexcode": "1F3B2",
+      "unicode": "U+1F3B2",
+      "unicodeInt": 127922,
+      "emoji": "🎲",
+      "name": "game die",
+      "group": "activities",
+      "subgroups": "game",
+      "tags": [
+        "dice",
+        "die",
+        "entertainment",
+        "game",
+        "board game",
+        "isometric"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 266,
+      "hexcode": "1F389",
+      "unicode": "U+1F389",
+      "unicodeInt": 127881,
+      "emoji": "🎉",
+      "name": "party popper",
+      "group": "activities",
+      "subgroups": "event",
+      "tags": [
+        "awesome",
+        "birthday",
+        "celebrate",
+        "celebration",
+        "excited",
+        "hooray",
+        "party",
+        "popper",
+        "tada",
+        "woohoo",
+        "decoration",
+        "happy"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 267,
+      "hexcode": "1F388",
+      "unicode": "U+1F388",
+      "unicodeInt": 127880,
+      "emoji": "🎈",
+      "name": "balloon",
+      "group": "activities",
+      "subgroups": "event",
+      "tags": [
+        "birthday",
+        "celebrate",
+        "celebration",
+        "balloon",
+        "party",
+        "decoration"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 268,
+      "hexcode": "1F381",
+      "unicode": "U+1F381",
+      "unicodeInt": 127873,
+      "emoji": "🎁",
+      "name": "wrapped gift",
+      "group": "activities",
+      "subgroups": "event",
+      "tags": [
+        "birthday",
+        "bow",
+        "box",
+        "celebration",
+        "christmas",
+        "gift",
+        "present",
+        "surprise",
+        "wrapped"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 269,
+      "hexcode": "1F3B5",
+      "unicode": "U+1F3B5",
+      "unicodeInt": 127925,
+      "emoji": "🎵",
+      "name": "musical note",
+      "group": "objects",
+      "subgroups": "music",
+      "tags": [
+        "music",
+        "musical",
+        "note",
+        "sound",
+        "song",
+        "melody",
+        "sounds",
+        "tone"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 270,
+      "hexcode": "1F3B8",
+      "unicode": "U+1F3B8",
+      "unicodeInt": 127928,
+      "emoji": "🎸",
+      "name": "guitar",
+      "group": "objects",
+      "subgroups": "musical-instrument",
+      "tags": [
+        "instrument",
+        "music",
+        "strat",
+        "guitar",
+        "e-guitar",
+        "instrumental",
+        "acoustic",
+        "chords"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 271,
+      "hexcode": "1F3A4",
+      "unicode": "U+1F3A4",
+      "unicodeInt": 127908,
+      "emoji": "🎤",
+      "name": "microphone",
+      "group": "objects",
+      "subgroups": "music",
+      "tags": [
+        "karaoke",
+        "mic",
+        "music",
+        "sing",
+        "sound",
+        "loud",
+        "stage",
+        "speech",
+        "singing",
+        "microphone",
+        "tone"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 272,
+      "hexcode": "1F3A7",
+      "unicode": "U+1F3A7",
+      "unicodeInt": 127911,
+      "emoji": "🎧️",
+      "name": "headphone",
+      "group": "objects",
+      "subgroups": "music",
+      "tags": [
+        "earbud",
+        "sound",
+        "music",
+        "headphones"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 273,
+      "hexcode": "1F3AC",
+      "unicode": "U+1F3AC",
+      "unicodeInt": 127916,
+      "emoji": "🎬️",
+      "name": "clapper board",
+      "group": "objects",
+      "subgroups": "light-video",
+      "tags": [
+        "action",
+        "board",
+        "clapper",
+        "movie",
+        "cut",
+        "new recording"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 274,
+      "hexcode": "1F4F7",
+      "unicode": "U+1F4F7",
+      "unicodeInt": 128247,
+      "emoji": "📷️",
+      "name": "camera",
+      "group": "objects",
+      "subgroups": "light-video",
+      "tags": [
+        "photo",
+        "selfie",
+        "snap",
+        "tbt",
+        "trip",
+        "video",
+        "camera",
+        "digital"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 275,
+      "hexcode": "1F4BB",
+      "unicode": "U+1F4BB",
+      "unicodeInt": 128187,
+      "emoji": "💻️",
+      "name": "laptop",
+      "group": "objects",
+      "subgroups": "computer",
+      "tags": [
+        "computer",
+        "office",
+        "pc",
+        "personal",
+        "old",
+        "retro"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 276,
+      "hexcode": "1F4F1",
+      "unicode": "U+1F4F1",
+      "unicodeInt": 128241,
+      "emoji": "📱",
+      "name": "mobile phone",
+      "group": "objects",
+      "subgroups": "phone",
+      "tags": [
+        "cell",
+        "communication",
+        "mobile",
+        "phone",
+        "telephone",
+        "smartphone",
+        "message",
+        "voice"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 277,
+      "hexcode": "1F4A1",
+      "unicode": "U+1F4A1",
+      "unicodeInt": 128161,
+      "emoji": "💡",
+      "name": "light bulb",
+      "group": "objects",
+      "subgroups": "light-video",
+      "tags": [
+        "bulb",
+        "comic",
+        "electric",
+        "idea",
+        "light",
+        "shine",
+        "power",
+        "on"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 278,
+      "hexcode": "1F4B0",
+      "unicode": "U+1F4B0",
+      "unicodeInt": 128176,
+      "emoji": "💰️",
+      "name": "money bag",
+      "group": "objects",
+      "subgroups": "money",
+      "tags": [
+        "bag",
+        "bank",
+        "bet",
+        "billion",
+        "cash",
+        "cost",
+        "dollar",
+        "gold",
+        "million",
+        "money",
+        "moneybag",
+        "paid",
+        "paying",
+        "pot",
+        "rich",
+        "win"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 279,
+      "hexcode": "1F48E",
+      "unicode": "U+1F48E",
+      "unicodeInt": 128142,
+      "emoji": "💎",
+      "name": "gem stone",
+      "group": "objects",
+      "subgroups": "clothing",
+      "tags": [
+        "diamond",
+        "engagement",
+        "gem",
+        "jewel",
+        "money",
+        "romance",
+        "stone",
+        "wedding",
+        "expensive"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 280,
+      "hexcode": "1F511",
+      "unicode": "U+1F511",
+      "unicodeInt": 128273,
+      "emoji": "🔑",
+      "name": "key",
+      "group": "objects",
+      "subgroups": "lock",
+      "tags": [
+        "keys",
+        "lock",
+        "major",
+        "password",
+        "unlock",
+        "closing"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 281,
+      "hexcode": "1F512",
+      "unicode": "U+1F512",
+      "unicodeInt": 128274,
+      "emoji": "🔒️",
+      "name": "locked",
+      "group": "objects",
+      "subgroups": "lock",
+      "tags": [
+        "closed",
+        "lock",
+        "private",
+        "locker",
+        "padlock"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 282,
+      "hexcode": "1F50D",
+      "unicode": "U+1F50D",
+      "unicodeInt": 128269,
+      "emoji": "🔍️",
+      "name": "magnifying glass tilted left",
+      "group": "objects",
+      "subgroups": "light-video",
+      "tags": [
+        "glass",
+        "lab",
+        "left",
+        "left-pointing",
+        "magnifying",
+        "science",
+        "search",
+        "tilted",
+        "tool",
+        "detail",
+        "big",
+        "zoom",
+        "detective"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 283,
+      "hexcode": "2708",
+      "unicode": "U+2708",
+      "unicodeInt": 9992,
+      "emoji": "✈️",
+      "name": "airplane",
+      "group": "travel-places",
+      "subgroups": "transport-air",
+      "tags": [
+        "aeroplane",
+        "fly",
+        "flying",
+        "jet",
+        "plane",
+        "travel",
+        "airplane",
+        "air",
+        "sky",
+        "departure",
+        "arrive"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 284,
+      "hexcode": "1F697",
+      "unicode": "U+1F697",
+      "unicodeInt": 128663,
+      "emoji": "🚗",
+      "name": "automobile",
+      "group": "travel-places",
+      "subgroups": "transport-ground",
+      "tags": [
+        "car",
+        "driving",
+        "vehicle",
+        "travel",
+        "automobile",
+        "transportation"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 285,
+      "hexcode": "1F6A8",
+      "unicode": "U+1F6A8",
+      "unicodeInt": 128680,
+      "emoji": "🚨",
+      "name": "police car light",
+      "group": "travel-places",
+      "subgroups": "transport-ground",
+      "tags": [
+        "alarm",
+        "alert",
+        "beacon",
+        "car",
+        "emergency",
+        "light",
+        "police",
+        "revolving",
+        "siren"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 286,
+      "hexcode": "2600",
+      "unicode": "U+2600",
+      "unicodeInt": 9728,
+      "emoji": "☀️",
+      "name": "sun",
+      "group": "travel-places",
+      "subgroups": "sky-weather",
+      "tags": [
+        "bright",
+        "rays",
+        "space",
+        "sunny",
+        "weather",
+        "sun",
+        "sunrise",
+        "warm",
+        "sunbeams",
+        "feel good",
+        "beach",
+        "tanning",
+        "fire",
+        "fireball",
+        "hot",
+        "heavenly body"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 287,
+      "hexcode": "1F319",
+      "unicode": "U+1F319",
+      "unicodeInt": 127769,
+      "emoji": "🌙",
+      "name": "crescent moon",
+      "group": "travel-places",
+      "subgroups": "sky-weather",
+      "tags": [
+        "crescent",
+        "moon",
+        "ramadan",
+        "space",
+        "crescent moon",
+        "full moon",
+        "night",
+        "night sky",
+        "celestial body",
+        "planet",
+        "far away"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 288,
+      "hexcode": "1F308",
+      "unicode": "U+1F308",
+      "unicodeInt": 127752,
+      "emoji": "🌈",
+      "name": "rainbow",
+      "group": "travel-places",
+      "subgroups": "sky-weather",
+      "tags": [
+        "gay",
+        "genderqueer",
+        "glbt",
+        "glbtq",
+        "lesbian",
+        "lgbt",
+        "lgbtq",
+        "lgbtqia",
+        "nature",
+        "pride",
+        "queer",
+        "rain",
+        "trans",
+        "transgender",
+        "weather",
+        "rainbow",
+        "color",
+        "colorful",
+        "colors formed in the sky",
+        "sunbeams",
+        "sunlight",
+        "facet",
+        "sparkle",
+        "unicorn"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 289,
+      "hexcode": "2601",
+      "unicode": "U+2601",
+      "unicodeInt": 9729,
+      "emoji": "☁️",
+      "name": "cloud",
+      "group": "travel-places",
+      "subgroups": "sky-weather",
+      "tags": [
+        "weather",
+        "cloud",
+        "cloudy",
+        "rain",
+        "gray",
+        "misty",
+        "diffuse",
+        "sky",
+        "dream",
+        "fleecy clouds"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 290,
+      "hexcode": "2744",
+      "unicode": "U+2744",
+      "unicodeInt": 10052,
+      "emoji": "❄️",
+      "name": "snowflake",
+      "group": "travel-places",
+      "subgroups": "sky-weather",
+      "tags": [
+        "cold",
+        "snow",
+        "weather",
+        "snowflake",
+        "ice",
+        "icy",
+        "wintry",
+        "snow storm",
+        "white",
+        "frosty",
+        "season",
+        "melting"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "index": 291,
+      "hexcode": "1F30D",
+      "unicode": "U+1F30D",
+      "unicodeInt": 127757,
+      "emoji": "🌍️",
+      "name": "globe showing Europe-Africa",
+      "group": "travel-places",
+      "subgroups": "place-map",
+      "tags": [
+        "africa",
+        "earth",
+        "europe",
+        "europe-africa",
+        "globe",
+        "showing",
+        "world",
+        "geographic",
+        "continent",
+        "global",
+        "planet"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ]
+    },
+    {
+      "hexcode": "1F3AA",
+      "unicode": "U+1F3AA",
+      "unicodeInt": 127914,
+      "emoji": "🎪",
+      "name": "circus tent",
+      "group": "activities",
+      "subgroups": "event",
+      "tags": [
+        "circus",
+        "tent",
+        "carnival",
+        "show",
+        "entertainment"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ],
+      "index": 292
+    },
+    {
+      "hexcode": "1F37F",
+      "unicode": "U+1F37F",
+      "unicodeInt": 127871,
+      "emoji": "🍿",
+      "name": "popcorn",
+      "group": "food-drink",
+      "subgroups": "food-prepared",
+      "tags": [
+        "popcorn",
+        "movie",
+        "cinema",
+        "snack",
+        "food"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ],
+      "index": 293
+    },
+    {
+      "hexcode": "1F3A8",
+      "unicode": "U+1F3A8",
+      "unicodeInt": 127912,
+      "emoji": "🎨",
+      "name": "artist palette",
+      "group": "activities",
+      "subgroups": "arts-crafts",
+      "tags": [
+        "art",
+        "palette",
+        "painting",
+        "colors",
+        "artist"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ],
+      "index": 294
+    },
+    {
+      "hexcode": "1F576",
+      "unicode": "U+1F576",
+      "unicodeInt": 128374,
+      "emoji": "🕶️",
+      "name": "sunglasses",
+      "group": "objects",
+      "subgroups": "clothing",
+      "tags": [
+        "glasses",
+        "sunglasses",
+        "dark",
+        "shades",
+        "cool"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ],
+      "index": 295
+    }
+  ]
+}

@@ -2,7 +2,7 @@
   "version": "1.0.0",
   "generator": "AE_Get_Emojis build_emoji_db.py",
   "CoordinateSpace": "72x72 centered at [0,0] (-36..+36)",
-  "totalCount": 291,
+  "totalCount": 295,
   "sources": [
     {
       "id": "openmoji_color",
@@ -8674,6 +8674,102 @@
         "openmoji_black",
         "twemoji_color"
       ]
+    },
+    {
+      "hexcode": "1F3AA",
+      "unicode": "U+1F3AA",
+      "unicodeInt": 127914,
+      "emoji": "🎪",
+      "name": "circus tent",
+      "group": "activities",
+      "subgroups": "event",
+      "tags": [
+        "circus",
+        "tent",
+        "carnival",
+        "show",
+        "entertainment"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ],
+      "index": 292
+    },
+    {
+      "hexcode": "1F37F",
+      "unicode": "U+1F37F",
+      "unicodeInt": 127871,
+      "emoji": "🍿",
+      "name": "popcorn",
+      "group": "food-drink",
+      "subgroups": "food-prepared",
+      "tags": [
+        "popcorn",
+        "movie",
+        "cinema",
+        "snack",
+        "food"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ],
+      "index": 293
+    },
+    {
+      "hexcode": "1F3A8",
+      "unicode": "U+1F3A8",
+      "unicodeInt": 127912,
+      "emoji": "🎨",
+      "name": "artist palette",
+      "group": "activities",
+      "subgroups": "arts-crafts",
+      "tags": [
+        "art",
+        "palette",
+        "painting",
+        "colors",
+        "artist"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ],
+      "index": 294
+    },
+    {
+      "hexcode": "1F576",
+      "unicode": "U+1F576",
+      "unicodeInt": 128374,
+      "emoji": "🕶️",
+      "name": "sunglasses",
+      "group": "objects",
+      "subgroups": "clothing",
+      "tags": [
+        "glasses",
+        "sunglasses",
+        "dark",
+        "shades",
+        "cool"
+      ],
+      "emoticons": [],
+      "sources": [
+        "openmoji_color",
+        "openmoji_flat",
+        "openmoji_black",
+        "twemoji_color"
+      ],
+      "index": 295
     }
   ]
 }
