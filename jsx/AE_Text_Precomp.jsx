@@ -1,6 +1,6 @@
 // Co-authored & architected with Google DeepMind Antigravity.
 // =============================================================================
-// ADOBE AFTER EFFECTS EXTENDSCRIPT & SCRIPTUI PANEL: AE TEXT PRECOMP v1.6.0
+// ADOBE AFTER EFFECTS EXTENDSCRIPT & SCRIPTUI PANEL: AE TEXT PRECOMP v1.7.0
 // =============================================================================
 //
 // PURPOSE:
@@ -53,14 +53,15 @@
 //      - Custom swatch button + hex input (#RRGGBB) compatible with AE native
 //        $.colorPicker, Windows OS color picker, and AE_JS_builder web emulator.
 //   8. 100-Word Lorem Ipsum Dummy Layer:
-//      - If no text layer is selected, creates a 100-word dummy layer with a system font (ArialMT).
+//      - If no text layer is selected, creates a 100-word dummy layer with randomized
+//        font, alignment, font size (±15%), leading (±15%), and text color.
 // =============================================================================
 
 (function(thisObj) {
     "use strict";
 
     var SCRIPT_NAME = "AE Text Precomp";
-    var SCRIPT_VERSION = "v1.6.0";
+    var SCRIPT_VERSION = "v1.7.0";
     var TEXT_PROP_REF_URL = "https://github.com/work2survive/AE_JS_builder/blob/main/samples/Text_Properties_To_Effects.jsx";
     var EXTRUDED_CORNERS_REF_URL = "https://github.com/work2survive/AE_Extruded_Round_corners";
 
@@ -1085,6 +1086,24 @@
         return { fontObject: null, font: pick.ps, name: pick.name };
     }
 
+    // Curated high-visibility, aesthetic colors for dummy text
+    var DUMMY_COLORS_POOL = [
+        { name: "Snow White", rgb: [0.96, 0.96, 0.98] },
+        { name: "Warm Cream", rgb: [0.98, 0.94, 0.86] },
+        { name: "Electric Cyan", rgb: [0.35, 0.82, 0.98] },
+        { name: "Mint Aqua", rgb: [0.38, 0.94, 0.74] },
+        { name: "Sun Gold", rgb: [0.98, 0.86, 0.22] },
+        { name: "Pastel Coral", rgb: [0.98, 0.58, 0.50] },
+        { name: "Neon Lavender", rgb: [0.76, 0.62, 0.98] },
+        { name: "Spring Lime", rgb: [0.70, 0.94, 0.35] },
+        { name: "Bright Amber", rgb: [0.98, 0.65, 0.25] },
+        { name: "Rose Quartz", rgb: [0.98, 0.48, 0.72] }
+    ];
+
+    function getRandomTextColor() {
+        return DUMMY_COLORS_POOL[Math.floor(Math.random() * DUMMY_COLORS_POOL.length)];
+    }
+
     function getRandomJustification() {
         var aligns = [
             { key: "left", name: "Left", val: (typeof ParagraphJustification !== "undefined" && typeof ParagraphJustification.LEFT_JUSTIFY !== "undefined" ? ParagraphJustification.LEFT_JUSTIFY : 7412) },
@@ -1095,7 +1114,7 @@
     }
 
     // -------------------------------------------------------------------------
-    // 5. Create Dummy 100-Word Lorem Ipsum Text Layer (Randomized Font & Alignment)
+    // 5. Create Dummy 100-Word Lorem Ipsum Text Layer (Randomized Typography)
     // -------------------------------------------------------------------------
     function createDummyTextLayer(comp, targetW, targetH, autoHeight, pad) {
         if (!comp) {
@@ -1111,12 +1130,21 @@
         var textW = Math.max(20, totalW - (padVal * 2));
         var textH = (autoHeight || !targetH) ? 360 : Math.max(20, targetH - (padVal * 2));
 
-        // Randomize typography font and paragraph alignment
+        // Randomize typography: font, alignment, font size (±15%), leading (±15%), and color
         var fontPick = getRandomFontInfo();
         var alignPick = getRandomJustification();
+        var colorPick = getRandomTextColor();
+
+        var baseFontSize = 28;
+        var sizeFactor = 0.85 + (Math.random() * 0.30); // ±15% variation
+        var randomizedFontSize = Math.round(baseFontSize * sizeFactor);
+
+        var baseLeading = randomizedFontSize * 1.35;
+        var leadingFactor = 0.85 + (Math.random() * 0.30); // ±15% variation
+        var randomizedLeading = Math.round(baseLeading * leadingFactor * 10) / 10;
 
         var dummyLayer = comp.layers.addText(LOREM_IPSUM_100);
-        dummyLayer.name = "Dummy Text - " + fontPick.name + " (" + alignPick.name + ")";
+        dummyLayer.name = "Dummy Text - " + fontPick.name + " (" + alignPick.name + ", " + randomizedFontSize + "px, " + colorPick.name + ")";
 
         // Center initially in composition
         dummyLayer.transform.position.setValue([comp.width / 2, comp.height / 2, 0]);
@@ -1131,17 +1159,17 @@
 
         if (doc) {
             doc.text = LOREM_IPSUM_100;
-            doc.fontSize = 28;
+            doc.fontSize = randomizedFontSize;
             if (fontPick.fontObject) {
                 try { doc.fontObject = fontPick.fontObject; } catch (eFO) {}
             }
             if (fontPick.font) {
                 try { doc.font = fontPick.font; } catch (eF) {}
             }
-            doc.fillColor = [0.95, 0.95, 0.95];
+            doc.fillColor = colorPick.rgb;
             doc.applyFill = true;
             doc.applyStroke = false;
-            doc.leading = 40;
+            doc.leading = randomizedLeading;
             try {
                 doc.justification = alignPick.val;
             } catch (eJ) {}
@@ -1164,7 +1192,7 @@
         try {
             var r = dummyLayer.sourceRectAtTime(0, false);
             if (!r || r.width > (textW * 1.4)) {
-                var wrapped = wrapTextToWidth(LOREM_IPSUM_100, textW, 28, fontPick.font);
+                var wrapped = wrapTextToWidth(LOREM_IPSUM_100, textW, randomizedFontSize, fontPick.font);
                 if (doc) {
                     doc.text = wrapped;
                     textProp.setValue(doc);

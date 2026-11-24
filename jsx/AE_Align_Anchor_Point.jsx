@@ -1,6 +1,6 @@
 // Co-authored & architected with Google DeepMind Antigravity.
 // =============================================================================
-// ADOBE AFTER EFFECTS EXTENDSCRIPT & SCRIPTUI PANEL: AE ALIGN ANCHOR POINT v1.1.0
+// ADOBE AFTER EFFECTS EXTENDSCRIPT & SCRIPTUI PANEL: AE ALIGN ANCHOR POINT v1.2.0
 // =============================================================================
 //
 // PURPOSE:
@@ -50,7 +50,7 @@
     "use strict";
 
     var SCRIPT_NAME = "AE Align Anchor Point";
-    var SCRIPT_VERSION = "v1.1.0";
+    var SCRIPT_VERSION = "v1.2.0";
     var REPO_URL = "https://github.com/work2survive/AE-Align-AnchorPoint";
     var README_URL = "https://github.com/work2survive/AE-Align-AnchorPoint/blob/main/README.md";
 
@@ -788,6 +788,24 @@
         return { fontObject: null, font: pick.ps, name: pick.name };
     }
 
+    // Curated high-visibility, aesthetic colors for dummy text
+    var DUMMY_COLORS_POOL = [
+        { name: "Snow White", rgb: [0.96, 0.96, 0.98] },
+        { name: "Warm Cream", rgb: [0.98, 0.94, 0.86] },
+        { name: "Electric Cyan", rgb: [0.35, 0.82, 0.98] },
+        { name: "Mint Aqua", rgb: [0.38, 0.94, 0.74] },
+        { name: "Sun Gold", rgb: [0.98, 0.86, 0.22] },
+        { name: "Pastel Coral", rgb: [0.98, 0.58, 0.50] },
+        { name: "Neon Lavender", rgb: [0.76, 0.62, 0.98] },
+        { name: "Spring Lime", rgb: [0.70, 0.94, 0.35] },
+        { name: "Bright Amber", rgb: [0.98, 0.65, 0.25] },
+        { name: "Rose Quartz", rgb: [0.98, 0.48, 0.72] }
+    ];
+
+    function getRandomTextColor() {
+        return DUMMY_COLORS_POOL[Math.floor(Math.random() * DUMMY_COLORS_POOL.length)];
+    }
+
     function getRandomJustification() {
         var aligns = [
             { key: "left", name: "Left", val: (typeof ParagraphJustification !== "undefined" && typeof ParagraphJustification.LEFT_JUSTIFY !== "undefined" ? ParagraphJustification.LEFT_JUSTIFY : 7412) },
@@ -802,7 +820,7 @@
     // -------------------------------------------------------------------------
 
     /**
-     * Creates a dummy text box centered in the viewport with randomized font & alignment
+     * Creates a dummy text box centered in the viewport with randomized font, alignment, size, leading & color
      */
     function createDummyTextBox(comp) {
         if (!comp) return null;
@@ -822,24 +840,36 @@
             textLayer = comp.layers.addText(dummyText);
         }
 
-        // Randomize font & alignment
+        // Randomize typography: font, alignment, font size (±15%), leading (±15%), and color
         var fontPick = getRandomFontInfo();
         var alignPick = getRandomJustification();
+        var colorPick = getRandomTextColor();
 
-        textLayer.name = "Dummy Text - " + fontPick.name + " (" + alignPick.name + ")";
+        var baseFontSize = 24;
+        var sizeFactor = 0.85 + (Math.random() * 0.30); // ±15% variation
+        var randomizedFontSize = Math.round(baseFontSize * sizeFactor);
+
+        var baseLeading = randomizedFontSize * 1.35;
+        var leadingFactor = 0.85 + (Math.random() * 0.30); // ±15% variation
+        var randomizedLeading = Math.round(baseLeading * leadingFactor * 10) / 10;
+
+        textLayer.name = "Dummy Text - " + fontPick.name + " (" + alignPick.name + ", " + randomizedFontSize + "px, " + colorPick.name + ")";
         textLayer.transform.position.setValue(centerPos);
         textLayer.transform.anchorPoint.setValue([boxW / 2, boxH / 2, 0]);
 
         var doc = textLayer.property("Source Text").value;
         if (doc) {
-            doc.fontSize = 24;
+            doc.fontSize = randomizedFontSize;
             if (fontPick.fontObject) {
                 try { doc.fontObject = fontPick.fontObject; } catch (eFO) {}
             }
             if (fontPick.font) {
                 try { doc.font = fontPick.font; } catch (eF) {}
             }
-            doc.fillColor = [1.0, 1.0, 1.0];
+            doc.fillColor = colorPick.rgb;
+            doc.applyFill = true;
+            doc.applyStroke = false;
+            doc.leading = randomizedLeading;
             try {
                 doc.justification = alignPick.val;
             } catch (eJ) {}
