@@ -2188,226 +2188,7 @@
     }
 
     // -------------------------------------------------------------------------
-    // 13. Dummy Text Layer Generator
-    // -------------------------------------------------------------------------
-    var DUMMY_TEXT_COLORS = [
-        [0.96, 0.96, 0.96], // Crisp White
-        [1.00, 0.88, 0.40], // Warm Goldenrod / Amber
-        [0.40, 0.88, 1.00], // Electric Sky Blue
-        [1.00, 0.58, 0.70], // Soft Coral Rose
-        [0.50, 0.95, 0.70], // Mint Green
-        [0.85, 0.70, 1.00], // Lavender Purple
-        [1.00, 0.72, 0.45], // Peach Coral
-        [0.90, 0.96, 0.50], // Lime Yellow
-        [0.65, 0.92, 0.98], // Ice Blue
-        [1.00, 0.48, 0.52], // Watermelon Pink
-        [0.95, 0.85, 0.75]  // Warm Sand / Cream
-    ];
-
-    function getRandomTextColor() {
-        if (Math.random() < 0.75) {
-            return DUMMY_TEXT_COLORS[Math.floor(Math.random() * DUMMY_TEXT_COLORS.length)];
-        }
-        // Random bright visible color: R, G, B in range [0.45, 1.00]
-        return [
-            Math.round((0.45 + Math.random() * 0.55) * 100) / 100,
-            Math.round((0.45 + Math.random() * 0.55) * 100) / 100,
-            Math.round((0.45 + Math.random() * 0.55) * 100) / 100
-        ];
-    }
-
-    function formatPointTextWithLineBreaks(text, maxChars) {
-        var limit = maxChars || 42;
-        var words = text.replace(/[\r\n]+/g, " ").split(/\s+/);
-        var lines = [];
-        var cur = "";
-        for (var i = 0; i < words.length; i++) {
-            var w = words[i];
-            if (!w || w.length === 0) continue;
-            if (cur.length === 0) {
-                cur = w;
-            } else if ((cur.length + 1 + w.length) <= limit) {
-                cur += " " + w;
-            } else {
-                lines.push(cur);
-                cur = w;
-            }
-        }
-        if (cur.length > 0) lines.push(cur);
-        return lines.join("\r");
-    }
-
-    // Word pool for random 20-30 words dummy text
-    var LOREM_IPSUM_WORDS = [
-        "Lorem", "ipsum", "dolor", "sit", "amet,", "consectetur", "adipiscing", "elit,", "sed", "do",
-        "eiusmod", "tempor", "incididunt", "ut", "labore", "et", "dolore", "magna", "aliqua.", "Ut",
-        "enim", "ad", "minim", "veniam,", "quis", "nostrud", "exercitation", "ullamco", "laboris", "nisi",
-        "ut", "aliquip", "ex", "ea", "commodo", "consequat.", "Duis", "aute", "irure", "dolor",
-        "in", "reprehenderit", "in", "voluptate", "velit", "esse", "cillum", "dolore", "eu", "fugiat",
-        "nulla", "pariatur.", "Excepteur", "sint", "occaecat", "cupidatat", "non", "proident,", "sunt", "in",
-        "culpa", "qui", "officia", "deserunt", "mollit", "anim", "id", "est", "laborum."
-    ];
-
-    function getRandomDummyText(minWords, maxWords) {
-        var min = (typeof minWords === "number") ? minWords : 20;
-        var max = (typeof maxWords === "number") ? maxWords : 30;
-        var count = Math.floor(min + Math.random() * (max - min + 1));
-        var start = Math.floor(Math.random() * Math.max(1, LOREM_IPSUM_WORDS.length - count));
-        var words = [];
-        for (var i = 0; i < count; i++) {
-            words.push(LOREM_IPSUM_WORDS[(start + i) % LOREM_IPSUM_WORDS.length]);
-        }
-        var text = words.join(" ");
-        var lastChar = text.charAt(text.length - 1);
-        if (lastChar === ",") {
-            text = text.substring(0, text.length - 1) + ".";
-        } else if (lastChar !== "." && lastChar !== "!" && lastChar !== "?") {
-            text += ".";
-        }
-        return text.charAt(0).toUpperCase() + text.slice(1);
-    }
-
-    function createDummyTextBoxLayer(comp, fontName, align, boxW, boxH) {
-        if (!comp) {
-            comp = app.project.activeItem;
-            if (!comp || !(comp instanceof CompItem)) {
-                comp = app.project.items.addComp("AE Text Highlight Demo", 1920, 1080, 1.0, 10.0, 30.0);
-                if (comp.openInViewer) comp.openInViewer();
-            }
-        }
-
-        var compW = (comp && typeof comp.width === "number") ? comp.width : 1920;
-        var compH = (comp && typeof comp.height === "number") ? comp.height : 1080;
-
-        // 1. Make the random dummy text wider: spans 76% to 88% of the composition viewport
-        var widthRatio = 0.76 + (Math.random() * 0.12); // [0.76, 0.88]
-        var w = boxW ? Math.max(boxW, Math.round(compW * widthRatio)) : Math.round(compW * widthRatio);
-        w = Math.min(compW - 120, Math.max(900, w));
-        var h = boxH || Math.max(380, Math.round(compH * 0.45));
-
-        // 2. Randomize whether created as Point Text or Paragraph (Box) Text (50/50 probability)
-        var isBox = (Math.random() < 0.5);
-
-        // 3. Randomize Font (or resolve specified font)
-        var f = fontName;
-        if (!f || typeof f !== "string" || f === "random" || f.indexOf("random") !== -1 || f.indexOf("Shuffle") !== -1 || f === "") {
-            f = TYPICAL_FONTS[Math.floor(Math.random() * TYPICAL_FONTS.length)];
-        }
-
-        // 4. Randomize Alignment
-        var alignOptions = ["left", "center", "right"];
-        var a = (align && typeof align === "string") ? align.toLowerCase() : "random";
-        if (a === "random" || a.indexOf("random") !== -1 || a.indexOf("shuffle") !== -1 || a === "") {
-            a = alignOptions[Math.floor(Math.random() * alignOptions.length)];
-        }
-
-        // 5. Randomize Size (±15% from base 34pt: range [29pt, 39pt])
-        var baseFontSize = 34;
-        var sizeVariation = 1.0 + (Math.random() * 0.30 - 0.15); // [0.85, 1.15] (±15%)
-        var fontSize = Math.max(18, Math.round(baseFontSize * sizeVariation));
-
-        // 6. Randomize Leading (±15% from default fontSize * 1.25)
-        var baseLeading = fontSize * 1.25;
-        var leadingVariation = 1.0 + (Math.random() * 0.30 - 0.15); // [0.85, 1.15] (±15%)
-        var leading = Math.round(baseLeading * leadingVariation * 10) / 10;
-
-        // 7. Randomize Text Color
-        var textColor = getRandomTextColor();
-
-        // 8. Random dummy text (20 to 30 words)
-        var rawDummy = getRandomDummyText(20, 30);
-
-        // 9. If Point Text: add line breaks formatted so it doesn't stick out of the viewport
-        var approxCharW = fontSize * 0.54;
-        var maxCharsPerLine = Math.max(35, Math.min(55, Math.floor((w * 0.85) / approxCharW)));
-
-        var formattedText = isBox
-            ? wordWrapToBoxWidth(rawDummy, w, fontSize, f, 0)
-            : formatPointTextWithLineBreaks(rawDummy, maxCharsPerLine);
-
-        var dummy = comp.layers.addText(formattedText);
-        var typeLabel = isBox ? "Box Text" : "Point Text";
-        dummy.name = "Dummy Text - " + f + " " + fontSize + "pt (" + typeLabel + ", " + a + ")";
-
-        // Setup typography document
-        try {
-            var prop = dummy.property("Source Text");
-            if (!prop) {
-                try { prop = dummy.property("ADBE Text Properties").property("ADBE Text Document"); } catch (eP) {}
-            }
-            if (prop) {
-                var doc = prop.value;
-                if (doc) {
-                    doc.text = formattedText;
-                    doc.fontSize = fontSize;
-                    doc.font = f;
-                    doc.leading = leading;
-                    doc.autoLeading = false;
-                    doc.fillColor = textColor;
-                    doc.applyFill = true;
-                    doc.applyStroke = false;
-                    if (typeof ParagraphJustification !== "undefined") {
-                        doc.justification = (a === "center")
-                            ? ParagraphJustification.CENTER_JUSTIFY
-                            : ((a === "right") ? ParagraphJustification.RIGHT_JUSTIFY : ParagraphJustification.LEFT_JUSTIFY);
-                    } else {
-                        doc.justification = (a === "center") ? 7414 : ((a === "right") ? 7413 : 7412);
-                    }
-
-                    if (isBox) {
-                        try {
-                            if (typeof doc.setBoxTextSize === "function") {
-                                doc.setBoxTextSize([w, h]);
-                            } else if (typeof doc.boxText !== "undefined") {
-                                doc.boxText = true;
-                                doc.boxTextSize = [w, h];
-                            }
-                        } catch (eBox) {}
-                    } else {
-                        try {
-                            if (typeof doc.boxText !== "undefined") {
-                                doc.boxText = false;
-                            }
-                        } catch (ePt) {}
-                    }
-
-                    prop.setValue(doc);
-                }
-            }
-        } catch (eStyling) {}
-
-        // Place text in the middle of the viewport
-        var centerPos = [comp.width / 2, comp.height / 2, 0];
-        try {
-            var propST = dummy.property("Source Text");
-            var isActuallyBox = false;
-            if (propST && propST.value && propST.value.boxText) isActuallyBox = true;
-
-            if (isActuallyBox) {
-                dummy.transform.anchorPoint.setValue([w / 2, h / 2, 0]);
-                dummy.transform.position.setValue(centerPos);
-            } else {
-                var rSR = dummy.sourceRectAtTime(0, false);
-                if (rSR && rSR.width > 0 && rSR.height > 0) {
-                    dummy.transform.anchorPoint.setValue([rSR.left + rSR.width / 2, rSR.top + rSR.height / 2, 0]);
-                    dummy.transform.position.setValue(centerPos);
-                } else {
-                    dummy.transform.anchorPoint.setValue([w / 2, h / 2, 0]);
-                    dummy.transform.position.setValue(centerPos);
-                }
-            }
-        } catch (ePos) {
-            dummy.transform.position.setValue(centerPos);
-        }
-
-        // Always select the layer after random text creation
-        selectSingleLayer(comp, dummy);
-
-        return dummy;
-    }
-
-    // -------------------------------------------------------------------------
-    // 15. Interactive Color Picker Component
+    // 13. Interactive Color Picker Component
     // Reference: custom_rounded_rect.jsx & windows-color-picker.js
     // -------------------------------------------------------------------------
     function createColorPickerGroup(parent, labelText, defaultHex, onChangeCallback, withCheckbox, defaultChecked) {
@@ -2758,21 +2539,9 @@
         btnBuild.preferredSize = [-1, 32];
         btnBuild.helpTip = "Executes the selected highlight method: Split Method (decomposes text layers) or Calculation Method (intact text box).";
 
-        var grpSubActions = pnlActions.add("group");
-        grpSubActions.orientation = "row";
-        grpSubActions.alignChildren = ["fill", "center"];
-        grpSubActions.alignment = ["fill", "top"];
-        grpSubActions.spacing = 6;
-
-        var btnRemove = grpSubActions.add("button", undefined, "🗑️ Remove Highlights & Restore");
-        btnRemove.alignment = ["fill", "center"];
+        var btnRemove = pnlActions.add("button", undefined, "🗑️ Remove Highlights & Restore");
         btnRemove.preferredSize = [-1, 26];
         btnRemove.helpTip = "Deletes created split layers/shapes/precomps and restores the original text box.";
-
-        var btnCreateDummy = grpSubActions.add("button", undefined, "🎲 Create Random Dummy Text");
-        btnCreateDummy.alignment = ["fill", "center"];
-        btnCreateDummy.preferredSize = [-1, 26];
-        btnCreateDummy.helpTip = "Generates a random dummy text (20-30 words) in the composition for immediate testing.";
 
         // =====================================================================
         // TAB 2: 🎨 APPEARANCE & COLORS
@@ -2892,29 +2661,6 @@
         txtSpecs.alignment = ["fill", "top"];
         txtSpecs.preferredSize = [-1, 100];
 
-        // Dummy Generator Controls in Advanced Tab
-        var pnlDummyOpt = tabAdv.add("panel", undefined, "Dummy Text Generator Options");
-        pnlDummyOpt.orientation = "column";
-        pnlDummyOpt.alignChildren = ["fill", "top"];
-        pnlDummyOpt.alignment = ["fill", "top"];
-        pnlDummyOpt.spacing = 6;
-        pnlDummyOpt.margins = [8, 6, 8, 6];
-
-        var grpDummyRow1 = pnlDummyOpt.add("group");
-        grpDummyRow1.orientation = "row";
-        grpDummyRow1.alignChildren = ["left", "center"];
-        grpDummyRow1.alignment = ["fill", "top"];
-        grpDummyRow1.spacing = 8;
-
-        grpDummyRow1.add("statictext", undefined, "Font:");
-        var ddDummyFont = grpDummyRow1.add("dropdownlist", undefined, ["Random (Shuffle)"].concat(TYPICAL_FONTS));
-        ddDummyFont.selection = 0;
-        ddDummyFont.preferredSize = [130, 24];
-
-        grpDummyRow1.add("statictext", undefined, "Align:");
-        var ddDummyAlign = grpDummyRow1.add("dropdownlist", undefined, ["Random (Shuffle)", "Left", "Center", "Right"]);
-        ddDummyAlign.selection = 0;
-        ddDummyAlign.preferredSize = [120, 24];
 
         // Knowledge Base & Architectural References Panel
         var pnlRefs = tabAdv.add("panel", undefined, "Knowledge Base & References");
@@ -2942,7 +2688,7 @@
             }
             var textLayer = getSelectedTextLayer(comp);
             if (!textLayer) {
-                lblStatus.text = "ℹ️ No Text Layer selected. (Click 'Create Dummy Text Box' to test)";
+                lblStatus.text = "ℹ️ No Text Layer selected. Please select a text layer in your composition.";
                 return null;
             }
             var props = getTextBoxProperties(comp, textLayer);
@@ -2985,21 +2731,6 @@
             txtTargets.text = "";
         };
 
-        btnCreateDummy.onClick = function () {
-            var comp = app.project ? app.project.activeItem : null;
-            if (app.beginUndoGroup) app.beginUndoGroup("Create Dummy Text Box");
-            try {
-                var f = ddDummyFont.selection ? ddDummyFont.selection.text : "Georgia";
-                var a = ddDummyAlign.selection ? ddDummyAlign.selection.text.toLowerCase() : "random";
-                var dummy = createDummyTextBoxLayer(comp, f, a);
-                updateSelectionStatus();
-            } catch (eD) {
-                alert("Error creating dummy text: " + eD.toString());
-            } finally {
-                if (app.endUndoGroup) app.endUndoGroup();
-            }
-        };
-
         btnRemove.onClick = function () {
             var comp = app.project ? app.project.activeItem : null;
             if (!comp || !(comp instanceof CompItem)) {
@@ -3032,21 +2763,11 @@
 
             var textLayer = getSelectedTextLayer(comp);
             if (!textLayer) {
-                // If user clicks "build highlight" without any text being selected, or created before,
-                // only then we will create a new random text.
-                if (app.beginUndoGroup) app.beginUndoGroup("Auto-Generate Dummy & Build");
-                try {
-                    var f = (ddDummyFont && ddDummyFont.selection) ? ddDummyFont.selection.text : "Georgia";
-                    var a = (ddDummyAlign && ddDummyAlign.selection) ? ddDummyAlign.selection.text.toLowerCase() : "random";
-                    textLayer = createDummyTextBoxLayer(comp, f, a);
-                } catch (eCreate) {
-                    alert("Unable to create text layer: " + eCreate.toString());
-                    if (app.endUndoGroup) app.endUndoGroup();
-                    return;
-                }
-            } else {
-                if (app.beginUndoGroup) app.beginUndoGroup("Build Highlights");
+                alert("Please select a text layer in your active composition first.");
+                return;
             }
+
+            if (app.beginUndoGroup) app.beginUndoGroup("Build Highlights");
 
             try {
                 var rawTerms = txtTargets.text;
@@ -3112,13 +2833,11 @@
         win.alignLayerAnchorPointTopLeft = alignLayerAnchorPointTopLeft;
         win.buildSplitHighlightsRig = buildSplitHighlightsRig;
         win.buildCalculationHighlightsRig = buildCalculationHighlightsRig;
-        win.createDummyTextBoxLayer = createDummyTextBoxLayer;
         win.removeHighlightsAndRestoreOriginal = removeHighlightsAndRestoreOriginal;
         win.createColorPickerGroup = createColorPickerGroup;
         win.pickerHighlight = pickerHighlight;
         win.pickerText = pickerText;
         win.btnBuild = btnBuild;
-        win.btnCreateDummy = btnCreateDummy;
         win.txtTargets = txtTargets;
 
         return win;
