@@ -457,26 +457,21 @@
                 }
             }
 
-            // Click row to select / toggle selection
+            // Click row to select
             const bar = row.querySelector('.ae-layer-main-bar');
             if (bar) {
                 bar.onclick = (e) => {
                     if (e.target.closest('.ae-twirl') || e.target.closest('.ae-switch-3d') || e.target.closest('.ae-switch-shy') || e.target.closest('.ae-btn-open-comp')) return;
-                    const wasSelected = (selectedLayer === layer && layer.selected);
-                    selectedLayer = wasSelected ? null : layer;
+                    selectedLayer = layer;
                     const allLayers = (comp && comp.layers && (comp.layers._layers || comp.layers)) || [];
                     if (allLayers && typeof allLayers.forEach === "function") {
                         allLayers.forEach(l => {
-                            l.selected = (l === selectedLayer);
+                            l.selected = (l === layer);
                         });
                     }
-                    if (selectedLayer) {
-                        selectedLayer.selected = true;
-                    }
+                    layer.selected = true;
                     document.querySelectorAll('.ae-layer-main-bar').forEach(el => el.classList.remove('selected'));
-                    if (selectedLayer) {
-                        bar.classList.add('selected');
-                    }
+                    bar.classList.add('selected');
                     window.dispatchEvent(new CustomEvent('ae-layer-selection-changed', { detail: { layer: selectedLayer } }));
                 };
             }
@@ -1659,9 +1654,12 @@
 
         // Ensure row in timeline is highlighted & visible
         setTimeout(() => {
-            const row = document.querySelector(`.ae-layer-row[data-layer-id="${layer.id}"]`) ||
+            const row = document.querySelector(`.ae-layer-row[data-layer-id="${layer._id}"]`) ||
+                        document.querySelector(`.ae-layer-row[data-layer-id="${layer.id}"]`) ||
+                        document.querySelector('.ae-layer-row:nth-child(2)') ||
                         document.querySelector('.ae-layer-row:first-child');
             if (row) {
+                document.querySelectorAll('.ae-layer-main-bar').forEach(el => el.classList.remove('selected'));
                 const bar = row.querySelector('.ae-layer-main-bar');
                 if (bar) bar.classList.add('selected');
                 row.scrollIntoView({ behavior: 'smooth', block: 'nearest' });

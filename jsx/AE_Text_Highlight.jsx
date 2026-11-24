@@ -474,6 +474,7 @@
         if (sel && sel.length > 0) {
             for (var i = 0; i < sel.length; i++) {
                 if (isTextLayer(sel[i])) return sel[i];
+                if (sel[i].parent && isTextLayer(sel[i].parent)) return sel[i].parent;
             }
         }
         return null;
@@ -2728,7 +2729,7 @@
         // Interactive Logic & Event Listeners
         // ---------------------------------------------------------------------
         function updateSelectionStatus() {
-            var comp = app.project ? app.project.activeItem : null;
+            var comp = app.project ? (app.project.activeItem || (app.project.items && app.project.items.length > 0 ? app.project.items[0] : null)) : null;
             if (!comp || (typeof CompItem !== "undefined" && !(comp instanceof CompItem) && !comp.layers)) {
                 lblStatus.text = "⚠️ No active composition open.";
                 return null;
@@ -2797,7 +2798,7 @@
         };
 
         btnBuild.onClick = function () {
-            var comp = app.project ? app.project.activeItem : null;
+            var comp = app.project ? (app.project.activeItem || (app.project.items && app.project.items.length > 0 ? app.project.items[0] : null)) : null;
             if (!comp || (typeof CompItem !== "undefined" && !(comp instanceof CompItem) && !comp.layers)) {
                 if (app.project && app.project.items && typeof app.project.items.addComp === "function") {
                     comp = app.project.items.addComp("AE Text Highlight Demo", 1920, 1080, 1.0, 10.0, 30.0);

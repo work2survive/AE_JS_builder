@@ -510,7 +510,7 @@
             }
             btn.onclick = () => {
                 const btnText = (this.text || '').toLowerCase();
-                if (btnText.includes('build')) {
+                if (btnText.includes('build') && !btnText.includes('highlight') && (btnText.includes('cube') || btnText.includes('cylinder') || btnText.includes('spiral') || btnText.includes('scene'))) {
                     if (typeof window !== 'undefined' && typeof window.clearCompLayers === 'function') {
                         window.clearCompLayers();
                     } else if (typeof app !== 'undefined' && app.project && app.project.activeItem) {
