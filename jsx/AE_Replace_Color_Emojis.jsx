@@ -880,31 +880,42 @@
         var emoContents = emoGrp.property("ADBE Vectors Group") || emoGrp.property("Contents");
 
         // Rig Master Vector Group Transform
-        var emoTr = emoGrp.property("ADBE Vector Transform Group");
+        var emoTr = emoGrp.property("ADBE Vector Transform Group") || emoGrp.property("Transform");
         if (emoTr) {
-            emoTr.property("ADBE Vector Anchor").setValue([0, 0]);
-            emoTr.property("ADBE Vector Position").setValue([posX, posY]);
-            var scalePct = Math.round((sizePx / 72.0) * 10000) / 100;
-            emoTr.property("ADBE Vector Scale").setValue([scalePct, scalePct]);
+            var pAnchor = emoTr.property("ADBE Vector Anchor Point") || emoTr.property("Anchor Point") || emoTr.property("ADBE Vector Anchor");
+            if (pAnchor && pAnchor.setValue) pAnchor.setValue([0, 0]);
+
+            var pPos = emoTr.property("ADBE Vector Position") || emoTr.property("Position");
+            if (pPos && pPos.setValue) pPos.setValue([posX, posY]);
+
+            var pScale = emoTr.property("ADBE Vector Scale") || emoTr.property("Scale");
+            if (pScale && pScale.setValue) {
+                var scalePct = Math.round((sizePx / 72.0) * 10000) / 100;
+                pScale.setValue([scalePct, scalePct]);
+            }
 
             try {
-                emoTr.property("ADBE Vector Position").expression = [
-                    'var ox = 0, oy = 0;',
-                    'try { ox = thisLayer.effect("Offset X")(1).value; } catch(e1) {}',
-                    'try { oy = thisLayer.effect("Offset Y")(1).value; } catch(e2) {}',
-                    '[' + posX.toFixed(2) + ' + ox, ' + posY.toFixed(2) + ' + oy];'
-                ].join('\n');
+                if (pPos) {
+                    pPos.expression = [
+                        'var ox = 0, oy = 0;',
+                        'try { ox = thisLayer.effect("Offset X")(1).value; } catch(e1) {}',
+                        'try { oy = thisLayer.effect("Offset Y")(1).value; } catch(e2) {}',
+                        '[' + posX.toFixed(2) + ' + ox, ' + posY.toFixed(2) + ' + oy];'
+                    ].join('\n');
+                }
             } catch (ePosExpr) {}
 
             try {
-                emoTr.property("ADBE Vector Scale").expression = [
-                    'try {',
-                    '  var sz = thisLayer.effect("Emoji Size (px)")(1).value;',
-                    '  var mult = thisLayer.effect("Emoji Size Multiplier %")(1).value / 100.0;',
-                    '  var s = ((sz * mult) / 72.0) * 100.0;',
-                    '  [s, s];',
-                    '} catch(e) { value; }'
-                ].join('\n');
+                if (pScale) {
+                    pScale.expression = [
+                        'try {',
+                        '  var sz = thisLayer.effect("Emoji Size (px)")(1).value;',
+                        '  var mult = thisLayer.effect("Emoji Size Multiplier %")(1).value / 100.0;',
+                        '  var s = ((sz * mult) / 72.0) * 100.0;',
+                        '  [s, s];',
+                        '} catch(e) { value; }'
+                    ].join('\n');
+                }
             } catch (eScExpr) {}
         }
 
@@ -931,43 +942,52 @@
                 myShape.inTangents = sp.i || [];
                 myShape.outTangents = sp.o || [];
                 myShape.closed = Boolean(sp.c);
-                pathGrp.property("ADBE Vector Shape").setValue(myShape);
+                var pathProp = pathGrp.property("ADBE Vector Shape") || pathGrp.property("Path");
+                if (pathProp && pathProp.setValue) pathProp.setValue(myShape);
             }
 
             if (item.f) {
                 var fillProp = partVecs.addProperty("ADBE Vector Graphic - Fill");
                 fillProp.name = "Fill";
-                fillProp.property("ADBE Vector Fill Color").setValue(item.f);
+                var fCol = fillProp.property("ADBE Vector Fill Color") || fillProp.property("Color");
+                if (fCol && fCol.setValue) fCol.setValue(item.f);
                 var fOp = (typeof item.fo === "number") ? item.fo : 100;
-                fillProp.property("ADBE Vector Fill Opacity").setValue(fOp);
+                var fOpProp = fillProp.property("ADBE Vector Fill Opacity") || fillProp.property("Opacity");
+                if (fOpProp && fOpProp.setValue) fOpProp.setValue(fOp);
             }
 
             if (item.s && item.sw > 0) {
                 var strokeProp = partVecs.addProperty("ADBE Vector Graphic - Stroke");
                 strokeProp.name = "Stroke";
-                strokeProp.property("ADBE Vector Stroke Color").setValue(item.s);
+                var sCol = strokeProp.property("ADBE Vector Stroke Color") || strokeProp.property("Color");
+                if (sCol && sCol.setValue) sCol.setValue(item.s);
                 var baseSw = item.sw;
                 var effectiveSw = isLine ? (baseSw * (outlinePct / 100.0)) : baseSw;
-                strokeProp.property("ADBE Vector Stroke Width").setValue(effectiveSw);
+                var swProp = strokeProp.property("ADBE Vector Stroke Width") || strokeProp.property("Stroke Width");
+                if (swProp && swProp.setValue) swProp.setValue(effectiveSw);
                 var sOp = (typeof item.so === "number") ? item.so : 100;
-                strokeProp.property("ADBE Vector Stroke Opacity").setValue(sOp);
+                var sOpProp = strokeProp.property("ADBE Vector Stroke Opacity") || strokeProp.property("Opacity");
+                if (sOpProp && sOpProp.setValue) sOpProp.setValue(sOp);
 
-                if (isLine) {
+                if (isLine && swProp) {
                     try {
-                        strokeProp.property("ADBE Vector Stroke Width").expression =
+                        swProp.expression =
                             "try { value * (thisLayer.effect('Outline Width %')(1).value / 100); } catch(e) { value; }";
                     } catch (eSwExpr) {}
                 }
             }
 
             if (isLine) {
-                var partTr = partGrp.property("ADBE Vector Transform Group");
-                if (partTr && partTr.property("ADBE Vector Opacity")) {
-                    partTr.property("ADBE Vector Opacity").setValue(showOutlines ? 100 : 0);
-                    try {
-                        partTr.property("ADBE Vector Opacity").expression =
-                            "try { (thisLayer.effect('Show Outlines')(1).value > 0) ? 100 : 0; } catch(e) { value; }";
-                    } catch (eOpExpr) {}
+                var partTr = partGrp.property("ADBE Vector Transform Group") || partGrp.property("Transform");
+                if (partTr) {
+                    var partOp = partTr.property("ADBE Vector Group Opacity") || partTr.property("Opacity") || partTr.property("ADBE Vector Opacity");
+                    if (partOp && partOp.setValue) {
+                        partOp.setValue(showOutlines ? 100 : 0);
+                        try {
+                            partOp.expression =
+                                "try { (thisLayer.effect('Show Outlines')(1).value > 0) ? 100 : 0; } catch(e) { value; }";
+                        } catch (eOpExpr) {}
+                    }
                 }
             }
         }

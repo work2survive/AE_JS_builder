@@ -943,6 +943,18 @@
                 this.properties.push(p);
             });
         }
+
+        property(nameOrIndex) {
+            if (typeof nameOrIndex === 'string') {
+                const clean = nameOrIndex.toLowerCase();
+                if (clean === 'adbe vector anchor' || clean === 'adbe vector anchor point' || clean === 'anchor point' || clean === 'anchor') return this.anchorPoint;
+                if (clean === 'adbe vector position' || clean === 'position') return this.position;
+                if (clean === 'adbe vector scale' || clean === 'scale') return this.scale;
+                if (clean === 'adbe vector rotation' || clean === 'rotation') return this.rotation;
+                if (clean === 'adbe vector opacity' || clean === 'adbe vector group opacity' || clean === 'opacity') return this.opacity;
+            }
+            return super.property(nameOrIndex);
+        }
     }
 
     class VectorShapeRect extends PropertyGroup {
