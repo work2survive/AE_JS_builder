@@ -2114,7 +2114,8 @@
         // 5. Randomize Text Color
         var textColor = getRandomTextColor();
 
-        var formattedText = wordWrapToBoxWidth(LOREM_IPSUM_RAW, w, fontSize, f, 0);
+        var dummyText = "Lorem ipsum dolor sit amet, consectetur adipiscing".substring(0, 50);
+        var formattedText = wordWrapToBoxWidth(dummyText, w, fontSize, f, 0);
         var dummy = comp.layers.addText(formattedText);
         dummy.name = "Dummy Text - " + f + " " + fontSize + "pt (" + a + ")";
 

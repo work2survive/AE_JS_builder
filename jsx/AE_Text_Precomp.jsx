@@ -120,15 +120,9 @@
         ];
     }
 
-    // 100 Words of Lorem Ipsum
-    var LOREM_IPSUM_100 =
-        "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut " +
-        "labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris " +
-        "nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit " +
-        "esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in " +
-        "culpa qui officia deserunt mollit anim id est laborum. Sed ut perspiciatis unde omnis iste natus error " +
-        "sit voluptatem accusantium doloremque laudantium, totam rem aperiam, eaque ipsa quae ab illo inventore " +
-        "veritatis et quasi architecto beatae vitae dicta sunt explicabo.";
+    // 50-Character Dummy Text (Lorem Ipsum)
+    var DUMMY_TEXT_50 = "Lorem ipsum dolor sit amet, consectetur adipiscing";
+    var LOREM_IPSUM_100 = DUMMY_TEXT_50; // Backwards-compatible alias
 
     function wrapTextToWidth(text, maxWidth, fontSize) {
         var charWidth = (fontSize || 28) * 0.52;
@@ -1145,7 +1139,8 @@
         var leadingFactor = 0.85 + (Math.random() * 0.30); // ±15% variation
         var randomizedLeading = Math.round(baseLeading * leadingFactor * 10) / 10;
 
-        var dummyLayer = comp.layers.addText(LOREM_IPSUM_100);
+        var dummyText = DUMMY_TEXT_50.substring(0, 50);
+        var dummyLayer = comp.layers.addText(dummyText);
         dummyLayer.name = "Dummy Text - " + fontPick.name + " (" + alignPick.name + ", " + randomizedFontSize + "px, " + colorPick.name + ")";
 
         var textProp = dummyLayer.property("Source Text");
@@ -1157,7 +1152,7 @@
         }
 
         if (doc) {
-            doc.text = LOREM_IPSUM_100;
+            doc.text = dummyText;
             doc.fontSize = randomizedFontSize;
             if (fontPick.fontObject) {
                 try { doc.fontObject = fontPick.fontObject; } catch (eFO) {}
@@ -1191,7 +1186,7 @@
         try {
             var r = dummyLayer.sourceRectAtTime(0, false);
             if (!r || r.width > (textW * 1.4)) {
-                var wrapped = wrapTextToWidth(LOREM_IPSUM_100, textW, randomizedFontSize, fontPick.font);
+                var wrapped = wrapTextToWidth(dummyText, textW, randomizedFontSize, fontPick.font);
                 if (doc) {
                     doc.text = wrapped;
                     textProp.setValue(doc);
@@ -2630,7 +2625,7 @@
             }
             return metrics;
         } else {
-            lblStatusText.text = "None selected (will create 100-word dummy layer)";
+            lblStatusText.text = "None selected (will create 50-char dummy layer)";
             btnAutoDetect.enabled = false;
             return null;
         }
@@ -2659,7 +2654,7 @@
     };
 
     btnDummyOnly.onClick = function() {
-        if (app.beginUndoGroup) app.beginUndoGroup("Create 100-Word Dummy Layer");
+        if (app.beginUndoGroup) app.beginUndoGroup("Create 50-Char Dummy Layer");
         try {
             var comp = app.project.activeItem;
             var w = parseFloat(txtWidth.text) || 800;
@@ -2669,7 +2664,7 @@
 
             var dummy = createDummyTextLayer(comp, w, h, autoH, padVal);
             syncLayerDetection();
-            lblFeedback.text = "Created dummy layer: '" + dummy.name + "' with 100 words of Lorem Ipsum.";
+            lblFeedback.text = "Created dummy layer: '" + dummy.name + "' (50 characters of Lorem Ipsum).";
         } catch (err) {
             alert("Error creating dummy text layer:\n" + err.toString());
         } finally {
@@ -2756,7 +2751,7 @@
                 msg = "Precomposed '" + res.name + "' [" + res.width + "x" + res.height + "px, Padding: " + res.padding + "px, Textbox: " + res.textboxWidth + "px]";
             }
             if (res.createdDummy) {
-                msg += " (Generated 100-word dummy layer)";
+                msg += " (Generated 50-char dummy layer)";
             }
             lblFeedback.text = msg;
         } catch (err) {

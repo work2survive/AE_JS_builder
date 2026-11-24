@@ -829,7 +829,7 @@
         var widthVariation = 0.70 + (Math.random() * 0.60); // ±30% variation (0.70 to 1.30)
         var boxW = Math.max(100, Math.round(baseBoxW * widthVariation));
         var boxH = 180;
-        var dummyText = "AE ALIGN ANCHOR POINT\nZero-shift live expressions dynamically anchor text to bounding boxes.";
+        var dummyText = "Lorem ipsum dolor sit amet, consectetur adipiscing".substring(0, 50);
 
         var textLayer;
         if (typeof comp.layers.addBoxText === "function") {
