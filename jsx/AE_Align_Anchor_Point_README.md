@@ -124,8 +124,9 @@ If continuous expression evaluation is not needed (e.g., to maximize playback pe
    - Radio buttons for Top, Center, and Bottom.
 4. **Quick 3×3 Visual Grid**:
    - 9 interactive buttons corresponding to the bounding box anchor points. Clicking any button updates the radio selectors and applies the alignment immediately.
-5. **One-Click Demo Generator**:
-   - A `Create Demo Comp` button generates an active composition with a Box Text layer, Vector Shape, Solid, and Precomp for immediate testing.
+5. **Execution Engine (Default Static Bake & Dynamic Expression Management)**:
+   - Defaults to **One-Time Static Bake** for zero runtime overhead.
+   - When **Dynamic Expressions** is selected, a dedicated `✕ Clear Expressions` button is directly paired alongside it for one-click expression cleanup.
 
 ---
 

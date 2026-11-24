@@ -615,100 +615,7 @@
     }
 
     // -------------------------------------------------------------------------
-    // 6. Demo Composition Generator
-    // -------------------------------------------------------------------------
-
-    function createDemoComposition() {
-        var comp = app.project.items.addComp("Anchor Point Demo", 1920, 1080, 1, 10, 30);
-
-        // 1. Dark Background Plate
-        var bg = comp.layers.addShape();
-        bg.name = "Background_Plate";
-        var bgGrp = bg.property("Contents").addProperty("ADBE Vector Group");
-        var bgRect = bgGrp.property("Contents").addProperty("ADBE Vector Shape - Rect");
-        bgRect.property("Size").setValue([1920, 1080]);
-        var bgFill = bgGrp.property("Contents").addProperty("ADBE Vector Graphic - Fill");
-        bgFill.property("Color").setValue([0.07, 0.08, 0.11]);
-
-        // 2. Demo Box Text Layer in Center of Viewport
-        var centerPos = [comp.width / 2, comp.height / 2, 0];
-        var boxW = 460;
-        var boxH = 180;
-        var demoText = "AE ALIGN ANCHOR POINT\nZero-shift live expressions dynamically anchor text to bounding boxes.";
-
-        var textLayer;
-        if (typeof comp.layers.addBoxText === "function") {
-            try {
-                textLayer = comp.layers.addBoxText([boxW, boxH], demoText);
-            } catch (eB) {
-                textLayer = comp.layers.addText(demoText);
-            }
-        } else {
-            textLayer = comp.layers.addText(demoText);
-        }
-
-        textLayer.name = "Demo_Box_Text";
-        textLayer.transform.position.setValue(centerPos);
-        textLayer.transform.anchorPoint.setValue([boxW / 2, boxH / 2, 0]);
-
-        var doc = textLayer.property("Source Text").value;
-        if (doc) {
-            doc.fontSize = 24;
-            doc.font = "Arial-BoldMT";
-            doc.fillColor = [1.0, 1.0, 1.0];
-            try {
-                doc.justification = (typeof ParagraphJustification !== "undefined" && ParagraphJustification.CENTER_JUSTIFY !== undefined)
-                    ? ParagraphJustification.CENTER_JUSTIFY
-                    : 7414;
-            } catch (eJ) {}
-            textLayer.property("Source Text").setValue(doc);
-        }
-
-        // 3. Demo Vector Shape Layer (Rounded Card)
-        var shapeLayer = comp.layers.addShape();
-        shapeLayer.name = "Demo_Vector_Shape";
-        shapeLayer.transform.position.setValue([1350, 320, 0]);
-        var sGrp = shapeLayer.property("Contents").addProperty("ADBE Vector Group");
-        var sRect = sGrp.property("Contents").addProperty("ADBE Vector Shape - Rect");
-        sRect.property("Size").setValue([380, 220]);
-        sRect.property("Roundness").setValue(28);
-        var sFill = sGrp.property("Contents").addProperty("ADBE Vector Graphic - Fill");
-        sFill.property("Color").setValue([0.18, 0.45, 0.90]);
-        var sStroke = sGrp.property("Contents").addProperty("ADBE Vector Graphic - Stroke");
-        sStroke.property("Color").setValue([1.0, 1.0, 1.0]);
-        sStroke.property("Stroke Width").setValue(3);
-
-        // 4. Demo Solid / AVLayer
-        var solidLayer = comp.layers.addSolid([0.95, 0.40, 0.15], "Demo_Solid_Card", 340, 200, 1);
-        solidLayer.transform.position.setValue([320, 720, 0]);
-
-        // 5. Demo Nested Precomposition
-        var precompItem = app.project.items.addComp("Inner Precomp Item", 380, 200, 1, 10, 30);
-        var pBg = precompItem.layers.addShape();
-        pBg.name = "Precomp_Bg";
-        var pGrp = pBg.property("Contents").addProperty("ADBE Vector Group");
-        var pRect = pGrp.property("Contents").addProperty("ADBE Vector Shape - Rect");
-        pRect.property("Size").setValue([360, 180]);
-        pRect.property("Roundness").setValue(16);
-        var pFill = pGrp.property("Contents").addProperty("ADBE Vector Graphic - Fill");
-        pFill.property("Color").setValue([0.16, 0.70, 0.50]);
-
-        var precompLayer = comp.layers.add(precompItem);
-        precompLayer.name = "Demo_Precomp_Layer";
-        precompLayer.transform.position.setValue([1350, 720, 0]);
-
-        // Keep text layer selected in center
-        textLayer.selected = true;
-
-        if (typeof comp.openInViewer === "function") {
-            comp.openInViewer();
-        }
-
-        return comp;
-    }
-
-    // -------------------------------------------------------------------------
-    // 8. ScriptUI Panel Architecture (matching AE_Text_Precomp.jsx)
+    // 6. ScriptUI Panel Architecture (matching AE_Text_Precomp.jsx)
     // -------------------------------------------------------------------------
 
     var win = (thisObj instanceof Panel)
@@ -850,19 +757,45 @@
 
     // --- Execution Mode Panel ---
     var pnlMode = win.add("panel", undefined, "Execution Engine");
-    pnlMode.orientation = "row";
-    pnlMode.alignChildren = ["center", "center"];
-    pnlMode.spacing = 20;
-    pnlMode.margins = [10, 8, 10, 8];
+    pnlMode.orientation = "column";
+    pnlMode.alignChildren = ["fill", "top"];
+    pnlMode.spacing = 8;
+    pnlMode.margins = [12, 10, 12, 10];
+    pnlMode._radioGroupId = "radio_grp_execution_mode";
 
-    var rbModeExpr = pnlMode.add("radiobutton", undefined, "Dynamic Expressions (Live Updates)");
-    rbModeExpr.value = true;
-    rbModeExpr.helpTip = "Applies linked expressions so resizing, typing text, or scaling dynamically maintains anchor point alignment.";
-
-    var rbModeBake = pnlMode.add("radiobutton", undefined, "One-Time Static Bake (No Expressions)");
+    // Row 1: One-Time Static Bake (Default)
+    var rbModeBake = pnlMode.add("radiobutton", undefined, "One-Time Static Bake (No Expressions - Default)");
+    rbModeBake.value = true;
     rbModeBake.helpTip = "Calculates exact compensation once and sets static numeric values on Anchor Point and Position without running expressions.";
 
-    // --- Main Action Buttons ---
+    // Row 2: Dynamic Expressions with adjacent/associated Clear Expressions button
+    var grpExprRow = pnlMode.add("group");
+    grpExprRow.orientation = "row";
+    grpExprRow.alignment = ["fill", "center"];
+    grpExprRow.alignChildren = ["left", "center"];
+    grpExprRow.spacing = 8;
+    grpExprRow._radioGroupId = pnlMode._radioGroupId;
+
+    var rbModeExpr = grpExprRow.add("radiobutton", undefined, "Dynamic Expressions (Live Updates)");
+    rbModeExpr.value = false;
+    rbModeExpr.alignment = ["fill", "center"];
+    rbModeExpr.helpTip = "Applies linked expressions so resizing, typing text, or scaling dynamically maintains anchor point alignment.";
+
+    var btnRemove = grpExprRow.add("button", undefined, "✕ Clear Expressions");
+    btnRemove.preferredSize = [135, 24];
+    btnRemove.alignment = ["right", "center"];
+    btnRemove.helpTip = "Clears active anchor point and position expressions from target layer(s).";
+
+    rbModeBake.onClick = function() {
+        rbModeBake.value = true;
+        rbModeExpr.value = false;
+    };
+    rbModeExpr.onClick = function() {
+        rbModeExpr.value = true;
+        rbModeBake.value = false;
+    };
+
+    // --- Main Action Button ---
     var grpActions = win.add("group");
     grpActions.orientation = "column";
     grpActions.alignChildren = ["fill", "top"];
@@ -870,18 +803,6 @@
 
     var btnAlign = grpActions.add("button", undefined, "⚓ Align Anchor Point (Zero Visual Shift)");
     btnAlign.preferredSize = [-1, 34];
-
-    var grpSecondary = grpActions.add("group");
-    grpSecondary.orientation = "row";
-    grpSecondary.alignment = ["fill", "top"];
-    grpSecondary.spacing = 6;
-
-    var btnRemove = grpSecondary.add("button", undefined, "✕ Clear Expressions");
-    btnRemove.alignment = ["fill", "center"];
-    btnRemove.helpTip = "Clears active anchor point and position expressions from layers.";
-
-    var btnDemo = grpSecondary.add("button", undefined, "➕ Create Demo Comp");
-    btnDemo.alignment = ["fill", "center"];
 
     // --- Feedback Label ---
     var lblFeedback = win.add("statictext", undefined, "Ready. Select a layer or click 'Align Anchor Point'.");
@@ -1016,19 +937,6 @@
         syncLayerDetection();
     };
 
-    btnDemo.onClick = function() {
-        if (app.beginUndoGroup) app.beginUndoGroup("Create Demo Comp");
-        try {
-            createDemoComposition();
-            syncLayerDetection();
-            lblFeedback.text = "Created 'Anchor Point Demo' comp with Box Text in viewport center, Shape, Solid, and Precomp.";
-        } catch (eDemo) {
-            alert("Error creating demo comp:\n" + eDemo.toString());
-        } finally {
-            if (app.endUndoGroup) app.endUndoGroup();
-        }
-    };
-
     btnRemove.onClick = function() {
         if (app.beginUndoGroup) app.beginUndoGroup("Clear Alignment Expressions");
         try {
@@ -1069,7 +977,6 @@
     })();
 
     // Expose programmatic hooks on win object
-    win.btnDemo = btnDemo;
     win.btnAlign = btnAlign;
     win.btnTL = btnTL;
     win.btnTC = btnTC;
@@ -1083,8 +990,9 @@
     win.btnRemove = btnRemove;
     win.rbBoundsSourceRect = rbBoundsSourceRect;
     win.rbBoundsStated = rbBoundsStated;
+    win.rbModeBake = rbModeBake;
+    win.rbModeExpr = rbModeExpr;
     win.executeAlignment = executeAlignment;
-    win.createDemoComposition = createDemoComposition;
     win.syncLayerDetection = syncLayerDetection;
     win.storeAlignmentEffect = storeAlignmentEffect;
     win.readAlignmentEffect = readAlignmentEffect;
