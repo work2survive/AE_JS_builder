@@ -8,13 +8,13 @@
     'use strict';
 
     // -------------------------------------------------------------
-    // Version Management (v1.2.14)
+    // Version Management (v1.2.15)
     // -------------------------------------------------------------
     function computeDailyVersion() {
-        return '1.2.14';
+        return '1.2.15';
     }
 
-    const APP_VERSION = '1.2.14';
+    const APP_VERSION = '1.2.15';
     global.EMULATOR_VERSION = APP_VERSION;
     global.AE_TEXT_GUIDE_URL = 'https://github.com/work2survive/AE_JS_builder/blob/main/AE_VS_JS_TEXT_RENDERING_DIFFERENCES.md';
     global.AE_ANCHOR_POINT_GUIDE_URL = 'https://github.com/work2survive/AE-Align-AnchorPoint/blob/main/README.md';
@@ -1439,6 +1439,165 @@
     }
 
     // -------------------------------------------------------------
+    // Dummy Text Creator
+    // Creates a random Point or Box text layer centered in the viewport
+    // with random font, size, leading, alignment, and ~50 words.
+    // -------------------------------------------------------------
+    function createDummyTextLayer() {
+        if (typeof app === 'undefined' || !app.project) {
+            appendConsole('Cannot create dummy text layer: AE project not initialized.', true);
+            return null;
+        }
+
+        const comp = app.project.activeItem || (app.project.items && app.project.items.length > 0 ? app.project.items[0] : null);
+        if (!comp) {
+            appendConsole('Cannot create dummy text layer: No active composition found.', true);
+            return null;
+        }
+
+        // 1. Random Type: Point Text (false) or Box Text (true)
+        const isBox = Math.random() < 0.5;
+
+        // 2. Random Calibrated Font
+        const fonts = ['Arial', 'Georgia', 'Times New Roman', 'Courier New', 'Verdana', 'Trebuchet MS', 'Impact', 'Segoe UI', 'Tahoma'];
+        const fontName = fonts[Math.floor(Math.random() * fonts.length)];
+
+        // 3. Random Font Size and Leading
+        const fontSizes = [22, 24, 26, 28, 30, 32, 36];
+        const fontSize = fontSizes[Math.floor(Math.random() * fontSizes.length)];
+        const leadingMults = [1.2, 1.3, 1.4, 1.5, 1.6];
+        const leadingMult = leadingMults[Math.floor(Math.random() * leadingMults.length)];
+        const leading = Math.round(fontSize * leadingMult);
+
+        // 4. Random Alignment
+        const alignments = [
+            { name: 'Left', just: (typeof ParagraphJustification !== 'undefined' ? ParagraphJustification.LEFT_JUSTIFY : 'left'), val: 'left' },
+            { name: 'Center', just: (typeof ParagraphJustification !== 'undefined' ? ParagraphJustification.CENTER_JUSTIFY : 'center'), val: 'center' },
+            { name: 'Right', just: (typeof ParagraphJustification !== 'undefined' ? ParagraphJustification.RIGHT_JUSTIFY : 'right'), val: 'right' }
+        ];
+        const alignChoice = alignments[Math.floor(Math.random() * alignments.length)];
+
+        // 5. Random Width approx 50% of Viewport (47% to 53%)
+        const widthFactor = 0.47 + Math.random() * 0.06;
+        const targetWidth = Math.round(comp.width * widthFactor);
+
+        // 6. Build Text: ~50 words including type, font, size, alignment, leading, and lorem ipsum
+        const typeLabel = isBox ? 'Box Text' : 'Point Text';
+        const headerStr = `${typeLabel} • ${fontName} ${fontSize}px • ${alignChoice.name} Align • Leading ${leading}px.`;
+
+        const LOREM_WORDS = "Lorem ipsum dolor sit amet consectetur adipiscing elit sed do eiusmod tempor incididunt ut labore et dolore magna aliqua Ut enim ad minim veniam quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur Excepteur sint occaecat cupidatat non proident sunt in culpa qui officia deserunt mollit anim id est laborum".split(' ');
+
+        const headerTokens = headerStr.trim().split(/\s+/).filter(Boolean);
+        const neededLoremCount = Math.max(5, 50 - headerTokens.length);
+        const loremSlice = LOREM_WORDS.slice(0, neededLoremCount).join(' ') + '.';
+        const rawCombinedText = `${headerStr}\n${loremSlice}`;
+
+        let finalText = rawCombinedText;
+        let layer = null;
+        let boxHeight = 0;
+
+        if (isBox) {
+            boxHeight = Math.max(180, Math.round(7 * leading));
+            layer = comp.layers.addBoxText([targetWidth, boxHeight], finalText);
+        } else {
+            // For Point Text: to have approx 50% viewport width, wrap using AETextCalibration
+            if (typeof AETextCalibration !== 'undefined' && typeof AETextCalibration.wrapParagraph === 'function') {
+                const wrappedLines = AETextCalibration.wrapParagraph(finalText, targetWidth, fontSize, fontName, {}, 0);
+                finalText = wrappedLines.map(l => l.text).join('\n');
+            }
+            layer = comp.layers.addText(finalText);
+        }
+
+        if (!layer) return null;
+
+        // Apply TextDocument styling
+        let textDoc = null;
+        if (layer.sourceText && layer.sourceText.value && typeof layer.sourceText.value === 'object') {
+            textDoc = layer.sourceText.value;
+        } else if (typeof TextDocument !== 'undefined') {
+            textDoc = new TextDocument();
+        }
+
+        if (textDoc) {
+            textDoc.text = finalText;
+            textDoc.font = fontName;
+            textDoc.fontFamily = fontName;
+            textDoc.fontSize = fontSize;
+            textDoc.fillColor = [1, 1, 1];
+            textDoc.justification = alignChoice.just;
+            textDoc.autoLeading = false;
+            textDoc.leading = leading;
+            if (isBox) {
+                textDoc.boxText = true;
+                textDoc.boxTextSize = [targetWidth, boxHeight];
+            } else {
+                textDoc.boxText = false;
+                textDoc.boxTextSize = null;
+            }
+            layer.sourceText.setValue(textDoc);
+        }
+
+        // Direct layer properties for emulator renderer
+        layer.fontFamily = fontName;
+        layer.font = fontName;
+        layer.fontSize = fontSize;
+        layer.justification = alignChoice.val;
+        layer.leading = leading;
+        layer.autoLeading = false;
+        if (isBox) {
+            layer.boxText = true;
+            layer.boxTextSize = [targetWidth, boxHeight];
+        } else {
+            layer.boxText = false;
+            layer.boxTextSize = null;
+        }
+
+        // 7. Centering in Viewport (middle of comp)
+        // Compute bounding box using sourceRectAtTime to align visual center with viewport center
+        const rect = (typeof layer.sourceRectAtTime === 'function') ? layer.sourceRectAtTime(0, false) : null;
+        if (rect && typeof rect.left === 'number' && typeof rect.top === 'number') {
+            const anchorX = Math.round(rect.left + rect.width / 2);
+            const anchorY = Math.round(rect.top + rect.height / 2);
+            layer.transform.anchorPoint.setValue([anchorX, anchorY, 0]);
+        } else if (isBox) {
+            layer.transform.anchorPoint.setValue([Math.round(targetWidth / 2), Math.round(boxHeight / 2), 0]);
+        }
+        layer.transform.position.setValue([Math.round(comp.width / 2), Math.round(comp.height / 2), 0]);
+
+        // 8. Always selected after creation
+        const allLayers = comp.layers._layers || comp.layers;
+        if (allLayers && Array.isArray(allLayers)) {
+            allLayers.forEach(l => {
+                l.selected = (l === layer);
+            });
+        }
+        layer.selected = true;
+        selectedLayer = layer;
+
+        // Re-render timeline & viewport
+        renderTimeline();
+        if (renderer && typeof renderer.render === 'function') {
+            renderer.render(comp.time || 0);
+        }
+
+        // Ensure row in timeline is highlighted & visible
+        setTimeout(() => {
+            const row = document.querySelector(`.ae-layer-row[data-layer-id="${layer.id}"]`) ||
+                        document.querySelector('.ae-layer-row:first-child');
+            if (row) {
+                const bar = row.querySelector('.ae-layer-main-bar');
+                if (bar) bar.classList.add('selected');
+                row.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }
+        }, 50);
+
+        window.dispatchEvent(new CustomEvent('ae-layer-selection-changed', { detail: { layer: layer } }));
+        appendConsole(`Created dummy ${typeLabel} layer "${layer.name}" (${fontName}, ${fontSize}px, ${alignChoice.name}, leading ${leading}px) centered at viewport [${Math.round(comp.width / 2)}, ${Math.round(comp.height / 2)}].`);
+        return layer;
+    }
+    global.createDummyTextLayer = createDummyTextLayer;
+
+    // -------------------------------------------------------------
     // Composition Clear Helper (Runs on new script or build)
     // -------------------------------------------------------------
     function clearCompLayers() {
@@ -2371,6 +2530,14 @@
                 btnGlobalShy.classList.toggle('active', globalShyActive);
                 renderTimeline();
                 appendConsole(globalShyActive ? 'Shy Mode ON: Showing only .JSX UI-related properties and active controls.' : 'Shy Mode OFF: Showing all comp layers and properties.');
+            };
+        }
+
+        // Dummy Text Creator Button (Aligned right in timeline header)
+        const btnCreateDummyText = document.getElementById('btn-create-dummy-text');
+        if (btnCreateDummyText) {
+            btnCreateDummyText.onclick = () => {
+                createDummyTextLayer();
             };
         }
 

@@ -1558,6 +1558,45 @@ body.body-viewport-panning {
     color: #64b5f6;
 }
 
+/* Dummy Text Button (aligned right in timeline header, same 22px size as shy button) */
+.ae-dummy-text-btn {
+    width: 22px;
+    height: 22px;
+    max-height: 22px;
+    min-height: 22px;
+    background: #252525;
+    border: 1px solid var(--border-light);
+    color: var(--text-muted);
+    border-radius: 3px;
+    padding: 0;
+    margin: 0 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-sizing: border-box;
+    flex-shrink: 0;
+    line-height: 1;
+    vertical-align: middle;
+    transition: all 0.15s ease;
+}
+.ae-dummy-text-btn svg.ae-type-icon {
+    display: block;
+    width: 14px;
+    height: 14px;
+    margin: 0;
+}
+.ae-dummy-text-btn:hover {
+    color: #ffffff;
+    background: #383838;
+    border-color: #555555;
+}
+.ae-dummy-text-btn:active {
+    background: #1c3b66;
+    border-color: var(--ae-blue);
+    color: #64b5f6;
+}
+
 .ae-switch-shy {
     width: 18px;
     height: 18px;
