@@ -464,10 +464,14 @@
                     if (e.target.closest('.ae-twirl') || e.target.closest('.ae-switch-3d') || e.target.closest('.ae-switch-shy') || e.target.closest('.ae-btn-open-comp')) return;
                     const wasSelected = (selectedLayer === layer && layer.selected);
                     selectedLayer = wasSelected ? null : layer;
-                    if (comp && comp.layers && comp.layers._layers) {
-                        comp.layers._layers.forEach(l => {
+                    const allLayers = (comp && comp.layers && (comp.layers._layers || comp.layers)) || [];
+                    if (allLayers && typeof allLayers.forEach === "function") {
+                        allLayers.forEach(l => {
                             l.selected = (l === selectedLayer);
                         });
+                    }
+                    if (selectedLayer) {
+                        selectedLayer.selected = true;
                     }
                     document.querySelectorAll('.ae-layer-main-bar').forEach(el => el.classList.remove('selected'));
                     if (selectedLayer) {

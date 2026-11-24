@@ -1625,6 +1625,7 @@
     class ShapeLayer extends AVLayer {
         constructor(name = 'Shape Layer', containingComp = null) {
             super(name, containingComp);
+            this.matchName = 'ADBE Vector Layer';
             this.colorLabel = '#4d88ff'; // AE Shape layer blue
             this.contents = new PropertyGroup('Contents', 'ADBE Root Vectors Group');
             this.contents.parentProperty = this;
@@ -2328,6 +2329,7 @@
     class TextLayer extends Layer {
         constructor(name = 'Text Layer', containingComp = null, initialText = '') {
             super(name, containingComp);
+            this.matchName = 'ADBE Text Layer';
             this.colorLabel = '#ff2d55'; // AE Text layer red/peach
             this.notShyable = false;
 

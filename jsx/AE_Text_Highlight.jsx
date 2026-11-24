@@ -371,30 +371,62 @@
     function isTextLayer(layer) {
         if (!layer) return false;
         try {
-            if (typeof layer.property === "function") {
-                if (layer.property("ADBE Text Properties") !== null) return true;
-                if (layer.property("Source Text") !== null) return true;
-                if (layer.property("Text") !== null) return true;
-            }
-        } catch (e) {}
+            if (layer.isText === false || layer.isShape === true) return false;
+        } catch (eIS) {}
         try {
-            if (layer.text && layer.text.sourceText) return true;
-        } catch (e2) {}
+            if (typeof TextLayer !== "undefined" && layer instanceof TextLayer) return true;
+        } catch (eTL) {}
+        try {
+            if (layer.matchName === "ADBE Text Layer") return true;
+            if (layer.matchName && (layer.matchName === "ADBE Vector Layer" || layer.matchName === "ADBE AV Layer" || layer.matchName === "ADBE Camera Layer" || layer.matchName === "ADBE Light Layer")) {
+                return false;
+            }
+        } catch (eMN) {}
+        try {
+            if (layer.sourceText !== undefined && layer.sourceText !== null) return true;
+            if (layer.text && (layer.text.sourceText || (layer.text.property && layer.text.property("Source Text")))) return true;
+        } catch (eST) {}
+        try {
+            if (layer.textDocument !== undefined && layer.textDocument !== null) return true;
+        } catch (eTD) {}
+        try {
+            if (layer.isText === true) return true;
+        } catch (eIT) {}
+        try {
+            if (typeof layer.property === "function") {
+                var tp = layer.property("ADBE Text Properties") || layer.property("Text");
+                if (tp !== null && typeof tp.property === "function") {
+                    var docProp = tp.property("ADBE Text Document") || tp.property("Source Text");
+                    if (docProp !== null && typeof docProp !== "undefined") return true;
+                }
+                var directST = layer.property("Source Text");
+                if (directST !== null && typeof directST !== "undefined") return true;
+            }
+        } catch (eP) {}
         return false;
     }
 
     function getTextDocument(layer) {
         if (!layer) return null;
         try {
-            var prop = layer.property("ADBE Text Properties") || layer.property("Text");
-            var docProp = prop ? (prop.property("ADBE Text Document") || prop.property("Source Text")) : layer.property("Source Text");
+            var prop = null;
+            if (typeof layer.property === "function") {
+                prop = layer.property("ADBE Text Properties") || layer.property("Text");
+            }
+            var docProp = prop ? (prop.property("ADBE Text Document") || prop.property("Source Text")) : (typeof layer.property === "function" ? layer.property("Source Text") : null);
             if (docProp && docProp.value) return docProp.value;
         } catch (e) {}
+        try {
+            if (layer.sourceText && layer.sourceText.value) return layer.sourceText.value;
+        } catch (eST) {}
         try {
             if (layer.text && layer.text.sourceText && layer.text.sourceText.value) {
                 return layer.text.sourceText.value;
             }
         } catch (e2) {}
+        try {
+            if (layer.textDocument) return layer.textDocument;
+        } catch (e3) {}
         return null;
     }
 
@@ -407,6 +439,16 @@
                 if (typeof doc === "string") return doc;
             }
         } catch (e) {}
+        try {
+            if (layer.sourceText && layer.sourceText.value && typeof layer.sourceText.value.text === "string") {
+                return layer.sourceText.value.text;
+            }
+        } catch (eST) {}
+        try {
+            if (layer.textDocument && typeof layer.textDocument.text === "string") {
+                return layer.textDocument.text;
+            }
+        } catch (eTD) {}
         try {
             if (typeof layer.text === "string") return layer.text;
         } catch (e2) {}
@@ -424,17 +466,15 @@
     }
 
     function getSelectedTextLayer(comp) {
+        if (!comp) {
+            comp = (app && app.project) ? app.project.activeItem : null;
+        }
         if (!comp) return null;
         var sel = comp.selectedLayers;
         if (sel && sel.length > 0) {
             for (var i = 0; i < sel.length; i++) {
                 if (isTextLayer(sel[i])) return sel[i];
             }
-        }
-        var total = (typeof comp.numLayers !== "undefined") ? comp.numLayers : comp.layers.length;
-        for (var j = 1; j <= total; j++) {
-            var l = (typeof comp.layer === "function") ? comp.layer(j) : (comp.layers[j] || comp.layers[j - 1]);
-            if (l && isTextLayer(l) && l.enabled && !l.guideLayer) return l;
         }
         return null;
     }
@@ -2689,7 +2729,7 @@
         // ---------------------------------------------------------------------
         function updateSelectionStatus() {
             var comp = app.project ? app.project.activeItem : null;
-            if (!comp || !(comp instanceof CompItem)) {
+            if (!comp || (typeof CompItem !== "undefined" && !(comp instanceof CompItem) && !comp.layers)) {
                 lblStatus.text = "⚠️ No active composition open.";
                 return null;
             }
@@ -2740,7 +2780,7 @@
 
         btnRemove.onClick = function () {
             var comp = app.project ? app.project.activeItem : null;
-            if (!comp || !(comp instanceof CompItem)) {
+            if (!comp || (typeof CompItem !== "undefined" && !(comp instanceof CompItem) && !comp.layers)) {
                 alert("Please open an active composition.");
                 return;
             }
@@ -2758,7 +2798,7 @@
 
         btnBuild.onClick = function () {
             var comp = app.project ? app.project.activeItem : null;
-            if (!comp || !(comp instanceof CompItem)) {
+            if (!comp || (typeof CompItem !== "undefined" && !(comp instanceof CompItem) && !comp.layers)) {
                 if (app.project && app.project.items && typeof app.project.items.addComp === "function") {
                     comp = app.project.items.addComp("AE Text Highlight Demo", 1920, 1080, 1.0, 10.0, 30.0);
                     if (comp.openInViewer) comp.openInViewer();
@@ -2820,6 +2860,30 @@
             }
         };
 
+        // Listen for timeline layer selection changes in AE_JS_builder emulator
+        if (typeof window !== "undefined" && typeof window.addEventListener === "function") {
+            window.addEventListener("ae-layer-selection-changed", function () {
+                updateSelectionStatus();
+            });
+        }
+
+        // Listen for ScriptUI activate & focus events (ExtendScript AE)
+        if (win) {
+            win.onActivate = function () {
+                updateSelectionStatus();
+            };
+            if (typeof win.addEventListener === "function") {
+                try {
+                    win.addEventListener("activate", function () {
+                        updateSelectionStatus();
+                    });
+                    win.addEventListener("focus", function () {
+                        updateSelectionStatus();
+                    });
+                } catch (eEvt) {}
+            }
+        }
+
         // Initial state sync
         updateSelectionStatus();
 
@@ -2848,6 +2912,9 @@
         win.txtTargets = txtTargets;
         win.grpFooter = grpFooter;
         win.lblRepo = lblRepo;
+        win.lblStatus = lblStatus;
+        win.updateSelectionStatus = updateSelectionStatus;
+        win.getSelectedTextLayer = getSelectedTextLayer;
 
         return win;
     }
