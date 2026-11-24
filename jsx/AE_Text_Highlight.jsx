@@ -28,6 +28,12 @@
 //   6. AE Text Highlight Repository:
 //      https://github.com/work2survive/AE-Text-Highlight
 //
+// NEW IN v2.1.2:
+//   - Enhanced Text Layer Selection Detection: Added hierarchy traversal so selecting child helper
+//     layers (such as Anchor Cross) cleanly resolves to the parent text layer.
+//   - UI Redesign: Relocated GitHub repository link to panel footer matching AE_Text_Precomp style.
+//   - Fully verified compatibility with AE JS Builder dummy text and layer selection workflow.
+//
 // NEW IN v2.1.1:
 //   - Selective Highlight Text Coloring: Highlight box fill strictly changes only the color of the
 //     font related to the highlights (via range selectors in Calculation Method and segment targets in Split Method).
@@ -50,7 +56,7 @@
     "use strict";
 
     var SCRIPT_TITLE    = "AE Text Highlight";
-    var SCRIPT_VERSION  = "v2.1.1";
+    var SCRIPT_VERSION  = "v2.1.2";
     var GITHUB_REPO_URL = "https://github.com/work2survive/AE-Text-Highlight";
 
     // -------------------------------------------------------------------------
