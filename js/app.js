@@ -8,13 +8,13 @@
     'use strict';
 
     // -------------------------------------------------------------
-    // Version Management (v1.2.21)
+    // Version Management (v1.2.22)
     // -------------------------------------------------------------
     function computeDailyVersion() {
-        return '1.2.21';
+        return '1.2.22';
     }
 
-    const APP_VERSION = '1.2.21';
+    const APP_VERSION = '1.2.22';
     global.EMULATOR_VERSION = APP_VERSION;
     global.AE_TEXT_GUIDE_URL = 'https://github.com/work2survive/AE_JS_builder/blob/main/AE_VS_JS_TEXT_RENDERING_DIFFERENCES.md';
     global.AE_ANCHOR_POINT_GUIDE_URL = 'https://github.com/work2survive/AE-Align-AnchorPoint/blob/main/README.md';
@@ -1595,6 +1595,13 @@
         const randAnchorY = Math.round(boxTop + v * boxHeightActual);
         layer.transform.anchorPoint.setValue([randAnchorX, randAnchorY, 0]);
 
+        // Randomize 3D layer (33% probability)
+        const is3D = Math.random() < 0.33;
+        layer.threeDLayer = is3D;
+
+        // If 3D, give a random Z position (+/- 100px)
+        const posZ = is3D ? Math.round((Math.random() * 200) - 100) : 0;
+
         // Place the text box in the middle of the viewport
         const boxCenterX = boxLeft + boxWidth / 2;
         const boxCenterY = boxTop + boxHeightActual / 2;
@@ -1602,13 +1609,13 @@
         const compCenterY = comp.height / 2;
         const posX = Math.round(compCenterX + randAnchorX - boxCenterX);
         const posY = Math.round(compCenterY + randAnchorY - boxCenterY);
-        layer.transform.position.setValue([posX, posY, 0]);
+        layer.transform.position.setValue([posX, posY, posZ]);
 
         // 8. Create small simple red cross as child of the text layer (always anchor [0,0] and position [0,0])
         const crossLayer = comp.layers.addShape();
         crossLayer.name = 'Anchor Cross';
         crossLayer.parent = layer;
-        crossLayer.threeDLayer = layer.threeDLayer;
+        crossLayer.threeDLayer = is3D;
         crossLayer.transform.anchorPoint.setValue([0, 0, 0]);
         crossLayer.transform.position.setValue([0, 0, 0]);
 
@@ -1661,7 +1668,7 @@
         }, 50);
 
         window.dispatchEvent(new CustomEvent('ae-layer-selection-changed', { detail: { layer: layer } }));
-        appendConsole(`Created dummy ${typeLabel} layer "${layer.name}" (${fontName}, ${fontSize}px, ${alignChoice.name}, leading ${leading}px) with randomized anchor point [${randAnchorX}, ${randAnchorY}] centered in viewport with red cross child.`);
+        appendConsole(`Created dummy ${typeLabel} (${is3D ? `3D, Z: ${posZ}px` : '2D'}) layer "${layer.name}" (${fontName}, ${fontSize}px, ${alignChoice.name}, leading ${leading}px) with randomized anchor point [${randAnchorX}, ${randAnchorY}] centered in viewport with red cross child.`);
         return layer;
     }
     global.createDummyTextLayer = createDummyTextLayer;
