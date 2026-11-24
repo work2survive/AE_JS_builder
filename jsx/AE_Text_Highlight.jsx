@@ -1,6 +1,6 @@
 // Co-authored & architected with Google DeepMind Antigravity.
 // =============================================================================
-// ADOBE AFTER EFFECTS EXTENDSCRIPT & SCRIPTUI PANEL: AE TEXT HIGHLIGHT v2.1.1
+// ADOBE AFTER EFFECTS EXTENDSCRIPT & SCRIPTUI PANEL: AE TEXT HIGHLIGHT v2.2.0
 // =============================================================================
 //
 // PURPOSE:
@@ -2178,7 +2178,7 @@
     }
 
     function formatPointTextWithLineBreaks(text, maxChars) {
-        var limit = maxChars || 75;
+        var limit = maxChars || 42;
         var words = text.replace(/[\r\n]+/g, " ").split(/\s+/);
         var lines = [];
         var cur = "";
@@ -2196,6 +2196,36 @@
         }
         if (cur.length > 0) lines.push(cur);
         return lines.join("\r");
+    }
+
+    // Word pool for random 20-30 words dummy text
+    var LOREM_IPSUM_WORDS = [
+        "Lorem", "ipsum", "dolor", "sit", "amet,", "consectetur", "adipiscing", "elit,", "sed", "do",
+        "eiusmod", "tempor", "incididunt", "ut", "labore", "et", "dolore", "magna", "aliqua.", "Ut",
+        "enim", "ad", "minim", "veniam,", "quis", "nostrud", "exercitation", "ullamco", "laboris", "nisi",
+        "ut", "aliquip", "ex", "ea", "commodo", "consequat.", "Duis", "aute", "irure", "dolor",
+        "in", "reprehenderit", "in", "voluptate", "velit", "esse", "cillum", "dolore", "eu", "fugiat",
+        "nulla", "pariatur.", "Excepteur", "sint", "occaecat", "cupidatat", "non", "proident,", "sunt", "in",
+        "culpa", "qui", "officia", "deserunt", "mollit", "anim", "id", "est", "laborum."
+    ];
+
+    function getRandomDummyText(minWords, maxWords) {
+        var min = (typeof minWords === "number") ? minWords : 20;
+        var max = (typeof maxWords === "number") ? maxWords : 30;
+        var count = Math.floor(min + Math.random() * (max - min + 1));
+        var start = Math.floor(Math.random() * Math.max(1, LOREM_IPSUM_WORDS.length - count));
+        var words = [];
+        for (var i = 0; i < count; i++) {
+            words.push(LOREM_IPSUM_WORDS[(start + i) % LOREM_IPSUM_WORDS.length]);
+        }
+        var text = words.join(" ");
+        var lastChar = text.charAt(text.length - 1);
+        if (lastChar === ",") {
+            text = text.substring(0, text.length - 1) + ".";
+        } else if (lastChar !== "." && lastChar !== "!" && lastChar !== "?") {
+            text += ".";
+        }
+        return text.charAt(0).toUpperCase() + text.slice(1);
     }
 
     function createDummyTextBoxLayer(comp, fontName, align, boxW, boxH) {
@@ -2245,12 +2275,12 @@
         // 7. Randomize Text Color
         var textColor = getRandomTextColor();
 
-        // 8. Substantial multi-sentence text so the paragraph and lines fill the wide span
-        var rawDummy = LOREM_IPSUM_RAW.substring(0, 420);
+        // 8. Random dummy text (20 to 30 words)
+        var rawDummy = getRandomDummyText(20, 30);
 
-        // 9. If Point Text: add line breaks formatted to maxCharsPerLine so it doesn't stick out of the viewport
+        // 9. If Point Text: add line breaks formatted so it doesn't stick out of the viewport
         var approxCharW = fontSize * 0.54;
-        var maxCharsPerLine = Math.max(35, Math.min(75, Math.floor((w * 0.85) / approxCharW)));
+        var maxCharsPerLine = Math.max(35, Math.min(55, Math.floor((w * 0.85) / approxCharW)));
 
         var formattedText = isBox
             ? wordWrapToBoxWidth(rawDummy, w, fontSize, f, 0)
@@ -2705,10 +2735,10 @@
         btnRemove.preferredSize = [-1, 26];
         btnRemove.helpTip = "Deletes created split layers/shapes/precomps and restores the original text box.";
 
-        var btnCreateDummy = grpSubActions.add("button", undefined, "🎲 Create Dummy Text Box");
+        var btnCreateDummy = grpSubActions.add("button", undefined, "🎲 Create Random Dummy Text");
         btnCreateDummy.alignment = ["fill", "center"];
         btnCreateDummy.preferredSize = [-1, 26];
-        btnCreateDummy.helpTip = "Generates a 100-word paragraph text box in the composition for immediate testing.";
+        btnCreateDummy.helpTip = "Generates a random dummy text (20-30 words) in the composition for immediate testing.";
 
         // =====================================================================
         // TAB 2: 🎨 APPEARANCE & COLORS

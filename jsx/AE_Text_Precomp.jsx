@@ -1,11 +1,11 @@
 // Co-authored & architected with Google DeepMind Antigravity.
 // =============================================================================
-// ADOBE AFTER EFFECTS EXTENDSCRIPT & SCRIPTUI PANEL: AE TEXT PRECOMP v1.7.0
+// ADOBE AFTER EFFECTS EXTENDSCRIPT & SCRIPTUI PANEL: AE TEXT PRECOMP v1.8.0
 // =============================================================================
 //
 // PURPOSE:
 //   Precomposes a selected text box (paragraph or point text) into a neatly-sized
-//   composition with customizable padding, dynamic top anchor point rigger,
+//   composition with customizable exterior padding, dynamic top anchor point rigger,
 //   a procedural 2D rounded rectangle background card featuring 4 independent
 //   corner radii (based on AE_Extruded_Round_corners), and kinetic division actions:
 //   "Divide by Words" and "Divide by Lines".
@@ -33,12 +33,10 @@
 //        pixel-for-pixel when precomposed, regardless of anchor point placement.
 //      - Whenever an anchor point is changed, position is automatically compensated
 //        using the layer's rotation and scale transformation matrix.
-//   4. Padding & Textbox Width Reduction:
-//      - Reduces the textbox width by (2 * padding) to accommodate padding inside the precomp.
-//      - When "automatic precomp height" is active, precomp height expands to fit
-//        the wrapped textbox vertical size plus top and bottom padding.
-//      - Anchor point automatically accounts for padding, resting cleanly at the
-//        top of the text box (Top-Left, Top-Center, or Top-Right based on alignment).
+//   4. Exterior Padding Architecture:
+//      - Padding is added to the exterior of the text box (default 0px, fuchsia background).
+//      - Text box dimensions are never shrunk by padding; precomposition canvas and background
+//        expand to accommodate (textboxWidth + 2*padding, textboxHeight + 2*padding).
 //   5. Coherent Text Properties Extraction Engine:
 //      - Follows Text_Properties_To_Effects.jsx for robust typography metrics,
 //        paragraph justification, box text detection, sourceRect bounds, and
@@ -52,9 +50,9 @@
 //   7. Integrated Interactive Color Picker:
 //      - Custom swatch button + hex input (#RRGGBB) compatible with AE native
 //        $.colorPicker, Windows OS color picker, and AE_JS_builder web emulator.
-//   8. 100-Word Lorem Ipsum Dummy Layer:
-//      - If no text layer is selected, creates a 100-word dummy layer with randomized
-//        font, alignment, font size (±15%), leading (±15%), and text color.
+//   8. Random Dummy Text Generator (20-30 Words):
+//      - If no text layer is selected or on request, creates a dummy layer with randomized
+//        font, alignment, font size (±15%), leading (±15%), text color, and 20-30 words.
 // =============================================================================
 
 (function(thisObj) {
@@ -120,8 +118,37 @@
         ];
     }
 
-    // 50-Character Dummy Text (Lorem Ipsum)
-    var DUMMY_TEXT_50 = "Lorem ipsum dolor sit amet, consectetur adipiscing";
+    // Word pool for random 20-30 words dummy text
+    var LOREM_IPSUM_WORDS = [
+        "Lorem", "ipsum", "dolor", "sit", "amet,", "consectetur", "adipiscing", "elit,", "sed", "do",
+        "eiusmod", "tempor", "incididunt", "ut", "labore", "et", "dolore", "magna", "aliqua.", "Ut",
+        "enim", "ad", "minim", "veniam,", "quis", "nostrud", "exercitation", "ullamco", "laboris", "nisi",
+        "ut", "aliquip", "ex", "ea", "commodo", "consequat.", "Duis", "aute", "irure", "dolor",
+        "in", "reprehenderit", "in", "voluptate", "velit", "esse", "cillum", "dolore", "eu", "fugiat",
+        "nulla", "pariatur.", "Excepteur", "sint", "occaecat", "cupidatat", "non", "proident,", "sunt", "in",
+        "culpa", "qui", "officia", "deserunt", "mollit", "anim", "id", "est", "laborum."
+    ];
+
+    function getRandomDummyText(minWords, maxWords) {
+        var min = (typeof minWords === "number") ? minWords : 20;
+        var max = (typeof maxWords === "number") ? maxWords : 30;
+        var count = Math.floor(min + Math.random() * (max - min + 1));
+        var start = Math.floor(Math.random() * Math.max(1, LOREM_IPSUM_WORDS.length - count));
+        var words = [];
+        for (var i = 0; i < count; i++) {
+            words.push(LOREM_IPSUM_WORDS[(start + i) % LOREM_IPSUM_WORDS.length]);
+        }
+        var text = words.join(" ");
+        var lastChar = text.charAt(text.length - 1);
+        if (lastChar === ",") {
+            text = text.substring(0, text.length - 1) + ".";
+        } else if (lastChar !== "." && lastChar !== "!" && lastChar !== "?") {
+            text += ".";
+        }
+        return text.charAt(0).toUpperCase() + text.slice(1);
+    }
+
+    var DUMMY_TEXT_50 = getRandomDummyText(20, 30);
     var LOREM_IPSUM_100 = DUMMY_TEXT_50; // Backwards-compatible alias
 
     function wrapTextToWidth(text, maxWidth, fontSize) {
@@ -148,7 +175,7 @@
     }
 
     function formatPointTextWithLineBreaks(text, maxChars) {
-        var limit = maxChars || 26;
+        var limit = maxChars || 42;
         var words = text.split(/\s+/);
         var lines = [];
         var cur = "";
@@ -1128,7 +1155,7 @@
     }
 
     // -------------------------------------------------------------------------
-    // 5. Create Dummy 100-Word Lorem Ipsum Text Layer (Randomized Typography)
+    // 5. Create Random Dummy Text Layer (Randomized Typography & 20-30 Words)
     // -------------------------------------------------------------------------
     function createDummyTextLayer(comp, targetW, targetH, autoHeight, pad) {
         if (!comp) {
@@ -1139,11 +1166,11 @@
             }
         }
 
-        var padVal = (typeof pad === "number") ? pad : 30;
+        var padVal = (typeof pad === "number") ? pad : 0;
         var compW = (comp && typeof comp.width === "number") ? comp.width : 1920;
 
         // Make random dummy text wider across composition
-        var baseTextW = Math.max(targetW ? (targetW - padVal * 2) : 0, Math.round(compW * 0.62));
+        var baseTextW = Math.max(targetW ? targetW : 0, Math.round(compW * 0.62));
         var widthVariation = 0.70 + (Math.random() * 0.60); // ±30% variation (0.70 to 1.30)
         var textW = Math.min(compW - (padVal * 2) - 40, Math.round(baseTextW * widthVariation));
         var textH = (autoHeight || !targetH) ? 360 : Math.max(20, targetH - (padVal * 2));
@@ -1164,11 +1191,11 @@
         var leadingFactor = 0.85 + (Math.random() * 0.30); // ±15% variation
         var randomizedLeading = Math.round(baseLeading * leadingFactor * 10) / 10;
 
-        // Base 50-character dummy text
-        var rawDummyText = DUMMY_TEXT_50.substring(0, 50);
+        // Random dummy text (20 to 30 words)
+        var rawDummyText = getRandomDummyText(20, 30);
 
         // If Point Text: add line breaks so it does not stretch out or stick out of viewport
-        var dummyText = isBoxTextMode ? rawDummyText : formatPointTextWithLineBreaks(rawDummyText, 26);
+        var dummyText = isBoxTextMode ? rawDummyText : formatPointTextWithLineBreaks(rawDummyText, 42);
 
         var dummyLayer = comp.layers.addText(dummyText);
         var typeLabel = isBoxTextMode ? "Box" : "Point";
@@ -1458,7 +1485,7 @@
             }
 
             if (fill) {
-                var rgb = hexToRgb(hexColor || "#1E222D");
+                var rgb = hexToRgb(hexColor || "#FF00FF");
                 try {
                     fill.property("Color").setValue([rgb[0], rgb[1], rgb[2]]);
                 } catch (eCol) {
@@ -1489,7 +1516,7 @@
 
         var textLayer = getSelectedTextLayer(comp);
         var createdDummy = false;
-        var padding = (typeof options.padding === "number") ? Math.max(0, options.padding) : 30;
+        var padding = (typeof options.padding === "number") ? Math.max(0, options.padding) : 0;
 
         if (!textLayer) {
             textLayer = createDummyTextLayer(comp, options.width, options.height, options.autoHeight, padding);
@@ -1558,30 +1585,29 @@
         }
 
         // ---------------------------------------------------------------------
-        // 2. Precomp Dimensions & Textbox Sizing
+        // 2. Precomp Dimensions & Textbox Sizing (Exterior Padding Architecture)
         // ---------------------------------------------------------------------
-        var precompW = 800;
+        var textboxW = 800;
         if (options.autoDetectWidth && metrics && metrics.detectedWidth) {
-            precompW = Math.max(40, Math.round(metrics.detectedWidth + (padding * 2)));
+            textboxW = Math.max(20, Math.round(metrics.detectedWidth));
         } else {
-            precompW = Math.max(40, Math.round(options.width || (metrics ? metrics.detectedWidth : 800) || 800));
+            textboxW = Math.max(20, Math.round(options.width || (metrics ? metrics.detectedWidth : 800) || 800));
         }
-        var textboxW = Math.max(20, precompW - (padding * 2));
+        // Padding is added to exterior of the text box
+        var precompW = Math.max(40, Math.round(textboxW + (padding * 2)));
 
-        var precompH = 0;
         var textboxH = 0;
-
         if (options.autoHeight) {
             var rawH = metrics.detectedHeight;
             if (metrics.rect && metrics.rect.height) {
                 rawH = Math.max(rawH, Math.ceil(metrics.rect.height));
             }
             textboxH = Math.max(20, Math.round(rawH));
-            precompH = Math.max(20, Math.round(textboxH + (padding * 2)));
         } else {
-            precompH = Math.max(20, Math.round(options.height || 400));
-            textboxH = Math.max(20, precompH - (padding * 2));
+            textboxH = Math.max(20, Math.round(options.height || 400));
         }
+        // Padding is added to exterior of the text box
+        var precompH = Math.max(20, Math.round(textboxH + (padding * 2)));
 
         // Precomposition Name
         var precompName = trimStr(options.precompName);
@@ -1794,6 +1820,10 @@
                     newComp.width = precompW;
                 } else if (!options.width || options.width <= 0) {
                     textboxW = Math.max(20, Math.round(maxLineContentW));
+                    precompW = Math.max(40, Math.round(textboxW + (padding * 2)));
+                    newComp.width = precompW;
+                } else {
+                    textboxW = Math.max(20, Math.round(options.width));
                     precompW = Math.max(40, Math.round(textboxW + (padding * 2)));
                     newComp.width = precompW;
                 }
@@ -2306,14 +2336,14 @@
     pnlDims.spacing = 8;
     pnlDims.margins = 10;
 
-    // Checkbox Option Before Width: Get Precomp Width From Selected Text Box
+    // Checkbox Option Before Width: Get Text Box Width From Selected Text Box
     var grpAutoDetect = pnlDims.add("group");
     grpAutoDetect.orientation = "row";
     grpAutoDetect.alignment = ["fill", "top"];
-    var chkAutoDetectWidth = grpAutoDetect.add("checkbox", undefined, "get precomp width from selected text box");
+    var chkAutoDetectWidth = grpAutoDetect.add("checkbox", undefined, "automatic text box width");
     chkAutoDetectWidth.value = true;
     chkAutoDetectWidth.alignment = ["fill", "center"];
-    chkAutoDetectWidth.helpTip = "Automatically detects width from the selected text box/layer and computes precomp width plus padding.";
+    chkAutoDetectWidth.helpTip = "Automatically detects width from the selected text box/layer.";
 
     var btnAutoDetect = grpAutoDetect.add("button", undefined, "Detect Now");
     btnAutoDetect.preferredSize = [85, 22];
@@ -2324,15 +2354,15 @@
     var grpWidth = pnlDims.add("group");
     grpWidth.orientation = "row";
     grpWidth.alignment = ["fill", "top"];
-    var lblWidth = grpWidth.add("statictext", undefined, "Precomp Width (px):");
+    var lblWidth = grpWidth.add("statictext", undefined, "Text Box Width (px):");
     lblWidth.preferredSize = [135, -1];
     var txtWidth = grpWidth.add("edittext", undefined, "800");
     txtWidth.alignment = ["fill", "center"];
 
     // Automatic Precomp Height Checkbox
-    var chkAutoHeight = pnlDims.add("checkbox", undefined, "automatic precomp height");
+    var chkAutoHeight = pnlDims.add("checkbox", undefined, "automatic text box height");
     chkAutoHeight.value = true;
-    chkAutoHeight.helpTip = "Expands the height of the precomp to fit the textbox vertical size plus padding.";
+    chkAutoHeight.helpTip = "Expands the height of the precomp to fit the textbox vertical size plus exterior padding.";
 
     // Manual Height Row
     var grpHeight = pnlDims.add("group");
@@ -2348,27 +2378,6 @@
         txtHeight.enabled = !chkAutoHeight.value;
     };
 
-    // --- Section 2: Padding Panel ---
-    var pnlPad = tabPrecomp.add("panel", undefined, "Padding");
-    pnlPad.orientation = "column";
-    pnlPad.alignChildren = ["fill", "top"];
-    pnlPad.spacing = 8;
-    pnlPad.margins = 10;
-
-    // Padding Slider & Text Row
-    var grpPadRow = pnlPad.add("group");
-    grpPadRow.orientation = "row";
-    grpPadRow.alignment = ["fill", "top"];
-    var lblPad = grpPadRow.add("statictext", undefined, "Padding (px):");
-    lblPad.preferredSize = [135, -1];
-    var sldPad = grpPadRow.add("slider", undefined, 30, 0, 120);
-    sldPad.minvalue = 0;
-    sldPad.maxvalue = 120;
-    sldPad.value = 30;
-    sldPad.alignment = ["fill", "center"];
-    var txtPad = grpPadRow.add("edittext", undefined, "30");
-    txtPad.characters = 4;
-
     function syncAutoDetectedWidth() {
         if (!chkAutoDetectWidth.value) return;
         var comp = app.project.activeItem;
@@ -2377,22 +2386,10 @@
         if (textLayer) {
             var metrics = getTextLayerMetrics(comp, textLayer);
             if (metrics && metrics.detectedWidth) {
-                var padVal = parseFloat(txtPad.text) || 0;
-                var proposedPrecompW = Math.max(40, Math.round(metrics.detectedWidth + (padVal * 2)));
-                txtWidth.text = String(proposedPrecompW);
+                txtWidth.text = String(Math.round(metrics.detectedWidth));
             }
         }
     }
-
-    sldPad.onChanging = sldPad.onChange = function() {
-        txtPad.text = String(Math.round(sldPad.value));
-        syncAutoDetectedWidth();
-    };
-    txtPad.onChange = function() {
-        var v = parseFloat(txtPad.text) || 0;
-        sldPad.value = Math.max(0, Math.min(120, v));
-        syncAutoDetectedWidth();
-    };
 
     chkAutoDetectWidth.onClick = function() {
         if (chkAutoDetectWidth.value) {
@@ -2476,6 +2473,35 @@
     tabBg.spacing = 8;
     tabBg.margins = 8;
 
+    // --- Section 1: Exterior Padding Panel ---
+    var pnlPad = tabBg.add("panel", undefined, "Exterior Padding");
+    pnlPad.orientation = "column";
+    pnlPad.alignChildren = ["fill", "top"];
+    pnlPad.spacing = 8;
+    pnlPad.margins = 10;
+
+    // Padding Slider & Text Row (Default: 0px)
+    var grpPadRow = pnlPad.add("group");
+    grpPadRow.orientation = "row";
+    grpPadRow.alignment = ["fill", "top"];
+    var lblPad = grpPadRow.add("statictext", undefined, "Padding (px):");
+    lblPad.preferredSize = [135, -1];
+    var sldPad = grpPadRow.add("slider", undefined, 0, 0, 120);
+    sldPad.minvalue = 0;
+    sldPad.maxvalue = 120;
+    sldPad.value = 0;
+    sldPad.alignment = ["fill", "center"];
+    var txtPad = grpPadRow.add("edittext", undefined, "0");
+    txtPad.characters = 4;
+
+    sldPad.onChanging = sldPad.onChange = function() {
+        txtPad.text = String(Math.round(sldPad.value));
+    };
+    txtPad.onChange = function() {
+        var v = parseFloat(txtPad.text) || 0;
+        sldPad.value = Math.max(0, Math.min(120, v));
+    };
+
     // --- Background Card & Rounded Corners Panel ---
     var pnlBg = tabBg.add("panel", undefined, "Background Card (Custom Rounded Corners)");
     pnlBg.orientation = "column";
@@ -2535,13 +2561,13 @@
     btnChatBubble.onClick = function() { chkTL.value = true; chkTR.value = true; chkBR.value = true; chkBL.value = false; };
     btnNoCorners.onClick = function() { chkTL.value = false; chkTR.value = false; chkBL.value = false; chkBR.value = false; };
 
-    // Background Color & Opacity
+    // Background Color & Opacity (Default: Fuchsia #FF00FF)
     var grpBgColor = pnlBg.add("group");
     grpBgColor.orientation = "row";
     grpBgColor.alignment = ["fill", "top"];
     var lblBgCol = grpBgColor.add("statictext", undefined, "Background Color:");
     lblBgCol.preferredSize = [135, -1];
-    var cpBgColor = createColorPicker(grpBgColor, "#1E222D");
+    var cpBgColor = createColorPicker(grpBgColor, "#FF00FF");
 
     var grpBgOp = pnlBg.add("group");
     grpBgOp.orientation = "row";
@@ -2612,9 +2638,9 @@
     btnDivideLines.preferredSize = [-1, 30];
     btnDivideLines.helpTip = "Creates a text layer for each line in matching position, then precomposes.";
 
-    var btnDummyOnly = pnlActions.add("button", undefined, "Create 100-Word Dummy Layer Only");
+    var btnDummyOnly = pnlActions.add("button", undefined, "Create Random Dummy Text");
     btnDummyOnly.preferredSize = [-1, 24];
-    btnDummyOnly.helpTip = "Creates a 100-word Lorem Ipsum text layer in the active composition without precomposing.";
+    btnDummyOnly.helpTip = "Creates a random dummy text layer (20-30 words) in the active composition without precomposing.";
 
     var lblFeedback = win.add("statictext", undefined, "Ready.");
     lblFeedback.alignment = ["fill", "bottom"];
@@ -2658,15 +2684,13 @@
             lblStatusText.text = "'" + textLayer.name + "' (" + typeStr + ", " + alignStr + wordCount + ")";
             btnAutoDetect.enabled = true;
 
-            // Automatically update Precomp Width if option is checked
+            // Automatically update Text Box Width if option is checked
             if (chkAutoDetectWidth && chkAutoDetectWidth.value && metrics && metrics.detectedWidth) {
-                var padVal = parseFloat(txtPad.text) || 0;
-                var proposedPrecompW = Math.max(40, Math.round(metrics.detectedWidth + (padVal * 2)));
-                txtWidth.text = String(proposedPrecompW);
+                txtWidth.text = String(Math.round(metrics.detectedWidth));
             }
             return metrics;
         } else {
-            lblStatusText.text = "None selected (will create 50-char dummy layer)";
+            lblStatusText.text = "None selected (will create random dummy text)";
             btnAutoDetect.enabled = false;
             return null;
         }
@@ -2675,10 +2699,8 @@
     btnAutoDetect.onClick = function() {
         var metrics = syncLayerDetection();
         if (metrics) {
-            var padVal = parseFloat(txtPad.text) || 30;
-            var proposedPrecompW = Math.max(40, Math.round(metrics.detectedWidth + (padVal * 2)));
-            txtWidth.text = String(proposedPrecompW);
-            txtHeight.text = String(Math.round(metrics.detectedHeight + (padVal * 2)));
+            txtWidth.text = String(Math.round(metrics.detectedWidth));
+            txtHeight.text = String(Math.round(metrics.detectedHeight));
 
             if (metrics.align === "center") {
                 dropAlign.selection = 2; // Top-Center
@@ -2688,24 +2710,24 @@
                 dropAlign.selection = 1; // Top-Left
             }
 
-            lblFeedback.text = "Auto-detected: Text " + metrics.detectedWidth + "x" + metrics.detectedHeight + "px (" + metrics.align + ") -> Precomp " + proposedPrecompW + "px";
+            lblFeedback.text = "Auto-detected text box: " + Math.round(metrics.detectedWidth) + "x" + Math.round(metrics.detectedHeight) + "px (" + metrics.align + ")";
         } else {
             alert("Please select a text layer in your active composition first.");
         }
     };
 
     btnDummyOnly.onClick = function() {
-        if (app.beginUndoGroup) app.beginUndoGroup("Create 50-Char Dummy Layer");
+        if (app.beginUndoGroup) app.beginUndoGroup("Create Random Dummy Text");
         try {
             var comp = app.project.activeItem;
             var w = parseFloat(txtWidth.text) || 800;
             var h = parseFloat(txtHeight.text) || 400;
             var autoH = chkAutoHeight.value;
-            var padVal = parseFloat(txtPad.text) || 30;
+            var padVal = parseFloat(txtPad.text) || 0;
 
             var dummy = createDummyTextLayer(comp, w, h, autoH, padVal);
             syncLayerDetection();
-            lblFeedback.text = "Created dummy layer: '" + dummy.name + "' (50 characters of Lorem Ipsum).";
+            lblFeedback.text = "Created dummy layer: '" + dummy.name + "' with random dummy text (20-30 words).";
         } catch (err) {
             alert("Error creating dummy text layer:\n" + err.toString());
         } finally {
@@ -2757,7 +2779,7 @@
                 BR: chkBR.value,
                 BL: chkBL.value
             };
-            var bgColor = cpBgColor._color || "#1E222D";
+            var bgColor = cpBgColor._color || "#FF00FF";
             var bgOpacity = parseFloat(txtBgOp.text) || 100;
 
             var res = precompTextLayer({
@@ -2792,7 +2814,7 @@
                 msg = "Precomposed '" + res.name + "' [" + res.width + "x" + res.height + "px, Padding: " + res.padding + "px, Textbox: " + res.textboxWidth + "px]";
             }
             if (res.createdDummy) {
-                msg += " (Generated 50-char dummy layer)";
+                msg += " (Generated random dummy text)";
             }
             lblFeedback.text = msg;
         } catch (err) {

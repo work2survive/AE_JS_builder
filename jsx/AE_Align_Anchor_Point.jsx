@@ -1,6 +1,6 @@
 // Co-authored & architected with Google DeepMind Antigravity.
 // =============================================================================
-// ADOBE AFTER EFFECTS EXTENDSCRIPT & SCRIPTUI PANEL: AE ALIGN ANCHOR POINT v1.2.0
+// ADOBE AFTER EFFECTS EXTENDSCRIPT & SCRIPTUI PANEL: AE ALIGN ANCHOR POINT v1.3.0
 // =============================================================================
 //
 // PURPOSE:
@@ -816,7 +816,7 @@
     }
 
     function formatPointTextWithLineBreaks(text, maxChars) {
-        var limit = maxChars || 26;
+        var limit = maxChars || 42;
         var words = text.split(/\s+/);
         var lines = [];
         var cur = "";
@@ -833,6 +833,36 @@
         }
         if (cur.length > 0) lines.push(cur);
         return lines.join("\r");
+    }
+
+    // Word pool for random 20-30 words dummy text
+    var LOREM_IPSUM_WORDS = [
+        "Lorem", "ipsum", "dolor", "sit", "amet,", "consectetur", "adipiscing", "elit,", "sed", "do",
+        "eiusmod", "tempor", "incididunt", "ut", "labore", "et", "dolore", "magna", "aliqua.", "Ut",
+        "enim", "ad", "minim", "veniam,", "quis", "nostrud", "exercitation", "ullamco", "laboris", "nisi",
+        "ut", "aliquip", "ex", "ea", "commodo", "consequat.", "Duis", "aute", "irure", "dolor",
+        "in", "reprehenderit", "in", "voluptate", "velit", "esse", "cillum", "dolore", "eu", "fugiat",
+        "nulla", "pariatur.", "Excepteur", "sint", "occaecat", "cupidatat", "non", "proident,", "sunt", "in",
+        "culpa", "qui", "officia", "deserunt", "mollit", "anim", "id", "est", "laborum."
+    ];
+
+    function getRandomDummyText(minWords, maxWords) {
+        var min = (typeof minWords === "number") ? minWords : 20;
+        var max = (typeof maxWords === "number") ? maxWords : 30;
+        var count = Math.floor(min + Math.random() * (max - min + 1));
+        var start = Math.floor(Math.random() * Math.max(1, LOREM_IPSUM_WORDS.length - count));
+        var words = [];
+        for (var i = 0; i < count; i++) {
+            words.push(LOREM_IPSUM_WORDS[(start + i) % LOREM_IPSUM_WORDS.length]);
+        }
+        var text = words.join(" ");
+        var lastChar = text.charAt(text.length - 1);
+        if (lastChar === ",") {
+            text = text.substring(0, text.length - 1) + ".";
+        } else if (lastChar !== "." && lastChar !== "!" && lastChar !== "?") {
+            text += ".";
+        }
+        return text.charAt(0).toUpperCase() + text.slice(1);
     }
 
     // -------------------------------------------------------------------------
@@ -856,11 +886,11 @@
         // Randomize whether created as Point Text or Paragraph (Box) Text (50/50 probability)
         var isBox = (Math.random() < 0.5);
 
-        // Base 50-character dummy text
-        var rawDummy = "Lorem ipsum dolor sit amet, consectetur adipiscing".substring(0, 50);
+        // Random dummy text (20 to 30 words)
+        var rawDummy = getRandomDummyText(20, 30);
 
         // If Point Text: add line breaks so it does not stretch out or stick out of viewport
-        var dummyText = isBox ? rawDummy : formatPointTextWithLineBreaks(rawDummy, 26);
+        var dummyText = isBox ? rawDummy : formatPointTextWithLineBreaks(rawDummy, 42);
 
         var textLayer;
         if (isBox && typeof comp.layers.addBoxText === "function") {
@@ -1217,9 +1247,9 @@
     grpSecondary.alignment = ["fill", "top"];
     grpSecondary.spacing = 6;
 
-    var btnCreateTextBox = grpSecondary.add("button", undefined, "📝 New Centered Text Box");
+    var btnCreateTextBox = grpSecondary.add("button", undefined, "📝 Create Random Dummy Text");
     btnCreateTextBox.alignment = ["fill", "center"];
-    btnCreateTextBox.helpTip = "Creates a fresh dummy text box in the center of the viewport.";
+    btnCreateTextBox.helpTip = "Creates a fresh random dummy text (20-30 words) in the center of the viewport.";
 
     var btnRemove = grpSecondary.add("button", undefined, "✕ Remove Crosshairs & Expressions");
     btnRemove.alignment = ["fill", "center"];
