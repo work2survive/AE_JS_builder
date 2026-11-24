@@ -8,13 +8,13 @@
     'use strict';
 
     // -------------------------------------------------------------
-    // Version Management (v1.2.19)
+    // Version Management (v1.2.20)
     // -------------------------------------------------------------
     function computeDailyVersion() {
-        return '1.2.19';
+        return '1.2.20';
     }
 
-    const APP_VERSION = '1.2.19';
+    const APP_VERSION = '1.2.20';
     global.EMULATOR_VERSION = APP_VERSION;
     global.AE_TEXT_GUIDE_URL = 'https://github.com/work2survive/AE_JS_builder/blob/main/AE_VS_JS_TEXT_RENDERING_DIFFERENCES.md';
     global.AE_ANCHOR_POINT_GUIDE_URL = 'https://github.com/work2survive/AE-Align-AnchorPoint/blob/main/README.md';
@@ -1490,32 +1490,27 @@
         const getRandomEmoji = () => EMOJI_POOL[Math.floor(Math.random() * EMOJI_POOL.length)];
 
         const typeLabel = isBox ? 'Box Text' : 'Point Text';
-        const headerEmoji = getRandomEmoji();
-        const headerStr = `${typeLabel} ${headerEmoji} • ${fontName} ${fontSize}px • ${alignChoice.name} Align • Leading ${leading}px.`;
+        const headerStr = `${typeLabel} • ${fontName} ${fontSize}px • ${alignChoice.name} Align • Leading ${leading}px.`;
 
         const LOREM_WORDS = "Lorem ipsum dolor sit amet consectetur adipiscing elit sed do eiusmod tempor incididunt ut labore et dolore magna aliqua Ut enim ad minim veniam quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur Excepteur sint occaecat cupidatat non proident sunt in culpa qui officia deserunt mollit anim id est laborum".split(' ');
 
         const headerTokens = headerStr.trim().split(/\s+/).filter(Boolean);
-        // Distribute 4-6 random emojis in between the lorem ipsum words
-        const emojiCount = 4 + Math.floor(Math.random() * 3);
+        // Distribute max two random emojis (1 or 2) in between the words
+        const emojiCount = Math.random() < 0.5 ? 1 : 2;
         const neededLoremCount = Math.max(5, 50 - headerTokens.length - emojiCount);
         const loremSlice = LOREM_WORDS.slice(0, neededLoremCount);
 
-        const loremTokens = [];
-        const interval = Math.max(2, Math.floor(loremSlice.length / (emojiCount + 1)));
-        let emojisInserted = 0;
-
-        for (let i = 0; i < loremSlice.length; i++) {
-            loremTokens.push(loremSlice[i]);
-            if (i > 0 && i < loremSlice.length - 1 && (i % interval === 0) && emojisInserted < emojiCount) {
-                loremTokens.push(getRandomEmoji());
-                emojisInserted++;
+        const loremTokens = [...loremSlice];
+        const insertPositions = [];
+        while (insertPositions.length < emojiCount && loremTokens.length > 2) {
+            const pos = 1 + Math.floor(Math.random() * (loremTokens.length - 1));
+            if (!insertPositions.includes(pos)) {
+                insertPositions.push(pos);
             }
         }
-        while (emojisInserted < emojiCount && loremTokens.length > 2) {
-            const randIdx = 1 + Math.floor(Math.random() * (loremTokens.length - 2));
-            loremTokens.splice(randIdx, 0, getRandomEmoji());
-            emojisInserted++;
+        insertPositions.sort((a, b) => b - a);
+        for (const pos of insertPositions) {
+            loremTokens.splice(pos, 0, getRandomEmoji());
         }
 
         const loremStr = loremTokens.join(' ') + '.';
