@@ -280,8 +280,6 @@
                     if (sProp && sProp.value) {
                         docToSet = sProp.value;
                     }
-                } else if (sampleDoc && !sampleDoc.boxText) {
-                    docToSet = sampleDoc;
                 }
 
                 if (docToSet && !docToSet.boxText) {
@@ -1525,6 +1523,15 @@
 
         var metrics = getTextLayerMetrics(comp, textLayer);
 
+        // Capture original full text string directly from textLayer before precompose
+        var originalFullText = "";
+        try {
+            originalFullText = getTextLayerString(textLayer);
+        } catch (eOrigText) {}
+        if (!originalFullText && metrics && metrics.fullText) {
+            originalFullText = metrics.fullText;
+        }
+
         // Store original transforms and parenting before precompose
         var origPos = textLayer.transform.position.value;
         var origAnchor = textLayer.transform.anchorPoint.value;
@@ -1685,6 +1692,9 @@
         var innerTextLayer = null;
         try {
             innerTextLayer = (typeof newComp.layer === "function") ? newComp.layer(1) : newComp.layers[0];
+            if (innerTextLayer) {
+                innerTextLayer.name = "__ae_orig_text__";
+            }
         } catch (eGetInner) {}
 
         var divideMode = options.divideMode || "none";
@@ -1699,12 +1709,40 @@
             if (!lineStep || lineStep <= 0) lineStep = fs * 1.2;
 
             if (divideMode === "words" || divideMode === "lines") {
+                // Resolve full text string reliably FIRST before creating any temporary layers
+                var fullText = originalFullText || "";
+                if (!fullText || fullText.length === 0) {
+                    try {
+                        var origLyrCheck = null;
+                        try { origLyrCheck = newComp.layer("__ae_orig_text__"); } catch (eFnd) {}
+                        if (!origLyrCheck) origLyrCheck = innerTextLayer;
+                        fullText = getTextLayerString(origLyrCheck);
+                    } catch (eGTLS) {}
+                }
+                if (!fullText || fullText.length === 0) {
+                    if (origDoc && typeof origDoc.text === "string" && origDoc.text.length > 0) {
+                        fullText = origDoc.text;
+                    } else if (metrics && metrics.fullText) {
+                        fullText = metrics.fullText;
+                    } else if (metrics && metrics.memoryStore && metrics.memoryStore.fullText) {
+                        fullText = metrics.memoryStore.fullText;
+                    }
+                }
+
+                // Reference to the original layer for cloning styles
+                var sourceRefLayer = null;
+                try {
+                    sourceRefLayer = newComp.layer("__ae_orig_text__");
+                } catch (eRefL) {}
+                if (!sourceRefLayer) sourceRefLayer = innerTextLayer;
+
                 // Temporary hidden text layer to measure exact sub-string widths in newComp
                 var measureLayer = null;
                 try {
                     measureLayer = newComp.layers.addText("");
                     measureLayer.enabled = false;
-                    applyTextDocStyling(measureLayer, origDoc, "W", innerTextLayer);
+                    measureLayer.name = "__ae_temp_measure__";
+                    applyTextDocStyling(measureLayer, origDoc, "", sourceRefLayer);
                 } catch (eML) {
                     measureLayer = null;
                 }
@@ -1744,20 +1782,6 @@
                         } catch (eMW) {}
                     }
                     return measureTextExact(w, fs, fn);
-                }
-
-                var fullText = "";
-                try {
-                    fullText = getTextLayerString(innerTextLayer);
-                } catch (eGTLS) {}
-                if (!fullText || fullText.length === 0) {
-                    if (origDoc && typeof origDoc.text === "string" && origDoc.text.length > 0) {
-                        fullText = origDoc.text;
-                    } else if (metrics && metrics.fullText) {
-                        fullText = metrics.fullText;
-                    } else if (metrics && metrics.memoryStore && metrics.memoryStore.fullText) {
-                        fullText = metrics.memoryStore.fullText;
-                    }
                 }
 
                 var visualLines = [];
@@ -1852,7 +1876,7 @@
                         var lineW = (measuredLineWidths.length > li) ? measuredLineWidths[li] : 0;
 
                         var lineLayer = newComp.layers.addText(lineStr);
-                        applyTextDocStyling(lineLayer, origDoc, lineStr, innerTextLayer);
+                        applyTextDocStyling(lineLayer, origDoc, lineStr, sourceRefLayer);
                         lineLayer.name = "Line " + (li + 1) + ": " + (lineStr.length > 25 ? (lineStr.substr(0, 25) + "...") : lineStr);
 
                         var rLine = lineLayer.sourceRectAtTime(0, false);
@@ -1893,7 +1917,7 @@
                         for (var wi = 0; wi < lineWords.length; wi++) {
                             var wordText = lineWords[wi];
                             var wordLayer = newComp.layers.addText(wordText);
-                            applyTextDocStyling(wordLayer, origDoc, wordText, innerTextLayer);
+                            applyTextDocStyling(wordLayer, origDoc, wordText, sourceRefLayer);
                             totalWordCount++;
                             wordLayer.name = "Word " + totalWordCount + ": " + wordText;
 
@@ -1943,9 +1967,19 @@
                 if (measureLayer) {
                     try { measureLayer.remove(); } catch (eRemM) {}
                 }
+                try {
+                    var mCheck = newComp.layer("__ae_temp_measure__");
+                    if (mCheck) mCheck.remove();
+                } catch (eRemM2) {}
 
                 // Remove the undivided single text layer
-                try { innerTextLayer.remove(); } catch (eRemInner) {}
+                try {
+                    var origToRemove = newComp.layer("__ae_orig_text__");
+                    if (origToRemove) origToRemove.remove();
+                } catch (eRemOrig) {}
+                try {
+                    if (innerTextLayer) innerTextLayer.remove();
+                } catch (eRemInner) {}
                 innerTextLayer = null;
 
             } else {
