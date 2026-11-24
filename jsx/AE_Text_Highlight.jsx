@@ -963,6 +963,11 @@
         var deltaAx = targetA[0] - curA[0];
         var deltaAy = targetA[1] - curA[1];
 
+        // Guard: if already aligned to top-left, preserve position and do not shift
+        if (Math.abs(deltaAx) < 0.001 && Math.abs(deltaAy) < 0.001) {
+            return true;
+        }
+
         var sdx = deltaAx * sx;
         var sdy = deltaAy * sy;
         var pDeltaX = sdx;
@@ -977,8 +982,11 @@
         try { apProp.expression = ""; } catch (eAE) {}
         try { posProp.expression = ""; } catch (ePE) {}
 
-        if (is3D) {
-            apProp.setValue([targetA[0], targetA[1], curA[2] || 0]);
+        var az = (curA && curA.length > 2) ? curA[2] : (is3D ? 0 : null);
+        var pz = (curPos && curPos.length > 2) ? curPos[2] : (is3D ? 0 : null);
+
+        if (az !== null) {
+            apProp.setValue([targetA[0], targetA[1], az]);
         } else {
             apProp.setValue([targetA[0], targetA[1]]);
         }
@@ -989,8 +997,8 @@
             if (xP) xP.setValue(xP.value + pDeltaX);
             if (yP) yP.setValue(yP.value + pDeltaY);
         } else {
-            if (is3D) {
-                posProp.setValue([curPos[0] + pDeltaX, curPos[1] + pDeltaY, curPos[2] || 0]);
+            if (pz !== null) {
+                posProp.setValue([curPos[0] + pDeltaX, curPos[1] + pDeltaY, pz]);
             } else {
                 posProp.setValue([curPos[0] + pDeltaX, curPos[1] + pDeltaY]);
             }
@@ -1618,6 +1626,9 @@
                     var fullLineLayer = comp.layers.addText(lineStr);
                     applyTextDocCopy(fullLineLayer, props.textDoc, lineStr, props.fillColor);
                     fullLineLayer.name = origLayer.name + " [Line " + (vl + 1) + "]";
+                    if (Boolean(origLayer.threeDLayer)) {
+                        try { fullLineLayer.threeDLayer = true; } catch (e3DLine) {}
+                    }
 
                     var rFL = fullLineLayer.sourceRectAtTime(comp.time, false);
                     fullLineLayer.transform.anchorPoint.setValue([rFL.left, rFL.top, 0]);
@@ -1668,6 +1679,9 @@
                     var segLayer = comp.layers.addText(seg.text);
                     var segColor = (seg.isHighlight && changeTextColor) ? highlightedTextColor : props.fillColor;
                     applyTextDocCopy(segLayer, props.textDoc, seg.text, segColor);
+                    if (Boolean(origLayer.threeDLayer)) {
+                        try { segLayer.threeDLayer = true; } catch (e3DSeg) {}
+                    }
 
                     segLayer.name = origLayer.name + " " + (seg.isHighlight ? "[HL-Target] " : "[HL-Text] ") + seg.text.substr(0, 16);
 
@@ -1806,10 +1820,14 @@
             }
 
             // Parent highlight shape layer to original text layer
+            var is3DSplit = Boolean(origLayer.threeDLayer);
+            if (is3DSplit) {
+                try { shapeLayer.threeDLayer = true; } catch (e3DShape) {}
+            }
             shapeLayer.parent = origLayer;
-            shapeLayer.transform.position.setValue([0, 0, 0]);
-            shapeLayer.transform.anchorPoint.setValue([0, 0, 0]);
-            shapeLayer.transform.scale.setValue([100, 100, 100]);
+            shapeLayer.transform.position.setValue(is3DSplit ? [0, 0, 0] : [0, 0]);
+            shapeLayer.transform.anchorPoint.setValue(is3DSplit ? [0, 0, 0] : [0, 0]);
+            shapeLayer.transform.scale.setValue(is3DSplit ? [100, 100, 100] : [100, 100]);
             if (shapeLayer.transform.rotation) shapeLayer.transform.rotation.setValue(0);
 
             // Stacking: place shape layer behind split text layers
@@ -1876,10 +1894,7 @@
         var props = getTextBoxProperties(comp, origLayer);
         if (!props || !props.metrics) return null;
 
-        // 1. Align original text layer anchor point based on text box justification (zero visual shift)
-        alignAnchorPointToJustification(origLayer, props);
-
-        // 2. Attach comprehensive typography inspector effect controls
+        // 1. Attach comprehensive typography inspector effect controls
         attachTextPropertiesEffects(origLayer, props);
 
         var terms = options.terms || [];
@@ -1896,14 +1911,10 @@
         var lines = props.metrics.lines;
         var lineStep = props.leading || (props.fontSize * 1.2);
         var just = props.justification || "left";
+        var contentWidth = props.isBox ? props.boxWidth : props.sRect.width;
+        var boxH = props.fontSize;
 
         var measurer = createMeasureHelper(comp, props);
-
-        // Determine first line baseline relative to original text layer local origin:
-        var rFirst = measurer.measureRect(lines.length > 0 ? lines[0] : "A");
-        var ascender = Math.abs(rFirst.top) || (props.fontSize * 0.78);
-        var firstBaselineY = (props.isBox ? props.boxPos[1] : props.sRect.top) + ascender;
-
         var highlightBoxes = [];
 
         try {
@@ -1913,25 +1924,15 @@
                 if (trimStr(lineStr).length === 0) continue;
 
                 var lineW = measurer.measureRect(lineStr).width;
-                var lineBaselineY = firstBaselineY + (vl * lineStep);
+                var lineTop = vl * lineStep;
 
-                var lineLeftX = 0;
-                if (props.isBox) {
-                    if (just === "center") {
-                        lineLeftX = props.boxPos[0] + (props.boxWidth - lineW) / 2;
-                    } else if (just === "right") {
-                        lineLeftX = props.boxPos[0] + props.boxWidth - lineW;
-                    } else {
-                        lineLeftX = props.boxPos[0];
-                    }
+                var lineLeft = 0;
+                if (just === "center") {
+                    lineLeft = Math.max(0, (contentWidth - lineW) / 2);
+                } else if (just === "right") {
+                    lineLeft = Math.max(0, contentWidth - lineW);
                 } else {
-                    if (just === "center") {
-                        lineLeftX = -lineW / 2;
-                    } else if (just === "right") {
-                        lineLeftX = -lineW;
-                    } else {
-                        lineLeftX = 0;
-                    }
+                    lineLeft = 0;
                 }
 
                 // Check which target terms appear on this visual line
@@ -1971,20 +1972,24 @@
                     var cMatch = cleanMatches[cm];
                     var prefix = lineStr.substring(0, cMatch.start);
                     var prefixAdv = measurer.measurePrefixAdvance(prefix);
-                    var segX = lineLeftX + prefixAdv;
-                    var rSeg = measurer.measureRect(cMatch.term);
+                    var fullAdv = measurer.measurePrefixAdvance(lineStr.substring(0, cMatch.end));
+                    var termW = fullAdv - prefixAdv;
+                    if (termW <= 4) {
+                        termW = measurer.measureRect(cMatch.term).width;
+                    }
+                    termW = Math.max(4, termW);
 
-                    var boxW = Math.max(4, rSeg.width);
-                    var boxH = Math.max(props.fontSize, rSeg.height);
-                    var boxPosX = segX + rSeg.left;
-                    var boxPosY = lineBaselineY + rSeg.top;
+                    var boxCenterX = lineLeft + prefixAdv + (termW / 2);
+                    var boxCenterY = lineTop + (boxH / 2);
 
                     highlightBoxes.push({
                         text: cMatch.term,
-                        width: boxW,
+                        width: termW,
                         height: boxH,
-                        posX: boxPosX,
-                        posY: boxPosY
+                        posX: lineLeft + prefixAdv,
+                        posY: lineTop,
+                        centerX: boxCenterX,
+                        centerY: boxCenterY
                     });
                 }
             }
@@ -2044,8 +2049,8 @@
                 }
 
                 var propPos = rect.property("ADBE Vector Rect Position") || rect.property("Position");
-                var boxCenterX = box.posX + (baseW / 2);
-                var boxCenterY = box.posY + (baseH / 2);
+                var boxCenterX = box.centerX;
+                var boxCenterY = box.centerY;
 
                 if (propPos) {
                     propPos.setValue([boxCenterX + offX, boxCenterY + offY]);
@@ -2078,10 +2083,14 @@
             }
 
             // Parent highlight shape layer to original text layer
+            var is3D = Boolean(origLayer.threeDLayer);
+            if (is3D) {
+                try { shapeLayer.threeDLayer = true; } catch (e3D) {}
+            }
             shapeLayer.parent = origLayer;
-            shapeLayer.transform.position.setValue([0, 0, 0]);
-            shapeLayer.transform.anchorPoint.setValue([0, 0, 0]);
-            shapeLayer.transform.scale.setValue([100, 100, 100]);
+            shapeLayer.transform.position.setValue(is3D ? [0, 0, 0] : [0, 0]);
+            shapeLayer.transform.anchorPoint.setValue(is3D ? [0, 0, 0] : [0, 0]);
+            shapeLayer.transform.scale.setValue(is3D ? [100, 100, 100] : [100, 100]);
             if (shapeLayer.transform.rotation) shapeLayer.transform.rotation.setValue(0);
 
             // Stacking: place shape layer directly behind original text layer
@@ -2542,7 +2551,7 @@
         var lblTargetHelp = pnlTargets.add("statictext", undefined, "Enter words or phrases to highlight (1 per line or comma-separated):");
         lblTargetHelp.alignment = ["fill", "top"];
 
-        var txtTargets = pnlTargets.add("edittext", undefined, "commodo consequat\nmauris", { multiline: true, wantReturn: true });
+        var txtTargets = pnlTargets.add("edittext", undefined, "ipsum\namet\nminim\ncommodo consequat", { multiline: true, wantReturn: true });
         txtTargets.alignment = ["fill", "top"];
         txtTargets.preferredSize = [-1, 75];
 
