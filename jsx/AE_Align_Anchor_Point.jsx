@@ -828,7 +828,7 @@
     pnlHeader.spacing = 4;
     pnlHeader.margins = [12, 10, 12, 10];
 
-    var lblSubTitle = pnlHeader.add("statictext", undefined, "Zero-Shift Anchor Aligner with State Effect, Crosshair Reticle & Auto Text Box");
+    var lblSubTitle = pnlHeader.add("statictext", undefined, "Zero-Shift Anchor Aligner with State Effect & Crosshair Reticle");
     try {
         lblSubTitle.graphics.foregroundColor = win.graphics.newPen(win.graphics.PenType.SOLID_COLOR, [0.35, 0.70, 0.95, 1], 1);
     } catch (ePen) {}
