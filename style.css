@@ -113,14 +113,20 @@ body {
 }
 
 .ae-preset-select {
+    height: 22px;
+    max-height: 22px;
+    min-height: 22px;
+    box-sizing: border-box;
     background-color: var(--bg-darker);
     color: var(--text-primary);
     border: 1px solid var(--border-light);
-    border-radius: 4px;
-    padding: 4px 8px;
-    font-size: 12px;
+    border-radius: 3px;
+    padding: 0 6px;
+    font-size: 11px;
+    line-height: 20px;
     outline: none;
     cursor: pointer;
+    vertical-align: middle;
 }
 
 .ae-topbar-actions {
@@ -130,18 +136,26 @@ body {
 }
 
 .ae-btn {
+    height: 22px;
+    max-height: 22px;
+    min-height: 22px;
+    box-sizing: border-box;
     background-color: #3a3a3a;
     color: var(--text-primary);
     border: 1px solid var(--border-light);
     border-radius: 3px;
-    padding: 5px 10px;
-    font-size: 12px;
+    padding: 0 8px;
+    font-size: 11px;
+    line-height: 20px;
     cursor: pointer;
     display: inline-flex;
     align-items: center;
-    gap: 6px;
+    justify-content: center;
+    gap: 5px;
     white-space: nowrap;
     flex-shrink: 0;
+    appearance: none;
+    -webkit-appearance: none;
     transition: background 0.15s, border-color 0.15s;
 }
 
@@ -167,14 +181,17 @@ body {
 .ae-autobuild-toggle {
     display: inline-flex;
     align-items: center;
-    gap: 7px;
+    gap: 6px;
     cursor: pointer;
     user-select: none;
-    padding: 3px 9px 3px 7px;
-    border-radius: 4px;
+    padding: 0 7px;
+    border-radius: 3px;
     background: #2a2a2a;
     border: 1px solid var(--border-light);
-    height: 27px;
+    height: 22px;
+    max-height: 22px;
+    min-height: 22px;
+    box-sizing: border-box;
     transition: background 0.15s, border-color 0.15s, box-shadow 0.15s;
     flex-shrink: 0;
 }
@@ -1366,6 +1383,8 @@ body.body-viewport-panning {
     font-size: 11px;
     font-weight: 500;
     white-space: nowrap;
+    appearance: none;
+    -webkit-appearance: none;
     max-width: 140px;
     vertical-align: middle;
     transition: all 0.15s ease;
@@ -1540,6 +1559,8 @@ body.body-viewport-panning {
     flex-shrink: 0;
     line-height: 1;
     vertical-align: middle;
+    appearance: none;
+    -webkit-appearance: none;
     transition: all 0.15s ease;
 }
 .ae-global-shy-btn svg.ae-shy-icon {
@@ -1578,6 +1599,8 @@ body.body-viewport-panning {
     flex-shrink: 0;
     line-height: 1;
     vertical-align: middle;
+    appearance: none;
+    -webkit-appearance: none;
     transition: all 0.15s ease;
 }
 .ae-dummy-text-btn svg.ae-type-icon {
@@ -2864,5 +2887,14 @@ button.scriptui-color-swatch:hover {
     padding: 12px 18px;
     background: #202020;
     border-top: 1px solid #383838;
+}
+
+.ae-url-dialog-footer .ae-btn {
+    height: 26px;
+    max-height: 26px;
+    min-height: 26px;
+    padding: 0 14px;
+    font-size: 12px;
+    line-height: 24px;
 }
 
