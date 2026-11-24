@@ -1041,8 +1041,61 @@
         };
     }
 
+    // Curated diverse fonts spanning Sans-Serif, Serif, Display, Monospace, and Modern
+    var DUMMY_FONTS_POOL = [
+        { ps: "ArialMT", name: "Arial" },
+        { ps: "Georgia", name: "Georgia" },
+        { ps: "TimesNewRomanPSMT", name: "Times New Roman" },
+        { ps: "TrebuchetMS", name: "Trebuchet MS" },
+        { ps: "Verdana", name: "Verdana" },
+        { ps: "CourierNewPSMT", name: "Courier New" },
+        { ps: "Impact", name: "Impact" },
+        { ps: "Tahoma", name: "Tahoma" },
+        { ps: "HelveticaNeue", name: "Helvetica Neue" },
+        { ps: "Helvetica", name: "Helvetica" },
+        { ps: "Palatino-Roman", name: "Palatino" },
+        { ps: "CenturyGothic", name: "Century Gothic" },
+        { ps: "Futura-Medium", name: "Futura" },
+        { ps: "GillSans", name: "Gill Sans" },
+        { ps: "Avenir-Medium", name: "Avenir" }
+    ];
+
+    function getRandomFontInfo() {
+        var pool = DUMMY_FONTS_POOL.slice(0);
+        for (var i = pool.length - 1; i > 0; i--) {
+            var j = Math.floor(Math.random() * (i + 1));
+            var temp = pool[i];
+            pool[i] = pool[j];
+            pool[j] = temp;
+        }
+
+        // In AE 24+, verify if font object exists in app.fonts environment
+        if (typeof app !== "undefined" && app.fonts && typeof app.fonts.getFontsByPostScriptName === "function") {
+            for (var k = 0; k < pool.length; k++) {
+                try {
+                    var found = app.fonts.getFontsByPostScriptName(pool[k].ps);
+                    if (found && found.length > 0) {
+                        return { fontObject: found[0], font: pool[k].ps, name: pool[k].name };
+                    }
+                } catch (eFCheck) {}
+            }
+        }
+
+        var pick = pool[0];
+        return { fontObject: null, font: pick.ps, name: pick.name };
+    }
+
+    function getRandomJustification() {
+        var aligns = [
+            { key: "left", name: "Left", val: (typeof ParagraphJustification !== "undefined" && typeof ParagraphJustification.LEFT_JUSTIFY !== "undefined" ? ParagraphJustification.LEFT_JUSTIFY : 7412) },
+            { key: "center", name: "Center", val: (typeof ParagraphJustification !== "undefined" && typeof ParagraphJustification.CENTER_JUSTIFY !== "undefined" ? ParagraphJustification.CENTER_JUSTIFY : 7414) },
+            { key: "right", name: "Right", val: (typeof ParagraphJustification !== "undefined" && typeof ParagraphJustification.RIGHT_JUSTIFY !== "undefined" ? ParagraphJustification.RIGHT_JUSTIFY : 7413) }
+        ];
+        return aligns[Math.floor(Math.random() * aligns.length)];
+    }
+
     // -------------------------------------------------------------------------
-    // 5. Create Dummy 100-Word Lorem Ipsum Text Layer
+    // 5. Create Dummy 100-Word Lorem Ipsum Text Layer (Randomized Font & Alignment)
     // -------------------------------------------------------------------------
     function createDummyTextLayer(comp, targetW, targetH, autoHeight, pad) {
         if (!comp) {
@@ -1058,8 +1111,12 @@
         var textW = Math.max(20, totalW - (padVal * 2));
         var textH = (autoHeight || !targetH) ? 360 : Math.max(20, targetH - (padVal * 2));
 
+        // Randomize typography font and paragraph alignment
+        var fontPick = getRandomFontInfo();
+        var alignPick = getRandomJustification();
+
         var dummyLayer = comp.layers.addText(LOREM_IPSUM_100);
-        dummyLayer.name = "Lorem Ipsum Text Box";
+        dummyLayer.name = "Dummy Text - " + fontPick.name + " (" + alignPick.name + ")";
 
         // Center initially in composition
         dummyLayer.transform.position.setValue([comp.width / 2, comp.height / 2, 0]);
@@ -1075,14 +1132,19 @@
         if (doc) {
             doc.text = LOREM_IPSUM_100;
             doc.fontSize = 28;
-            doc.font = "ArialMT"; // System font
+            if (fontPick.fontObject) {
+                try { doc.fontObject = fontPick.fontObject; } catch (eFO) {}
+            }
+            if (fontPick.font) {
+                try { doc.font = fontPick.font; } catch (eF) {}
+            }
             doc.fillColor = [0.95, 0.95, 0.95];
             doc.applyFill = true;
             doc.applyStroke = false;
             doc.leading = 40;
-            doc.justification = (typeof ParagraphJustification !== "undefined")
-                ? ParagraphJustification.LEFT_JUSTIFY
-                : 7412;
+            try {
+                doc.justification = alignPick.val;
+            } catch (eJ) {}
 
             try {
                 if (typeof doc.setBoxTextSize === "function") {
@@ -1102,7 +1164,7 @@
         try {
             var r = dummyLayer.sourceRectAtTime(0, false);
             if (!r || r.width > (textW * 1.4)) {
-                var wrapped = wrapTextToWidth(LOREM_IPSUM_100, textW, 28);
+                var wrapped = wrapTextToWidth(LOREM_IPSUM_100, textW, 28, fontPick.font);
                 if (doc) {
                     doc.text = wrapped;
                     textProp.setValue(doc);

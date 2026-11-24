@@ -745,12 +745,64 @@
         return true;
     }
 
+    // Curated diverse fonts spanning Sans-Serif, Serif, Display, Monospace, and Modern
+    var DUMMY_FONTS_POOL = [
+        { ps: "ArialMT", name: "Arial" },
+        { ps: "Georgia", name: "Georgia" },
+        { ps: "TimesNewRomanPSMT", name: "Times New Roman" },
+        { ps: "TrebuchetMS", name: "Trebuchet MS" },
+        { ps: "Verdana", name: "Verdana" },
+        { ps: "CourierNewPSMT", name: "Courier New" },
+        { ps: "Impact", name: "Impact" },
+        { ps: "Tahoma", name: "Tahoma" },
+        { ps: "HelveticaNeue", name: "Helvetica Neue" },
+        { ps: "Helvetica", name: "Helvetica" },
+        { ps: "Palatino-Roman", name: "Palatino" },
+        { ps: "CenturyGothic", name: "Century Gothic" },
+        { ps: "Futura-Medium", name: "Futura" },
+        { ps: "GillSans", name: "Gill Sans" },
+        { ps: "Avenir-Medium", name: "Avenir" }
+    ];
+
+    function getRandomFontInfo() {
+        var pool = DUMMY_FONTS_POOL.slice(0);
+        for (var i = pool.length - 1; i > 0; i--) {
+            var j = Math.floor(Math.random() * (i + 1));
+            var temp = pool[i];
+            pool[i] = pool[j];
+            pool[j] = temp;
+        }
+
+        if (typeof app !== "undefined" && app.fonts && typeof app.fonts.getFontsByPostScriptName === "function") {
+            for (var k = 0; k < pool.length; k++) {
+                try {
+                    var found = app.fonts.getFontsByPostScriptName(pool[k].ps);
+                    if (found && found.length > 0) {
+                        return { fontObject: found[0], font: pool[k].ps, name: pool[k].name };
+                    }
+                } catch (eFCheck) {}
+            }
+        }
+
+        var pick = pool[0];
+        return { fontObject: null, font: pick.ps, name: pick.name };
+    }
+
+    function getRandomJustification() {
+        var aligns = [
+            { key: "left", name: "Left", val: (typeof ParagraphJustification !== "undefined" && typeof ParagraphJustification.LEFT_JUSTIFY !== "undefined" ? ParagraphJustification.LEFT_JUSTIFY : 7412) },
+            { key: "center", name: "Center", val: (typeof ParagraphJustification !== "undefined" && typeof ParagraphJustification.CENTER_JUSTIFY !== "undefined" ? ParagraphJustification.CENTER_JUSTIFY : 7414) },
+            { key: "right", name: "Right", val: (typeof ParagraphJustification !== "undefined" && typeof ParagraphJustification.RIGHT_JUSTIFY !== "undefined" ? ParagraphJustification.RIGHT_JUSTIFY : 7413) }
+        ];
+        return aligns[Math.floor(Math.random() * aligns.length)];
+    }
+
     // -------------------------------------------------------------------------
     // 7. Dummy Text Box & Demo Composition Generator
     // -------------------------------------------------------------------------
 
     /**
-     * Creates a dummy text box centered in the viewport
+     * Creates a dummy text box centered in the viewport with randomized font & alignment
      */
     function createDummyTextBox(comp) {
         if (!comp) return null;
@@ -770,19 +822,26 @@
             textLayer = comp.layers.addText(dummyText);
         }
 
-        textLayer.name = "Dummy_Box_Text";
+        // Randomize font & alignment
+        var fontPick = getRandomFontInfo();
+        var alignPick = getRandomJustification();
+
+        textLayer.name = "Dummy Text - " + fontPick.name + " (" + alignPick.name + ")";
         textLayer.transform.position.setValue(centerPos);
         textLayer.transform.anchorPoint.setValue([boxW / 2, boxH / 2, 0]);
 
         var doc = textLayer.property("Source Text").value;
         if (doc) {
             doc.fontSize = 24;
-            doc.font = "Arial-BoldMT";
+            if (fontPick.fontObject) {
+                try { doc.fontObject = fontPick.fontObject; } catch (eFO) {}
+            }
+            if (fontPick.font) {
+                try { doc.font = fontPick.font; } catch (eF) {}
+            }
             doc.fillColor = [1.0, 1.0, 1.0];
             try {
-                doc.justification = (typeof ParagraphJustification !== "undefined" && ParagraphJustification.CENTER_JUSTIFY !== undefined)
-                    ? ParagraphJustification.CENTER_JUSTIFY
-                    : 7414;
+                doc.justification = alignPick.val;
             } catch (eJ) {}
             textLayer.property("Source Text").setValue(doc);
         }

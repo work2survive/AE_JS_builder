@@ -1968,6 +1968,49 @@
     // -------------------------------------------------------------------------
     // 13. Dummy Text Layer Generator
     // -------------------------------------------------------------------------
+    // Curated diverse fonts spanning Sans-Serif, Serif, Display, Monospace, and Modern
+    var DUMMY_FONTS_POOL = [
+        { ps: "ArialMT", name: "Arial" },
+        { ps: "Georgia", name: "Georgia" },
+        { ps: "TimesNewRomanPSMT", name: "Times New Roman" },
+        { ps: "TrebuchetMS", name: "Trebuchet MS" },
+        { ps: "Verdana", name: "Verdana" },
+        { ps: "CourierNewPSMT", name: "Courier New" },
+        { ps: "Impact", name: "Impact" },
+        { ps: "Tahoma", name: "Tahoma" },
+        { ps: "HelveticaNeue", name: "Helvetica Neue" },
+        { ps: "Helvetica", name: "Helvetica" },
+        { ps: "Palatino-Roman", name: "Palatino" },
+        { ps: "CenturyGothic", name: "Century Gothic" },
+        { ps: "Futura-Medium", name: "Futura" },
+        { ps: "GillSans", name: "Gill Sans" },
+        { ps: "Avenir-Medium", name: "Avenir" }
+    ];
+
+    function getRandomFontInfo() {
+        var pool = DUMMY_FONTS_POOL.slice(0);
+        for (var i = pool.length - 1; i > 0; i--) {
+            var j = Math.floor(Math.random() * (i + 1));
+            var temp = pool[i];
+            pool[i] = pool[j];
+            pool[j] = temp;
+        }
+
+        if (typeof app !== "undefined" && app.fonts && typeof app.fonts.getFontsByPostScriptName === "function") {
+            for (var k = 0; k < pool.length; k++) {
+                try {
+                    var found = app.fonts.getFontsByPostScriptName(pool[k].ps);
+                    if (found && found.length > 0) {
+                        return { fontObject: found[0], font: pool[k].ps, name: pool[k].name };
+                    }
+                } catch (eFCheck) {}
+            }
+        }
+
+        var pick = pool[0];
+        return { fontObject: null, font: pick.ps, name: pick.name };
+    }
+
     function createDummyTextBoxLayer(comp, fontName, align, boxW, boxH) {
         if (!comp) {
             comp = app.project.activeItem;
@@ -1979,7 +2022,11 @@
 
         var w = boxW || 950;
         var h = boxH || 450;
-        var f = fontName || "Georgia";
+        var fontPick = getRandomFontInfo();
+        var f = (fontName && typeof fontName === "string" && fontName !== "random" && fontName.indexOf("random") === -1)
+            ? fontName
+            : fontPick.font;
+        var fontDisplayName = (fontName && typeof fontName === "string" && fontName !== "random") ? fontName : fontPick.name;
 
         // Randomize alignment if requested or unspecified
         var alignOptions = ["left", "center", "right"];
@@ -1990,7 +2037,7 @@
 
         var formattedText = wordWrapToBoxWidth(LOREM_IPSUM_RAW, w, 34, f, 0);
         var dummy = comp.layers.addText(formattedText);
-        dummy.name = "Dummy Text - " + f + " (" + a + ")";
+        dummy.name = "Dummy Text - " + fontDisplayName + " (" + a + ")";
 
         // Setup typography document
         try {
