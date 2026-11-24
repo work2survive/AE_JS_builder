@@ -8,13 +8,13 @@
     'use strict';
 
     // -------------------------------------------------------------
-    // Version Management (v1.2.20)
+    // Version Management (v1.2.21)
     // -------------------------------------------------------------
     function computeDailyVersion() {
-        return '1.2.20';
+        return '1.2.21';
     }
 
-    const APP_VERSION = '1.2.20';
+    const APP_VERSION = '1.2.21';
     global.EMULATOR_VERSION = APP_VERSION;
     global.AE_TEXT_GUIDE_URL = 'https://github.com/work2survive/AE_JS_builder/blob/main/AE_VS_JS_TEXT_RENDERING_DIFFERENCES.md';
     global.AE_ANCHOR_POINT_GUIDE_URL = 'https://github.com/work2survive/AE-Align-AnchorPoint/blob/main/README.md';
@@ -1787,8 +1787,7 @@
 
     function runUserScript(code, sourceUrl) {
         try {
-            clearCompLayers();
-            appendConsole('Cleared composition. Executing JSX script...');
+            appendConsole('Executing JSX script...');
 
             // Configure execution context for temporary vs trusted files
             if (window.AEExecutionContext) {
