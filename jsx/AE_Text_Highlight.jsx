@@ -1,6 +1,6 @@
 // Co-authored & architected with Google DeepMind Antigravity.
 // =============================================================================
-// ADOBE AFTER EFFECTS EXTENDSCRIPT & SCRIPTUI PANEL: AE TEXT HIGHLIGHT v2.1.0
+// ADOBE AFTER EFFECTS EXTENDSCRIPT & SCRIPTUI PANEL: AE TEXT HIGHLIGHT v2.1.1
 // =============================================================================
 //
 // PURPOSE:
@@ -28,6 +28,12 @@
 //   6. AE Text Highlight Repository:
 //      https://github.com/work2survive/AE-Text-Highlight
 //
+// NEW IN v2.1.1:
+//   - Selective Highlight Text Coloring: Highlight box fill strictly changes only the color of the
+//     font related to the highlights (via range selectors in Calculation Method and segment targets in Split Method).
+//   - Checkbox Toggle for Highlighted Text Color: Added a toggle checkbox before "Highlighted Text Color:"
+//     to disable this option when needed; when disabled, the original font color remains 100% untouched.
+//
 // NEW IN v2.1.0:
 //   - Mandatory First-Action Anchor Alignment: Always aligns the text box anchor point to Top-Left
 //     using AE_Align_Anchor_Point.jsx logic with 0.00px visual shift, regardless of method selected.
@@ -44,7 +50,7 @@
     "use strict";
 
     var SCRIPT_TITLE    = "AE Text Highlight";
-    var SCRIPT_VERSION  = "v2.1.0";
+    var SCRIPT_VERSION  = "v2.1.1";
     var GITHUB_REPO_URL = "https://github.com/work2survive/AE-Text-Highlight";
 
     // -------------------------------------------------------------------------
