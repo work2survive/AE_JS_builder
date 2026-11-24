@@ -1127,7 +1127,9 @@
 
         var padVal = (typeof pad === "number") ? pad : 30;
         var totalW = targetW || 800;
-        var textW = Math.max(20, totalW - (padVal * 2));
+        var baseTextW = Math.max(20, totalW - (padVal * 2));
+        var widthVariation = 0.70 + (Math.random() * 0.60); // ±30% variation (0.70 to 1.30)
+        var textW = Math.max(100, Math.round(baseTextW * widthVariation));
         var textH = (autoHeight || !targetH) ? 360 : Math.max(20, targetH - (padVal * 2));
 
         // Randomize typography: font, alignment, font size (±15%), leading (±15%), and color
@@ -1145,9 +1147,6 @@
 
         var dummyLayer = comp.layers.addText(LOREM_IPSUM_100);
         dummyLayer.name = "Dummy Text - " + fontPick.name + " (" + alignPick.name + ", " + randomizedFontSize + "px, " + colorPick.name + ")";
-
-        // Center initially in composition
-        dummyLayer.transform.position.setValue([comp.width / 2, comp.height / 2, 0]);
 
         var textProp = dummyLayer.property("Source Text");
         var doc = null;
@@ -1199,6 +1198,31 @@
                 }
             }
         } catch (eWrap) {}
+
+        // Place text box in the middle of the viewport
+        try {
+            var isBox = false;
+            try {
+                var dNow = dummyLayer.property("Source Text").value;
+                if (dNow && dNow.boxText) isBox = true;
+            } catch (eB) {}
+
+            if (isBox) {
+                dummyLayer.transform.anchorPoint.setValue([textW / 2, textH / 2, 0]);
+                dummyLayer.transform.position.setValue([comp.width / 2, comp.height / 2, 0]);
+            } else {
+                var rNow = dummyLayer.sourceRectAtTime(0, false);
+                if (rNow && rNow.width > 0 && rNow.height > 0) {
+                    dummyLayer.transform.anchorPoint.setValue([rNow.left + rNow.width / 2, rNow.top + rNow.height / 2, 0]);
+                    dummyLayer.transform.position.setValue([comp.width / 2, comp.height / 2, 0]);
+                } else {
+                    dummyLayer.transform.anchorPoint.setValue([textW / 2, textH / 2, 0]);
+                    dummyLayer.transform.position.setValue([comp.width / 2, comp.height / 2, 0]);
+                }
+            }
+        } catch (eCenter) {
+            dummyLayer.transform.position.setValue([comp.width / 2, comp.height / 2, 0]);
+        }
 
         // Select dummy layer
         var totalL = (typeof comp.numLayers !== "undefined") ? comp.numLayers : comp.layers.length;

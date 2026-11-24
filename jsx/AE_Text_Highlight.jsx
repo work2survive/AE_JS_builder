@@ -2083,7 +2083,9 @@
             }
         }
 
-        var w = boxW || 950;
+        var baseBoxW = boxW || 950;
+        var widthVariation = 0.70 + (Math.random() * 0.60); // ±30% variation (0.70 to 1.30)
+        var w = Math.max(100, Math.round(baseBoxW * widthVariation));
         var h = boxH || 450;
 
         // 1. Randomize Font (or resolve specified font)
@@ -2152,21 +2154,29 @@
             }
         } catch (eStyling) {}
 
-        // Center layer in composition
-        var posX = Math.max(120, (comp.width - w) / 2);
+        // Place text box in the middle of the viewport
+        var centerPos = [comp.width / 2, comp.height / 2, 0];
         try {
             var propST = dummy.property("Source Text");
             var isBox = false;
             if (propST && propST.value && propST.value.boxText) isBox = true;
-            if (!isBox) {
-                if (a === "center") {
-                    posX = comp.width / 2;
-                } else if (a === "right") {
-                    posX = comp.width / 2 + (w / 2);
+
+            if (isBox) {
+                dummy.transform.anchorPoint.setValue([w / 2, h / 2, 0]);
+                dummy.transform.position.setValue(centerPos);
+            } else {
+                var rSR = dummy.sourceRectAtTime(0, false);
+                if (rSR && rSR.width > 0 && rSR.height > 0) {
+                    dummy.transform.anchorPoint.setValue([rSR.left + rSR.width / 2, rSR.top + rSR.height / 2, 0]);
+                    dummy.transform.position.setValue(centerPos);
+                } else {
+                    dummy.transform.anchorPoint.setValue([w / 2, h / 2, 0]);
+                    dummy.transform.position.setValue(centerPos);
                 }
             }
-        } catch (ePos) {}
-        dummy.transform.position.setValue([posX, 200, 0]);
+        } catch (ePos) {
+            dummy.transform.position.setValue(centerPos);
+        }
 
         // Deselect others and select dummy
         var total = (typeof comp.numLayers !== "undefined") ? comp.numLayers : comp.layers.length;

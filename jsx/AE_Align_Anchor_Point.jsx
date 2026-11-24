@@ -825,7 +825,9 @@
     function createDummyTextBox(comp) {
         if (!comp) return null;
         var centerPos = [comp.width / 2, comp.height / 2, 0];
-        var boxW = 460;
+        var baseBoxW = 460;
+        var widthVariation = 0.70 + (Math.random() * 0.60); // ±30% variation (0.70 to 1.30)
+        var boxW = Math.max(100, Math.round(baseBoxW * widthVariation));
         var boxH = 180;
         var dummyText = "AE ALIGN ANCHOR POINT\nZero-shift live expressions dynamically anchor text to bounding boxes.";
 
@@ -854,8 +856,6 @@
         var randomizedLeading = Math.round(baseLeading * leadingFactor * 10) / 10;
 
         textLayer.name = "Dummy Text - " + fontPick.name + " (" + alignPick.name + ", " + randomizedFontSize + "px, " + colorPick.name + ")";
-        textLayer.transform.position.setValue(centerPos);
-        textLayer.transform.anchorPoint.setValue([boxW / 2, boxH / 2, 0]);
 
         var doc = textLayer.property("Source Text").value;
         if (doc) {
@@ -875,6 +875,26 @@
             } catch (eJ) {}
             textLayer.property("Source Text").setValue(doc);
         }
+
+        // Place in the middle of the viewport
+        try {
+            var sr = textLayer.sourceRectAtTime(0, false);
+            var isBox = false;
+            try {
+                var dVal = textLayer.property("Source Text").value;
+                if (dVal && dVal.boxText) isBox = true;
+            } catch (eB2) {}
+            if (isBox) {
+                textLayer.transform.anchorPoint.setValue([boxW / 2, boxH / 2, 0]);
+            } else if (sr && sr.width > 0 && sr.height > 0) {
+                textLayer.transform.anchorPoint.setValue([sr.left + sr.width / 2, sr.top + sr.height / 2, 0]);
+            } else {
+                textLayer.transform.anchorPoint.setValue([boxW / 2, boxH / 2, 0]);
+            }
+        } catch (eSr) {
+            textLayer.transform.anchorPoint.setValue([boxW / 2, boxH / 2, 0]);
+        }
+        textLayer.transform.position.setValue(centerPos);
 
         // Unselect all other layers, select dummy text layer
         var numL = (typeof comp.numLayers === "number") ? comp.numLayers : comp.layers.length;
