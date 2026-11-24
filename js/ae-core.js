@@ -852,6 +852,11 @@
                 case 'Point Control':
                     prop = new EffectPointControl();
                     break;
+                case 'ADBE Point3D Control':
+                case '3D Point Control':
+                case 'Point3D Control':
+                    prop = new EffectPoint3DControl();
+                    break;
                 default:
                     prop = new PropertyGroup(nameOrMatchName, nameOrMatchName);
                     break;
@@ -1170,6 +1175,15 @@
         }
     }
 
+    class EffectPoint3DControl extends EffectGroup {
+        constructor(name = '3D Point Control') {
+            super(name, 'ADBE Point3D Control');
+            this.point = new Property('3D Point', 'ADBE Point3D Control-0001', [0, 0, 0], '3d');
+            this.point.parentProperty = this;
+            this.properties.push(this.point);
+        }
+    }
+
     // -------------------------------------------------------------
     // 6. Transform Group for Layers
     // Evaluates 2D/3D affine transformation pipelines.
@@ -1209,6 +1223,27 @@
             if (nameOrIndex === 'X Rotation' || nameOrIndex === 'ADBE Rotate X') return this.xRotation;
             if (nameOrIndex === 'Y Rotation' || nameOrIndex === 'ADBE Rotate Y') return this.yRotation;
             if (nameOrIndex === 'Z Rotation' || nameOrIndex === 'ADBE Rotate Z') return this.zRotation;
+            if (nameOrIndex === 'X Position' || nameOrIndex === 'ADBE Position_0') {
+                if (!this.xPosition) {
+                    this.xPosition = new Property('X Position', 'ADBE Position_0', (this.position && this.position.value) ? this.position.value[0] || 0 : 0, 'number');
+                    this.xPosition.parentProperty = this;
+                }
+                return this.xPosition;
+            }
+            if (nameOrIndex === 'Y Position' || nameOrIndex === 'ADBE Position_1') {
+                if (!this.yPosition) {
+                    this.yPosition = new Property('Y Position', 'ADBE Position_1', (this.position && this.position.value) ? this.position.value[1] || 0 : 0, 'number');
+                    this.yPosition.parentProperty = this;
+                }
+                return this.yPosition;
+            }
+            if (nameOrIndex === 'Z Position' || nameOrIndex === 'ADBE Position_2') {
+                if (!this.zPosition) {
+                    this.zPosition = new Property('Z Position', 'ADBE Position_2', (this.position && this.position.value) ? this.position.value[2] || 0 : 0, 'number');
+                    this.zPosition.parentProperty = this;
+                }
+                return this.zPosition;
+            }
             if (nameOrIndex === 'Position' || nameOrIndex === 'ADBE Position') return this.position;
             if (nameOrIndex === 'Scale' || nameOrIndex === 'ADBE Scale') return this.scale;
             if (nameOrIndex === 'Orientation' || nameOrIndex === 'ADBE Orientation') return this.orientation;

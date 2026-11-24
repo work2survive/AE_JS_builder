@@ -46,7 +46,7 @@
     "use strict";
 
     var SCRIPT_NAME = "AE Align Anchor Point";
-    var SCRIPT_VERSION = "v1.1.0";
+    var SCRIPT_VERSION = "v1.2.0";
     var REPO_URL = "https://github.com/work2survive/AE-Align-AnchorPoint";
     var README_URL = "https://github.com/work2survive/AE-Align-AnchorPoint/blob/main/README.md";
 
@@ -324,7 +324,7 @@
     }
 
     function buildAnchorExpression(xMode, yMode, boundsMethod, is3D) {
-        var zPart = is3D ? ", value[2]" : "";
+        var zPart = is3D ? ", (value.length > 2 ? value[2] : 0)" : "";
         if (boundsMethod === "stated") {
             var exprXStated = getTargetXExpression(xMode, "stated");
             var exprYStated = getTargetYExpression(yMode, "stated");
@@ -357,67 +357,108 @@
     }
 
     function buildPositionExpression(xMode, yMode, boundsMethod, is3D, baseA) {
-        var zPart = is3D ? ", (value.length > 2 ? value[2] : 0)" : "";
         var baseAx = (baseA && typeof baseA[0] === "number") ? baseA[0] : 0;
         var baseAy = (baseA && typeof baseA[1] === "number") ? baseA[1] : 0;
+        var baseAz = (baseA && typeof baseA[2] === "number") ? baseA[2] : 0;
 
-        if (boundsMethod === "stated") {
-            var exprXStated = getTargetXExpression(xMode, "stated");
-            var exprYStated = getTargetYExpression(yMode, "stated");
-            return "// AE Align Anchor Point (Stated Dimensions Scale-Safe Compensator)\n" +
-                   "let bLeft = 0, bTop = 0, bW = thisLayer.width, bH = thisLayer.height;\n" +
-                   "try {\n" +
-                   "    const rawDoc = thisLayer.text ? thisLayer.text.sourceText : thisLayer.sourceText;\n" +
-                   "    const sDoc = (rawDoc && rawDoc.value) ? rawDoc.value : rawDoc;\n" +
-                   "    if (sDoc && sDoc.boxText && sDoc.boxTextSize) {\n" +
-                   "        bW = sDoc.boxTextSize[0];\n" +
-                   "        bH = sDoc.boxTextSize[1];\n" +
-                   "        if (sDoc.boxTextPos) { bLeft = sDoc.boxTextPos[0]; bTop = sDoc.boxTextPos[1]; }\n" +
-                   "    } else if (thisLayer.boxTextSize) {\n" +
-                   "        bW = thisLayer.boxTextSize[0];\n" +
-                   "        bH = thisLayer.boxTextSize[1];\n" +
-                   "    }\n" +
-                   "} catch(e) {}\n" +
-                   "const s = [transform.scale[0] / 100, transform.scale[1] / 100];\n" +
-                   "const targetX = " + exprXStated + ";\n" +
-                   "const targetY = " + exprYStated + ";\n" +
-                   "const origA = [" + baseAx + ", " + baseAy + "];\n" +
-                   "const dx = (targetX - origA[0]) * s[0];\n" +
-                   "const dy = (targetY - origA[1]) * s[1];\n" +
-                   "const rot = transform.rotation;\n" +
-                   "if (rot && Math.abs(rot) > 0.0001) {\n" +
-                   "    const rad = rot * (Math.PI / 180);\n" +
-                   "    const rx = dx * Math.cos(rad) - dy * Math.sin(rad);\n" +
-                   "    const ry = dx * Math.sin(rad) + dy * Math.cos(rad);\n" +
-                   "    [value[0] + rx, value[1] + ry" + zPart + "];\n" +
-                   "} else {\n" +
-                   "    [value[0] + dx, value[1] + dy" + zPart + "];\n" +
-                   "}";
+        var boundsBlock = (boundsMethod === "stated")
+            ? "let bLeft = 0, bTop = 0, bW = thisLayer.width, bH = thisLayer.height;\n" +
+              "try {\n" +
+              "    const rawDoc = thisLayer.text ? thisLayer.text.sourceText : thisLayer.sourceText;\n" +
+              "    const sDoc = (rawDoc && rawDoc.value) ? rawDoc.value : rawDoc;\n" +
+              "    if (sDoc && sDoc.boxText && sDoc.boxTextSize) {\n" +
+              "        bW = sDoc.boxTextSize[0];\n" +
+              "        bH = sDoc.boxTextSize[1];\n" +
+              "        if (sDoc.boxTextPos) { bLeft = sDoc.boxTextPos[0]; bTop = sDoc.boxTextPos[1]; }\n" +
+              "    } else if (thisLayer.boxTextSize) {\n" +
+              "        bW = thisLayer.boxTextSize[0];\n" +
+              "        bH = thisLayer.boxTextSize[1];\n" +
+              "    }\n" +
+              "} catch(e) {}\n" +
+              "const targetX = " + getTargetXExpression(xMode, "stated") + ";\n" +
+              "const targetY = " + getTargetYExpression(yMode, "stated") + ";\n"
+            : "const r = sourceRectAtTime(time, false);\n" +
+              "const targetX = " + getTargetXExpression(xMode, "sourceRect") + ";\n" +
+              "const targetY = " + getTargetYExpression(yMode, "sourceRect") + ";\n";
+
+        var banner = (boundsMethod === "stated")
+            ? "// AE Align Anchor Point (Stated Dimensions Scale-Safe Compensator)\n"
+            : "// AE Align Anchor Point (sourceRectAtTime Scale-Safe Compensator)\n";
+
+        if (is3D) {
+            return banner +
+                boundsBlock +
+                "const s = [\n" +
+                "    transform.scale[0] / 100,\n" +
+                "    transform.scale[1] / 100,\n" +
+                "    (transform.scale.length > 2 ? transform.scale[2] : 100) / 100\n" +
+                "];\n" +
+                "let origA = [" + baseAx + ", " + baseAy + ", " + baseAz + "];\n" +
+                "try {\n" +
+                "    const fx = effect('Original Anchor Point');\n" +
+                "    if (fx && fx(1)) origA = fx(1).value;\n" +
+                "} catch (eFx) {}\n" +
+                "const dx = (targetX - origA[0]) * s[0];\n" +
+                "const dy = (targetY - origA[1]) * s[1];\n" +
+                "const dz = 0;\n" +
+                "function rotX(v, deg) {\n" +
+                "    if (!deg) return v;\n" +
+                "    const rad = deg * (Math.PI / 180), c = Math.cos(rad), sn = Math.sin(rad);\n" +
+                "    return [v[0], v[1] * c - v[2] * sn, v[1] * sn + v[2] * c];\n" +
+                "}\n" +
+                "function rotY(v, deg) {\n" +
+                "    if (!deg) return v;\n" +
+                "    const rad = deg * (Math.PI / 180), c = Math.cos(rad), sn = Math.sin(rad);\n" +
+                "    return [v[0] * c + v[2] * sn, v[1], -vec[0] * sn + v[2] * c];\n" +
+                "}\n" +
+                "function rotZ(v, deg) {\n" +
+                "    if (!deg) return v;\n" +
+                "    const rad = deg * (Math.PI / 180), c = Math.cos(rad), sn = Math.sin(rad);\n" +
+                "    return [v[0] * c - v[1] * sn, v[0] * sn + v[1] * c, v[2]];\n" +
+                "}\n" +
+                "let v = [dx, dy, dz];\n" +
+                "try {\n" +
+                "    const xr = transform.xRotation ? (transform.xRotation.value || transform.xRotation) : 0;\n" +
+                "    const yr = transform.yRotation ? (transform.yRotation.value || transform.yRotation) : 0;\n" +
+                "    const zr = transform.zRotation ? (transform.zRotation.value || transform.zRotation) : (transform.rotation ? (transform.rotation.value || transform.rotation) : 0);\n" +
+                "    if (zr) v = rotZ(v, zr);\n" +
+                "    if (yr) v = rotY(v, yr);\n" +
+                "    if (xr) v = rotX(v, xr);\n" +
+                "} catch (eR) {}\n" +
+                "try {\n" +
+                "    const o = transform.orientation;\n" +
+                "    if (o) {\n" +
+                "        if (o[2]) v = rotZ(v, o[2]);\n" +
+                "        if (o[1]) v = rotY(v, o[1]);\n" +
+                "        if (o[0]) v = rotX(v, o[0]);\n" +
+                "    }\n" +
+                "} catch (eO) {}\n" +
+                "[value[0] + v[0], value[1] + v[1], (value.length > 2 ? value[2] : 0) + v[2]];";
         }
 
-        var exprX = getTargetXExpression(xMode, "sourceRect");
-        var exprY = getTargetYExpression(yMode, "sourceRect");
-        return "// AE Align Anchor Point (sourceRectAtTime Scale-Safe Compensator)\n" +
-               "const r = sourceRectAtTime(time, false);\n" +
-               "const s = [transform.scale[0] / 100, transform.scale[1] / 100];\n" +
-               "const targetX = " + exprX + ";\n" +
-               "const targetY = " + exprY + ";\n" +
-               "const origA = [" + baseAx + ", " + baseAy + "];\n" +
-               "const dx = (targetX - origA[0]) * s[0];\n" +
-               "const dy = (targetY - origA[1]) * s[1];\n" +
-               "const rot = transform.rotation;\n" +
-               "if (rot && Math.abs(rot) > 0.0001) {\n" +
-               "    const rad = rot * (Math.PI / 180);\n" +
-               "    const rx = dx * Math.cos(rad) - dy * Math.sin(rad);\n" +
-               "    const ry = dx * Math.sin(rad) + dy * Math.cos(rad);\n" +
-               "    [value[0] + rx, value[1] + ry" + zPart + "];\n" +
-               "} else {\n" +
-               "    [value[0] + dx, value[1] + dy" + zPart + "];\n" +
-               "}";
+        return banner +
+            boundsBlock +
+            "const s = [transform.scale[0] / 100, transform.scale[1] / 100];\n" +
+            "let origA = [" + baseAx + ", " + baseAy + "];\n" +
+            "try {\n" +
+            "    const fx = effect('Original Anchor Point');\n" +
+            "    if (fx && fx(1)) origA = fx(1).value;\n" +
+            "} catch (eFx) {}\n" +
+            "const dx = (targetX - origA[0]) * s[0];\n" +
+            "const dy = (targetY - origA[1]) * s[1];\n" +
+            "const rot = transform.rotation;\n" +
+            "if (rot && Math.abs(rot) > 0.0001) {\n" +
+            "    const rad = rot * (Math.PI / 180);\n" +
+            "    const rx = dx * Math.cos(rad) - dy * Math.sin(rad);\n" +
+            "    const ry = dx * Math.sin(rad) + dy * Math.cos(rad);\n" +
+            "    [value[0] + rx, value[1] + ry];\n" +
+            "} else {\n" +
+            "    [value[0] + dx, value[1] + dy];\n" +
+            "}";
     }
 
     // -------------------------------------------------------------------------
-    // 4. Alignment State Storage Effect
+    // 4. Alignment State & Original Anchor Effects
     // -------------------------------------------------------------------------
 
     var ALIGN_X_INDICES = { "left": 0, "center": 1, "right": 2 };
@@ -425,9 +466,68 @@
     var BOUNDS_MODE_INDICES = { "sourceRect": 0, "stated": 1 };
 
     /**
-     * Stores alignment state directly on targetLayer as effect slider controls
+     * Stores original anchor point as a Point Control effect (ADBE Point Control or ADBE Point3D Control)
+     * Preserves existing effect if already present on layer.
      */
-    function storeAlignmentEffect(layer, xMode, yMode, boundsMethod, baseA) {
+    function storeOriginalAnchorEffect(layer, origA, is3D) {
+        if (!layer || !origA) return;
+        try {
+            var fxParade = layer.property("ADBE Effect Parade") || layer.property("Effects");
+            if (!fxParade) return;
+
+            // Preserve existing original anchor point effect - do not overwrite
+            var existingEff = fxParade.property("Original Anchor Point");
+            if (existingEff) return;
+
+            var eff = null;
+            if (is3D) {
+                try {
+                    eff = fxParade.addProperty("ADBE Point3D Control");
+                } catch (e3D) {
+                    try { eff = fxParade.addProperty("ADBE Point Control"); } catch (e2D) {}
+                }
+            } else {
+                try {
+                    eff = fxParade.addProperty("ADBE Point Control");
+                } catch (e2D) {}
+            }
+
+            if (eff) {
+                eff.name = "Original Anchor Point";
+                var ptProp = eff.property("ADBE Point3D Control-0001") || eff.property("ADBE Point Control-0001") || eff.property(1);
+                if (ptProp) {
+                    if (is3D && eff.matchName === "ADBE Point3D Control") {
+                        ptProp.setValue([origA[0], origA[1], (origA.length > 2 ? origA[2] : 0)]);
+                    } else {
+                        ptProp.setValue([origA[0], origA[1]]);
+                    }
+                }
+            }
+        } catch (e) {}
+    }
+
+    /**
+     * Reads the original anchor point stored in the Original Anchor Point effect if present
+     */
+    function readOriginalAnchorEffect(layer) {
+        if (!layer) return null;
+        try {
+            var fxParade = layer.property("ADBE Effect Parade") || layer.property("Effects");
+            if (!fxParade) return null;
+            var eff = fxParade.property("Original Anchor Point");
+            if (!eff) return null;
+            var ptProp = eff.property("ADBE Point3D Control-0001") || eff.property("ADBE Point Control-0001") || eff.property(1);
+            if (ptProp && ptProp.value) {
+                return ptProp.value;
+            }
+        } catch (e) {}
+        return null;
+    }
+
+    /**
+     * Stores alignment state directly on targetLayer as effect controls
+     */
+    function storeAlignmentEffect(layer, xMode, yMode, boundsMethod, baseA, is3D) {
         if (!layer) return;
         try {
             var fxParade = layer.property("ADBE Effect Parade") || layer.property("Effects");
@@ -461,7 +561,7 @@
                 if (pB) pB.setValue(bVal);
             }
 
-            // 4. Optional Point Control: Anchor Align [X, Y]
+            // 4. Point Control: Anchor Align [X, Y]
             try {
                 var effPt = fxParade.property("Anchor Align [X, Y]") || fxParade.addProperty("ADBE Point Control");
                 if (effPt) {
@@ -474,11 +574,25 @@
             // 5. Point Control: Anchor Base Point
             try {
                 if (baseA && typeof baseA[0] === "number") {
-                    var effBasePt = fxParade.property("Anchor Base Point") || fxParade.addProperty("ADBE Point Control");
+                    var baseEffMatch = is3D ? "ADBE Point3D Control" : "ADBE Point Control";
+                    var effBasePt = fxParade.property("Anchor Base Point");
+                    if (!effBasePt) {
+                        try {
+                            effBasePt = fxParade.addProperty(baseEffMatch);
+                        } catch (e3) {
+                            effBasePt = fxParade.addProperty("ADBE Point Control");
+                        }
+                    }
                     if (effBasePt) {
                         effBasePt.name = "Anchor Base Point";
-                        var pBasePt = effBasePt.property("ADBE Point Control-0001") || effBasePt.property(1);
-                        if (pBasePt) pBasePt.setValue([baseA[0], baseA[1]]);
+                        var pBasePt = effBasePt.property(1);
+                        if (pBasePt) {
+                            if (is3D && effBasePt.matchName === "ADBE Point3D Control") {
+                                pBasePt.setValue([baseA[0], baseA[1], (baseA.length > 2 ? baseA[2] : 0)]);
+                            } else {
+                                pBasePt.setValue([baseA[0], baseA[1]]);
+                            }
+                        }
                     }
                 }
             } catch (eBasePt) {}
@@ -525,8 +639,74 @@
     // 5. Core Alignment Execution Logic
     // -------------------------------------------------------------------------
 
-    function alignLayerAnchorPoint(layer, xMode, yMode, boundsMethod, useExpressions) {
+    /**
+     * Rotates vector v by layer 2D rotation or 3D orientation & Euler rotations
+     */
+    function applyTransformRotation(v, layer, is3D) {
+        var transform = layer.property("Transform");
+        if (!transform) return v;
+
+        if (!is3D) {
+            var rotProp = transform.property("Rotation");
+            var rz = rotProp ? (rotProp.value || 0) : 0;
+            if (Math.abs(rz) > 0.0001) {
+                var rad = rz * (Math.PI / 180);
+                return [
+                    v[0] * Math.cos(rad) - v[1] * Math.sin(rad),
+                    v[0] * Math.sin(rad) + v[1] * Math.cos(rad),
+                    v[2] || 0
+                ];
+            }
+            return v;
+        }
+
+        var orientProp = transform.property("Orientation");
+        var xRotProp = transform.property("X Rotation");
+        var yRotProp = transform.property("Y Rotation");
+        var zRotProp = transform.property("Z Rotation") || transform.property("Rotation");
+
+        var oVal = (orientProp && orientProp.value) ? orientProp.value : [0, 0, 0];
+        var xRot = (xRotProp && typeof xRotProp.value === "number") ? xRotProp.value : 0;
+        var yRot = (yRotProp && typeof yRotProp.value === "number") ? yRotProp.value : 0;
+        var zRot = (zRotProp && typeof zRotProp.value === "number") ? zRotProp.value : 0;
+
+        function rotX(vec, deg) {
+            if (!deg || Math.abs(deg) < 0.0001) return vec;
+            var rad = deg * (Math.PI / 180);
+            var cos = Math.cos(rad), sin = Math.sin(rad);
+            return [vec[0], vec[1] * cos - vec[2] * sin, vec[1] * sin + vec[2] * cos];
+        }
+        function rotY(vec, deg) {
+            if (!deg || Math.abs(deg) < 0.0001) return vec;
+            var rad = deg * (Math.PI / 180);
+            var cos = Math.cos(rad), sin = Math.sin(rad);
+            return [vec[0] * cos + vec[2] * sin, vec[1], -vec[0] * sin + vec[2] * cos];
+        }
+        function rotZ(vec, deg) {
+            if (!deg || Math.abs(deg) < 0.0001) return vec;
+            var rad = deg * (Math.PI / 180);
+            var cos = Math.cos(rad), sin = Math.sin(rad);
+            return [vec[0] * cos - vec[1] * sin, vec[0] * sin + vec[1] * cos, vec[2]];
+        }
+
+        var res = [v[0], v[1], v[2] || 0];
+
+        // 1. Individual 3D Rotations (Z -> Y -> X in vector transform order)
+        if (zRot) res = rotZ(res, zRot);
+        if (yRot) res = rotY(res, yRot);
+        if (xRot) res = rotX(res, xRot);
+
+        // 2. Orientation (Z -> Y -> X in vector transform order)
+        if (oVal[2]) res = rotZ(res, oVal[2]);
+        if (oVal[1]) res = rotY(res, oVal[1]);
+        if (oVal[0]) res = rotX(res, oVal[0]);
+
+        return res;
+    }
+
+    function alignLayerAnchorPoint(layer, xMode, yMode, boundsMethod, useExpressions, storeOrig) {
         if (!layer) return false;
+        if (storeOrig === undefined) storeOrig = (chkStoreOrig ? chkStoreOrig.value : true);
         var comp = layer.containingComp;
         var curTime = comp ? comp.time : 0;
         var is3D = Boolean(layer.threeDLayer);
@@ -537,27 +717,38 @@
         var apProp = layer.property("Transform").property("Anchor Point");
         var posProp = layer.property("Transform").property("Position");
         var scaleProp = layer.property("Transform").property("Scale");
-        var rotProp = layer.property("Transform").property("Rotation") || layer.property("Transform").property("Z Rotation");
 
         var curA = apProp.value;
         var curPos = posProp.value;
-        var curScale = scaleProp ? scaleProp.value : [100, 100];
-        var curRot = rotProp ? (rotProp.value || 0) : 0;
+        var curScale = scaleProp ? scaleProp.value : [100, 100, 100];
 
         var sx = (curScale[0] || 100) / 100;
         var sy = (curScale[1] || 100) / 100;
+        var sz = is3D ? ((curScale.length > 2 ? curScale[2] : 100) / 100) : 1;
+
         var deltaAx = targetA[0] - curA[0];
         var deltaAy = targetA[1] - curA[1];
+        var deltaAz = 0; // Content 2D bounds anchor shift operates in layer X and Y
 
+        // Determine base/original anchor point
+        var storedOrig = readOriginalAnchorEffect(layer);
         var fxParade = layer.property("ADBE Effect Parade") || layer.property("Effects");
         var effBase = fxParade ? fxParade.property("Anchor Base Point") : null;
         var baseA;
-        if (effBase && effBase.property(1) && effBase.property(1).value) {
-            baseA = effBase.property(1).value;
+        if (storedOrig && typeof storedOrig[0] === "number") {
+            baseA = is3D ? [storedOrig[0], storedOrig[1], (storedOrig.length > 2 ? storedOrig[2] : 0)] : [storedOrig[0], storedOrig[1]];
+        } else if (effBase && effBase.property(1) && effBase.property(1).value) {
+            var bVal = effBase.property(1).value;
+            baseA = is3D ? [bVal[0], bVal[1], (bVal.length > 2 ? bVal[2] : 0)] : [bVal[0], bVal[1]];
         } else if (apProp._baseValue && Array.isArray(apProp._baseValue)) {
-            baseA = [apProp._baseValue[0], apProp._baseValue[1]];
+            baseA = is3D ? [apProp._baseValue[0], apProp._baseValue[1], (apProp._baseValue.length > 2 ? apProp._baseValue[2] : 0)] : [apProp._baseValue[0], apProp._baseValue[1]];
         } else {
-            baseA = [curA[0], curA[1]];
+            baseA = is3D ? [curA[0], curA[1], (curA.length > 2 ? curA[2] : 0)] : [curA[0], curA[1]];
+        }
+
+        // Store original anchor point effect if option is enabled
+        if (storeOrig) {
+            storeOriginalAnchorEffect(layer, baseA, is3D);
         }
 
         if (useExpressions) {
@@ -566,19 +757,21 @@
             var pExpr = buildPositionExpression(xMode, yMode, boundsMethod, is3D, baseA);
 
             apProp.expression = aExpr;
+
+            if (posProp.dimensionsSeparated) {
+                try { posProp.dimensionsSeparated = false; } catch (eDim) {}
+            }
             posProp.expression = pExpr;
         } else {
             // --- One-Time Static Bake Mode ---
             var sdx = deltaAx * sx;
             var sdy = deltaAy * sy;
-            var pDeltaX = sdx;
-            var pDeltaY = sdy;
+            var sdz = deltaAz * sz;
 
-            if (curRot && Math.abs(curRot) > 0.0001) {
-                var rad = curRot * (Math.PI / 180);
-                pDeltaX = sdx * Math.cos(rad) - sdy * Math.sin(rad);
-                pDeltaY = sdx * Math.sin(rad) + sdy * Math.cos(rad);
-            }
+            var pDelta = applyTransformRotation([sdx, sdy, sdz], layer, is3D);
+            var pDeltaX = pDelta[0];
+            var pDeltaY = pDelta[1];
+            var pDeltaZ = pDelta[2];
 
             // Remove expressions if any existed previously
             try { apProp.expression = ""; } catch (eAE) {}
@@ -586,7 +779,7 @@
 
             // Set new anchor point
             if (is3D) {
-                apProp.setValue([targetA[0], targetA[1], curA[2] || 0]);
+                apProp.setValue([targetA[0], targetA[1], (curA.length > 2 ? curA[2] : 0)]);
             } else {
                 apProp.setValue([targetA[0], targetA[1]]);
             }
@@ -595,21 +788,23 @@
             if (posProp.dimensionsSeparated) {
                 var xP = layer.property("Transform").property("X Position");
                 var yP = layer.property("Transform").property("Y Position");
+                var zP = is3D ? layer.property("Transform").property("Z Position") : null;
                 if (xP) xP.setValue(xP.value + pDeltaX);
                 if (yP) yP.setValue(yP.value + pDeltaY);
+                if (zP) zP.setValue(zP.value + pDeltaZ);
             } else {
                 if (is3D) {
-                    posProp.setValue([curPos[0] + pDeltaX, curPos[1] + pDeltaY, curPos[2] || 0]);
+                    posProp.setValue([curPos[0] + pDeltaX, curPos[1] + pDeltaY, (curPos.length > 2 ? curPos[2] : 0) + pDeltaZ]);
                 } else {
                     posProp.setValue([curPos[0] + pDeltaX, curPos[1] + pDeltaY]);
                 }
             }
 
-            baseA = [targetA[0], targetA[1]];
+            baseA = is3D ? [targetA[0], targetA[1], (curA.length > 2 ? curA[2] : 0)] : [targetA[0], targetA[1]];
         }
 
         // Store alignment status effect directly on the layer
-        storeAlignmentEffect(layer, xMode, yMode, boundsMethod, baseA);
+        storeAlignmentEffect(layer, xMode, yMode, boundsMethod, baseA, is3D);
 
         return true;
     }
@@ -786,6 +981,11 @@
     btnRemove.alignment = ["right", "center"];
     btnRemove.helpTip = "Clears active anchor point and position expressions from target layer(s).";
 
+    // Row 3: Coordinate Effect Option
+    var chkStoreOrig = pnlMode.add("checkbox", undefined, "Store Original Anchor Point (Coordinate Effect)");
+    chkStoreOrig.value = true;
+    chkStoreOrig.helpTip = "Stores the layer's unshifted anchor point in a 2D (ADBE Point Control) or 3D (ADBE Point3D Control) effect named 'Original Anchor Point'.";
+
     rbModeBake.onClick = function() {
         rbModeBake.value = true;
         rbModeExpr.value = false;
@@ -881,7 +1081,8 @@
             var curA = lyr.transform.anchorPoint.value || [0, 0];
             var ax = Math.round(curA[0] * 10) / 10;
             var ay = Math.round(curA[1] * 10) / 10;
-            lblStatusText.text = "'" + lyr.name + "' [" + typeName + ", Anchor: " + ax + ", " + ay + "]" + statusSuffix;
+            var azStr = (lyr.threeDLayer && curA.length > 2) ? (", " + Math.round(curA[2] * 10) / 10) : "";
+            lblStatusText.text = "'" + lyr.name + "' [" + typeName + (lyr.threeDLayer ? " (3D)" : "") + ", Anchor: " + ax + ", " + ay + azStr + "]" + statusSuffix;
         } else {
             lblStatusText.text = sel.length + " layers selected in '" + comp.name + "'.";
         }
@@ -907,12 +1108,13 @@
             var yMode = getSelectedYMode();
             var boundsMethod = getSelectedBoundsMethod();
             var useExpr = rbModeExpr.value;
+            var storeOrig = chkStoreOrig.value;
 
             var count = 0;
             for (var i = 0; i < sel.length; i++) {
                 var layer = sel[i];
                 if (!layer) continue;
-                alignLayerAnchorPoint(layer, xMode, yMode, boundsMethod, useExpr);
+                alignLayerAnchorPoint(layer, xMode, yMode, boundsMethod, useExpr, storeOrig);
                 count++;
             }
 
@@ -945,22 +1147,30 @@
             var sel = comp.selectedLayers;
             var clearedCount = 0;
 
+            function clearExpressionsOnLayer(lyr) {
+                if (!lyr) return;
+                try { lyr.transform.anchorPoint.expression = ""; } catch (eA) {}
+                try { lyr.transform.position.expression = ""; } catch (eP) {}
+                try {
+                    var xP = lyr.property("Transform").property("X Position");
+                    if (xP) xP.expression = "";
+                    var yP = lyr.property("Transform").property("Y Position");
+                    if (yP) yP.expression = "";
+                    var zP = lyr.property("Transform").property("Z Position");
+                    if (zP) zP.expression = "";
+                } catch (eSep) {}
+                clearedCount++;
+            }
+
             if (sel && sel.length > 0) {
                 for (var s = 0; s < sel.length; s++) {
-                    var sLyr = sel[s];
-                    if (!sLyr) continue;
-                    try { sLyr.transform.anchorPoint.expression = ""; } catch (eA) {}
-                    try { sLyr.transform.position.expression = ""; } catch (eP) {}
-                    clearedCount++;
+                    clearExpressionsOnLayer(sel[s]);
                 }
             } else {
                 var totalL = (typeof comp.numLayers === "number") ? comp.numLayers : comp.layers.length;
                 for (var i = totalL; i >= 1; i--) {
                     var lyr = (typeof comp.layer === "function") ? comp.layer(i) : (comp.layers[i] || comp.layers[i - 1]);
-                    if (!lyr) continue;
-                    try { lyr.transform.anchorPoint.expression = ""; } catch (eA2) {}
-                    try { lyr.transform.position.expression = ""; } catch (eP2) {}
-                    clearedCount++;
+                    clearExpressionsOnLayer(lyr);
                 }
             }
 
@@ -992,10 +1202,14 @@
     win.rbBoundsStated = rbBoundsStated;
     win.rbModeBake = rbModeBake;
     win.rbModeExpr = rbModeExpr;
+    win.chkStoreOrig = chkStoreOrig;
     win.executeAlignment = executeAlignment;
     win.syncLayerDetection = syncLayerDetection;
     win.storeAlignmentEffect = storeAlignmentEffect;
     win.readAlignmentEffect = readAlignmentEffect;
+    win.storeOriginalAnchorEffect = storeOriginalAnchorEffect;
+    win.readOriginalAnchorEffect = readOriginalAnchorEffect;
+    win.alignLayerAnchorPoint = alignLayerAnchorPoint;
 
     win.layout.layout(true);
     win.onResizing = win.onResize = function() { this.layout.resize(); };
