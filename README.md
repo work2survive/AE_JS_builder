@@ -187,6 +187,11 @@ The simulator automatically detects and loads standalone production-ready After 
    - **Documentation**: [AE-Align-AnchorPoint/README.md](https://github.com/work2survive/AE-Align-AnchorPoint/blob/main/README.md)
    - **Live Demo**: [https://work2survive.github.io/AE_JS_builder/?jsx=AE_Align_Anchor_Point.jsx&autobuild=true](https://work2survive.github.io/AE_JS_builder/?jsx=AE_Align_Anchor_Point.jsx&autobuild=true)
 
+13. **[AE Replace Color Emojis](https://github.com/work2survive/AE-replace-color-emojis)** (`jsx/AE_Replace_Color_Emojis.jsx` - v1.0):
+   - Combines the procedural typography measurement and dual-engine architecture of `AE-Text-Highlight` with the vector emoji database of `AE_Get_Emojis`. Scans text layers for monochrome font emojis and emoticons, calculates their sub-pixel coordinates, hides the monochrome font glyphs via native After Effects Text Animator (Opacity = 0%), and places full-color OpenMoji & Twemoji vector shape layers in their exact positions.
+   - **Repository**: [work2survive/AE-replace-color-emojis](https://github.com/work2survive/AE-replace-color-emojis)
+   - **Live Demo**: [https://work2survive.github.io/AE_JS_builder/?jsx=AE_Replace_Color_Emojis.jsx&autobuild=true](https://work2survive.github.io/AE_JS_builder/?jsx=AE_Replace_Color_Emojis.jsx&autobuild=true)
+
 #### Built-in Samples (`samples/` Folder)
 
 The simulator includes built-in sample scripts located in [`samples/`](samples/) demonstrating ScriptUI, kinetic typography, expressions, and 3D primitives:
@@ -260,6 +265,7 @@ The production tools built and tested inside this simulator are also available a
 - **[AE Spiral Maker](https://github.com/work2survive/AE_spiral_maker)**: Procedural vector spiral generator featuring 5 mathematical spiral algorithms, native After Effects Stroke Taper integration for independent start and end stroke thicknesses, analytical cubic Bézier derivative tangents, and factory presets (v1.0).
 - **[AE Scripted Chat](https://github.com/work2survive/AE_scripted_Chat)**: Fully animated multi-message chat conversation generator with smart timestamps, real vs fake delays, auto-scrolling, and JSON conversation management (v1.0).
 - **[AE Get Emojis](https://github.com/work2survive/AE_Get_Emojis)**: Full-color vector emoji search, catalog indexer, and native After Effects shape layer generator supporting OpenMoji & Twemoji with emoticon parsing and bidirectional Unicode conversion (v1.0).
+- **[AE Replace Color Emojis](https://github.com/work2survive/AE-replace-color-emojis)**: Detects monochrome font emojis and emoticons in text layers, calculates exact sub-pixel coordinates, hides font glyphs via Text Animator, and replaces them with native full-color vector shape layers (v1.0).
 - **[AE Align Anchor Point](https://github.com/work2survive/AE-Align-AnchorPoint)**: Zero-shift anchor point alignment panel and expression engine with mathematical compensation invariance (v1.1.0).
 
 ---
