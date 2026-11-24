@@ -28,6 +28,15 @@
 //   6. AE Text Highlight Repository:
 //      https://github.com/work2survive/AE-Text-Highlight
 //
+// NEW IN v2.2.1:
+//   - Critical Bug Fix in Native After Effects Text Layer Detection: Fixed bug where After Effects
+//     alerted "Please select a text layer in your active composition first" even when a text layer was selected.
+//     Removed faulty layer.matchName === 'ADBE AV Layer' rejection (in AE ExtendScript, TextLayer is an AVLayer
+//     subclass whose matchName is 'ADBE AV Layer'). Text layers are now accurately identified via canonical
+//     'ADBE Text Properties' and 'Source Text' property checks matching AE_Align_Anchor_Point.jsx.
+//   - Added getActiveComposition() fallback resolver ensuring the open composition is always
+//     found even when focus shifts to floating ScriptUI panels.
+//
 // NEW IN v2.2.0:
 //   - Configurable Target Separator Engine: Allows using Newline (1 per line), Pipe (|), Semicolon (;),
 //     or Custom delimiters instead of forcing commas.
@@ -64,7 +73,7 @@
     "use strict";
 
     var SCRIPT_TITLE    = "AE Text Highlight";
-    var SCRIPT_VERSION  = "v2.2.0";
+    var SCRIPT_VERSION  = "v2.2.1";
     var GITHUB_REPO_URL = "https://github.com/work2survive/AE-Text-Highlight";
 
     // -------------------------------------------------------------------------
@@ -466,39 +475,52 @@
     // -------------------------------------------------------------------------
     function isTextLayer(layer) {
         if (!layer) return false;
+
+        // 1. Simulator / Mock environment flag checks
         try {
+            if (layer.isText === true) return true;
             if (layer.isText === false || layer.isShape === true) return false;
-        } catch (eIS) {}
+        } catch (eMock) {}
+
+        // 2. Camera or Light layer early exit
+        try {
+            if (layer.matchName === "ADBE Camera Layer" || layer.matchName === "ADBE Light Layer") return false;
+        } catch (eCL) {}
+
+        // 3. Shape layer early exit
+        try {
+            if (layer.matchName === "ADBE Vector Layer") return false;
+            if (typeof layer.property === "function") {
+                var contents = layer.property("ADBE Root Vectors Group") || layer.property("Contents");
+                if (contents !== null) {
+                    var textP = layer.property("ADBE Text Properties") || layer.property("Source Text");
+                    if (textP === null) return false;
+                }
+            }
+        } catch (eShape) {}
+
+        // 4. Native After Effects TextLayer instanceof check
         try {
             if (typeof TextLayer !== "undefined" && layer instanceof TextLayer) return true;
         } catch (eTL) {}
-        try {
-            if (layer.matchName === "ADBE Text Layer") return true;
-            if (layer.matchName && (layer.matchName === "ADBE Vector Layer" || layer.matchName === "ADBE AV Layer" || layer.matchName === "ADBE Camera Layer" || layer.matchName === "ADBE Light Layer")) {
-                return false;
-            }
-        } catch (eMN) {}
-        try {
-            if (layer.sourceText !== undefined && layer.sourceText !== null) return true;
-            if (layer.text && (layer.text.sourceText || (layer.text.property && layer.text.property("Source Text")))) return true;
-        } catch (eST) {}
-        try {
-            if (layer.textDocument !== undefined && layer.textDocument !== null) return true;
-        } catch (eTD) {}
-        try {
-            if (layer.isText === true) return true;
-        } catch (eIT) {}
+
+        // 5. Canonical After Effects property check:
+        // In After Effects ExtendScript, ONLY Text Layers possess "ADBE Text Properties" or "Source Text".
         try {
             if (typeof layer.property === "function") {
-                var tp = layer.property("ADBE Text Properties") || layer.property("Text");
-                if (tp !== null && typeof tp.property === "function") {
-                    var docProp = tp.property("ADBE Text Document") || tp.property("Source Text");
-                    if (docProp !== null && typeof docProp !== "undefined") return true;
-                }
-                var directST = layer.property("Source Text");
-                if (directST !== null && typeof directST !== "undefined") return true;
+                if (layer.property("ADBE Text Properties") !== null) return true;
+                if (layer.property("Source Text") !== null) return true;
+                if (layer.property("Text") !== null) return true;
             }
-        } catch (eP) {}
+        } catch (eProp) {}
+
+        // 6. Direct property accessors fallback
+        try {
+            if (layer.sourceText !== undefined && layer.sourceText !== null) return true;
+            if (layer.textDocument !== undefined && layer.textDocument !== null) return true;
+            if (layer.text && (layer.text.sourceText || (layer.text.property && layer.text.property("Source Text")))) return true;
+        } catch (eDirect) {}
+
         return false;
     }
 
@@ -561,16 +583,47 @@
         return { left: 0, top: 0, width: 0, height: 0 };
     }
 
+    function getActiveComposition() {
+        if (!app || !app.project) return null;
+        var item = app.project.activeItem;
+        if (item && (typeof CompItem === "undefined" || (item instanceof CompItem) || item.layers)) {
+            return item;
+        }
+        if (app.project.items && app.project.items.length > 0) {
+            for (var i = 1; i <= app.project.items.length; i++) {
+                var it = app.project.items[i];
+                if (it && (typeof CompItem === "undefined" || (it instanceof CompItem) || it.layers)) {
+                    if (it.selectedLayers && it.selectedLayers.length > 0) {
+                        return it;
+                    }
+                }
+            }
+            for (var j = 1; j <= app.project.items.length; j++) {
+                var it2 = app.project.items[j];
+                if (it2 && (typeof CompItem === "undefined" || (it2 instanceof CompItem) || it2.layers)) {
+                    return it2;
+                }
+            }
+        }
+        return null;
+    }
+
     function getSelectedTextLayer(comp) {
         if (!comp) {
-            comp = (app && app.project) ? app.project.activeItem : null;
+            comp = getActiveComposition();
         }
-        if (!comp) return null;
+        if (!comp || (typeof CompItem !== "undefined" && !(comp instanceof CompItem) && !comp.layers)) return null;
         var sel = comp.selectedLayers;
         if (sel && sel.length > 0) {
             for (var i = 0; i < sel.length; i++) {
-                if (isTextLayer(sel[i])) return sel[i];
-                if (sel[i].parent && isTextLayer(sel[i].parent)) return sel[i].parent;
+                if (sel[i] && isTextLayer(sel[i])) return sel[i];
+            }
+            for (var j = 0; j < sel.length; j++) {
+                var p = sel[j] ? sel[j].parent : null;
+                while (p) {
+                    if (isTextLayer(p)) return p;
+                    p = p.parent;
+                }
             }
         }
         return null;
@@ -2869,7 +2922,7 @@
         // Interactive Logic & Event Listeners
         // ---------------------------------------------------------------------
         function updateSelectionStatus() {
-            var comp = app.project ? (app.project.activeItem || (app.project.items && app.project.items.length > 0 ? app.project.items[0] : null)) : null;
+            var comp = getActiveComposition();
             if (!comp || (typeof CompItem !== "undefined" && !(comp instanceof CompItem) && !comp.layers)) {
                 lblStatus.text = "⚠️ No active composition open.";
                 return null;
@@ -2968,7 +3021,7 @@
         };
 
         btnRepick.onClick = function () {
-            var comp = app.project ? app.project.activeItem : null;
+            var comp = getActiveComposition();
             var textLayer = comp ? getSelectedTextLayer(comp) : null;
             var raw = textLayer ? getTextLayerString(textLayer) : LOREM_IPSUM_RAW;
             var auto = extractRandomWordsAndSentence(raw);
@@ -3008,7 +3061,7 @@
         };
 
         btnRemove.onClick = function () {
-            var comp = app.project ? app.project.activeItem : null;
+            var comp = getActiveComposition();
             if (!comp || (typeof CompItem !== "undefined" && !(comp instanceof CompItem) && !comp.layers)) {
                 alert("Please open an active composition.");
                 return;
@@ -3026,7 +3079,7 @@
         };
 
         btnBuild.onClick = function () {
-            var comp = app.project ? (app.project.activeItem || (app.project.items && app.project.items.length > 0 ? app.project.items[0] : null)) : null;
+            var comp = getActiveComposition();
             if (!comp || (typeof CompItem !== "undefined" && !(comp instanceof CompItem) && !comp.layers)) {
                 if (app.project && app.project.items && typeof app.project.items.addComp === "function") {
                     comp = app.project.items.addComp("AE Text Highlight Demo", 1920, 1080, 1.0, 10.0, 30.0);
