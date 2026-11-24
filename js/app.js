@@ -8,13 +8,13 @@
     'use strict';
 
     // -------------------------------------------------------------
-    // Version Management (v1.2.22)
+    // Version Management (v1.2.23)
     // -------------------------------------------------------------
     function computeDailyVersion() {
-        return '1.2.22';
+        return '1.2.23';
     }
 
-    const APP_VERSION = '1.2.22';
+    const APP_VERSION = '1.2.23';
     global.EMULATOR_VERSION = APP_VERSION;
     global.AE_TEXT_GUIDE_URL = 'https://github.com/work2survive/AE_JS_builder/blob/main/AE_VS_JS_TEXT_RENDERING_DIFFERENCES.md';
     global.AE_ANCHOR_POINT_GUIDE_URL = 'https://github.com/work2survive/AE-Align-AnchorPoint/blob/main/README.md';
@@ -1462,6 +1462,11 @@
         // 1. Random Type: Point Text (false) or Box Text (true)
         const isBox = Math.random() < 0.5;
 
+        // Randomize 3D layer (33% probability) & Z position (+/- 100px)
+        const is3D = Math.random() < 0.33;
+        const posZ = is3D ? Math.round((Math.random() * 200) - 100) : 0;
+        const dimLabel = is3D ? (posZ !== 0 ? `3D, Z: ${posZ > 0 ? '+' : ''}${posZ}px` : '3D') : '2D';
+
         // 2. Random Calibrated Font
         const fonts = ['Arial', 'Georgia', 'Times New Roman', 'Courier New', 'Verdana', 'Trebuchet MS', 'Impact', 'Segoe UI', 'Tahoma'];
         const fontName = fonts[Math.floor(Math.random() * fonts.length)];
@@ -1485,7 +1490,7 @@
         const widthFactor = 0.47 + Math.random() * 0.06;
         const targetWidth = Math.round(comp.width * widthFactor);
 
-        // 6. Build Text: ~50 words including type, font, size, alignment, leading, lorem ipsum, and random emojis between words
+        // 6. Build Text: ~50 words including type (box or point), 2D/3D status, font, size, alignment, leading, lorem ipsum, and random emojis
         const EMOJI_POOL = [
             '✨', '🔥', '🚀', '💡', '🎨', '🎉', '🌟', '💎', '🎯', '⚡',
             '🌈', '🍕', '☕', '🎈', '🍀', '🏆', '🎵', '🤖', '🌍', '🍩',
@@ -1494,7 +1499,7 @@
         const getRandomEmoji = () => EMOJI_POOL[Math.floor(Math.random() * EMOJI_POOL.length)];
 
         const typeLabel = isBox ? 'Box Text' : 'Point Text';
-        const headerStr = `${typeLabel} • ${fontName} ${fontSize}px • ${alignChoice.name} Align • Leading ${leading}px.`;
+        const headerStr = `${typeLabel} (${dimLabel}) • ${fontName} ${fontSize}px • ${alignChoice.name} Align • Leading ${leading}px.`;
 
         const LOREM_WORDS = "Lorem ipsum dolor sit amet consectetur adipiscing elit sed do eiusmod tempor incididunt ut labore et dolore magna aliqua Ut enim ad minim veniam quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur Excepteur sint occaecat cupidatat non proident sunt in culpa qui officia deserunt mollit anim id est laborum".split(' ');
 
@@ -1595,12 +1600,8 @@
         const randAnchorY = Math.round(boxTop + v * boxHeightActual);
         layer.transform.anchorPoint.setValue([randAnchorX, randAnchorY, 0]);
 
-        // Randomize 3D layer (33% probability)
-        const is3D = Math.random() < 0.33;
+        // Apply 3D layer setting
         layer.threeDLayer = is3D;
-
-        // If 3D, give a random Z position (+/- 100px)
-        const posZ = is3D ? Math.round((Math.random() * 200) - 100) : 0;
 
         // Place the text box in the middle of the viewport
         const boxCenterX = boxLeft + boxWidth / 2;
