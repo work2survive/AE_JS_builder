@@ -1,12 +1,12 @@
 // Co-authored & architected with Google DeepMind Antigravity.
 // =============================================================================
-// ADOBE AFTER EFFECTS EXTENDSCRIPT & SCRIPTUI PANEL: AE TEXT HIGHLIGHT v2.0.0
+// ADOBE AFTER EFFECTS EXTENDSCRIPT & SCRIPTUI PANEL: AE TEXT HIGHLIGHT v2.1.0
 // =============================================================================
 //
 // PURPOSE:
 //   Advanced procedural typography highlighter for Adobe After Effects.
 //   Supports two swappable highlight generation methods selectable at the top of the UI:
-//     1. "Split Method": Aligns anchor point based on text box justification (zero shift),
+//     1. "Split Method": Aligns anchor point to Top-Left with zero visual shift,
 //        marks original as guideline layer, splits target lines & words into independent
 //        text boxes with top-left anchor points, and rigs matching vector highlight boxes.
 //     2. "Calculation Method": Keeps the original text box intact without splitting,
@@ -16,7 +16,7 @@
 // ARCHITECTURAL REFERENCES & KNOWLEDGE BASE:
 //   1. AE vs. JS Text Rendering Differences Guide (Engine Metrics, Delimiter Advance & Justification):
 //      https://github.com/work2survive/AE_JS_builder/blob/main/AE_VS_JS_TEXT_RENDERING_DIFFERENCES.md
-//   2. AE Align Anchor Point (Justification-Based Zero-Shift Anchor Alignment):
+//   2. AE Align Anchor Point (Mandatory First-Action Zero-Shift Anchor Alignment):
 //      https://github.com/work2survive/AE-Align-AnchorPoint
 //   3. Text & Box Properties to Effects (Typography & Inspector Engine):
 //      https://github.com/work2survive/AE_JS_builder/blob/main/samples/Text_Properties_To_Effects.jsx
@@ -28,16 +28,13 @@
 //   6. AE Text Highlight Repository:
 //      https://github.com/work2survive/AE-Text-Highlight
 //
-// NEW IN v2.0.0:
-//   - Top-of-UI Method Switch: "Split Method" vs. "Calculation Method (Intact Text Box)".
-//   - Anchor Point Alignment based on Text Box Justification (Left, Center, Right) with zero visual shift.
-//   - In-place Font Parameter Calculation without layer splitting using delimiter-anchored advance.
-//   - Original Text Layer preserved as hidden Guideline Layer in Split Method, or intact in Calculation Method.
-//   - Top-left anchor points pinned across all generated text boxes and highlight vector shapes.
-//   - Dual Interactive Color Pickers: Highlight Box Fill Color & Highlighted Text Color.
-//   - Mirrored Precomposition Engine with parent-to-precomp expression linking.
-//   - Non-destructive "Remove Highlights & Restore Text Box" action.
-//   - "Create Dummy Text Box" generator button for rapid testing.
+// NEW IN v2.1.0:
+//   - Mandatory First-Action Anchor Alignment: Always aligns the text box anchor point to Top-Left
+//     using AE_Align_Anchor_Point.jsx logic with 0.00px visual shift, regardless of method selected.
+//   - Eliminated Upward Shift in Split Method: Line 1 baseline is strictly calibrated from typographic
+//     ascender (matching AE_Text_Precomp), preventing glyphs from ascending into negative space.
+//   - Precomp Anchor Point & Size Normalization: Precomp layer anchor point is pinned strictly to
+//     Top-Left ([0, 0, 0]) and dimensions match the text box dimensions, eliminating baseline offsets.
 //
 // REPOSITORY: https://github.com/work2survive/AE-Text-Highlight
 // LIVE DEMO:  https://work2survive.github.io/AE_JS_builder/?jsx=AE_Text_Highlight.jsx&autobuild=true
@@ -47,7 +44,7 @@
     "use strict";
 
     var SCRIPT_TITLE    = "AE Text Highlight";
-    var SCRIPT_VERSION  = "v2.0.0";
+    var SCRIPT_VERSION  = "v2.1.0";
     var GITHUB_REPO_URL = "https://github.com/work2survive/AE-Text-Highlight";
 
     // -------------------------------------------------------------------------
@@ -807,38 +804,121 @@
         layer.transform.anchorPoint.setValue(is3D ? [targetAnchor[0], targetAnchor[1], curA[2] || 0] : [targetAnchor[0], targetAnchor[1]]);
     }
 
-    function alignAnchorPointToJustification(targetLayer, props) {
-        if (!targetLayer || !props) return;
-        var just = props.justification || "left";
-        var xMode = (just === "center") ? "center" : ((just === "right") ? "right" : "left");
-        var yMode = "top";
+    function getLayerStatedBounds(layer) {
+        if (!layer) return { left: 0, top: 0, width: 100, height: 100 };
+        try {
+            var textProp = layer.property("ADBE Text Properties") || layer.property("Text");
+            if (textProp) {
+                var docProp = textProp.property("ADBE Text Document") || layer.property("Source Text");
+                if (docProp && docProp.value) {
+                    var doc = docProp.value;
+                    if (doc.boxText && doc.boxTextSize) {
+                        var bPos = doc.boxTextPos || [0, 0];
+                        return {
+                            left: bPos[0],
+                            top: bPos[1],
+                            width: doc.boxTextSize[0],
+                            height: doc.boxTextSize[1]
+                        };
+                    }
+                }
+            }
+        } catch (eBox) {}
 
-        var bounds = { left: 0, top: 0, width: props.boxWidth, height: props.boxHeight };
-        if (props.isBox) {
-            bounds.left = props.boxPos ? props.boxPos[0] : 0;
-            bounds.top = props.boxPos ? props.boxPos[1] : 0;
-            bounds.width = props.boxWidth;
-            bounds.height = props.boxHeight;
-        } else {
-            bounds.left = props.sRect.left;
-            bounds.top = props.sRect.top;
-            bounds.width = props.sRect.width;
-            bounds.height = props.sRect.height;
+        try {
+            var comp = layer.containingComp;
+            var t = comp ? comp.time : 0;
+            var r = layer.sourceRectAtTime(t, false);
+            return {
+                left: r.left,
+                top: r.top,
+                width: r.width,
+                height: r.height
+            };
+        } catch (eSR) {
+            return { left: 0, top: 0, width: 100, height: 100 };
+        }
+    }
+
+    /**
+     * Mandatory first-action anchor alignment:
+     * Aligns the text layer anchor point strictly to the Top-Left of the text box
+     * using AE_Align_Anchor_Point.jsx logic with 0.00px visual shift.
+     * Works identically on both Point Text and Paragraph Box Text.
+     */
+    function alignLayerAnchorPointTopLeft(targetLayer) {
+        if (!targetLayer) return false;
+        var comp = targetLayer.containingComp;
+        var is3D = Boolean(targetLayer.threeDLayer);
+
+        var bounds = getLayerStatedBounds(targetLayer);
+        var targetA = [bounds.left, bounds.top];
+
+        var apProp = (targetLayer.transform && targetLayer.transform.anchorPoint) ? targetLayer.transform.anchorPoint : (targetLayer.property("ADBE Transform Group") ? targetLayer.property("ADBE Transform Group").property("ADBE Anchor Point") : null);
+        var posProp = (targetLayer.transform && targetLayer.transform.position) ? targetLayer.transform.position : (targetLayer.property("ADBE Transform Group") ? targetLayer.property("ADBE Transform Group").property("ADBE Position") : null);
+        var scaleProp = (targetLayer.transform && targetLayer.transform.scale) ? targetLayer.transform.scale : (targetLayer.property("ADBE Transform Group") ? targetLayer.property("ADBE Transform Group").property("ADBE Scale") : null);
+        var rotProp = (targetLayer.transform && (targetLayer.transform.rotation || targetLayer.transform.zRotation)) ? (targetLayer.transform.rotation || targetLayer.transform.zRotation) : (targetLayer.property("ADBE Transform Group") ? (targetLayer.property("ADBE Transform Group").property("ADBE Rotate Z") || targetLayer.property("ADBE Transform Group").property("ADBE Rotation")) : null);
+
+        if (!apProp || !posProp) return false;
+
+        var curA = apProp.value;
+        var curPos = posProp.value;
+        var curScale = scaleProp ? scaleProp.value : [100, 100];
+        var curRot = rotProp ? (rotProp.value || 0) : 0;
+
+        var sx = (curScale[0] || 100) / 100;
+        var sy = (curScale[1] || 100) / 100;
+        var deltaAx = targetA[0] - curA[0];
+        var deltaAy = targetA[1] - curA[1];
+
+        var sdx = deltaAx * sx;
+        var sdy = deltaAy * sy;
+        var pDeltaX = sdx;
+        var pDeltaY = sdy;
+
+        if (curRot && Math.abs(curRot) > 0.0001) {
+            var rad = curRot * (Math.PI / 180);
+            pDeltaX = sdx * Math.cos(rad) - sdy * Math.sin(rad);
+            pDeltaY = sdx * Math.sin(rad) + sdy * Math.cos(rad);
         }
 
-        var targetA = computeTargetAnchor(bounds, xMode, yMode);
-        applyZeroShiftAnchor(targetLayer, targetA);
+        try { apProp.expression = ""; } catch (eAE) {}
+        try { posProp.expression = ""; } catch (ePE) {}
 
-        // Store state effect
+        if (is3D) {
+            apProp.setValue([targetA[0], targetA[1], curA[2] || 0]);
+        } else {
+            apProp.setValue([targetA[0], targetA[1]]);
+        }
+
+        if (posProp.dimensionsSeparated) {
+            var xP = targetLayer.property("Transform").property("X Position");
+            var yP = targetLayer.property("Transform").property("Y Position");
+            if (xP) xP.setValue(xP.value + pDeltaX);
+            if (yP) yP.setValue(yP.value + pDeltaY);
+        } else {
+            if (is3D) {
+                posProp.setValue([curPos[0] + pDeltaX, curPos[1] + pDeltaY, curPos[2] || 0]);
+            } else {
+                posProp.setValue([curPos[0] + pDeltaX, curPos[1] + pDeltaY]);
+            }
+        }
+
         try {
             var fx = targetLayer.property("ADBE Effect Parade") || targetLayer.property("Effects");
             if (fx) {
                 var effX = fx.property("Anchor Align X") || fx.addProperty("ADBE Slider Control");
-                if (effX) { effX.name = "Anchor Align X"; effX.property(1).setValue(xMode === "center" ? 1 : (xMode === "right" ? 2 : 0)); }
+                if (effX) { effX.name = "Anchor Align X"; effX.property(1).setValue(0); } // 0 = left
                 var effY = fx.property("Anchor Align Y") || fx.addProperty("ADBE Slider Control");
                 if (effY) { effY.name = "Anchor Align Y"; effY.property(1).setValue(0); } // 0 = top
             }
         } catch (eState) {}
+
+        return true;
+    }
+
+    function alignAnchorPointToJustification(targetLayer, props) {
+        return alignLayerAnchorPointTopLeft(targetLayer);
     }
 
     // -------------------------------------------------------------------------
@@ -909,7 +989,12 @@
         }
 
         for (var r = 0; r < toRemove.length; r++) {
-            try { toRemove[r].remove(); } catch (eRem) {}
+            var lyr = toRemove[r];
+            var srcComp = (lyr && lyr.source && (lyr.source instanceof CompItem)) ? lyr.source : null;
+            try { lyr.remove(); } catch (eRem) {}
+            if (srcComp && srcComp.name && srcComp.name.indexOf("Highlight Precomp") !== -1) {
+                try { srcComp.remove(); } catch (eSrcRem) {}
+            }
         }
 
         for (var rl = 0; rl < restoredLayers.length; rl++) {
@@ -1198,7 +1283,8 @@
         }
 
         // 5. In parent comp: Find and configure precompLayer with zero-shift compensation
-        var precompLayer = comp.layer(precompName);
+        var precompLayer = null;
+        try { precompLayer = comp.layer(precompName); } catch (ePL) {}
         if (!precompLayer) {
             try {
                 var totalL = (typeof comp.numLayers !== "undefined") ? comp.numLayers : comp.layers.length;
@@ -1217,21 +1303,15 @@
             // Enable continuous rasterization/collapse transformation to prevent highlight clipping
             try { precompLayer.collapseTransformation = true; } catch (eCT) {}
 
-            var just = props.justification || "left";
+            // Precomp layer anchor point is pinned strictly to Top-Left [0, 0] of the text box
             var targetA = [0, 0];
-            if (just === "center") {
-                targetA = [precompW / 2, 0];
-            } else if (just === "right") {
-                targetA = [precompW, 0];
-            }
+            var deltaAx = 0;
+            var deltaAy = 0;
+            var pDeltaX = 0;
+            var pDeltaY = 0;
 
-            var deltaAx = targetA[0] * sx;
-            var deltaAy = targetA[1] * sy;
-            var pDeltaX = deltaAx * cosA - deltaAy * sinA;
-            var pDeltaY = deltaAx * sinA + deltaAy * cosA;
-
-            var finalPosX = pContentTopLeft[0] + pDeltaX;
-            var finalPosY = pContentTopLeft[1] + pDeltaY;
+            var finalPosX = pContentTopLeft[0];
+            var finalPosY = pContentTopLeft[1];
             var finalPosZ = (pContentTopLeft.length > 2) ? pContentTopLeft[2] : 0;
 
             if (origParent && typeof origParent.fromComp === "function") {
@@ -1371,7 +1451,7 @@
         // Determine first line baseline relative to original text layer local origin:
         var rFirst = measurer.measureRect(lines.length > 0 ? lines[0] : "A");
         var ascender = Math.abs(rFirst.top) || (props.fontSize * 0.78);
-        var firstBaselineY = props.isBox ? (props.boxPos[1] + ascender) : 0;
+        var firstBaselineY = (props.isBox ? props.boxPos[1] : props.sRect.top) + ascender;
 
         var createdLayers = [];
         var highlightBoxes = [];
@@ -1719,7 +1799,7 @@
         // Determine first line baseline relative to original text layer local origin:
         var rFirst = measurer.measureRect(lines.length > 0 ? lines[0] : "A");
         var ascender = Math.abs(rFirst.top) || (props.fontSize * 0.78);
-        var firstBaselineY = props.isBox ? (props.boxPos[1] + ascender) : 0;
+        var firstBaselineY = (props.isBox ? props.boxPos[1] : props.sRect.top) + ascender;
 
         var highlightBoxes = [];
 
@@ -2719,6 +2799,10 @@
                     makePrecomp: chkPrecomp.value
                 };
 
+                // 1. Mandatory First Action: Always move the anchor point to Top-Left using AE_Align_Anchor_Point.jsx logic,
+                // no matter the method selected (Split Method or Calculation Method).
+                alignLayerAnchorPointTopLeft(textLayer);
+
                 var isSplitMethod = (!ddMethod.selection || ddMethod.selection.index === 0);
                 var result = null;
                 if (isSplitMethod) {
@@ -2751,6 +2835,13 @@
             pickerHighlight.refresh();
             pickerText.refresh();
         } catch (eRef) {}
+
+        // Expose public API methods on panel for automation and testing
+        win.alignLayerAnchorPointTopLeft = alignLayerAnchorPointTopLeft;
+        win.buildSplitHighlightsRig = buildSplitHighlightsRig;
+        win.buildCalculationHighlightsRig = buildCalculationHighlightsRig;
+        win.createDummyTextBoxLayer = createDummyTextBoxLayer;
+        win.removeHighlightsAndRestoreOriginal = removeHighlightsAndRestoreOriginal;
 
         return win;
     }
