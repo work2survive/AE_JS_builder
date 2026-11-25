@@ -35,7 +35,7 @@
     "use strict";
 
     var SCRIPT_NAME    = "AE Text Precomp";
-    var SCRIPT_VERSION = "v2.0.0";
+    var SCRIPT_VERSION = "v2.0.1";
     var REPO_URL       = "https://github.com/work2survive/AE-text-precomp";
 
     // -------------------------------------------------------------------------

@@ -1,6 +1,6 @@
 // Co-authored & architected with Google DeepMind Antigravity.
 // =============================================================================
-// ADOBE AFTER EFFECTS EXTENDSCRIPT & SCRIPTUI PANEL: AE WINDBOX v1.2.2
+// ADOBE AFTER EFFECTS EXTENDSCRIPT & SCRIPTUI PANEL: AE WINDBOX v1.2.3
 // =============================================================================
 //
 // PURPOSE:
@@ -38,6 +38,8 @@
 
 (function (thisObj) {
     "use strict";
+
+    var SCRIPT_VERSION = "v1.2.3";
 
     // =========================================================================
     // PERFORMANCE CONFIGURATION: MAXIMUM PARTICLE LIMIT
@@ -915,7 +917,7 @@
                 var dataObj = {
                     "$schema": "https://json-schema.org/draft/2020-12/schema",
                     "description": "After Effects WindBox - Presets configuration. Edit freely or add your own custom presets, then click the reload button (🔄) in the panel.",
-                    "version": "1.2.2",
+                    "version": "1.2.3",
                     "presets": cloneDefaultPresets()
                 };
                 pFile.write(JSONPolyfill.stringify(dataObj, null, 2));
@@ -1012,11 +1014,11 @@
     // ==========================================
     function buildWindBoxUI(thisObj) {
         var isPanel = (thisObj instanceof Panel);
-        var win = isPanel ? thisObj : new Window("palette", "AE WindBox v1.2.2", undefined, {
+        var win = isPanel ? thisObj : new Window("palette", "AE WindBox v1.2.3", undefined, {
             resizeable: true
         });
         if (!(thisObj instanceof Panel)) {
-            win.text = "AE WindBox v1.2.2";
+            win.text = "AE WindBox v1.2.3";
         }
 
         win.orientation = "column";
@@ -1034,7 +1036,7 @@
         pnlHeader.spacing = 3;
         pnlHeader.margins = [10, 8, 10, 8];
 
-        var lblDesc = pnlHeader.add("statictext", undefined, "v1.2.2 - Procedural 3D Wind Volume Particle System with Virtual Guide Cube & Precomp Rig.");
+        var lblDesc = pnlHeader.add("statictext", undefined, "v1.2.3 - Procedural 3D Wind Volume Particle System with Virtual Guide Cube & Precomp Rig.");
 
         // ---------- SYSTEM NAME & PRESETS ----------
         var headerGroup = win.add("group");

@@ -3,6 +3,7 @@
 // ==========================================
 
 (function(thisObj) {
+    var SCRIPT_VERSION = "v1.0.1";
     var win = (thisObj instanceof Panel) ? thisObj : new Window("palette", "AE Cube Generator", undefined, {resizeable: true});
     win.orientation = "column";
     win.alignChildren = ["fill", "top"];

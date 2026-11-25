@@ -38,7 +38,7 @@
 (function(thisObj) {
     "use strict";
 
-    var SCRIPT_VERSION = "v1.3";
+    var SCRIPT_VERSION = "v1.3.1";
 
     // -------------------------------------------------------------------------
     // 1. ScriptUI Window / Dockable Panel Initialization
@@ -171,7 +171,7 @@
     pnlHeader.spacing = 3;
     pnlHeader.margins = [10, 8, 10, 8];
 
-    var lblDesc = pnlHeader.add("statictext", undefined, "v1.3 - Parametric 3D Shape Layer Cube generator and live controller rig.");
+    var lblDesc = pnlHeader.add("statictext", undefined, "v1.3.1 - Parametric 3D Shape Layer Cube generator and live controller rig.");
 
     // -------------------------------------------------------------------------
     // 4. UI Section: Tabbed Panel Container (Geometry vs. Appearance)

@@ -1,3 +1,4 @@
+var SCRIPT_VERSION = "v1.0.1";
 // ==========================================
 // After Effects Stroke Taper Showcase:
 // Variable-width Tapered Vector Strokes

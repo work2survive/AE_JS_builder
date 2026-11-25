@@ -4,6 +4,7 @@
 // ==========================================
 
 (function() {
+    var SCRIPT_VERSION = "v1.0.1";
     var comp = app.project.activeItem;
     if (!comp) {
         comp = app.project.items.addComp("Test JSX Comp", 1280, 720, 1, 10, 30);
@@ -42,7 +43,8 @@
     starLayer.parent = ring; // Parented to the ring!
 
     var starGroup = starLayer.property("Contents").addProperty("ADBE Vector Group");
-    var pathProp = starGroup.property("Contents").addProperty("ADBE Vector Shape - Path");
+    var pathGroup = starGroup.property("Contents").addProperty("ADBE Vector Shape - Group");
+    var pathProp = pathGroup.property("ADBE Vector Shape") || pathGroup.property("Path") || pathGroup;
 
     var star = new Shape();
     var points = 5;
@@ -60,7 +62,7 @@
         star.outTangents.push([0, 0]);
     }
     star.closed = true;
-    pathProp.property("Path").setValue(star);
+    pathProp.setValue(star);
 
     var starFill = starGroup.property("Contents").addProperty("ADBE Vector Graphic - Fill");
     starFill.property("Color").setValue([1.0, 0.8, 0.1]);
@@ -68,6 +70,43 @@
     var starStroke = starGroup.property("Contents").addProperty("ADBE Vector Graphic - Stroke");
     starStroke.property("Color").setValue([1, 1, 1]);
     starStroke.property("Stroke Width").setValue(2);
+
+    // 3. Add Point Text Header Title
+    var header = comp.layers.addText("KINETIC 3D MOTION RIG (POINT TEXT)");
+    header.name = "Header Title (Point Text)";
+    header.transform.position.setValue([comp.width / 2, 70, 0]);
+    var hDoc = header.property("Source Text").value;
+    if (hDoc) {
+        hDoc.fontSize = 28;
+        hDoc.font = "Arial-BoldMT";
+        hDoc.fillColor = [1.0, 1.0, 1.0];
+        try { hDoc.justification = (typeof ParagraphJustification !== "undefined" && ParagraphJustification.CENTER_JUSTIFY !== undefined) ? ParagraphJustification.CENTER_JUSTIFY : 7414; } catch (eJ1) {}
+        header.property("Source Text").setValue(hDoc);
+    }
+
+    // 4. Add Paragraph Box Text Footer Card
+    var infoStr = "Procedural 3D animation test featuring continuous sinusoidal wiggle rotations on concentric shape rings parented to a central golden star, combining Point and Box text elements.";
+    var infoLayer;
+    if (typeof comp.layers.addBoxText === "function") {
+        try {
+            infoLayer = comp.layers.addBoxText([720, 60], infoStr);
+        } catch (eB) {
+            infoLayer = comp.layers.addText(infoStr);
+        }
+    } else {
+        infoLayer = comp.layers.addText(infoStr);
+    }
+    infoLayer.name = "Footer Note (Box Text)";
+    infoLayer.transform.position.setValue([comp.width / 2, 640, 0]);
+    try { infoLayer.transform.anchorPoint.setValue([360, 0, 0]); } catch (eAnc) {}
+    var iDoc = infoLayer.property("Source Text").value;
+    if (iDoc) {
+        iDoc.fontSize = 14;
+        iDoc.font = "ArialMT";
+        iDoc.fillColor = [0.65, 0.72, 0.82];
+        try { iDoc.justification = (typeof ParagraphJustification !== "undefined" && ParagraphJustification.CENTER_JUSTIFY !== undefined) ? ParagraphJustification.CENTER_JUSTIFY : 7414; } catch (eJ2) {}
+        infoLayer.property("Source Text").setValue(iDoc);
+    }
 
     $.writeln("Success: External .jsx script loaded and executed!");
 })();

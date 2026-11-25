@@ -1,6 +1,6 @@
 /**
  * ============================================================================
- * AE Get Emojis v1.0 — Full-Color Vector Emojis for Adobe After Effects
+ * AE Get Emojis v1.0.1 — Full-Color Vector Emojis for Adobe After Effects
  * ============================================================================
  * Purpose:
  *   Quickly search, index, and add or replace full-color vector emojis as native
@@ -46,7 +46,8 @@
  */
 
 (function (thisObj) {
-    var SCRIPT_TITLE = "AE Get Emojis v1.0";
+    var SCRIPT_TITLE = "AE Get Emojis v1.0.1";
+    var SCRIPT_VERSION = "v1.0.1";
 
     // =========================================================================
     // 1. ES3 / EXTENDSCRIPT SAFE JSON POLYFILL & STRING UTILITIES

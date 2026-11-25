@@ -8,13 +8,13 @@
     'use strict';
 
     // -------------------------------------------------------------
-    // Version Management (v1.2.33)
+    // Version Management (v1.2.34)
     // -------------------------------------------------------------
     function computeDailyVersion() {
-        return '1.2.33';
+        return '1.2.34';
     }
 
-    const APP_VERSION = '1.2.33';
+    const APP_VERSION = '1.2.34';
     global.EMULATOR_VERSION = APP_VERSION;
     global.AE_TEXT_GUIDE_URL = 'https://github.com/work2survive/AE_JS_builder/blob/main/AE_VS_JS_TEXT_RENDERING_DIFFERENCES.md';
     global.AE_ANCHOR_POINT_GUIDE_URL = 'https://github.com/work2survive/AE-Align-AnchorPoint/blob/main/README.md';
@@ -2200,7 +2200,7 @@
                 const folder = isSample ? 'samples' : 'jsx';
                 const fname = val.slice(isSample ? 7 : 4);
                 const fileMap = isSample ? sampleFiles : jsxFiles;
-                const manifestList = isSample ? window.SAMPLE_FOLDER_FILES : window.JSX_FOLDER_FILES;
+                const manifestList = isSample ? (window.SAMPLE_FOLDER_FILES || window.BUILTIN_SAMPLES) : (window.JSX_FOLDER_FILES || window.__JSX_PRESETS__);
                 const fileObj = fileMap.get(fname);
                 let code = fileObj ? fileObj.code : null;
 
@@ -2285,9 +2285,9 @@
         function loadManifestInto(list, map, folder) {
             if (!list || !Array.isArray(list)) return;
             list.forEach(item => {
-                const fname = typeof item === 'string' ? item : item.filename;
-                const code = typeof item === 'object' ? item.code : null;
-                const path = typeof item === 'object' ? item.path : `${folder}/${fname}`;
+                const fname = typeof item === 'string' ? item : (item.filename || item.name || item.title);
+                const code = typeof item === 'object' ? (item.code !== undefined ? item.code : item.content) : null;
+                const path = typeof item === 'object' ? (item.path || `${folder}/${fname}`) : `${folder}/${fname}`;
                 if (fname) {
                     map.set(fname, { filename: fname, path: path, code: code });
                 }
@@ -2296,8 +2296,8 @@
 
         async function populatePresetsDropdown() {
             // Load manifests immediately
-            loadManifestInto(window.JSX_FOLDER_FILES, jsxFiles, 'jsx');
-            loadManifestInto(window.SAMPLE_FOLDER_FILES, sampleFiles, 'samples');
+            loadManifestInto(window.JSX_FOLDER_FILES || window.__JSX_PRESETS__, jsxFiles, 'jsx');
+            loadManifestInto(window.SAMPLE_FOLDER_FILES || window.BUILTIN_SAMPLES, sampleFiles, 'samples');
 
             // Also ingest any items from window.PRESETS if present
             if (typeof PRESETS !== 'undefined' && PRESETS) {

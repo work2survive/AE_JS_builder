@@ -1,6 +1,6 @@
 // Co-authored & architected with Google DeepMind Antigravity.
 // =============================================================================
-// ADOBE AFTER EFFECTS EXTENDSCRIPT & SCRIPTUI PANEL: AE SPIRAL MAKER v1.0.0
+// ADOBE AFTER EFFECTS EXTENDSCRIPT & SCRIPTUI PANEL: AE SPIRAL MAKER v1.0.1
 // =============================================================================
 //
 // PURPOSE:
@@ -45,7 +45,7 @@
     "use strict";
 
     var SCRIPT_NAME = "AE Spiral Maker";
-    var SCRIPT_VERSION = "v1.0.0";
+    var SCRIPT_VERSION = "v1.0.1";
     var GITHUB_REPO_URL = "https://github.com/work2survive/AE_spiral_maker";
     var INSPIRATION_URL = "https://tiny-online.tools/svg-tools/svg-spiral-generator";
 

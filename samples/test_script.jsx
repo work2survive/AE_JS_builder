@@ -4,6 +4,7 @@
 // ==========================================
 
 (function() {
+    var SCRIPT_VERSION = "v1.0.1";
     var comp = app.project.activeItem;
     if (!comp) {
         comp = app.project.items.addComp("Test JSX Comp", 1280, 720, 1, 10, 30);

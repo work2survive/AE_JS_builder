@@ -4,6 +4,7 @@
 // ==========================================
 
 (function() {
+    var SCRIPT_VERSION = "v1.0.1";
     var mainComp = app.project.activeItem;
     if (!mainComp) {
         mainComp = app.project.items.addComp("Main Comp", 1920, 1080, 1, 10, 30);

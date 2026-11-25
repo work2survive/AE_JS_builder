@@ -1,3 +1,4 @@
+var SCRIPT_VERSION = "v1.0.1";
 // ==========================================
 // After Effects JSX Script: 200x200 3D Cube
 // Built with 6 Shape Layers & Master Controller

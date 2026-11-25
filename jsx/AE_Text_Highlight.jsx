@@ -1,6 +1,6 @@
 // Co-authored & architected with Google DeepMind Antigravity.
 // =============================================================================
-// ADOBE AFTER EFFECTS EXTENDSCRIPT & SCRIPTUI PANEL: AE TEXT HIGHLIGHT v3.0.1
+// ADOBE AFTER EFFECTS EXTENDSCRIPT & SCRIPTUI PANEL: AE TEXT HIGHLIGHT v3.0.2
 // =============================================================================
 //
 // PURPOSE:
@@ -8,7 +8,7 @@
 //   Creates a non-destructive vector shape layer parented directly to your text layer,
 //   pinpointing target words, multi-word phrases, or clauses with sub-pixel precision.
 //
-// KEY DESIGN PRINCIPLES (v3.0.1):
+// KEY DESIGN PRINCIPLES (v3.0.2):
 //   1. 100% Deterministic & Idempotent:
 //      Running the script multiple times on the same layer cleanly updates the highlights.
 //      No stacked duplicate layers, no orphaned helper layers.
@@ -31,7 +31,7 @@
     "use strict";
 
     var SCRIPT_TITLE   = "AE Text Highlight";
-    var SCRIPT_VERSION = "v3.0.1";
+    var SCRIPT_VERSION = "v3.0.2";
     var GITHUB_URL     = "https://github.com/work2survive/AE-Text-Highlight";
 
     // Default target words (deterministic across all runs)

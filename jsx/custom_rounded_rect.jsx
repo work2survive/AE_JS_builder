@@ -1,6 +1,6 @@
 // Co-authored & architected with Google DeepMind Antigravity.
 // =============================================================================
-// ADOBE AFTER EFFECTS EXTENDSCRIPT & SCRIPTUI PANEL: CUSTOM ROUNDED RECTANGLE v1.1
+// ADOBE AFTER EFFECTS EXTENDSCRIPT & SCRIPTUI PANEL: CUSTOM ROUNDED RECTANGLE v1.1.1
 // =============================================================================
 //
 // PURPOSE:
@@ -36,7 +36,7 @@
 (function(thisObj) {
     "use strict";
 
-    var SCRIPT_VERSION = "v1.1";
+    var SCRIPT_VERSION = "v1.1.1";
 
     // -------------------------------------------------------------------------
     // 1. ScriptUI Window / Dockable Panel Initialization
@@ -113,7 +113,7 @@
     pnlHeader.spacing = 3;
     pnlHeader.margins = [10, 8, 10, 8];
 
-    var lblDesc = pnlHeader.add("statictext", undefined, "v1.1 - Parametric 2D Shape Layer with independent corner radii & W3C overlap protection.");
+    var lblDesc = pnlHeader.add("statictext", undefined, "v1.1.1 - Parametric 2D Shape Layer with independent corner radii & W3C overlap protection.");
 
     // -------------------------------------------------------------------------
     // 4. Tabbed Panel (Geometry vs. Appearance)

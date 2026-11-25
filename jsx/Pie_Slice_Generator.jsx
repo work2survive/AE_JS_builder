@@ -1,6 +1,6 @@
 /*
  * Co-authored & architected with Google DeepMind Antigravity.
-    Pie / Circular Sector Generator for Adobe After Effects  (v4)
+    Pie / Circular Sector Generator for Adobe After Effects  (v4.1.1)
     Creates a native Shape Layer with an expression-driven Path.
 
     Vertices:
@@ -14,6 +14,7 @@
     with A's rounding or with each other.
 */
 (function (thisObj) {
+    var SCRIPT_VERSION = "v4.1.1";
     function buildUI(thisObj) {
         var panel = (thisObj instanceof Panel)
             ? thisObj
@@ -37,7 +38,7 @@
         pnlHeader.spacing = 3;
         pnlHeader.margins = [10, 8, 10, 8];
 
-        var lblDesc = pnlHeader.add("statictext", undefined, "v4.1 - Procedural Bézier Shape Layer pie & slice sector generator.");
+        var lblDesc = pnlHeader.add("statictext", undefined, "v4.1.1 - Procedural Bézier Shape Layer pie & slice sector generator.");
 
         // ---------- Dimensions ----------
         var grpRadius = panel.add("panel", undefined, "Dimensions");

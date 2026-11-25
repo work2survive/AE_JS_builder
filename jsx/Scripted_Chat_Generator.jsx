@@ -1,6 +1,6 @@
 // =============================================================================
 // ADOBE AFTER EFFECTS EXTENDSCRIPT & SCRIPTUI PANEL:
-// SCRIPTED CHAT GENERATOR v1.0.0
+// SCRIPTED CHAT GENERATOR v1.0.1
 // Repository: https://github.com/work2survive/AE_scripted_Chat
 // Based on:   https://github.com/work2survive/AE_message_bubble
 // =============================================================================
@@ -44,6 +44,8 @@
 
 (function (thisObj) {
     "use strict";
+
+    var SCRIPT_VERSION = "v1.0.1";
 
     // -------------------------------------------------------------------------
     // 1. Constants, JSON Polyfill & Utility Helpers
@@ -2221,7 +2223,7 @@
     function createUI(thisObj) {
         var win = (thisObj instanceof Panel)
             ? thisObj
-            : new Window("palette", "Scripted Chat Generator v1.0", undefined, { resizeable: true });
+            : new Window("palette", "Scripted Chat Generator v1.0.1", undefined, { resizeable: true });
 
         win.orientation = "column";
         win.alignChildren = ["fill", "top"];

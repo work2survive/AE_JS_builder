@@ -1,6 +1,6 @@
 // Co-authored & architected with Google DeepMind Antigravity.
 // =============================================================================
-// ADOBE AFTER EFFECTS EXTENDSCRIPT & SCRIPTUI PANEL: AE ALIGN ANCHOR POINT v1.1.0
+// ADOBE AFTER EFFECTS EXTENDSCRIPT & SCRIPTUI PANEL: AE ALIGN ANCHOR POINT v1.2.1
 // =============================================================================
 //
 // PURPOSE:
@@ -46,7 +46,7 @@
     "use strict";
 
     var SCRIPT_NAME = "AE Align Anchor Point";
-    var SCRIPT_VERSION = "v1.2.0";
+    var SCRIPT_VERSION = "v1.2.1";
     var REPO_URL = "https://github.com/work2survive/AE-Align-AnchorPoint";
     var README_URL = "https://github.com/work2survive/AE-Align-AnchorPoint/blob/main/README.md";
 

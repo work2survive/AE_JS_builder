@@ -1,6 +1,6 @@
 // Co-authored & architected with Google DeepMind Antigravity.
 // =============================================================================
-// ADOBE AFTER EFFECTS EXTENDSCRIPT & SCRIPTUI PANEL: AE / EMULATOR TESTER v1.0
+// ADOBE AFTER EFFECTS EXTENDSCRIPT & SCRIPTUI PANEL: AE / EMULATOR TESTER v1.3.1
 // =============================================================================
 //
 // PURPOSE:
@@ -49,7 +49,7 @@
     "use strict";
 
     var SCRIPT_TITLE = "AE / Emulator Tester";
-    var SCRIPT_VERSION = "v1.3.0";
+    var SCRIPT_VERSION = "v1.3.1";
 
     // -------------------------------------------------------------------------
     // 1. ScriptUI Window / Panel Initialization

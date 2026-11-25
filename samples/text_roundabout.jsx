@@ -17,6 +17,8 @@
 (function(thisObj) {
     "use strict";
 
+    var SCRIPT_VERSION = "v1.0.1";
+
     // ES3 String Helper (replaces unsupported String.prototype.trim)
     function trimStr(str) {
         if (!str) return "";
@@ -28,9 +30,9 @@
     // -------------------------------------------------------------------------
     var win = (thisObj instanceof Panel)
         ? thisObj
-        : new Window("palette", "Text Roundabout", undefined, { resizeable: true });
+        : new Window("palette", "Text Roundabout " + SCRIPT_VERSION, undefined, { resizeable: true });
     if (!(thisObj instanceof Panel)) {
-        win.text = "Text Roundabout";
+        win.text = "Text Roundabout " + SCRIPT_VERSION;
     }
 
     win.orientation = "column";
@@ -129,7 +131,7 @@
     pnlHeader.spacing = 3;
     pnlHeader.margins = [10, 8, 10, 8];
 
-    var lblDesc = pnlHeader.add("statictext", undefined, "v1.0 - Kinetic 3D Word Carousel & Roundabout generator.");
+    var lblDesc = pnlHeader.add("statictext", undefined, "v1.0.1 - Kinetic 3D Word Carousel & Roundabout generator.");
 
     // -------------------------------------------------------------------------
     // 4. UI Section: Roundabout Configuration

@@ -1,3 +1,4 @@
+var SCRIPT_VERSION = "v1.0.1";
 // ==========================================
 // After Effects Shapes Showcase:
 // Squares, Circles, and Custom Bézier Paths

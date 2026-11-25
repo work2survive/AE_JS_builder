@@ -1,6 +1,6 @@
 /**
  * ============================================================================
- * AE Replace Color Emojis v2.0.1 — Ground-Up Rewrite
+ * AE Replace Color Emojis v2.0.2 — Ground-Up Rewrite
  * ============================================================================
  *
  * Replaces monochrome font emojis in Adobe After Effects text layers with
@@ -14,7 +14,7 @@
     "use strict";
 
     var SCRIPT_TITLE   = "AE Replace Color Emojis";
-    var SCRIPT_VERSION = "v2.0.1";
+    var SCRIPT_VERSION = "v2.0.2";
 
     // -------------------------------------------------------------------------
     // 1. Safe Environment & Polyfills

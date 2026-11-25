@@ -1,7 +1,7 @@
 // Co-authored & architected with Google DeepMind Antigravity.
 // =============================================================================
 // ADOBE AFTER EFFECTS EXTENDSCRIPT & SCRIPTUI PANEL:
-// TEXT & BOX PROPERTIES TO EFFECTS (INSPECTOR & RIGGER) v1.3.0
+// TEXT & BOX PROPERTIES TO EFFECTS (INSPECTOR & RIGGER) v1.3.1
 // =============================================================================
 //
 // PURPOSE:
@@ -45,7 +45,7 @@
     "use strict";
 
     var SCRIPT_NAME = "Text & Box Properties to Effects";
-    var SCRIPT_VERSION = "v1.3.0";
+    var SCRIPT_VERSION = "v1.3.1";
     var DOC_TEXTDOC_URL = "https://ae-scripting.docsforadobe.dev/text/textdocument/";
     var DOC_CHANGELOG_URL = "https://ae-scripting.docsforadobe.dev/introduction/changelog/";
     var DOC_DIFFERENCES_URL = "https://github.com/work2survive/AE_JS_builder/blob/main/AE_VS_JS_TEXT_RENDERING_DIFFERENCES.md";

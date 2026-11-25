@@ -1,6 +1,6 @@
 // Co-authored & architected with Google DeepMind Antigravity.
 // =============================================================================
-// ADOBE AFTER EFFECTS EXTENDSCRIPT & SCRIPTUI PANEL: CYLINDER MAKER 3D v1.4
+// ADOBE AFTER EFFECTS EXTENDSCRIPT & SCRIPTUI PANEL: CYLINDER MAKER 3D v1.4.1
 // =============================================================================
 //
 // PURPOSE:
@@ -37,7 +37,7 @@
 (function(thisObj) {
     "use strict";
 
-    var SCRIPT_VERSION = "v1.4";
+    var SCRIPT_VERSION = "v1.4.1";
 
     // -------------------------------------------------------------------------
     // 1. ScriptUI Window / Dockable Panel Initialization
@@ -225,7 +225,7 @@
     pnlHeader.spacing = 3;
     pnlHeader.margins = [10, 8, 10, 8];
 
-    var lblDesc = pnlHeader.add("statictext", undefined, "v1.4 - Parametric 3D Shape Layer Cylinder & Slice generator with live master rig.");
+    var lblDesc = pnlHeader.add("statictext", undefined, "v1.4.1 - Parametric 3D Shape Layer Cylinder & Slice generator with live master rig.");
 
     // -------------------------------------------------------------------------
     // 4. Tabbed Panel: Geometry vs. Appearance
