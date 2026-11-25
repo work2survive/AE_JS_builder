@@ -1402,6 +1402,359 @@
     }
 
     // -------------------------------------------------------------------------
+    // 8.5. Real-Time Animatable Path Expression Generator
+    // -------------------------------------------------------------------------
+    /**
+     * Generates an After Effects expression on the Path property that tracks
+     * the "🎯 Tail Target" null layer dynamically across time in real time!
+     * Animators can keyframe or drag the target null directly in the comp viewer.
+     */
+    function buildDynamicPathExpression(bodyType, tailType, cornerRadius, burstSpikes, tailBaseW, tailCurvature, padX, padY, textLayerName, targetLayerName, defaultW, defaultH) {
+        var lines = [];
+        lines.push("/* AE Comic Text Bubble - Real-time Animatable Tail Engine */");
+        lines.push("if (typeof createPath !== \"function\") {");
+        lines.push("    value;");
+        lines.push("} else {");
+        lines.push("    try {");
+        lines.push("        var targetLayer = thisComp.layer(\"" + targetLayerName + "\");");
+        lines.push("        var tipComp = targetLayer.toComp(targetLayer.anchorPoint);");
+        lines.push("        var tip = fromComp(tipComp);");
+        lines.push("        var tipX = tip[0];");
+        lines.push("        var tipY = tip[1];");
+        lines.push("        var tailDist = Math.sqrt(tipX * tipX + tipY * tipY);");
+        lines.push("        var rad = Math.atan2(tipY, tipX);");
+        lines.push("        if (rad < 0) rad += 2 * Math.PI;");
+        lines.push("        var tailAngleDeg = rad * (180 / Math.PI);");
+        lines.push("");
+        lines.push("        var bw = " + defaultW + ";");
+        lines.push("        var bh = " + defaultH + ";");
+        lines.push("        try {");
+        lines.push("            var tL = thisComp.layer(\"" + textLayerName + "\");");
+        lines.push("            var sr = tL.sourceRectAtTime(time, false);");
+        lines.push("            if (sr && sr.width > 0) {");
+        lines.push("                bw = sr.width + " + (padX * 2) + ";");
+        lines.push("                bh = sr.height + " + (padY * 2) + ";");
+        lines.push("            }");
+        lines.push("        } catch (eT) {}");
+        lines.push("");
+        lines.push("        var a = Math.max(20, bw / 2);");
+        lines.push("        var b = Math.max(15, bh / 2);");
+        lines.push("        var meanR = (a + b) / 2;");
+        lines.push("        var hasTail = (" + (tailType !== "none" && tailType !== "thought_bubbles") + ");");
+        lines.push("        var tailBaseW = " + tailBaseW + ";");
+        lines.push("        var tailCurvature = " + tailCurvature + ";");
+        lines.push("        var cornerRadius = " + cornerRadius + ";");
+        lines.push("        var burstSpikes = " + burstSpikes + ";");
+        lines.push("        var bodyType = \"" + bodyType + "\";");
+        lines.push("        var tailType = \"" + tailType + "\";");
+        lines.push("");
+        lines.push("        var vertices = [];");
+        lines.push("        var inTangents = [];");
+        lines.push("        var outTangents = [];");
+        lines.push("");
+        lines.push("        function getSquirclePoint(t, sa, sb, n) {");
+        lines.push("            var cosT = Math.cos(t), sinT = Math.sin(t);");
+        lines.push("            var signCos = (cosT < 0) ? -1 : 1;");
+        lines.push("            var signSin = (sinT < 0) ? -1 : 1;");
+        lines.push("            return [");
+        lines.push("                sa * signCos * Math.pow(Math.abs(cosT), 2 / n),");
+        lines.push("                sb * signSin * Math.pow(Math.abs(sinT), 2 / n)");
+        lines.push("            ];");
+        lines.push("        }");
+        lines.push("");
+        lines.push("        if (bodyType === \"oval\" || bodyType === \"squircle\") {");
+        lines.push("            var isSquircle = (bodyType === \"squircle\");");
+        lines.push("            var nExp = isSquircle ? 3.2 : 2.0;");
+        lines.push("            if (!hasTail) {");
+        lines.push("                var stepsNoTail = isSquircle ? 16 : 4;");
+        lines.push("                if (!isSquircle) {");
+        lines.push("                    var kappa = 0.55228475;");
+        lines.push("                    var kx = a * kappa, ky = b * kappa;");
+        lines.push("                    vertices = [[a, 0], [0, b], [-a, 0], [0, -b]];");
+        lines.push("                    inTangents = [[0, -ky], [kx, 0], [0, ky], [-kx, 0]];");
+        lines.push("                    outTangents = [[0, ky], [-kx, 0], [0, -ky], [kx, 0]];");
+        lines.push("                } else {");
+        lines.push("                    var dtheta = (2 * Math.PI) / stepsNoTail;");
+        lines.push("                    for (var si = 0; si < stepsNoTail; si++) {");
+        lines.push("                        var th = si * dtheta;");
+        lines.push("                        vertices.push(getSquirclePoint(th, a, b, nExp));");
+        lines.push("                        var stx = -a * Math.sin(th) * (dtheta / 3);");
+        lines.push("                        var sty = b * Math.cos(th) * (dtheta / 3);");
+        lines.push("                        inTangents.push([-stx, -sty]);");
+        lines.push("                        outTangents.push([stx, sty]);");
+        lines.push("                    }");
+        lines.push("                }");
+        lines.push("            } else {");
+        lines.push("                var halfBaseAngle = Math.min(Math.PI * 0.35, Math.max(0.10, tailBaseW / (2 * meanR)));");
+        lines.push("                var ang1 = rad - halfBaseAngle;");
+        lines.push("                var ang2 = rad + halfBaseAngle;");
+        lines.push("                var span = 2 * Math.PI - 2 * halfBaseAngle;");
+        lines.push("                var steps = 14;");
+        lines.push("                var dt = span / steps;");
+        lines.push("                for (var i = 0; i <= steps; i++) {");
+        lines.push("                    var t = ang2 + i * dt;");
+        lines.push("                    if (isSquircle) {");
+        lines.push("                        vertices.push(getSquirclePoint(t, a, b, nExp));");
+        lines.push("                    } else {");
+        lines.push("                        vertices.push([a * Math.cos(t), b * Math.sin(t)]);");
+        lines.push("                    }");
+        lines.push("                    var tx = -a * Math.sin(t) * (dt / 3);");
+        lines.push("                    var ty = b * Math.cos(t) * (dt / 3);");
+        lines.push("                    inTangents.push([-tx, -ty]);");
+        lines.push("                    outTangents.push([tx, ty]);");
+        lines.push("                }");
+        lines.push("                var b1 = vertices[vertices.length - 1];");
+        lines.push("                var b2 = vertices[0];");
+        lines.push("                var v1x = tipX - b1[0], v1y = tipY - b1[1];");
+        lines.push("                var len1 = Math.sqrt(v1x * v1x + v1y * v1y) || 1;");
+        lines.push("                var n1x = -v1y / len1, n1y = v1x / len1;");
+        lines.push("                var v2x = b2[0] - tipX, v2y = b2[1] - tipY;");
+        lines.push("                var len2 = Math.sqrt(v2x * v2x + v2y * v2y) || 1;");
+        lines.push("                var n2x = -v2y / len2, n2y = v2x / len2;");
+        lines.push("                var curveAmount = (tailType === \"straight_cone\" || tailType === \"side_wedge\" || tailType === \"wide_wedge\") ? 0 : (tailCurvature * 0.40);");
+        lines.push("                outTangents[outTangents.length - 1] = [v1x * 0.35 + n1x * len1 * curveAmount, v1y * 0.35 + n1y * len1 * curveAmount];");
+        lines.push("                vertices.push([tipX, tipY]);");
+        lines.push("                inTangents.push([-v1x * 0.25 + n1x * len1 * (curveAmount * 0.5), -v1y * 0.25 + n1y * len1 * (curveAmount * 0.5)]);");
+        lines.push("                outTangents.push([v2x * 0.25 - n2x * len2 * (curveAmount * 0.5), v2y * 0.25 - n2y * len2 * (curveAmount * 0.5)]);");
+        lines.push("                inTangents[0] = [-v2x * 0.35 - n2x * len2 * curveAmount, -v2y * 0.35 - n2y * len2 * curveAmount];");
+        lines.push("            }");
+        lines.push("        } else if (bodyType === \"shout\") {");
+        lines.push("            var pts = Math.max(8, Math.min(36, burstSpikes || 16));");
+        lines.push("            var totalPts = pts * 2;");
+        lines.push("            var rOut = Math.max(a, b) + 16;");
+        lines.push("            var rIn = rOut * 0.62;");
+        lines.push("            for (var p = 0; p < totalPts; p++) {");
+        lines.push("                var pAng = (p * 2 * Math.PI) / totalPts;");
+        lines.push("                var isSpike = (p % 2 === 0);");
+        lines.push("                var radius = isSpike ? rOut : rIn;");
+        lines.push("                var diffAng = Math.abs(pAng - rad);");
+        lines.push("                if (diffAng > Math.PI) diffAng = 2 * Math.PI - diffAng;");
+        lines.push("                if (hasTail && isSpike && diffAng < (Math.PI / pts)) {");
+        lines.push("                    vertices.push([tipX, tipY]);");
+        lines.push("                } else {");
+        lines.push("                    vertices.push([radius * Math.cos(pAng), radius * Math.sin(pAng)]);");
+        lines.push("                }");
+        lines.push("                inTangents.push([0, 0]);");
+        lines.push("                outTangents.push([0, 0]);");
+        lines.push("            }");
+        lines.push("        } else if (bodyType === \"thought\") {");
+        lines.push("            var cloudPuffs = 12;");
+        lines.push("            var cDt = (2 * Math.PI) / cloudPuffs;");
+        lines.push("            for (var c = 0; c < cloudPuffs; c++) {");
+        lines.push("                var cAng = c * cDt;");
+        lines.push("                var cx = a * Math.cos(cAng);");
+        lines.push("                var cy = b * Math.sin(cAng);");
+        lines.push("                vertices.push([cx, cy]);");
+        lines.push("                var pTanX = -a * Math.sin(cAng) * 0.28;");
+        lines.push("                var pTanY = b * Math.cos(cAng) * 0.28;");
+        lines.push("                inTangents.push([-pTanX, -pTanY]);");
+        lines.push("                outTangents.push([pTanX, pTanY]);");
+        lines.push("            }");
+        lines.push("        } else if (bodyType === \"polygon\") {");
+        lines.push("            var v0 = [-a * 0.96, -b * 0.88];");
+        lines.push("            var v1 = [a * 0.90, -b * 1.08];");
+        lines.push("            var v2 = [a * 1.04, b * 0.92];");
+        lines.push("            var v3 = [-a * 0.90, b * 1.08];");
+        lines.push("            function addPolyPt(pt) { vertices.push(pt); inTangents.push([0, 0]); outTangents.push([0, 0]); }");
+        lines.push("            addPolyPt(v0);");
+        lines.push("            addPolyPt(v1);");
+        lines.push("            addPolyPt(v2);");
+        lines.push("            if (hasTail) {");
+        lines.push("                if (tailType === \"corner\") {");
+        lines.push("                    if (tipX <= 0) {");
+        lines.push("                        var bxMid = (v2[0] + v3[0]) / 2;");
+        lines.push("                        var byMid = (v2[1] + v3[1]) / 2;");
+        lines.push("                        addPolyPt([bxMid, byMid]);");
+        lines.push("                        addPolyPt([tipX, tipY]);");
+        lines.push("                        addPolyPt([-a * 0.94, b * 0.4]);");
+        lines.push("                    } else {");
+        lines.push("                        addPolyPt([tipX, tipY]);");
+        lines.push("                        addPolyPt(v3);");
+        lines.push("                    }");
+        lines.push("                } else if (tailType === \"side_wedge\") {");
+        lines.push("                    addPolyPt(v3);");
+        lines.push("                    if (tipX <= 0) {");
+        lines.push("                        addPolyPt([-a * 0.92, b * 0.25]);");
+        lines.push("                        addPolyPt([tipX, tipY]);");
+        lines.push("                        addPolyPt([-a * 0.94, -b * 0.25]);");
+        lines.push("                    } else {");
+        lines.push("                        var lastI = vertices.length - 1;");
+        lines.push("                        vertices.splice(lastI, 0, [a * 0.96, b * 0.25], [tipX, tipY], [a * 0.96, -b * 0.25]);");
+        lines.push("                        inTangents.splice(lastI, 0, [0, 0], [0, 0], [0, 0]);");
+        lines.push("                        outTangents.splice(lastI, 0, [0, 0], [0, 0], [0, 0]);");
+        lines.push("                    }");
+        lines.push("                } else {");
+        lines.push("                    var bpx = Math.max(-a * 0.65, Math.min(a * 0.65, tipX));");
+        lines.push("                    var halfWPoly = tailBaseW / 2;");
+        lines.push("                    addPolyPt([bpx + halfWPoly, b]);");
+        lines.push("                    addPolyPt([tipX, tipY]);");
+        lines.push("                    addPolyPt([bpx - halfWPoly, b]);");
+        lines.push("                    addPolyPt(v3);");
+        lines.push("                }");
+        lines.push("            } else {");
+        lines.push("                addPolyPt(v3);");
+        lines.push("            }");
+        lines.push("        } else if (bodyType === \"docked\") {");
+        lines.push("            var rDock = Math.min(Math.min(a * 0.5, b * 0.5), cornerRadius || 28);");
+        lines.push("            var KDock = 0.55228475;");
+        lines.push("            var rKD = rDock * KDock;");
+        lines.push("            var halfWD = tailBaseW / 2;");
+        lines.push("            function addDockPt(pt, ti, to) { vertices.push(pt); inTangents.push(ti || [0, 0]); outTangents.push(to || [0, 0]); }");
+        lines.push("            addDockPt([-a, -b]);");
+        lines.push("            addDockPt([a, -b]);");
+        lines.push("            addDockPt([a, b - rDock]);");
+        lines.push("            addDockPt([a - rDock, b], [0, rKD], [0, 0]);");
+        lines.push("            if (hasTail) {");
+        lines.push("                if (tailType === \"corner\") {");
+        lines.push("                    if (tipX <= 0) {");
+        lines.push("                        addDockPt([-a + rDock, b]);");
+        lines.push("                        addDockPt([tipX, tipY]);");
+        lines.push("                        addDockPt([-a, b - rDock]);");
+        lines.push("                    } else {");
+        lines.push("                        var lastIdx = vertices.length - 1;");
+        lines.push("                        vertices[lastIdx] = [tipX, tipY];");
+        lines.push("                        inTangents[lastIdx] = [0, 0];");
+        lines.push("                        outTangents[lastIdx] = [0, 0];");
+        lines.push("                        addDockPt([-a + rDock, b]);");
+        lines.push("                        addDockPt([-a, b - rDock], [rKD, 0], [0, -rKD]);");
+        lines.push("                    }");
+        lines.push("                } else {");
+        lines.push("                    var bxDock = Math.max(-a + rDock + halfWD + 8, Math.min(a - rDock - halfWD - 8, tipX));");
+        lines.push("                    addDockPt([bxDock + halfWD, b]);");
+        lines.push("                    addDockPt([tipX, tipY]);");
+        lines.push("                    addDockPt([bxDock - halfWD, b]);");
+        lines.push("                    addDockPt([-a + rDock, b]);");
+        lines.push("                    addDockPt([-a, b - rDock], [rKD, 0], [0, -rKD]);");
+        lines.push("                }");
+        lines.push("            } else {");
+        lines.push("                addDockPt([-a + rDock, b]);");
+        lines.push("                addDockPt([-a, b - rDock], [rKD, 0], [0, -rKD]);");
+        lines.push("            }");
+        lines.push("        } else if (bodyType === \"stepped\") {");
+        lines.push("            var rSt = Math.min(14, cornerRadius || 14);");
+        lines.push("            var KSt = 0.55228475;");
+        lines.push("            var rKS = rSt * KSt;");
+        lines.push("            var w1 = a * 0.78, w2 = a * 1.02, w3 = a * 0.86;");
+        lines.push("            var y12 = -b * 0.33, y23 = b * 0.33;");
+        lines.push("            var halfWS = tailBaseW / 2;");
+        lines.push("            function addStPt(pt, ti, to) { vertices.push(pt); inTangents.push(ti || [0, 0]); outTangents.push(to || [0, 0]); }");
+        lines.push("            addStPt([-w1 + rSt, -b]);");
+        lines.push("            addStPt([w1 - rSt, -b]);");
+        lines.push("            addStPt([w1, -b + rSt], [0, -rKS], [0, 0]);");
+        lines.push("            addStPt([w1, y12 - rSt]);");
+        lines.push("            addStPt([w1 + rSt, y12], [-rKS, 0], [0, 0]);");
+        lines.push("            addStPt([w2 - rSt, y12], [0, 0], [rKS, 0]);");
+        lines.push("            addStPt([w2, y12 + rSt], [0, -rKS], [0, 0]);");
+        lines.push("            addStPt([w2, y23 - rSt]);");
+        lines.push("            addStPt([w2 - rSt, y23], [0, 0], [-rKS, 0]);");
+        lines.push("            addStPt([w3 + rSt, y23], [rKS, 0], [0, 0]);");
+        lines.push("            addStPt([w3, y23 + rSt], [0, -rKS], [0, 0]);");
+        lines.push("            addStPt([w3, b - rSt]);");
+        lines.push("            addStPt([w3 - rSt, b], [0, rKS], [0, 0]);");
+        lines.push("            if (hasTail) {");
+        lines.push("                var bxSt = Math.max(-w3 + rSt + halfWS + 6, Math.min(w3 - rSt - halfWS - 6, tipX));");
+        lines.push("                addStPt([bxSt + halfWS, b]);");
+        lines.push("                addStPt([tipX, tipY]);");
+        lines.push("                addStPt([bxSt - halfWS, b]);");
+        lines.push("            }");
+        lines.push("            addStPt([-w3 + rSt, b]);");
+        lines.push("            addStPt([-w3, b - rSt], [rKS, 0], [0, -rKS]);");
+        lines.push("            addStPt([-w3, y23 + rSt]);");
+        lines.push("            addStPt([-w3 - rSt, y23], [rKS, 0], [0, 0]);");
+        lines.push("            addStPt([-w2 + rSt, y23], [0, 0], [-rKS, 0]);");
+        lines.push("            addStPt([-w2, y23 - rSt], [0, rKS], [0, 0]);");
+        lines.push("            addStPt([-w2, y12 + rSt]);");
+        lines.push("            addStPt([-w2 + rSt, y12], [0, 0], [rKS, 0]);");
+        lines.push("            addStPt([-w1 - rSt, y12], [-rKS, 0], [0, 0]);");
+        lines.push("            addStPt([-w1, y12 - rSt], [0, rKS], [0, 0]);");
+        lines.push("            addStPt([-w1, -b + rSt]);");
+        lines.push("            addStPt([-w1 + rSt, -b], [0, -rKS], [0, 0]);");
+        lines.push("        } else {");
+        lines.push("            var r = (bodyType === \"caption\") ? 0 : Math.min(Math.min(a, b), cornerRadius || 28);");
+        lines.push("            var K = 0.55228475;");
+        lines.push("            var rK = r * K;");
+        lines.push("            var halfW = tailBaseW / 2;");
+        lines.push("            var rectPts = [");
+        lines.push("                [-a, -b + r], [-a + r, -b],");
+        lines.push("                [a - r, -b],  [a, -b + r],");
+        lines.push("                [a, b - r],   [a - r, b],");
+        lines.push("                [-a + r, b],  [-a, b - r]");
+        lines.push("            ];");
+        lines.push("            var rectIn = [");
+        lines.push("                [0, -rK], [-rK, 0],");
+        lines.push("                [0, 0],   [rK, 0],");
+        lines.push("                [0, 0],   [0, rK],");
+        lines.push("                [rK, 0],  [0, 0]");
+        lines.push("            ];");
+        lines.push("            var rectOut = [");
+        lines.push("                [0, 0],   [rK, 0],");
+        lines.push("                [rK, 0],  [0, 0],");
+        lines.push("                [0, rK],  [0, 0],");
+        lines.push("                [-rK, 0], [0, -rK]");
+        lines.push("            ];");
+        lines.push("            if (!hasTail) {");
+        lines.push("                vertices = rectPts; inTangents = rectIn; outTangents = rectOut;");
+        lines.push("            } else if (tailType === \"corner\") {");
+        lines.push("                for (var cvi = 0; cvi < rectPts.length; cvi++) {");
+        lines.push("                    if (tipX <= 0 && cvi === 6) {");
+        lines.push("                        vertices.push([-a + r, b]); inTangents.push([0, 0]); outTangents.push([0, 0]);");
+        lines.push("                        vertices.push([tipX, tipY]); inTangents.push([0, 0]); outTangents.push([0, 0]);");
+        lines.push("                        vertices.push([-a, b - r]); inTangents.push([0, 0]); outTangents.push([0, 0]);");
+        lines.push("                        cvi++; continue;");
+        lines.push("                    }");
+        lines.push("                    if (tipX > 0 && cvi === 4) {");
+        lines.push("                        vertices.push([a, b - r]); inTangents.push([0, 0]); outTangents.push([0, 0]);");
+        lines.push("                        vertices.push([tipX, tipY]); inTangents.push([0, 0]); outTangents.push([0, 0]);");
+        lines.push("                        vertices.push([a - r, b]); inTangents.push([0, 0]); outTangents.push([0, 0]);");
+        lines.push("                        cvi++; continue;");
+        lines.push("                    }");
+        lines.push("                    vertices.push(rectPts[cvi]); inTangents.push(rectIn[cvi]); outTangents.push(rectOut[cvi]);");
+        lines.push("                }");
+        lines.push("            } else if (tailType === \"side_wedge\") {");
+        lines.push("                for (var swi = 0; swi < rectPts.length; swi++) {");
+        lines.push("                    vertices.push(rectPts[swi]); inTangents.push(rectIn[swi]); outTangents.push(rectOut[swi]);");
+        lines.push("                    if (tipX <= 0 && swi === 7) {");
+        lines.push("                        vertices.push([-a, -halfW]); inTangents.push([0, 0]); outTangents.push([0, 0]);");
+        lines.push("                        vertices.push([tipX, tipY]); inTangents.push([0, 0]); outTangents.push([0, 0]);");
+        lines.push("                        vertices.push([-a, halfW]);  inTangents.push([0, 0]); outTangents.push([0, 0]);");
+        lines.push("                    } else if (tipX > 0 && swi === 3) {");
+        lines.push("                        vertices.push([a, -halfW]);  inTangents.push([0, 0]); outTangents.push([0, 0]);");
+        lines.push("                        vertices.push([tipX, tipY]); inTangents.push([0, 0]); outTangents.push([0, 0]);");
+        lines.push("                        vertices.push([a, halfW]);   inTangents.push([0, 0]); outTangents.push([0, 0]);");
+        lines.push("                    }");
+        lines.push("                }");
+        lines.push("            } else {");
+        lines.push("                var edgeIdx = 2;");
+        lines.push("                if (rad >= Math.PI * 0.25 && rad < Math.PI * 0.75) edgeIdx = 2;");
+        lines.push("                else if (rad >= Math.PI * 0.75 && rad < Math.PI * 1.25) edgeIdx = 3;");
+        lines.push("                else if (rad >= Math.PI * 1.25 && rad < Math.PI * 1.75) edgeIdx = 0;");
+        lines.push("                else edgeIdx = 1;");
+        lines.push("                for (var vi = 0; vi < rectPts.length; vi++) {");
+        lines.push("                    vertices.push(rectPts[vi]); inTangents.push(rectIn[vi]); outTangents.push(rectOut[vi]);");
+        lines.push("                    if (edgeIdx === 2 && vi === 5) {");
+        lines.push("                        var bx = Math.max(-a + r + halfW + 10, Math.min(a - r - halfW - 10, tipX));");
+        lines.push("                        vertices.push([bx + halfW, b]); inTangents.push([0, 0]); outTangents.push([(tipX - (bx + halfW)) * 0.3, (tipY - b) * 0.3]);");
+        lines.push("                        vertices.push([tipX, tipY]); inTangents.push([0, 0]); outTangents.push([0, 0]);");
+        lines.push("                        vertices.push([bx - halfW, b]); inTangents.push([(tipX - (bx - halfW)) * 0.3, (tipY - b) * 0.3]); outTangents.push([0, 0]);");
+        lines.push("                    } else if (edgeIdx === 0 && vi === 1) {");
+        lines.push("                        var txPos = Math.max(-a + r + halfW + 10, Math.min(a - r - halfW - 10, tipX));");
+        lines.push("                        vertices.push([txPos - halfW, -b]); inTangents.push([0, 0]); outTangents.push([(tipX - (txPos - halfW)) * 0.3, (tipY - (-b)) * 0.3]);");
+        lines.push("                        vertices.push([tipX, tipY]); inTangents.push([0, 0]); outTangents.push([0, 0]);");
+        lines.push("                        vertices.push([txPos + halfW, -b]); inTangents.push([(tipX - (txPos + halfW)) * 0.3, (tipY - (-b)) * 0.3]); outTangents.push([0, 0]);");
+        lines.push("                    }");
+        lines.push("                }");
+        lines.push("            }");
+        lines.push("        }");
+        lines.push("");
+        lines.push("        createPath(vertices, inTangents, outTangents, true);");
+        lines.push("    } catch (err) {");
+        lines.push("        value;");
+        lines.push("    }");
+        lines.push("}");
+        return lines.join("\n");
+    }
+
+    // -------------------------------------------------------------------------
     // 9. Main Comic Bubble Creation & Rigging Engine
     // -------------------------------------------------------------------------
     function buildComicBubble(comp, textLayer, params) {
@@ -1540,6 +1893,16 @@
         var bubbleCompPos = [textPos[0] + textCenterLocalX, textPos[1] + textCenterLocalY, 0];
         if (bubbleLayer.transform && bubbleLayer.transform.position) {
             bubbleLayer.transform.position.setValue(bubbleCompPos);
+            if (params.liveAnimTail !== false) {
+                try {
+                    bubbleLayer.transform.position.expression = 'try {\n' +
+                        '    var tL = thisComp.layer("' + textLayer.name.replace(/"/g, '\\"') + '");\n' +
+                        '    var sr = tL.sourceRectAtTime(time, false);\n' +
+                        '    tL.toComp([sr.left + (sr.width / 2), sr.top + (sr.height / 2)]);\n' +
+                        '} catch (e) { value; }';
+                    bubbleLayer.transform.position.expressionEnabled = true;
+                } catch (ePosExpr) {}
+            }
         }
 
         // 6. Generate Vector Shape Bézier Path
@@ -1575,6 +1938,28 @@
                 sObj.closed = true;
                 pathProp.setValue(sObj);
             } catch (eSetPath) {}
+
+            // Attach real-time animatable tail expression
+            if (params.liveAnimTail !== false) {
+                try {
+                    var exprCode = buildDynamicPathExpression(
+                        params.bodyType,
+                        params.tailType,
+                        params.cornerRadius,
+                        params.burstSpikes,
+                        params.tailBaseW,
+                        params.tailCurvature,
+                        padX,
+                        padY,
+                        textLayer.name.replace(/"/g, '\\"'),
+                        LAYER_TARGET_NAME.replace(/"/g, '\\"'),
+                        bubbleW,
+                        bubbleH
+                    );
+                    pathProp.expression = exprCode;
+                    pathProp.expressionEnabled = true;
+                } catch (ePathExpr) {}
+            }
         }
 
         // If Thought Bubbles, add 3 descending thought circles
@@ -1595,7 +1980,19 @@
                 var elProp = puffContents.addProperty("ADBE Vector Shape - Ellipse");
                 if (elProp) {
                     if (elProp.property("Size")) elProp.property("Size").setValue([pf.r * 2, pf.r * 2]);
-                    if (elProp.property("Position")) elProp.property("Position").setValue([pfx, pfy]);
+                    if (elProp.property("Position")) {
+                        elProp.property("Position").setValue([pfx, pfy]);
+                        if (params.liveAnimTail !== false) {
+                            try {
+                                elProp.property("Position").expression = 'try {\n' +
+                                    '    var tL = thisComp.layer("' + LAYER_TARGET_NAME.replace(/"/g, '\\"') + '");\n' +
+                                    '    var tip = fromComp(tL.toComp(tL.anchorPoint));\n' +
+                                    '    [tip[0] * ' + pf.frac + ', tip[1] * ' + pf.frac + '];\n' +
+                                    '} catch (e) { value; }';
+                                elProp.property("Position").expressionEnabled = true;
+                            } catch (ePuffExpr) {}
+                        }
+                    }
                 }
             }
         }
@@ -2027,6 +2424,10 @@
         btnBC.onClick = function() { sldAngle.value = 90;   txtAngle.text = "90";   };
         btnBR.onClick = function() { sldAngle.value = 45;   txtAngle.text = "45";   };
 
+        var chkLiveAnimTail = pnlTargetCtrl.add("checkbox", undefined, "Animatable Tail (Live '🎯 Tail Target' Expression Tracking)");
+        chkLiveAnimTail.value = true;
+        chkLiveAnimTail.helpTip = "Enables real-time After Effects expressions on the vector Path so keyframing or dragging '🎯 Tail Target' animates the tail dynamically across time!";
+
         // ---------------------------------------------------------------------
         // TAB 3: 🎨 COLORS & STYLING
         // ---------------------------------------------------------------------
@@ -2340,7 +2741,8 @@
                 inDelay: 0.0,
                 holdDuration: parseFloat(txtHold.text) || 2.5,
                 outDuration: 0.30,
-                animateFromTail: chkTailOrigin.value
+                animateFromTail: chkTailOrigin.value,
+                liveAnimTail: chkLiveAnimTail.value
             };
 
             var appObj = (typeof app !== "undefined") ? app : globalObj.app;

@@ -15,7 +15,7 @@ window.JSX_MANIFEST = [
         "filename": "AE_Comic_Text_Bubble.jsx",
         "title": "AE COMIC TEXT BUBBLE v1.0.0",
         "description": "AE COMIC TEXT BUBBLE v1.0.0",
-        "size": 108356
+        "size": 136737
     },
     {
         "filename": "AE_Get_Emojis.jsx",
@@ -96,6 +96,3 @@ window.JSX_MANIFEST = [
         "size": 318278
     }
 ];
-
-if (typeof window !== "undefined") { window.JSX_FOLDER_FILES = window.__JSX_PRESETS__; }
-if (typeof globalThis !== "undefined") { globalThis.JSX_FOLDER_FILES = globalThis.__JSX_PRESETS__; }
