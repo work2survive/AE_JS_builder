@@ -959,8 +959,27 @@
         while (rad < 0) rad += 2 * Math.PI;
         while (rad >= 2 * Math.PI) rad -= 2 * Math.PI;
 
-        var tipX = tailDist * Math.cos(rad);
-        var tipY = tailDist * Math.sin(rad);
+        // Constraint: Tail target must NOT be placed inside the bubble area!
+        // Calculate boundary distance along ray + safety clearance margin
+        var cosR = Math.cos(rad);
+        var sinR = Math.sin(rad);
+        var absCosR = Math.abs(cosR) || 0.0001;
+        var absSinR = Math.abs(sinR) || 0.0001;
+        var rBound;
+        if (bodyType === "oval") {
+            rBound = (a * b) / Math.sqrt((b * cosR) * (b * cosR) + (a * sinR) * (a * sinR));
+        } else if (bodyType === "squircle") {
+            rBound = 1 / Math.pow(Math.pow(absCosR / a, 3.2) + Math.pow(absSinR / b, 3.2), 1 / 3.2);
+        } else {
+            rBound = Math.min(a / absCosR, b / absSinR);
+        }
+        var minSafeDist = rBound + 18;
+        if (tailDist < minSafeDist) {
+            tailDist = minSafeDist;
+        }
+
+        var tipX = tailDist * cosR;
+        var tipY = tailDist * sinR;
 
         var vertices = [];
         var inTangents = [];
@@ -1448,6 +1467,26 @@
         lines.push("        var bodyType = \"" + bodyType + "\";");
         lines.push("        var tailType = \"" + tailType + "\";");
         lines.push("");
+        lines.push("        /* Constraint: Tail target must NOT be placed inside the bubble area! */");
+        lines.push("        var cosR = Math.cos(rad);");
+        lines.push("        var sinR = Math.sin(rad);");
+        lines.push("        var absCosR = Math.abs(cosR) || 0.0001;");
+        lines.push("        var absSinR = Math.abs(sinR) || 0.0001;");
+        lines.push("        var rBound;");
+        lines.push("        if (bodyType === \"oval\") {");
+        lines.push("            rBound = (a * b) / Math.sqrt((b * cosR) * (b * cosR) + (a * sinR) * (a * sinR));");
+        lines.push("        } else if (bodyType === \"squircle\") {");
+        lines.push("            rBound = 1 / Math.pow(Math.pow(absCosR / a, 3.2) + Math.pow(absSinR / b, 3.2), 1 / 3.2);");
+        lines.push("        } else {");
+        lines.push("            rBound = Math.min(a / absCosR, b / absSinR);");
+        lines.push("        }");
+        lines.push("        var minSafeDist = rBound + 18;");
+        lines.push("        if (tailDist < minSafeDist) {");
+        lines.push("            tailDist = minSafeDist;");
+        lines.push("            tipX = tailDist * cosR;");
+        lines.push("            tipY = tailDist * sinR;");
+        lines.push("        }");
+        lines.push("");
         lines.push("        var vertices = [];");
         lines.push("        var inTangents = [];");
         lines.push("        var outTangents = [];");
@@ -1824,6 +1863,26 @@
             }
         } catch (eP) {}
 
+        // Constraint: Tail target must NOT be placed inside the bubble area!
+        var halfBW = bubbleW / 2;
+        var halfBH = bubbleH / 2;
+        function getSafeTailDistance(angleDeg) {
+            var radAngle = angleDeg * (Math.PI / 180);
+            var cosA = Math.cos(radAngle);
+            var sinA = Math.sin(radAngle);
+            var aCos = Math.abs(cosA) || 0.0001;
+            var aSin = Math.abs(sinA) || 0.0001;
+            var rB;
+            if (params.bodyType === "oval") {
+                rB = (halfBW * halfBH) / Math.sqrt((halfBH * cosA) * (halfBH * cosA) + (halfBW * sinA) * (halfBW * sinA));
+            } else if (params.bodyType === "squircle") {
+                rB = 1 / Math.pow(Math.pow(aCos / halfBW, 3.2) + Math.pow(aSin / halfBH, 3.2), 1 / 3.2);
+            } else {
+                rB = Math.min(halfBW / aCos, halfBH / aSin);
+            }
+            return Math.round(rB + 18);
+        }
+
         // Check if user already moved the in-comp 🎯 Tail Target null
         if (comp.layers) {
             for (var clChk = 1; clChk <= comp.layers.length; clChk++) {
@@ -1837,8 +1896,10 @@
                         var dY = ePos[1] - bCenterY;
                         var computedDist = Math.sqrt(dX * dX + dY * dY);
                         if (computedDist > 10) {
-                            params.tailDist = Math.round(computedDist);
-                            params.tailAngle = Math.round(Math.atan2(dY, dX) * (180 / Math.PI));
+                            var detectedAngle = Math.round(Math.atan2(dY, dX) * (180 / Math.PI));
+                            var minSafe = getSafeTailDistance(detectedAngle);
+                            params.tailDist = Math.max(minSafe, Math.round(computedDist));
+                            params.tailAngle = detectedAngle;
                         }
                     } catch (eTargCalc) {}
                     break;
@@ -1854,6 +1915,12 @@
                     try { oldL.remove(); } catch (eR) {}
                 }
             }
+        }
+
+        // Enforce safe initial tail placement outside bubble perimeter
+        var minInitSafe = getSafeTailDistance(params.tailAngle);
+        if (params.tailDist < minInitSafe) {
+            params.tailDist = minInitSafe;
         }
 
         // 4. Create Dedicated In-Comp "🎯 Tail Target" Null Layer
@@ -2404,21 +2471,37 @@
         grpDist.orientation = "row";
         grpDist.alignChildren = ["fill", "center"];
         grpDist.add("statictext", undefined, "Distance:");
-        var sldDist = grpDist.add("slider", undefined, 90, 20, 350);
+        var sldDist = grpDist.add("slider", undefined, 110, 60, 450);
         sldDist.alignment = ["fill", "center"];
-        var txtDist = grpDist.add("edittext", undefined, "90");
+        var txtDist = grpDist.add("edittext", undefined, "110");
         txtDist.preferredSize = [35, 20];
         grpDist.add("statictext", undefined, "px");
 
         sldAngle.onChanging = function() { txtAngle.text = String(Math.round(sldAngle.value)); };
-        sldDist.onChanging = function() { txtDist.text = String(Math.round(sldDist.value)); };
+        txtAngle.onChange = function() {
+            var val = parseFloat(txtAngle.text);
+            if (isNaN(val)) val = 0;
+            sldAngle.value = val;
+            txtAngle.text = String(Math.round(val));
+        };
+
+        sldDist.onChanging = function() {
+            var val = Math.max(60, Math.round(sldDist.value));
+            txtDist.text = String(val);
+        };
+        txtDist.onChange = function() {
+            var val = parseFloat(txtDist.text);
+            if (isNaN(val) || val < 60) val = 60;
+            sldDist.value = val;
+            txtDist.text = String(Math.round(val));
+        };
 
         // Matrix button click bindings
         btnTL.onClick = function() { sldAngle.value = -135; txtAngle.text = "-135"; };
         btnTC.onClick = function() { sldAngle.value = -90;  txtAngle.text = "-90";  };
         btnTR.onClick = function() { sldAngle.value = -45;  txtAngle.text = "-45";  };
         btnML.onClick = function() { sldAngle.value = 180;  txtAngle.text = "180";  };
-        btnCC.onClick = function() { sldDist.value = 30;    txtDist.text = "30";    };
+        btnCC.onClick = function() { sldAngle.value = 90;   txtAngle.text = "90";   sldDist.value = 110; txtDist.text = "110"; };
         btnMR.onClick = function() { sldAngle.value = 0;    txtAngle.text = "0";    };
         btnBL.onClick = function() { sldAngle.value = 115;  txtAngle.text = "115";  };
         btnBC.onClick = function() { sldAngle.value = 90;   txtAngle.text = "90";   };
@@ -2722,7 +2805,7 @@
 
                 tailBaseW: 38,
                 tailAngle: parseFloat(txtAngle.text) || 115,
-                tailDist: parseFloat(txtDist.text) || 90,
+                tailDist: Math.max(60, parseFloat(txtDist.text) || 110),
                 tailCurvature: 0.35,
 
                 bgColor: cpBg.getColor(),
