@@ -1002,3 +1002,230 @@ When text layers have `threeDLayer = true` and custom Z-depth positions (e.g. `Z
    }
    ```
 
+---
+
+## 21. Character & Emoji Spatial Locating: The Geometry of In-Line Character Placement
+
+When replacing or decorating specific characters (such as swapping monochrome font glyphs for color vector emojis via `AE_Replace_Color_Emojis.jsx`, or anchoring callouts, badges, or pointers to specific characters inside existing text), scripts must determine the exact local $[X, Y]$ coordinates of individual characters within arbitrary text layers.
+
+Unlike word-level bounding box calculations that wrap an entire word into a highlight box, character-level locating requires sub-pixel optical baseline alignment, multi-line paragraph text box wrapping, and justification invariance without altering the parent text layer's anchor point.
+
+```
+                  POINT TEXT CHARACTER LOCATING
+      [Local Origin [0, 0] at Baseline Y=0, Horizontal Anchor at Justification X=0]
+                     Line 0: "Hello After Effects! 😃 We now have color emojis!"
+                     ──────────────────────────────▲─────────────────────────── [Baseline Y=0]
+                                                   │
+                                                   └─ [emojiCenterX, emojiCenterY]
+
+                  PARAGRAPH (BOX) TEXT CHARACTER LOCATING
+      [Local Origin [0, 0] at Box Top-Left [boxPos[0], boxPos[1]]]
+      ┌────────────────────────────────────────────────────────────────────────┐
+      │  Line 0: "Right aligned box text with popcorn 🍿 and circus"           │
+      │  ─────────────────────────────────────────────▲───────────── [Line 0 Baseline = boxPos.y + ascender]
+      │                                               │
+      │  Line 1: "tent 🎪 rendered with native vector shapes!"                 │
+      │  ──────────────▲──────────────────────────────────────────── [Line 1 Baseline = Line 0 Baseline + leading]
+      │                └─ [emojiCenterX, emojiCenterY]                         │
+      └────────────────────────────────────────────────────────────────────────┘
+```
+
+### 21.1 The Multi-Line Paragraph Text Box Wrapping Trap
+
+The single most critical failure mode when locating characters in **Paragraph (Box) Text** stems from how After Effects stores text strings:
+
+1. **Point Text**: Visual line breaks exist **only** where explicit newline characters (`\r\n`, `\r`, or `\n`) occur in `doc.text`.
+2. **Paragraph (Box) Text**: Text flows continuously inside `doc.boxTextSize[0]`. Words wrap onto subsequent visual lines **without inserting newline characters into the underlying string**.
+
+#### The Catastrophic Unwrapped Width Error in Center & Right Alignment
+If a script naively splits `doc.text` by `/\r\n|\r|\n/`, an entire 50-word paragraph is treated as a **single line**:
+- The measured line width $\text{lineW}$ is the length of all 50 words combined (e.g. $2500\text{px}$), while the box width $\text{boxWidth}$ is only $800\text{px}$.
+- When aligned **Right**:
+  $$\text{lineLeftX} = \text{boxWidth} - \text{lineW} = 800 - 2500 = -1700\text{px}$$
+- The script calculates an advance for a character on line 2 or 3 using line index $0$, throwing the character into negative coordinate space far outside the composition window!
+
+#### The Canonical Solution: Dynamic Visual Line Wrapping (`computeVisualLines`)
+Before locating character coordinates, scripts **must** simulate After Effects' internal Knuth-Plass greedy line-breaker across each paragraph:
+
+```javascript
+function computeVisualLines(props, measurer) {
+    var fullText = props.fullText;
+    if (!props.isBox || props.boxWidth <= 0) {
+        return fullText.split(/\r\n|\r|\n/);
+    }
+
+    // 1. Check for AETextCalibration engine (e.g. in AE_JS_builder emulator)
+    var calib = (typeof AETextCalibration !== "undefined") ? AETextCalibration : (globalObj.AETextCalibration || null);
+    if (calib && typeof calib.wrapParagraph === "function") {
+        try {
+            var wrapped = calib.wrapParagraph(fullText, props.boxWidth, props.fontSize, props.font, {}, props.tracking);
+            if (wrapped && wrapped.length > 0) {
+                var wLines = [];
+                for (var wi = 0; wi < wrapped.length; wi++) wLines.push(wrapped[wi].text);
+                return wLines;
+            }
+        } catch (eCal) {}
+    }
+
+    // 2. ExtendScript native greedy token wrapping fallback
+    var rawParas = fullText.split(/\r\n|\r|\n/);
+    var resultLines = [];
+    for (var pi = 0; pi < rawParas.length; pi++) {
+        var para = rawParas[pi];
+        var words = para.match(/\S+|\s+/g) || [];
+        if (words.length === 0) { resultLines.push(""); continue; }
+
+        var curLine = "";
+        for (var wi = 0; wi < words.length; wi++) {
+            var token = words[wi];
+            var testLine = curLine + token;
+            var testW = measurer ? measurer.measurePrefixAdvance(testLine.replace(/\s+$/, "")) : 0;
+            if (testW > props.boxWidth && curLine.replace(/\s+$/, "").length > 0) {
+                resultLines.push(curLine.replace(/\s+$/, ""));
+                curLine = token.replace(/^\s+/, "");
+            } else {
+                curLine = testLine;
+            }
+        }
+        if (curLine.length > 0) resultLines.push(curLine.replace(/\s+$/, ""));
+    }
+    return resultLines.length > 0 ? resultLines : rawParas;
+}
+```
+
+---
+
+### 21.2 Paragraph Justification Enum & Numeric Normalization
+
+ExtendScript justification values are encoded as numeric constants under `ParagraphJustification`. A notorious bug occurs when scripts misidentify numeric enum values or invert them:
+
+| Justification | ExtendScript Enum | Numeric Value | Alternate / Last-Line Enums |
+| :--- | :--- | :--- | :--- |
+| **Left** | `ParagraphJustification.LEFT_JUSTIFY` | `7412` | `7415` (`JUSTIFY_LAST_LEFT`), `7418` (`JUSTIFY_ALL`), `0`, `"left"` |
+| **Right** | `ParagraphJustification.RIGHT_JUSTIFY` | `7413` | `7416` (`JUSTIFY_LAST_RIGHT`), `1`, `"right"`, `"RIGHT_JUSTIFY"` |
+| **Center** | `ParagraphJustification.CENTER_JUSTIFY` | `7414` | `7417` (`JUSTIFY_LAST_CENTER`), `2`, `"center"`, `"CENTER_JUSTIFY"` |
+
+> [!WARNING]
+> **The 7413 / 7414 Inversion Trap**:
+> Developers frequently write `if (j === 7413) just = "center"` assuming standard array indexing or sequential numbering. In After Effects typography, **7413 is RIGHT** and **7414 is CENTER**. Inverting them causes right-aligned text to calculate center coordinates, displacing characters by hundreds of pixels.
+
+To guarantee bulletproof justification normalization across all AE versions and web simulators:
+```javascript
+function normalizeJustification(j) {
+    if (typeof ParagraphJustification !== "undefined") {
+        if (j === ParagraphJustification.CENTER_JUSTIFY ||
+            j === ParagraphJustification.JUSTIFY_LAST_CENTER ||
+            (typeof ParagraphJustification.FULL_JUSTIFY_LASTCENTER !== "undefined" && j === ParagraphJustification.FULL_JUSTIFY_LASTCENTER)) {
+            return "center";
+        }
+        if (j === ParagraphJustification.RIGHT_JUSTIFY ||
+            j === ParagraphJustification.JUSTIFY_LAST_RIGHT ||
+            (typeof ParagraphJustification.FULL_JUSTIFY_LASTRIGHT !== "undefined" && j === ParagraphJustification.FULL_JUSTIFY_LASTRIGHT)) {
+            return "right";
+        }
+    }
+    if (j == 7414 || j == 7417 || j == 2 || j === "center" || j === "CENTER_JUSTIFY") return "center";
+    if (j == 7413 || j == 7416 || j == 1 || j === "right" || j === "RIGHT_JUSTIFY") return "right";
+    if (typeof j === "string") {
+        var s = j.toLowerCase();
+        if (s.indexOf("center") !== -1) return "center";
+        if (s.indexOf("right") !== -1) return "right";
+    }
+    return "left";
+}
+```
+
+---
+
+### 21.3 Child Layer Parenting Without Parent Anchor Point Disruption
+
+When generating procedural vector shape layers to replace or decorate text characters, **never mutate the parent text layer's anchor point or position** (doing so breaks user keyframe animations, tracking trackers, and parent transforms).
+
+Instead, utilize After Effects' transform hierarchy:
+```javascript
+var shapeLayer = comp.layers.addShape();
+shapeLayer.parent = textLayer;
+var origAP = textLayer.transform.anchorPoint.value; // [apX, apY, apZ]
+shapeLayer.transform.anchorPoint.setValue([0, 0, 0]);
+shapeLayer.transform.position.setValue([-origAP[0], -origAP[1], 0]);
+shapeLayer.transform.scale.setValue([100, 100, 100]);
+```
+
+#### Why `position = [-origAP[0], -origAP[1], 0]` Works Universally
+In After Effects matrix mechanics:
+1. When `child.parent = parent`, child `position = [0, 0]` is evaluated at `parent.anchorPoint`.
+2. Setting `child.position = -parent.anchorPoint` cancels out the parent's anchor point offset:
+   $$M_{\text{child\_world}} = M_{\text{parent\_world}} \times \text{Translate}(-\text{Anchor}_{\text{parent}}) \times \text{Translate}(+\text{Anchor}_{\text{parent}}) = M_{\text{parent\_world}}$$
+3. Consequently, any local coordinate $[x, y]$ in `shapeLayer` lands at the **exact same composition coordinate** as $[x, y]$ in the text layer's native coordinate space!
+
+---
+
+### 21.4 The Universal Character Coordinate Equations
+
+For any specific character located on visual line `vl` (0-indexed) with line text `lineStr`:
+1. **Visual Line Width**:
+   $$\text{lineW} = \text{measurePrefixAdvance}(\text{lineStr})$$
+2. **Character Advance & Prefix Advance**:
+   $$\text{prefix} = \text{lineStr.substring}(0, \text{charIndex})$$
+   $$\text{prefixAdv} = \text{measurePrefixAdvance}(\text{prefix})$$
+   $$\text{charAdv} = \max\left(\text{fontSize} \times 0.70, \text{measurePrefixAdvance}(\text{prefix} + \text{char}) - \text{prefixAdv}\right)$$
+
+#### 1. Horizontal Line Origin ($\text{lineLeftX}$)
+$$\text{lineLeftX} = \begin{cases}
+\text{boxPos}_x & \text{if Box Text, Left Justified} \\
+\text{boxPos}_x + \frac{\text{boxWidth} - \text{lineW}}{2} & \text{if Box Text, Center Justified} \\
+\text{boxPos}_x + \text{boxWidth} - \text{lineW} & \text{if Box Text, Right Justified} \\
+0 & \text{if Point Text, Left Justified} \\
+-\frac{\text{lineW}}{2} & \text{if Point Text, Center Justified} \\
+-\text{lineW} & \text{if Point Text, Right Justified}
+\end{cases}$$
+
+#### 2. Vertical Line Baseline ($\text{lineBaselineY}$)
+$$\text{firstBaselineY} = \begin{cases}
+\text{boxPos}_y + (\text{fontSize} \times 0.78) & \text{if Paragraph Box Text} \\
+0 & \text{if Point Text}
+\end{cases}$$
+$$\text{lineBaselineY} = \text{firstBaselineY} + (vl \times \text{leading})$$
+*(where $\text{leading} = \text{doc.leading} \parallel \text{fontSize} \times 1.2$)*
+
+#### 3. Character Center Coordinates ($\text{charCenterX}, \text{charCenterY}$)
+$$\text{charCenterX} = \text{lineLeftX} + \text{prefixAdv} + \frac{\text{charAdv}}{2}$$
+$$\text{charCenterY} = \text{lineBaselineY} - (\text{fontSize} \times 0.35)$$
+
+> [!TIP]
+> **Optical Baseline Offset ($0.35 \times \text{fontSize}$)**:
+> In vector typography, glyph em-boxes extend from baseline $y=0$ upwards to ascender $y \approx -0.78 \times \text{fontSize}$. Placing an icon or replacement vector shape centered at $\text{lineBaselineY} - 0.35 \times \text{fontSize}$ centers the shape optically with the cap-height of uppercase Latin letters and digits.
+
+---
+
+### 21.5 Multi-Byte Unicode Surrogate Pairs & Text Animator Hiding
+
+When characters are emojis (such as 🍿 `U+1F37F` or 🎪 `U+1F3AA`), JavaScript engines represent them as **two UTF-16 code units** (surrogate pairs with `codePoint >= 0x10000`, string length 2).
+
+1. **Surrogate Pair Scanning**:
+   ```javascript
+   var code = str.charCodeAt(i);
+   if (code >= 0xD800 && code <= 0xDBFF && i + 1 < str.length) {
+       var next = str.charCodeAt(i + 1);
+       if (next >= 0xDC00 && next <= 0xDFFF) {
+           var cp = ((code - 0xD800) * 0x400) + (next - 0xDC00) + 0x10000;
+           // Atomic glyph with length 2
+           i++; // advance past surrogate partner
+       }
+   }
+   ```
+2. **Hiding Font Glyphs with Native Text Animators**:
+   To replace font glyphs without removing text characters from `doc.text` (which would invalidate expressions, word wrapping, and text indexes):
+   ```javascript
+   var anim = animators.addProperty("ADBE Text Animator");
+   var opProp = anim.property("ADBE Text Animator Properties").addProperty("ADBE Text Opacity");
+   opProp.setValue(0); // 0% opacity on font glyphs
+
+   var sel = anim.property("ADBE Text Selectors").addProperty("ADBE Text Selector");
+   sel.property("ADBE Text Range Units").setValue(2); // 2 = Index Units (UTF-16 code units)
+   sel.property("ADBE Text Index Start").setValue(match.start);
+   sel.property("ADBE Text Index End").setValue(match.start + match.length);
+   ```
+   Because `ADBE Text Selector` in Index mode operates directly on UTF-16 code units, passing $[start, start + length]$ sets opacity to 0% exclusively for the target emoji glyphs, preserving exact line geometry while displaying native color vector shapes.
+
+
