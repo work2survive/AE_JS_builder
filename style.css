@@ -776,8 +776,9 @@ body.body-viewport-panning {
     transition: background-color 0.15s ease, outline 0.15s ease;
 }
 
-.scriptui-dock.drag-over {
-    outline: 2px dashed var(--ae-blue);
+.scriptui-dock.drag-over,
+.ae-editor-panel.drag-over {
+    outline: 2px dashed var(--ae-blue) !important;
     outline-offset: -4px;
     background-color: rgba(44, 140, 255, 0.08);
 }
@@ -885,11 +886,7 @@ body.body-viewport-panning {
     user-select: none;
     position: relative;
     flex-shrink: 0;
-    cursor: grab;
-}
-
-.scriptui-tab-bar-ae:active {
-    cursor: grabbing;
+    cursor: default;
 }
 
 .scriptui-tab-item-ae {
@@ -897,8 +894,20 @@ body.body-viewport-panning {
     align-items: center;
     gap: 6px;
     position: relative;
-    padding-bottom: 3px;
+    padding: 2px 4px 3px 4px;
+    border-radius: 3px 3px 0 0;
     border-bottom: 2px solid #4096f3;
+    cursor: grab;
+    transition: background-color 0.12s ease;
+}
+
+.scriptui-tab-item-ae:hover {
+    background-color: rgba(255, 255, 255, 0.06);
+}
+
+.scriptui-tab-item-ae:active,
+.scriptui-tab-item-ae.is-dragging {
+    cursor: grabbing;
 }
 
 .scriptui-tab-title-ae {

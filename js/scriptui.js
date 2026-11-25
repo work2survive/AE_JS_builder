@@ -1468,7 +1468,12 @@
             if (dockMenuBtn) dockMenuBtn.textContent = 'Undock Panel';
 
             const tabScriptUI = document.getElementById('tab-scriptui');
-            if (tabScriptUI) tabScriptUI.textContent = 'ScriptUI Panel Preview';
+            if (tabScriptUI) {
+                tabScriptUI.textContent = 'ScriptUI Panel Preview';
+                if (!initial && !tabScriptUI.classList.contains('active')) {
+                    tabScriptUI.click();
+                }
+            }
 
             this.setFocus(true);
             if (!initial && typeof this.onResize === 'function') {
@@ -1544,9 +1549,11 @@
         }
 
         _setupWindowEvents(winDiv, titlebar, tabBar, rCorner, rRight, rBottom, rLeft, rCornerBL) {
+            const tabItem = tabBar.querySelector('.scriptui-tab-item-ae');
             const hamburgerBtn = tabBar.querySelector('.scriptui-hamburger-btn');
             const menu = tabBar.querySelector('.scriptui-panel-menu');
             const closeBtnOS = titlebar.querySelector('.scriptui-floating-close-btn');
+            let suppressHamburgerClick = false;
 
             if (closeBtnOS) {
                 closeBtnOS.onclick = (e) => {
@@ -1559,6 +1566,10 @@
             if (hamburgerBtn && menu) {
                 hamburgerBtn.onclick = (e) => {
                     e.stopPropagation();
+                    if (suppressHamburgerClick) {
+                        suppressHamburgerClick = false;
+                        return;
+                    }
                     const isVisible = menu.style.display !== 'none';
                     menu.style.display = isVisible ? 'none' : 'block';
                     const dockItem = menu.querySelector('.scriptui-menu-dock-btn');
@@ -1585,7 +1596,7 @@
 
             // Global click: close menu when clicking outside & handle focus outline
             const onDocPointerDown = (e) => {
-                if (menu && menu.style.display !== 'none' && !menu.contains(e.target) && e.target !== hamburgerBtn) {
+                if (menu && menu.style.display !== 'none' && !menu.contains(e.target) && !e.target.closest('.scriptui-hamburger-btn')) {
                     menu.style.display = 'none';
                 }
                 if (winDiv && winDiv.parentNode) {
@@ -1598,12 +1609,14 @@
             };
             document.addEventListener('pointerdown', onDocPointerDown);
 
-            // Double click tab bar to toggle dock / undock
-            tabBar.ondblclick = (e) => {
-                if (!e.target.closest('.scriptui-hamburger-btn') && !e.target.closest('.scriptui-panel-menu')) {
-                    this.toggleDock();
-                }
-            };
+            // Double click window title tab item to toggle dock / undock
+            if (tabItem) {
+                tabItem.ondblclick = (e) => {
+                    if (!e.target.closest('.scriptui-hamburger-btn') && !e.target.closest('.scriptui-panel-menu')) {
+                        this.toggleDock();
+                    }
+                };
+            }
 
             // Resizing logic for All Border Lines & Corners (Active in both Docked and Floating modes)
             const initResizer = (resizerEl, mode) => {
@@ -1712,11 +1725,16 @@
 
             // Dragging logic:
             // 1. Floating Titlebar moves floating window freely (NEVER docks, allowing placement anywhere over the right area)
-            // 2. Tab Bar (Window Title) allows undocking when dragged from dock, and docks back when dropped over dock area
+            // 2. Tab Item (.scriptui-tab-item-ae: window title + hamburger) tears off from dock, and docks back ONLY when dragged over the right panel (#ae-editor-panel)
             const initDrag = (dragEl, canDockOnDrop = false) => {
+                if (!dragEl) return;
                 dragEl.addEventListener('pointerdown', (e) => {
-                    if (e.target.closest('.scriptui-hamburger-btn') || e.target.closest('.scriptui-floating-close-btn') || e.target.closest('.scriptui-panel-menu')) return;
-                    e.preventDefault();
+                    if (e.target.closest('.scriptui-floating-close-btn') || e.target.closest('.scriptui-panel-menu')) return;
+                    const startedOnHamburger = Boolean(e.target.closest('.scriptui-hamburger-btn'));
+                    if (!startedOnHamburger) {
+                        e.preventDefault();
+                    }
+                    e.stopPropagation();
                     this.setFocus(true);
 
                     const startX = e.clientX;
@@ -1728,24 +1746,35 @@
                     let isDragging = false;
 
                     const dockHost = document.getElementById('scriptui-dock-host');
+                    const rightPanel = document.getElementById('ae-editor-panel') || dockHost;
+
+                    const isPointerOverRightPanel = (clientX, clientY) => {
+                        if (!rightPanel) return false;
+                        const r = rightPanel.getBoundingClientRect();
+                        return r.width > 0 && r.height > 0 &&
+                               clientX >= r.left && clientX <= r.right &&
+                               clientY >= r.top && clientY <= r.bottom;
+                    };
 
                     const onPointerMove = (ev) => {
                         const dx = ev.clientX - startX;
                         const dy = ev.clientY - startY;
 
-                        // If docked, tear off into floating after 5px movement
-                        if (!hasDetached) {
-                            if (Math.abs(dx) > 5 || Math.abs(dy) > 5) {
-                                this.undock();
-                                hasDetached = true;
-                                isDragging = true;
-                                winDiv.classList.add('is-dragging');
-                                dragEl.classList.add('is-dragging');
-                            } else {
+                        if (!isDragging) {
+                            if (Math.abs(dx) <= 5 && Math.abs(dy) <= 5) {
                                 return;
                             }
-                        } else {
                             isDragging = true;
+                            if (startedOnHamburger) {
+                                suppressHamburgerClick = true;
+                            }
+                            if (menu && menu.style.display !== 'none') {
+                                menu.style.display = 'none';
+                            }
+                            if (!hasDetached) {
+                                this.undock();
+                                hasDetached = true;
+                            }
                             winDiv.classList.add('is-dragging');
                             dragEl.classList.add('is-dragging');
                         }
@@ -1759,12 +1788,11 @@
                         this._floatingPos = { left: newLeft, top: newTop };
                         ScriptUIWindow._lastFloatingPos = this._floatingPos;
 
-                        // Only highlight dock drop zone when dragging by the window title tab
-                        if (canDockOnDrop && dockHost) {
-                            const dockRect = dockHost.getBoundingClientRect();
-                            const isOverDock = (ev.clientX >= dockRect.left && ev.clientX <= dockRect.right &&
-                                                ev.clientY >= dockRect.top && ev.clientY <= dockRect.bottom);
-                            dockHost.classList.toggle('drag-over', isOverDock);
+                        // Highlight right panel drop zone ONLY when dragging via the window title tab item
+                        if (canDockOnDrop) {
+                            const isOverRight = isPointerOverRightPanel(ev.clientX, ev.clientY);
+                            if (rightPanel) rightPanel.classList.toggle('drag-over', isOverRight);
+                            if (dockHost) dockHost.classList.toggle('drag-over', isOverRight);
                         }
                     };
 
@@ -1776,18 +1804,12 @@
                         winDiv.classList.remove('is-dragging');
                         dragEl.classList.remove('is-dragging');
 
-                        if (dockHost) {
-                            dockHost.classList.remove('drag-over');
+                        if (rightPanel) rightPanel.classList.remove('drag-over');
+                        if (dockHost) dockHost.classList.remove('drag-over');
 
-                            // Dock ONLY if dragging by the window title tab (canDockOnDrop === true)
-                            if (canDockOnDrop) {
-                                const dockRect = dockHost.getBoundingClientRect();
-                                const isOverDock = (ev.clientX >= dockRect.left && ev.clientX <= dockRect.right &&
-                                                    ev.clientY >= dockRect.top && ev.clientY <= dockRect.bottom);
-                                if (isOverDock && isDragging) {
-                                    this.dock();
-                                }
-                            }
+                        // Dock ONLY if dragged using .scriptui-tab-item-ae (window title + hamburger) and dropped over the right panel
+                        if (canDockOnDrop && isDragging && isPointerOverRightPanel(ev.clientX, ev.clientY)) {
+                            this.dock();
                         }
                     };
 
@@ -1797,10 +1819,10 @@
                 });
             };
 
-            // Floating titlebar moves floating window freely (never auto-docks)
+            // Floating OS titlebar moves floating window freely (never auto-docks)
             initDrag(titlebar, false);
-            // Window title tab (matches user screenshot) undocks on drag and docks when dropped over right area
-            initDrag(tabBar, true);
+            // ONLY the marked tab item (window title + hamburger) undocks on drag and docks back when dropped over the right panel
+            initDrag(tabItem, true);
         }
 
         show() {
