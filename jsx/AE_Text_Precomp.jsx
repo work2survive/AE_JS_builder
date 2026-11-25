@@ -1,6 +1,6 @@
 // Co-authored & architected with Google DeepMind Antigravity.
 // =============================================================================
-// ADOBE AFTER EFFECTS EXTENDSCRIPT & SCRIPTUI PANEL: AE TEXT PRECOMP v2.0.0
+// ADOBE AFTER EFFECTS EXTENDSCRIPT & SCRIPTUI PANEL: AE TEXT PRECOMP v2.0.1
 // =============================================================================
 //
 // PURPOSE:
@@ -10,7 +10,11 @@
 //     1. 100% Zero-Shift Content Invariance (Scale & Rotation-safe parent comp compensation).
 //     2. True Exterior Padding (Expands canvas outward without breaking text wrap or lines).
 //     3. Procedural Bézier Background Card with custom corner radii (Default: Fuchsia #FF00FF).
-//     4. Kinetic Line & Word Division without font substitution or layer hijacking (Fixes "W" bug).
+//     4. Kinetic Line & Word Division:
+//        - "Divide by Lines": Precomposes each visual line as an independent text layer,
+//          anchored at the typographic baseline with zero visual drift.
+//        - "Divide by Words": Precomposes each word as an independent text layer,
+//          with calibrated inter-word spacing and baseline alignment.
 //     5. Ergonomic Single-Panel ScriptUI Interface with interactive 3x3 anchor matrix.
 //
 // ARCHITECTURAL REFERENCES & KNOWLEDGE BASE:
@@ -155,6 +159,76 @@
         return { left: 0, top: 0, width: 800, height: 120 };
     }
 
+    function applyTextDocCopy(targetLayer, origDoc, textContent) {
+        if (!targetLayer) return;
+        try {
+            var prop = targetLayer.property("Source Text");
+            if (!prop) {
+                try { prop = targetLayer.property("ADBE Text Properties").property("ADBE Text Document"); } catch (eP) {}
+            }
+            if (!prop && targetLayer.sourceText) prop = targetLayer.sourceText;
+            if (!prop) return;
+
+            var d = prop.value;
+            if (d) {
+                d.text = textContent;
+                if (origDoc) {
+                    if (origDoc.fontObject) {
+                        try { d.fontObject = origDoc.fontObject; } catch (eFO) {}
+                    }
+                    if (origDoc.font) {
+                        try { d.font = origDoc.font; } catch (eF) {}
+                    }
+                    if (typeof origDoc.fontSize === "number" && origDoc.fontSize > 0) {
+                        d.fontSize = origDoc.fontSize;
+                    }
+                    if (typeof origDoc.tracking === "number") {
+                        d.tracking = origDoc.tracking;
+                    }
+                    if (typeof origDoc.leading === "number" && origDoc.leading > 0) {
+                        d.leading = origDoc.leading;
+                    }
+                    if (typeof origDoc.applyFill !== "undefined") {
+                        d.applyFill = origDoc.applyFill;
+                    }
+                    if (origDoc.fillColor) {
+                        try { d.fillColor = origDoc.fillColor; } catch (eFC) {}
+                    }
+                    if (typeof origDoc.applyStroke !== "undefined") {
+                        d.applyStroke = origDoc.applyStroke;
+                    }
+                    if (origDoc.strokeColor) {
+                        try { d.strokeColor = origDoc.strokeColor; } catch (eSC) {}
+                    }
+                    if (typeof origDoc.strokeWidth === "number") {
+                        d.strokeWidth = origDoc.strokeWidth;
+                    }
+                    if (typeof origDoc.strokeOverFill !== "undefined") {
+                        try { d.strokeOverFill = origDoc.strokeOverFill; } catch (eSOF) {}
+                    }
+                    if (typeof origDoc.fauxBold !== "undefined") d.fauxBold = origDoc.fauxBold;
+                    if (typeof origDoc.fauxItalic !== "undefined") d.fauxItalic = origDoc.fauxItalic;
+                    if (typeof origDoc.allCaps !== "undefined") d.allCaps = origDoc.allCaps;
+                    if (typeof origDoc.smallCaps !== "undefined") d.smallCaps = origDoc.smallCaps;
+                    if (typeof origDoc.fontCapsOption !== "undefined") {
+                        try { d.fontCapsOption = origDoc.fontCapsOption; } catch (eCaps) {}
+                    }
+                }
+                try { d.boxText = false; } catch (eBT) {}
+                try {
+                    if (typeof ParagraphJustification !== "undefined") {
+                        d.justification = ParagraphJustification.LEFT_JUSTIFY;
+                    } else {
+                        d.justification = 7412;
+                    }
+                } catch (eJ) {}
+                prop.setValue(d);
+            } else {
+                prop.setValue(textContent);
+            }
+        } catch (eStyling) {}
+    }
+
     function getTextLayerMetrics(comp, layer) {
         if (!layer) return null;
         var curTime = comp ? comp.time : 0;
@@ -202,7 +276,6 @@
             }
         }
 
-        var lines = rawText.split(/\r\n|\r|\n/);
         var words = rawText.replace(/\s+/g, " ").replace(/^\s+|\s+$/g, "").split(" ");
         if (words.length === 1 && words[0] === "") words = [];
 
@@ -219,15 +292,73 @@
             tracking: tracking,
             align: align,
             rawText: rawText,
-            lines: lines,
+            doc: doc,
             words: words,
-            totalWords: words.length,
-            totalLines: lines.length
+            totalWords: words.length
         };
 
         // Cache in global store
         $root.global.AE_TEXT_PRECOMP_MEMORY = metrics;
         return metrics;
+    }
+
+    /**
+     * Extracts visual lines from text layer (supporting both hard returns and paragraph box auto-wrapping).
+     */
+    function getVisualLines(fullText, isBoxText, boxWidth, fontSize, doc) {
+        if (!fullText || fullText.length === 0) return [""];
+
+        // 1. Native composed lines in AE 24.3+
+        if (isBoxText && doc && typeof doc.composedLineCount === "number" && doc.composedLineCount > 0 && typeof doc.composedLine === "function") {
+            try {
+                var compLines = [];
+                for (var cli = 0; cli < doc.composedLineCount; cli++) {
+                    compLines.push(doc.composedLine(cli));
+                }
+                if (compLines.length > 0) return compLines;
+            } catch (eCL) {}
+        }
+
+        // 2. Hard line breaks
+        var paragraphs = String(fullText).split(/\r\n|\r|\n/);
+        if (!isBoxText || !boxWidth || boxWidth <= 0) {
+            return paragraphs;
+        }
+
+        // 3. Word wrapping simulation for Paragraph Box Text
+        var visualLines = [];
+        var spaceWidth = Math.round(fontSize * 0.28);
+        var avgCharW = fontSize * 0.52;
+
+        for (var p = 0; p < paragraphs.length; p++) {
+            var para = paragraphs[p];
+            var pWords = para.match(/\S+/g) || [];
+            if (pWords.length === 0) {
+                visualLines.push("");
+                continue;
+            }
+
+            var curLineWords = [pWords[0]];
+            var curLineW = pWords[0].length * avgCharW;
+
+            for (var pw = 1; pw < pWords.length; pw++) {
+                var word = pWords[pw];
+                var wordW = word.length * avgCharW;
+                if ((curLineW + spaceWidth + wordW) > boxWidth && curLineWords.length > 0) {
+                    visualLines.push(curLineWords.join(" "));
+                    curLineWords = [word];
+                    curLineW = wordW;
+                } else {
+                    curLineWords.push(word);
+                    curLineW += spaceWidth + wordW;
+                }
+            }
+            if (curLineWords.length > 0) {
+                visualLines.push(curLineWords.join(" "));
+            }
+        }
+
+        return visualLines.length > 0 ? visualLines : [fullText];
     }
 
     // -------------------------------------------------------------------------
@@ -358,16 +489,11 @@
         "BR": { label: "Bottom-Right",  fx: 1.0, fy: 1.0 }
     };
 
-    function calculateZeroShiftPosition(textLayer, boxLeft, boxTop, padding, precompW, precompH, anchorKey) {
-        var posProp = textLayer.property("Transform").property("Position");
-        var apProp  = textLayer.property("Transform").property("Anchor Point");
-        var scProp  = textLayer.property("Transform").property("Scale");
-        var rotProp = textLayer.property("Transform").property("Rotation") || textLayer.property("Transform").property("Z Rotation");
-
-        var p = posProp ? posProp.value : [0, 0];
-        var a = apProp ? apProp.value : [0, 0];
-        var s = scProp ? scProp.value : [100, 100];
-        var rot = rotProp ? (rotProp.value || 0) : 0;
+    function calculateZeroShiftPosition(origTransform, boxLeft, boxTop, padding, precompW, precompH, anchorKey) {
+        var p = origTransform.position || [0, 0];
+        var a = origTransform.anchor || [0, 0];
+        var s = origTransform.scale || [100, 100];
+        var rot = origTransform.rotation || 0;
 
         var sx = (s[0] || 100) / 100;
         var sy = (s[1] || 100) / 100;
@@ -385,7 +511,7 @@
         var rotDeltaY = deltaLocalX * Math.sin(rad) + deltaLocalY * Math.cos(rad);
 
         var precompCompPos = [p[0] + rotDeltaX, p[1] + rotDeltaY];
-        if (textLayer.threeDLayer && p.length > 2) {
+        if (origTransform.threeD && p.length > 2) {
             precompCompPos.push(p[2]);
         }
 
@@ -411,21 +537,45 @@
         var metrics = getTextLayerMetrics(comp, targetLayer);
         if (!metrics) throw new Error("Could not extract text metrics from layer.");
 
+        // Capture original transform properties BEFORE precomposition mutates hierarchy
+        var origDoc = metrics.doc || getTextDocument(targetLayer);
+        var origTransform = {
+            anchor: targetLayer.property("Transform").property("Anchor Point").value,
+            position: targetLayer.property("Transform").property("Position").value,
+            scale: targetLayer.property("Transform").property("Scale").value,
+            rotation: (targetLayer.property("Transform").property("Rotation") ||
+                       targetLayer.property("Transform").property("Z Rotation") || { value: 0 }).value || 0,
+            parent: targetLayer.parent,
+            threeD: targetLayer.threeDLayer
+        };
+
         var width = options.autoWidth ? metrics.detectedWidth : Math.max(10, options.manualWidth);
-        var height = options.autoHeight ? metrics.detectedHeight : Math.max(10, options.manualHeight);
         var padding = Math.max(0, options.padding || 0);
+
+        // Pre-extract visual lines
+        var visualLines = getVisualLines(metrics.rawText, metrics.isBoxText, width, metrics.fontSize, origDoc);
+
+        var ascenderHeight = Math.round(metrics.fontSize * 0.78);
+        var descenderHeight = Math.round(metrics.fontSize * 0.22);
+        var lineStep = metrics.leading;
+
+        var height;
+        if (options.mode === "lines" || options.mode === "words") {
+            var typoTotalH = ascenderHeight + (Math.max(0, visualLines.length - 1) * lineStep) + descenderHeight;
+            height = options.autoHeight ? typoTotalH : Math.max(10, options.manualHeight);
+        } else {
+            height = options.autoHeight ? metrics.detectedHeight : Math.max(10, options.manualHeight);
+        }
 
         var precompW = Math.max(4, Math.ceil(width + (padding * 2)));
         var precompH = Math.max(4, Math.ceil(height + (padding * 2)));
 
         var targetIndex = targetLayer.index;
-        var targetParent = targetLayer.parent;
-        var target3D = targetLayer.threeDLayer;
         var baseName = targetLayer.name.replace(/\s*Precomp$/, "");
         var precompName = baseName + " Precomp";
 
         var zeroShift = calculateZeroShiftPosition(
-            targetLayer,
+            origTransform,
             metrics.boxLeft,
             metrics.boxTop,
             padding,
@@ -434,10 +584,11 @@
             options.anchorKey || "TL"
         );
 
-        app.beginUndoGroup(SCRIPT_NAME + ": " + (options.mode === "lines" ? "Divide by Lines" : (options.mode === "words" ? "Divide by Words" : "Precompose")));
+        var actionName = SCRIPT_NAME + ": " + (options.mode === "lines" ? "Divide by Lines" : (options.mode === "words" ? "Divide by Words" : "Precompose"));
+        app.beginUndoGroup(actionName);
 
         try {
-            // 1. Precompose target layer natively (preserves all effects, masks, animators)
+            // 1. Precompose target layer natively (moves original layer into newComp)
             var precompItem = comp.layers.precompose([targetIndex], precompName, true);
             if (!precompItem) throw new Error("Failed to precompose layer.");
 
@@ -448,8 +599,6 @@
             var innerTextLayer = precompItem.layer(1);
             if (!innerTextLayer) throw new Error("Inner layer missing in precomposition.");
 
-            var innerOrigAnchor = targetLayer.property("Transform").property("Anchor Point").value;
-
             if (options.mode === "single") {
                 // Keep original text box intact, offset by exterior padding
                 innerTextLayer.property("Transform").property("Scale").setValue([100, 100]);
@@ -459,35 +608,32 @@
                     if (innerRot) innerRot.setValue(0);
                 } catch (eIR) {}
 
-                var innerPosX = padding + innerOrigAnchor[0] - metrics.boxLeft;
-                var innerPosY = padding + innerOrigAnchor[1] - metrics.boxTop;
+                var innerPosX = padding + origTransform.anchor[0] - metrics.boxLeft;
+                var innerPosY = padding + origTransform.anchor[1] - metrics.boxTop;
                 innerTextLayer.property("Transform").property("Position").setValue([innerPosX, innerPosY]);
 
             } else if (options.mode === "lines") {
-                // Divide text by lines using native layer duplication (prevents "W" bug & font substitution)
-                var rawLines = metrics.lines;
-                if (!rawLines || rawLines.length === 0) rawLines = [metrics.rawText || "Text"];
+                // Divide text by visual lines
+                for (var li = 0; li < visualLines.length; li++) {
+                    var lineStr = visualLines[li];
+                    var lineLayer = precompItem.layers.addText(lineStr);
+                    applyTextDocCopy(lineLayer, origDoc, lineStr);
+                    lineLayer.name = "Line " + (li + 1) + (lineStr.length > 0 ? (": " + (lineStr.length > 25 ? lineStr.substr(0, 25) + "..." : lineStr)) : "");
 
-                var firstLineBaseline = (Math.abs(metrics.boxTop) > 0) ? Math.abs(metrics.boxTop) : (metrics.fontSize * 0.75);
+                    var rLine = lineLayer.sourceRectAtTime(0, false);
+                    var rLeft = (rLine && typeof rLine.left === "number") ? rLine.left : 0;
+                    var rWidth = (rLine && typeof rLine.width === "number") ? rLine.width : 0;
 
-                for (var li = 0; li < rawLines.length; li++) {
-                    var lineLayer = innerTextLayer.duplicate();
-                    lineLayer.name = "Line " + (li + 1);
-
-                    var lineDoc = lineLayer.property("Source Text").value;
-                    lineDoc.text = rawLines[li];
-                    try { lineDoc.boxText = false; } catch (eBT) {}
-                    lineLayer.property("Source Text").setValue(lineDoc);
-
-                    var lineX = padding;
+                    var lineLeftX = padding;
                     if (metrics.align === "center") {
-                        lineX = precompW / 2;
+                        lineLeftX = padding + (width - rWidth) / 2;
                     } else if (metrics.align === "right") {
-                        lineX = precompW - padding;
+                        lineLeftX = padding + (width - rWidth);
                     }
-                    var lineY = padding + firstLineBaseline + (li * metrics.leading);
+                    var lineBaselineY = padding + ascenderHeight + (li * lineStep);
 
-                    lineLayer.property("Transform").property("Position").setValue([lineX, lineY]);
+                    lineLayer.property("Transform").property("Anchor Point").setValue([rLeft, 0]);
+                    lineLayer.property("Transform").property("Position").setValue([lineLeftX, lineBaselineY]);
                     lineLayer.property("Transform").property("Scale").setValue([100, 100]);
                     try {
                         var lRot = lineLayer.property("Transform").property("Rotation") ||
@@ -500,42 +646,75 @@
 
             } else if (options.mode === "words") {
                 // Divide text by words
-                var rawLines2 = metrics.lines;
-                if (!rawLines2 || rawLines2.length === 0) rawLines2 = [metrics.rawText || "Text"];
+                // Calculate space character width for consistent inter-word spacing
+                var measureLayer = precompItem.layers.addText("A A");
+                applyTextDocCopy(measureLayer, origDoc, "A A");
+                var rPair = measureLayer.sourceRectAtTime(0, false);
 
-                var firstLineBaseline2 = (Math.abs(metrics.boxTop) > 0) ? Math.abs(metrics.boxTop) : (metrics.fontSize * 0.75);
-                var spaceWidth = metrics.fontSize * 0.28;
+                var mDoc = measureLayer.property("Source Text").value;
+                mDoc.text = "AA";
+                measureLayer.property("Source Text").setValue(mDoc);
+                var rSingle = measureLayer.sourceRectAtTime(0, false);
+
+                var spaceWidth = (rPair && rSingle && rPair.width > rSingle.width)
+                    ? (rPair.width - rSingle.width)
+                    : Math.round(metrics.fontSize * 0.28);
+                measureLayer.remove();
+
                 var wordCounter = 1;
 
-                for (var li2 = 0; li2 < rawLines2.length; li2++) {
-                    var lineWords = rawLines2[li2].replace(/^\s+|\s+$/g, "").split(/\s+/);
+                for (var vl = 0; vl < visualLines.length; vl++) {
+                    var lineWords = visualLines[vl].replace(/^\s+|\s+$/g, "").split(/\s+/);
                     if (lineWords.length === 0 || (lineWords.length === 1 && lineWords[0] === "")) continue;
 
-                    var curX = padding;
-                    var lineY2 = padding + firstLineBaseline2 + (li2 * metrics.leading);
+                    var lineBaselineY2 = padding + ascenderHeight + (vl * lineStep);
+
+                    // 1. Create word layers for this line and measure them
+                    var lineWordObjs = [];
+                    var totalWordsW = 0;
 
                     for (var wi = 0; wi < lineWords.length; wi++) {
-                        var wordLayer = innerTextLayer.duplicate();
-                        wordLayer.name = "Word " + wordCounter;
+                        var wordText = lineWords[wi];
+                        var wordLayer = precompItem.layers.addText(wordText);
+                        applyTextDocCopy(wordLayer, origDoc, wordText);
+                        wordLayer.name = "Word " + wordCounter + ": " + wordText;
                         wordCounter++;
 
-                        var wordDoc = wordLayer.property("Source Text").value;
-                        wordDoc.text = lineWords[wi];
-                        try { wordDoc.boxText = false; } catch (eBT2) {}
-                        wordLayer.property("Source Text").setValue(wordDoc);
+                        var rW = wordLayer.sourceRectAtTime(0, false);
+                        var rWLeft = (rW && typeof rW.left === "number") ? rW.left : 0;
+                        var rWWidth = (rW && typeof rW.width === "number") ? rW.width : (metrics.fontSize * 0.6 * wordText.length);
 
-                        wordLayer.property("Transform").property("Position").setValue([curX, lineY2]);
-                        wordLayer.property("Transform").property("Scale").setValue([100, 100]);
+                        lineWordObjs.push({
+                            layer: wordLayer,
+                            word: wordText,
+                            rLeft: rWLeft,
+                            width: rWWidth
+                        });
+                        totalWordsW += rWWidth;
+                    }
+
+                    var totalLineW = totalWordsW + (Math.max(0, lineWordObjs.length - 1) * spaceWidth);
+
+                    var curX = padding;
+                    if (metrics.align === "center") {
+                        curX = padding + (width - totalLineW) / 2;
+                    } else if (metrics.align === "right") {
+                        curX = padding + (width - totalLineW);
+                    }
+
+                    // 2. Position words along the shared baseline
+                    for (var wj = 0; wj < lineWordObjs.length; wj++) {
+                        var wObj = lineWordObjs[wj];
+                        wObj.layer.property("Transform").property("Anchor Point").setValue([wObj.rLeft, 0]);
+                        wObj.layer.property("Transform").property("Position").setValue([curX, lineBaselineY2]);
+                        wObj.layer.property("Transform").property("Scale").setValue([100, 100]);
                         try {
-                            var wRot = wordLayer.property("Transform").property("Rotation") ||
-                                       wordLayer.property("Transform").property("Z Rotation");
+                            var wRot = wObj.layer.property("Transform").property("Rotation") ||
+                                       wObj.layer.property("Transform").property("Z Rotation");
                             if (wRot) wRot.setValue(0);
                         } catch (eWR) {}
 
-                        // Measure advance width of the real word layer
-                        var wBounds = wordLayer.sourceRectAtTime(0, false);
-                        var wordAdvance = (wBounds && wBounds.width > 0) ? wBounds.width : (metrics.fontSize * 0.6 * lineWords[wi].length);
-                        curX += wordAdvance + spaceWidth;
+                        curX += wObj.width + spaceWidth;
                     }
                 }
                 // Remove the template original layer
@@ -566,8 +745,8 @@
                     if (pRotProp) pRotProp.setValue(zeroShift.rotation);
                 } catch (ePR) {}
 
-                if (targetParent) precompLayer.parent = targetParent;
-                if (target3D) precompLayer.threeDLayer = true;
+                if (origTransform.parent) precompLayer.parent = origTransform.parent;
+                if (origTransform.threeD) precompLayer.threeDLayer = true;
 
                 // Select precomp layer
                 try {
@@ -583,7 +762,8 @@
                 precompItem: precompItem,
                 precompLayer: precompLayer,
                 width: precompW,
-                height: precompH
+                height: precompH,
+                lineCount: visualLines.length
             };
 
         } catch (eExec) {
@@ -831,11 +1011,6 @@
     var lblAnchorDesc = grpAnchorDetails.add("statictext", undefined, "Invariance: 0.00px visual shift");
     lblAnchorDesc.graphics.foregroundColor = win.graphics.newPen(win.graphics.PenType.SOLID_COLOR, [0.35, 0.75, 0.45, 1], 1);
 
-    var matrixButtons = {
-        "TL": btnTL, "TC": btnTC, "TR": btnTR,
-        "ML": btnML, "C": btnC,   "MR": btnMR,
-        "BL": btnBL, "BC": btnBC, "BR": btnBR
-    };
     var currentAnchorKey = "TL";
 
     function setAnchorSelection(key) {
@@ -1077,10 +1252,12 @@
 
         try {
             var result = executePrecomp(comp, textLayer, options);
-            lblFeedback.text = "Success: " + result.precompItem.name + " (" + result.width + "x" + result.height + "px)";
+            var actStr = (mode === "lines") ? "divided into " + result.lineCount + " line layers" :
+                         ((mode === "words") ? "divided into word layers" : "precomposed");
+            lblFeedback.text = "Success: '" + result.precompItem.name + "' (" + actStr + ", " + result.width + "x" + result.height + "px)";
             syncDetection();
         } catch (eErr) {
-            lblFeedback.text = "Error: " + eErr.message;
+            lblFeedback.text = "Error: " + (eErr.message || eErr.toString());
         }
     }
 
