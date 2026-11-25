@@ -1,14 +1,13 @@
 // Co-authored & architected with Google DeepMind Antigravity.
 // =============================================================================
-// ADOBE AFTER EFFECTS EXTENDSCRIPT & SCRIPTUI PANEL: AE TEXT HIGHLIGHT v2.2.0
+// ADOBE AFTER EFFECTS EXTENDSCRIPT & SCRIPTUI PANEL: AE TEXT HIGHLIGHT v2.2.3
 // =============================================================================
 //
 // PURPOSE:
 //   Advanced procedural typography highlighter for Adobe After Effects.
 //   Supports two swappable highlight generation methods selectable at the top of the UI:
-//     1. "Split Method": Aligns anchor point to Top-Left with zero visual shift,
-//        marks original as guideline layer, splits target lines & words into independent
-//        text boxes with top-left anchor points, and rigs matching vector highlight boxes.
+//     1. "Split Method": Marks original as guideline layer, splits target lines & words
+//        into independent text boxes, and rigs matching vector highlight boxes.
 //     2. "Calculation Method": Keeps the original text box intact without splitting,
 //        calculating exact highlight box positions and dimensions in-place using all
 //        available font metrics, leading, tracking, boxTextPos, and delimiter-anchored advance.
@@ -27,6 +26,17 @@
 //      https://github.com/work2survive/AE_JS_builder/blob/main/jsx/custom_rounded_rect.jsx
 //   6. AE Text Highlight Repository:
 //      https://github.com/work2survive/AE-Text-Highlight
+//
+// NEW IN v2.2.3:
+//   - Zero Unwanted Layer Creation: Eliminated premature dummy text layer creation on panel launch,
+//     dropdown method switching, and selection status polling. No layers are added until the user
+//     clicks 'Build Highlights'.
+//   - Precise Calculation Method Alignment: Fixed vertical offset where highlights on Line 0
+//     were displaced into Line 1. Highlights now properly anchor to the first line's actual glyph
+//     top (`sRect.top`) and compensate for the text layer's anchor point.
+//   - Fixed Split Method Text Box Misplacement: Stopped forcibly modifying the original text layer's
+//     anchor point and position. Split child layers and highlight shapes are now offset by the parent's
+//     anchor point `[curAx, curAy]`, keeping all text perfectly in place.
 //
 // NEW IN v2.2.2:
 //   - Smart Text Layer Resolver (Matches AE Align Anchor Point): When no text layer is actively
@@ -85,7 +95,7 @@
     "use strict";
 
     var SCRIPT_TITLE    = "AE Text Highlight";
-    var SCRIPT_VERSION  = "v2.2.2";
+    var SCRIPT_VERSION  = "v2.2.3";
     var GITHUB_REPO_URL = "https://github.com/work2survive/AE-Text-Highlight";
 
     // -------------------------------------------------------------------------
@@ -987,7 +997,7 @@
         return memoryStore;
     }
 
-    function getTextBoxProperties(comp, layer) {
+    function getTextBoxProperties(comp, layer, skipMetrics) {
         if (!comp || !layer || !isTextLayer(layer)) return null;
 
         var textDoc = getTextDocument(layer);
@@ -1020,7 +1030,7 @@
         var justification = getJustificationName(textDoc, layer);
         var fillColor = (textDoc && textDoc.fillColor) ? textDoc.fillColor : [1, 1, 1];
 
-        var metrics = measureAndStoreTextMetrics(comp, layer);
+        var metrics = skipMetrics ? (layer._textMetrics || $memGlobal.AE_TEXT_BOX_MEMORY || null) : measureAndStoreTextMetrics(comp, layer);
 
         return {
             isText: true,
@@ -1766,10 +1776,13 @@
         var props = getTextBoxProperties(comp, origLayer);
         if (!props || !props.metrics) return null;
 
-        // 1. First align original text layer anchor point based on text box justification
-        alignAnchorPointToJustification(origLayer, props);
+        // Cache original text layer anchor point to compensate child positions without mutating origLayer
+        var apProp = (origLayer.transform && origLayer.transform.anchorPoint) ? origLayer.transform.anchorPoint : (origLayer.property("ADBE Transform Group") ? origLayer.property("ADBE Transform Group").property("ADBE Anchor Point") : null);
+        var curA = apProp ? apProp.value : [0, 0, 0];
+        var curAx = (curA && typeof curA[0] === "number") ? curA[0] : 0;
+        var curAy = (curA && typeof curA[1] === "number") ? curA[1] : 0;
 
-        // 2. Attach comprehensive typography inspector effect controls
+        // Attach comprehensive typography inspector effect controls
         attachTextPropertiesEffects(origLayer, props);
 
         var terms = options.terms || [];
@@ -1871,7 +1884,7 @@
 
                     var rFL = fullLineLayer.sourceRectAtTime(comp.time, false);
                     fullLineLayer.transform.anchorPoint.setValue([rFL.left, rFL.top, 0]);
-                    fullLineLayer.transform.position.setValue([lineLeftX + rFL.left, lineBaselineY + rFL.top, 0]);
+                    fullLineLayer.transform.position.setValue([lineLeftX + rFL.left - curAx, lineBaselineY + rFL.top - curAy, 0]);
 
                     fullLineLayer.parent = origLayer;
                     try { fullLineLayer.comment = "AE_HIGHLIGHT_CHILD"; } catch (eC) {}
@@ -1927,8 +1940,8 @@
                     var rSeg = segLayer.sourceRectAtTime(comp.time, false);
                     // Pin anchor point strictly to Top-Left
                     segLayer.transform.anchorPoint.setValue([rSeg.left, rSeg.top, 0]);
-                    // Position at exact visual coordinates
-                    segLayer.transform.position.setValue([segX + rSeg.left, lineBaselineY + rSeg.top, 0]);
+                    // Position at exact visual coordinates relative to parent anchor
+                    segLayer.transform.position.setValue([segX + rSeg.left - curAx, lineBaselineY + rSeg.top - curAy, 0]);
 
                     segLayer.parent = origLayer;
                     try { segLayer.comment = "AE_HIGHLIGHT_CHILD"; } catch (eC2) {}
@@ -2004,8 +2017,8 @@
                 }
 
                 var propPos = rect.property("ADBE Vector Rect Position") || rect.property("Position");
-                var boxCenterX = box.posX + (baseW / 2);
-                var boxCenterY = box.posY + (baseH / 2);
+                var boxCenterX = (box.posX + (baseW / 2)) - curAx;
+                var boxCenterY = (box.posY + (baseH / 2)) - curAy;
 
                 if (propPos) {
                     propPos.setValue([boxCenterX + offX, boxCenterY + offY]);
@@ -2133,7 +2146,13 @@
         var props = getTextBoxProperties(comp, origLayer);
         if (!props || !props.metrics) return null;
 
-        // 1. Attach comprehensive typography inspector effect controls
+        // Cache original text layer anchor point to position highlight shapes without mutating origLayer
+        var apProp = (origLayer.transform && origLayer.transform.anchorPoint) ? origLayer.transform.anchorPoint : (origLayer.property("ADBE Transform Group") ? origLayer.property("ADBE Transform Group").property("ADBE Anchor Point") : null);
+        var curA = apProp ? apProp.value : [0, 0, 0];
+        var curAx = (curA && typeof curA[0] === "number") ? curA[0] : 0;
+        var curAy = (curA && typeof curA[1] === "number") ? curA[1] : 0;
+
+        // Attach comprehensive typography inspector effect controls
         attachTextPropertiesEffects(origLayer, props);
 
         var terms = options.terms || [];
@@ -2152,6 +2171,7 @@
         var just = props.justification || "left";
         var contentWidth = props.isBox ? props.boxWidth : props.sRect.width;
         var boxH = props.fontSize;
+        var firstLineTop = (props.sRect && typeof props.sRect.top === "number") ? props.sRect.top : 0;
 
         var measurer = createMeasureHelper(comp, props);
         var highlightBoxes = [];
@@ -2163,15 +2183,26 @@
                 if (trimStr(lineStr).length === 0) continue;
 
                 var lineW = measurer.measureRect(lineStr).width;
-                var lineTop = vl * lineStep;
+                var lineTop = firstLineTop + (vl * lineStep);
 
                 var lineLeft = 0;
-                if (just === "center") {
-                    lineLeft = Math.max(0, (contentWidth - lineW) / 2);
-                } else if (just === "right") {
-                    lineLeft = Math.max(0, contentWidth - lineW);
+                if (props.isBox) {
+                    var bX = (props.boxPos && typeof props.boxPos[0] === "number") ? props.boxPos[0] : 0;
+                    if (just === "center") {
+                        lineLeft = bX + (props.boxWidth - lineW) / 2;
+                    } else if (just === "right") {
+                        lineLeft = bX + props.boxWidth - lineW;
+                    } else {
+                        lineLeft = bX;
+                    }
                 } else {
-                    lineLeft = 0;
+                    if (just === "center") {
+                        lineLeft = -lineW / 2;
+                    } else if (just === "right") {
+                        lineLeft = -lineW;
+                    } else {
+                        lineLeft = 0;
+                    }
                 }
 
                 // Check which target terms appear on this visual line
@@ -2218,8 +2249,8 @@
                     }
                     termW = Math.max(4, termW);
 
-                    var boxCenterX = lineLeft + prefixAdv + (termW / 2);
-                    var boxCenterY = lineTop + (boxH / 2);
+                    var boxCenterX = (lineLeft + prefixAdv + (termW / 2)) - curAx;
+                    var boxCenterY = (lineTop + (boxH / 2)) - curAy;
 
                     highlightBoxes.push({
                         text: cMatch.term,
@@ -3034,7 +3065,7 @@
                 return null;
             }
             try {
-                var props = getTextBoxProperties(comp, textLayer);
+                var props = getTextBoxProperties(comp, textLayer, true);
                 var justName = props ? props.justification : "left";
                 var typeName = (props && props.isBox) ? ("Box Text " + Math.round(props.boxWidth) + "px") : "Point Text";
                 lblStatus.text = "🎯 Target: \"" + textLayer.name + "\" (" + typeName + ", " + justName + " justified)";
@@ -3123,7 +3154,7 @@
 
         btnRefresh.onClick = function () {
             var comp = getActiveComposition();
-            if (comp) getSelectedTextLayer(comp, true);
+            if (comp) getSelectedTextLayer(comp, false);
             updateSelectionStatus();
         };
 
@@ -3240,10 +3271,6 @@
                     makePrecomp: chkPrecomp.value
                 };
 
-                // 1. Mandatory First Action: Always move the anchor point to Top-Left using AE_Align_Anchor_Point.jsx logic,
-                // no matter the method selected (Split Method or Calculation Method).
-                alignLayerAnchorPointTopLeft(textLayer);
-
                 var isSplitMethod = (!ddMethod.selection || ddMethod.selection.index === 0);
                 var result = null;
                 if (isSplitMethod) {
@@ -3285,15 +3312,8 @@
             }
         }
 
-        // Initial setup matching AE Align Anchor Point: if comp is empty, create dummy text box
+        // Initial setup: update selection status without creating any layers
         (function initialSetup() {
-            var comp = getActiveComposition();
-            if (comp && (typeof CompItem === "undefined" || (comp instanceof CompItem) || comp.layers)) {
-                var total = (typeof comp.numLayers !== "undefined") ? comp.numLayers : (comp.layers ? comp.layers.length : 0);
-                if (total === 0) {
-                    createDummyTextBox(comp);
-                }
-            }
             updateSelectionStatus();
         })();
 
