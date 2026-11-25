@@ -1288,7 +1288,7 @@
             }
             var restored = restoreOriginalText(textLayer);
             if (restored) {
-                alert("Restored original text successfully!");
+                updateTargetStatus();
             } else {
                 alert("No stored original text found on this layer.");
             }
