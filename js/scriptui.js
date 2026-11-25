@@ -1272,13 +1272,13 @@
     }
 
     // -------------------------------------------------------------
-    // Window: Floating / Dockable Panel
+    // Window: Floating / Dockable Panel (Real After Effects Behavior)
     // -------------------------------------------------------------
     class ScriptUIWindow extends UIElement {
         constructor(type = 'palette', title = 'AE Script Panel', bounds = undefined, properties = {}) {
             super('window', title, null, properties);
             this.windowType = type; // 'palette', 'dialog', 'window'
-            this.title = title;
+            this.title = title || 'AE Script Panel';
             this.orientation = 'column';
             this.spacing = 6;
             this.margins = 0;
@@ -1287,6 +1287,27 @@
                 resize: () => this.updateLayout()
             };
             this.domWrapper = null;
+            this.onClose = null;
+            this.onResize = null;
+            this.onResizing = null;
+
+            // Retain dock state from previous run if user docked/undocked
+            this.isDocked = ScriptUIWindow._lastDockState !== false;
+
+            // Dimensions and positions
+            this._bounds = bounds;
+            let initW = 440;
+            let initH = null;
+            if (Array.isArray(bounds) && bounds.length >= 4) {
+                initW = Math.max(260, bounds[2] - (bounds[0] || 0));
+                initH = Math.max(140, bounds[3] - (bounds[1] || 0));
+            } else if (ScriptUIWindow._lastSize) {
+                initW = ScriptUIWindow._lastSize.width;
+                initH = ScriptUIWindow._lastSize.height;
+            }
+            this._width = initW;
+            this._height = initH;
+            this._floatingPos = ScriptUIWindow._lastFloatingPos || null;
         }
 
         get text() {
@@ -1297,36 +1318,442 @@
             this.title = val;
             if (this.domWrapper) {
                 const titleEl = this.domWrapper.querySelector('.scriptui-window-title');
-                if (titleEl) titleEl.textContent = val;
+                if (titleEl) {
+                    titleEl.textContent = val;
+                    titleEl.title = val;
+                }
+            }
+        }
+
+        get size() {
+            if (this.domWrapper) {
+                const rect = this.domWrapper.getBoundingClientRect();
+                return [rect.width, rect.height];
+            }
+            return [this._width || 440, this._height || 400];
+        }
+
+        set size(val) {
+            if (Array.isArray(val) && val.length >= 2) {
+                this._width = Math.max(260, val[0]);
+                this._height = Math.max(140, val[1]);
+                if (this.domWrapper) {
+                    this.domWrapper.style.width = this._width + 'px';
+                    if (this._height) this.domWrapper.style.height = this._height + 'px';
+                }
+                ScriptUIWindow._lastSize = { width: this._width, height: this._height };
+                if (typeof this.onResize === 'function') {
+                    try { this.onResize(); } catch (e) {}
+                }
+            }
+        }
+
+        get bounds() {
+            if (this.domWrapper) {
+                const rect = this.domWrapper.getBoundingClientRect();
+                return [rect.left, rect.top, rect.right, rect.bottom];
+            }
+            return [0, 0, this._width || 440, this._height || 400];
+        }
+
+        set bounds(val) {
+            if (Array.isArray(val) && val.length >= 4) {
+                this.location = [val[0], val[1]];
+                this.size = [val[2] - val[0], val[3] - val[1]];
+            }
+        }
+
+        get location() {
+            if (this.domWrapper) {
+                const rect = this.domWrapper.getBoundingClientRect();
+                return [rect.left, rect.top];
+            }
+            if (this._floatingPos) return [this._floatingPos.left, this._floatingPos.top];
+            return [0, 0];
+        }
+
+        set location(val) {
+            if (Array.isArray(val) && val.length >= 2) {
+                this._floatingPos = { left: val[0], top: val[1] };
+                ScriptUIWindow._lastFloatingPos = this._floatingPos;
+                if (this.domWrapper && !this.isDocked) {
+                    this.domWrapper.style.left = val[0] + 'px';
+                    this.domWrapper.style.top = val[1] + 'px';
+                }
             }
         }
 
         center() {
-            // Automatically centered by CSS or dock
-        }
-
-        close() {
-            if (this.domWrapper && this.domWrapper.parentNode) {
-                this.domWrapper.parentNode.removeChild(this.domWrapper);
+            if (!this.isDocked && this.domWrapper) {
+                this.centerFloating();
             }
         }
 
+        centerFloating() {
+            if (!this.domWrapper) return;
+            const w = this._width || 440;
+            const h = this.domWrapper.getBoundingClientRect().height || this._height || 450;
+            const left = Math.max(20, Math.round((window.innerWidth - w) / 2));
+            const top = Math.max(50, Math.round((window.innerHeight - h) / 2));
+            this.domWrapper.style.left = left + 'px';
+            this.domWrapper.style.top = top + 'px';
+            this._floatingPos = { left, top };
+            ScriptUIWindow._lastFloatingPos = this._floatingPos;
+        }
+
+        resetSize() {
+            this._width = 440;
+            this._height = null;
+            if (this.domWrapper) {
+                this.domWrapper.style.width = '440px';
+                this.domWrapper.style.height = '';
+            }
+            ScriptUIWindow._lastSize = { width: 440, height: null };
+            if (typeof this.onResize === 'function') {
+                try { this.onResize(); } catch (e) {}
+            }
+        }
+
+        close() {
+            if (typeof this.onClose === 'function') {
+                try { this.onClose(); } catch (err) { console.warn(err); }
+            }
+            if (this.domWrapper && this.domWrapper.parentNode) {
+                this.domWrapper.parentNode.removeChild(this.domWrapper);
+            }
+            this.domWrapper = null;
+            if (ScriptUIWindow.activeWindow === this) {
+                ScriptUIWindow.activeWindow = null;
+            }
+            const host = document.getElementById('scriptui-dock-host');
+            if (host && !host.querySelector('.scriptui-window-container')) {
+                host.innerHTML = '<div style="color: #888; font-size: 12px; text-align: center; margin-top: 40px;">ScriptUI window closed. Run a script to reopen.</div>';
+            }
+            const tabScriptUI = document.getElementById('tab-scriptui');
+            if (tabScriptUI) {
+                tabScriptUI.textContent = 'ScriptUI Panel Preview';
+            }
+        }
+
+        _getDockBtnIcon() {
+            if (this.isDocked) {
+                // Undock Icon (pop out window)
+                return `<svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor">
+                    <path d="M1.5 2.5A1.5 1.5 0 0 1 3 1h6a1.5 1.5 0 0 1 1.5 1.5V5h-1V2.5a.5.5 0 0 0-.5-.5H3a.5.5 0 0 0-.5.5v10a.5.5 0 0 0 .5.5H6v1H3a1.5 1.5 0 0 1-1.5-1.5v-10z"/>
+                    <path d="M11 6a.5.5 0 0 1 .5-.5h4a.5.5 0 0 1 .5.5v4a.5.5 0 0 1-1 0V7.207l-4.146 4.147a.5.5 0 0 1-.708-.708L14.293 6.5H11.5A.5.5 0 0 1 11 6z"/>
+                </svg>`;
+            } else {
+                // Dock Icon (dock back into workspace)
+                return `<svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor">
+                    <path d="M2 2a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V2zm2-1a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1H4z"/>
+                    <path d="M5.5 7.5a.5.5 0 0 1 .5-.5h4a.5.5 0 0 1 .5.5v4a.5.5 0 0 1-1 0V8.707l-2.146 2.147a.5.5 0 0 1-.708-.708L8.793 8H6a.5.5 0 0 1-.5-.5z"/>
+                </svg>`;
+            }
+        }
+
+        dock(initial = false) {
+            this.isDocked = true;
+            ScriptUIWindow._lastDockState = true;
+            const winDiv = this.domWrapper;
+            if (!winDiv) return;
+
+            winDiv.classList.remove('scriptui-floating');
+            winDiv.style.position = '';
+            winDiv.style.left = '';
+            winDiv.style.top = '';
+            winDiv.style.zIndex = '';
+            winDiv.style.maxHeight = '';
+
+            const host = document.getElementById('scriptui-dock-host');
+            if (host) {
+                host.innerHTML = '';
+                host.appendChild(winDiv);
+            }
+
+            // Update header UI
+            const dockBtn = winDiv.querySelector('.scriptui-dock-btn');
+            if (dockBtn) {
+                dockBtn.innerHTML = this._getDockBtnIcon();
+                dockBtn.title = 'Undock Panel (Float window)';
+            }
+            const badge = winDiv.querySelector('.scriptui-window-badge');
+            if (badge) badge.style.display = 'none';
+
+            const tabScriptUI = document.getElementById('tab-scriptui');
+            if (tabScriptUI) tabScriptUI.textContent = 'ScriptUI Panel Preview';
+
+            if (!initial && typeof this.onResize === 'function') {
+                try { this.onResize(); } catch (e) {}
+            }
+        }
+
+        undock(initial = false) {
+            this.isDocked = false;
+            ScriptUIWindow._lastDockState = false;
+            const winDiv = this.domWrapper;
+            if (!winDiv) return;
+
+            winDiv.classList.add('scriptui-floating');
+            document.body.appendChild(winDiv);
+
+            // Compute floating position
+            if (!this._floatingPos) {
+                const editorPanel = document.getElementById('ae-editor-panel');
+                const rect = editorPanel ? editorPanel.getBoundingClientRect() : { left: window.innerWidth - 480, top: 60 };
+                const left = Math.max(20, Math.min(window.innerWidth - 480, Math.round(rect.left + 20)));
+                const top = Math.max(50, Math.min(window.innerHeight - 450, Math.round(rect.top + 30)));
+                this._floatingPos = { left, top };
+            }
+            winDiv.style.position = 'fixed';
+            winDiv.style.zIndex = '10000';
+            winDiv.style.left = this._floatingPos.left + 'px';
+            winDiv.style.top = this._floatingPos.top + 'px';
+            winDiv.style.maxHeight = 'calc(100vh - 40px)';
+            ScriptUIWindow._lastFloatingPos = this._floatingPos;
+
+            // Render dock placeholder in #scriptui-dock-host
+            const host = document.getElementById('scriptui-dock-host');
+            if (host) {
+                host.innerHTML = `
+                    <div class="scriptui-undocked-placeholder">
+                        <div class="scriptui-placeholder-icon">
+                            <svg width="28" height="28" viewBox="0 0 16 16" fill="currentColor">
+                                <path d="M1.5 2.5A1.5 1.5 0 0 1 3 1h6a1.5 1.5 0 0 1 1.5 1.5V5h-1V2.5a.5.5 0 0 0-.5-.5H3a.5.5 0 0 0-.5.5v10a.5.5 0 0 0 .5.5H6v1H3a1.5 1.5 0 0 1-1.5-1.5v-10z"/>
+                                <path d="M11 6a.5.5 0 0 1 .5-.5h4a.5.5 0 0 1 .5.5v4a.5.5 0 0 1-1 0V7.207l-4.146 4.147a.5.5 0 0 1-.708-.708L14.293 6.5H11.5A.5.5 0 0 1 11 6z"/>
+                            </svg>
+                        </div>
+                        <div class="scriptui-placeholder-title">${this.title} is Floating</div>
+                        <div class="scriptui-placeholder-desc">The ScriptUI window is undocked and active over your workspace. You can edit code, inspect layers, and test the tool simultaneously.</div>
+                        <div class="scriptui-placeholder-actions">
+                            <button class="ae-btn ae-btn-primary scriptui-redock-btn" type="button">⇲ Dock Panel Back</button>
+                            <button class="ae-btn scriptui-center-btn" type="button">Center Window</button>
+                        </div>
+                    </div>
+                `;
+                const btnRedock = host.querySelector('.scriptui-redock-btn');
+                if (btnRedock) btnRedock.onclick = () => this.dock();
+                const btnCenter = host.querySelector('.scriptui-center-btn');
+                if (btnCenter) btnCenter.onclick = () => this.centerFloating();
+            }
+
+            // Update header UI
+            const dockBtn = winDiv.querySelector('.scriptui-dock-btn');
+            if (dockBtn) {
+                dockBtn.innerHTML = this._getDockBtnIcon();
+                dockBtn.title = 'Dock Panel into workspace';
+            }
+            const badge = winDiv.querySelector('.scriptui-window-badge');
+            if (badge) badge.style.display = 'inline-block';
+
+            const tabScriptUI = document.getElementById('tab-scriptui');
+            if (tabScriptUI) tabScriptUI.textContent = 'ScriptUI Panel Preview (Floating)';
+
+            if (!initial && typeof this.onResize === 'function') {
+                try { this.onResize(); } catch (e) {}
+            }
+        }
+
+        toggleDock() {
+            if (this.isDocked) this.undock();
+            else this.dock();
+        }
+
+        _setupWindowEvents(header, rCorner, rRight, rBottom) {
+            const winDiv = this.domWrapper;
+            const dockBtn = header.querySelector('.scriptui-dock-btn');
+            const resetBtn = header.querySelector('.scriptui-reset-btn');
+            const closeBtn = header.querySelector('.scriptui-close-btn');
+
+            if (dockBtn) {
+                dockBtn.onclick = (e) => {
+                    e.stopPropagation();
+                    this.toggleDock();
+                };
+            }
+            if (resetBtn) {
+                resetBtn.onclick = (e) => {
+                    e.stopPropagation();
+                    this.resetSize();
+                };
+            }
+            if (closeBtn) {
+                closeBtn.onclick = (e) => {
+                    e.stopPropagation();
+                    this.close();
+                };
+            }
+
+            // Double click header to toggle dock / undock
+            header.ondblclick = (e) => {
+                if (!e.target.closest('.scriptui-hdr-btn')) {
+                    this.toggleDock();
+                }
+            };
+
+            // Resizing logic for Corner, Right Edge, and Bottom Edge
+            const initResizer = (resizerEl, mode) => {
+                resizerEl.addEventListener('pointerdown', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const startX = e.clientX;
+                    const startY = e.clientY;
+                    const winRect = winDiv.getBoundingClientRect();
+                    const startW = winRect.width;
+                    const startH = winRect.height;
+
+                    const onPointerMove = (ev) => {
+                        if (mode === 'corner' || mode === 'right') {
+                            const newW = Math.max(260, Math.min(window.innerWidth - 20, Math.round(startW + (ev.clientX - startX))));
+                            winDiv.style.width = newW + 'px';
+                            this._width = newW;
+                        }
+                        if (mode === 'corner' || mode === 'bottom') {
+                            const newH = Math.max(140, Math.min(window.innerHeight - 20, Math.round(startH + (ev.clientY - startY))));
+                            winDiv.style.height = newH + 'px';
+                            this._height = newH;
+                        }
+                        ScriptUIWindow._lastSize = { width: this._width, height: this._height };
+                        if (typeof this.onResizing === 'function') {
+                            try { this.onResizing(); } catch (err) {}
+                        }
+                    };
+
+                    const onPointerUp = () => {
+                        document.removeEventListener('pointermove', onPointerMove);
+                        document.removeEventListener('pointerup', onPointerUp);
+                        document.removeEventListener('pointercancel', onPointerUp);
+                        if (typeof this.onResize === 'function') {
+                            try { this.onResize(); } catch (err) {}
+                        }
+                    };
+
+                    document.addEventListener('pointermove', onPointerMove);
+                    document.addEventListener('pointerup', onPointerUp);
+                    document.addEventListener('pointercancel', onPointerUp);
+                });
+            };
+
+            initResizer(rCorner, 'corner');
+            initResizer(rRight, 'right');
+            initResizer(rBottom, 'bottom');
+
+            // Dragging logic on Header (Draggable floating window + Drag-to-undock / Drag-to-dock)
+            header.addEventListener('pointerdown', (e) => {
+                if (e.target.closest('.scriptui-hdr-btn')) return;
+                e.preventDefault();
+
+                const startX = e.clientX;
+                const startY = e.clientY;
+                const startRect = winDiv.getBoundingClientRect();
+                const startLeft = startRect.left;
+                const startTop = startRect.top;
+                let hasDetached = !this.isDocked;
+                let isDragging = false;
+
+                const dockHost = document.getElementById('scriptui-dock-host');
+
+                const onPointerMove = (ev) => {
+                    const dx = ev.clientX - startX;
+                    const dy = ev.clientY - startY;
+
+                    // If docked, tear off into floating after 5px movement
+                    if (!hasDetached) {
+                        if (Math.abs(dx) > 5 || Math.abs(dy) > 5) {
+                            this.undock();
+                            hasDetached = true;
+                            isDragging = true;
+                            winDiv.classList.add('is-dragging');
+                            header.classList.add('is-dragging');
+                        } else {
+                            return;
+                        }
+                    } else {
+                        isDragging = true;
+                        winDiv.classList.add('is-dragging');
+                        header.classList.add('is-dragging');
+                    }
+
+                    const winW = winDiv.offsetWidth || 440;
+                    const newLeft = Math.max(20 - winW, Math.min(window.innerWidth - 40, Math.round(startLeft + dx)));
+                    const newTop = Math.max(0, Math.min(window.innerHeight - 30, Math.round(startTop + dy)));
+
+                    winDiv.style.left = newLeft + 'px';
+                    winDiv.style.top = newTop + 'px';
+                    this._floatingPos = { left: newLeft, top: newTop };
+                    ScriptUIWindow._lastFloatingPos = this._floatingPos;
+
+                    // Highlight dock drop zone if hovering over dock host
+                    if (dockHost) {
+                        const dockRect = dockHost.getBoundingClientRect();
+                        const isOverDock = (ev.clientX >= dockRect.left && ev.clientX <= dockRect.right &&
+                                            ev.clientY >= dockRect.top && ev.clientY <= dockRect.bottom);
+                        dockHost.classList.toggle('drag-over', isOverDock);
+                    }
+                };
+
+                const onPointerUp = (ev) => {
+                    document.removeEventListener('pointermove', onPointerMove);
+                    document.removeEventListener('pointerup', onPointerUp);
+                    document.removeEventListener('pointercancel', onPointerUp);
+
+                    winDiv.classList.remove('is-dragging');
+                    header.classList.remove('is-dragging');
+
+                    if (dockHost) {
+                        const dockRect = dockHost.getBoundingClientRect();
+                        const isOverDock = (ev.clientX >= dockRect.left && ev.clientX <= dockRect.right &&
+                                            ev.clientY >= dockRect.top && ev.clientY <= dockRect.bottom);
+                        dockHost.classList.remove('drag-over');
+
+                        // If dropped inside dock host, dock back!
+                        if (isOverDock && isDragging) {
+                            this.dock();
+                        }
+                    }
+                };
+
+                document.addEventListener('pointermove', onPointerMove);
+                document.addEventListener('pointerup', onPointerUp);
+                document.addEventListener('pointercancel', onPointerUp);
+            });
+        }
+
         show() {
+            // Close any existing active window
+            if (ScriptUIWindow.activeWindow && ScriptUIWindow.activeWindow !== this) {
+                try { ScriptUIWindow.activeWindow.close(); } catch (eOld) {}
+            }
+            ScriptUIWindow.activeWindow = this;
+
             const host = document.getElementById('scriptui-dock-host') || document.body;
-            // Clear previous windows and placeholder
             host.innerHTML = '';
 
             const winDiv = document.createElement('div');
-            winDiv.className = 'scriptui-window-container';
+            winDiv.className = 'scriptui-window-container' + (this.isDocked ? '' : ' scriptui-floating');
+            if (this._width) winDiv.style.width = this._width + 'px';
+            if (this._height) winDiv.style.height = this._height + 'px';
 
-            // Title Bar
+            // Title Bar / Header (Draggable & Interactive)
             const header = document.createElement('div');
             header.className = 'scriptui-window-header';
             header.innerHTML = `
-                <span class="scriptui-window-title">${this.title}</span>
-                <span class="scriptui-close-btn">&times;</span>
+                <div class="scriptui-header-left">
+                    <span class="scriptui-drag-grip" title="Drag to move or undock window">⋮⋮</span>
+                    <span class="scriptui-window-title" title="${this.title}">${this.title}</span>
+                    <span class="scriptui-window-badge" style="display: ${this.isDocked ? 'none' : 'inline-block'};">Floating</span>
+                </div>
+                <div class="scriptui-header-actions">
+                    <button class="scriptui-hdr-btn scriptui-dock-btn" type="button" title="${this.isDocked ? 'Undock Panel (Float window)' : 'Dock Panel into workspace'}">
+                        ${this._getDockBtnIcon()}
+                    </button>
+                    <button class="scriptui-hdr-btn scriptui-reset-btn" type="button" title="Reset Window Size">
+                        <svg width="11" height="11" viewBox="0 0 16 16" fill="currentColor">
+                            <path d="M1.5 1a.5.5 0 0 0-.5.5v4a.5.5 0 0 1-1 0v-4A1.5 1.5 0 0 1 1.5 0h4a.5.5 0 0 1 0 1h-4zM10 .5a.5.5 0 0 1 .5-.5h4A1.5 1.5 0 0 1 16 1.5v4a.5.5 0 0 1-1 0v-4a.5.5 0 0 0-.5-.5h-4a.5.5 0 0 1-.5-.5zM.5 10a.5.5 0 0 1 .5.5v4a.5.5 0 0 0 .5.5h4a.5.5 0 0 1 0 1h-4A1.5 1.5 0 0 1 0 14.5v-4a.5.5 0 0 1 .5-.5zm15 0a.5.5 0 0 1 .5.5v4a1.5 1.5 0 0 1-1.5 1.5h-4a.5.5 0 0 1 0-1h4a.5.5 0 0 0 .5-.5v-4a.5.5 0 0 1 .5-.5z"/>
+                        </svg>
+                    </button>
+                    <button class="scriptui-hdr-btn scriptui-close-btn" type="button" title="Close Panel">&times;</button>
+                </div>
             `;
-            header.querySelector('.scriptui-close-btn').onclick = () => this.close();
             winDiv.appendChild(header);
 
             // Body Content
@@ -1337,12 +1764,37 @@
             for (const child of this.children) {
                 body.appendChild(child.renderDOM());
             }
-
             winDiv.appendChild(body);
-            host.appendChild(winDiv);
+
+            // Resizers: Corner (Both), Right Edge (Width), Bottom Edge (Height)
+            const rCorner = document.createElement('div');
+            rCorner.className = 'scriptui-resizer-corner';
+            rCorner.title = 'Drag to resize panel (Width & Height)';
+            winDiv.appendChild(rCorner);
+
+            const rRight = document.createElement('div');
+            rRight.className = 'scriptui-resizer-right';
+            rRight.title = 'Drag to resize width';
+            winDiv.appendChild(rRight);
+
+            const rBottom = document.createElement('div');
+            rBottom.className = 'scriptui-resizer-bottom';
+            rBottom.title = 'Drag to resize height';
+            winDiv.appendChild(rBottom);
+
             this.domWrapper = winDiv;
 
-            // Notify app to switch tab if needed
+            // Setup Event Handlers: Dragging, Resizing, Dock/Undock, Buttons
+            this._setupWindowEvents(header, rCorner, rRight, rBottom);
+
+            // Mount to DOM based on dock state
+            if (this.isDocked) {
+                this.dock(true);
+            } else {
+                this.undock(true);
+            }
+
+            // Notify app to switch tab if needed (when docked)
             if (typeof window !== 'undefined') {
                 window.dispatchEvent(new CustomEvent('scriptui-window-shown'));
             }
@@ -1362,8 +1814,15 @@
         }
     }
 
+    // Static variables for remembering state across script re-runs
+    ScriptUIWindow.activeWindow = null;
+    ScriptUIWindow._lastDockState = true;
+    ScriptUIWindow._lastFloatingPos = null;
+    ScriptUIWindow._lastSize = null;
+
     // ExtendScript ScriptUI Window constructor
     global.Window = ScriptUIWindow;
+    global.ScriptUIWindow = ScriptUIWindow;
     global.Panel = Panel;
     global.Group = Group;
     global.TabbedPanel = TabbedPanel;

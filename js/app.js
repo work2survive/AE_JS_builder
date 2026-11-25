@@ -8,13 +8,13 @@
     'use strict';
 
     // -------------------------------------------------------------
-    // Version Management (v1.2.34)
+    // Version Management (v1.2.35)
     // -------------------------------------------------------------
     function computeDailyVersion() {
-        return '1.2.34';
+        return '1.2.35';
     }
 
-    const APP_VERSION = '1.2.34';
+    const APP_VERSION = '1.2.35';
     global.EMULATOR_VERSION = APP_VERSION;
     global.AE_TEXT_GUIDE_URL = 'https://github.com/work2survive/AE_JS_builder/blob/main/AE_VS_JS_TEXT_RENDERING_DIFFERENCES.md';
     global.AE_ANCHOR_POINT_GUIDE_URL = 'https://github.com/work2survive/AE-Align-AnchorPoint/blob/main/README.md';
@@ -1811,8 +1811,11 @@
     }
 
     function findMainBuildButton() {
-        const dock = document.getElementById('scriptui-dock-host') || document.body;
-        const buttons = Array.from(dock.querySelectorAll('button.scriptui-button, button'));
+        const winContainer = (window.ScriptUIWindow && window.ScriptUIWindow.activeWindow && window.ScriptUIWindow.activeWindow.domWrapper) ||
+                              document.querySelector('.scriptui-window-container') ||
+                              document.getElementById('scriptui-dock-host') ||
+                              document.body;
+        const buttons = Array.from(winContainer.querySelectorAll('button.scriptui-button, button'));
         if (buttons.length === 0) return null;
 
         // 1. Look for button with text containing "build"
@@ -2693,11 +2696,13 @@
             tabScriptUI.classList.add('active');
             tabEditor.classList.remove('active');
             editorView.style.display = 'none';
-            scriptUIView.style.display = 'block';
+            scriptUIView.style.display = 'flex';
         };
 
         window.addEventListener('scriptui-window-shown', () => {
-            tabScriptUI.click();
+            if (!window.ScriptUIWindow || window.ScriptUIWindow._lastDockState !== false) {
+                tabScriptUI.click();
+            }
         });
 
         // Global Shy Toggle Button (AE Shy Guy Pictogram)
@@ -2732,6 +2737,8 @@
                 removeJSXFromURL();
                 window.__currentScriptSource = null;
                 if (currentFilenameEl) currentFilenameEl.textContent = 'None';
+                const floatingWin = document.querySelector('.scriptui-window-container.scriptui-floating');
+                if (floatingWin && floatingWin.parentNode) floatingWin.parentNode.removeChild(floatingWin);
                 const scriptUIView = document.getElementById('scriptui-dock-host');
                 if (scriptUIView) {
                     scriptUIView.innerHTML = '<div style="color: #888; font-size: 12px; text-align: center; margin-top: 40px;">No active ScriptUI panel. Select or run a script.</div>';
