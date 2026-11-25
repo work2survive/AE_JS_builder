@@ -1628,3 +1628,43 @@ Modern After Effects ScriptUI tools must prioritize ergonomic single-panel workf
 2. **Interactive 9-Point Anchor Matrix**: A 3x3 button grid (`[TL][TC][TR] / [ML][ C][MR] / [BL][BC][BR]`) synced bidirectionally with a dropdown list gives immediate visual feedback of the active anchor point.
 3. **Dual-Environment Color Picker**: Swatches should support both desktop ExtendScript (`$.colorPicker()`) and web-based browser emulators (`window.openWindowsColorPicker()`), with instant hex text input validation (`#RRGGBB`).
 4. **Persistent Undo Groups**: Every operation must be wrapped in `app.beginUndoGroup()` and `app.endUndoGroup()` so designers can instantly revert with `Ctrl+Z` / `Cmd+Z`.
+
+---
+
+## 27. ScriptUI Responsive Panel Geometry & Unconstrained Text Layer Name Traps
+
+Modern After Effects ScriptUI panels must comfortably dock into narrow workspace sidebars (220px–300px) as well as float as standalone palettes without ballooning horizontally or breaking host UI layouts.
+
+### 27.1 The "Unrenamed Layer Name" Intrinsic Width Explosion
+In After Effects, if a user does not explicitly rename a text layer in the timeline, After Effects automatically assigns the layer's `.name` to the **entire text string** of the paragraph. If the paragraph contains 200–500 characters of text, `textLayer.name` is hundreds of characters long.
+
+In ScriptUI:
+1. `statictext` widgets calculate their intrinsic minimum width based on their string content unless bounded.
+2. ScriptUI's container layout engine calculates the entire window/panel width from the maximum intrinsic width of its widest leaf element.
+3. If a status bar or label sets `lblTargetStatus.text = textLayer.name + " (Point Text)"`, ScriptUI computes an intrinsic width requirement of **1200px to 2500px+**, forcibly stretching the docked panel across the screen.
+
+**The Solution:**
+- Explicitly truncate long layer names in the UI text (e.g., truncate at 20 characters with `"..."`).
+- Pass the creation parameter `{ truncate: "middle" }` when creating the `statictext` widget.
+- Bound the widget with explicit `preferredSize = [160, 20]`, `minimumSize = [60, 20]`, and `maximumSize = [280, 20]`.
+- Store the full raw name in `lblTargetStatus.helpTip` so the user can hover to inspect the complete layer name and type without expanding the UI.
+
+### 27.2 Vertical Stacking for Narrow Dockability
+Horizontal `row` groups containing descriptive radio buttons (e.g. `"Apply Once (Baked Position)"` beside `"Live Expression (Updates if alignment changes)"`) require ~480px of horizontal space alone.
+- Stack secondary options and radio groups vertically (`orientation = "column"`, `alignChildren = ["left", "top"]`, `spacing = 3`).
+- Use concise widget labels with fixed `preferredSize` (e.g. 65px–80px) and transfer verbose descriptions into `helpTip` tooltips.
+- This immediately drops the panel's minimum required width to ~220px, enabling seamless docking beside the Effects & Presets or Character palettes.
+
+### 27.3 Responsive Resize Handlers
+To ensure ScriptUI reflows dynamically when docked or resized inside the After Effects workspace:
+```javascript
+if (win.layout) {
+    win.layout.layout(true);
+}
+win.onResizing = win.onResize = function () {
+    if (this.layout) {
+        this.layout.resize();
+    }
+};
+```
+

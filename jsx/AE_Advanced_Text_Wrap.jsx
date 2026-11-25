@@ -62,7 +62,7 @@
     "use strict";
 
     var SCRIPT_TITLE   = "AE Advanced Text Wrap";
-    var SCRIPT_VERSION = "v1.4.0";
+    var SCRIPT_VERSION = "v1.4.1";
     var GITHUB_URL     = "https://github.com/work2survive/AE-advanced-text-wrap";
     var README_URL     = "https://github.com/work2survive/AE-advanced-text-wrap/blob/main/README.md";
 
@@ -1722,19 +1722,30 @@
         var win = isDockable ? thisObj : (WinClass ? new WinClass("palette", SCRIPT_TITLE + " " + SCRIPT_VERSION, undefined, { resizeable: true }) : null);
         if (!win) return null;
 
+        if (win instanceof Window) {
+            win.text = SCRIPT_TITLE + " " + SCRIPT_VERSION;
+            win.preferredSize = [320, 560];
+            win.minimumSize = [240, 420];
+            win.maximumSize = [600, 1200];
+        } else {
+            win.preferredSize = [280, -1];
+            win.minimumSize = [220, -1];
+        }
+
         win.orientation = "column";
         win.alignChildren = ["fill", "top"];
-        win.spacing = 8;
-        win.margins = 10;
+        win.spacing = 6;
+        win.margins = 8;
 
         // --- Header Panel ---
         var pnlHeader = win.add("panel", undefined, SCRIPT_TITLE + " " + SCRIPT_VERSION);
         pnlHeader.orientation = "column";
         pnlHeader.alignChildren = ["fill", "top"];
-        pnlHeader.spacing = 3;
-        pnlHeader.margins = [8, 6, 8, 6];
+        pnlHeader.spacing = 2;
+        pnlHeader.margins = [8, 5, 8, 5];
 
-        var lblSub = pnlHeader.add("statictext", undefined, "Balanced paragraph typography, hyphenation & micro-spacing");
+        var lblSub = pnlHeader.add("statictext", undefined, "Balanced paragraph typography & hyphenation");
+        lblSub.alignment = ["fill", "center"];
         try {
             lblSub.graphics.foregroundColor = win.graphics.newPen(win.graphics.PenType.SOLID_COLOR, [0.35, 0.75, 1.0, 1.0], 1);
         } catch (eG) {}
@@ -1744,20 +1755,23 @@
         pnlTarget.orientation = "row";
         pnlTarget.alignChildren = ["fill", "center"];
         pnlTarget.spacing = 6;
-        pnlTarget.margins = 8;
+        pnlTarget.margins = [8, 6, 8, 6];
 
-        var lblTargetStatus = pnlTarget.add("statictext", undefined, "Scanning for text layer...");
+        var lblTargetStatus = pnlTarget.add("statictext", undefined, "Scanning for text layer...", { truncate: "middle" });
         lblTargetStatus.alignment = ["fill", "center"];
+        lblTargetStatus.preferredSize = [160, 20];
+        lblTargetStatus.maximumSize = [280, 20];
+        lblTargetStatus.minimumSize = [60, 20];
 
         var btnRefresh = pnlTarget.add("button", undefined, "Refresh");
-        btnRefresh.preferredSize = [65, 24];
+        btnRefresh.preferredSize = [55, 22];
 
         // --- Width Constraints Panel ---
         var pnlWidth = win.add("panel", undefined, "Width Constraints (px)");
         pnlWidth.orientation = "column";
         pnlWidth.alignChildren = ["fill", "top"];
-        pnlWidth.spacing = 6;
-        pnlWidth.margins = 8;
+        pnlWidth.spacing = 5;
+        pnlWidth.margins = [8, 6, 8, 6];
 
         // 1. Max Text Width Constraint (Ceiling)
         var grpMaxWidthRow = pnlWidth.add("group");
@@ -1765,14 +1779,15 @@
         grpMaxWidthRow.alignChildren = ["fill", "center"];
         grpMaxWidthRow.spacing = 6;
 
-        var lblMaxWidth = grpMaxWidthRow.add("statictext", undefined, "Max Width (Ceiling):");
-        lblMaxWidth.preferredSize = [130, -1];
+        var lblMaxWidth = grpMaxWidthRow.add("statictext", undefined, "Max Width:");
+        lblMaxWidth.preferredSize = [80, -1];
+        lblMaxWidth.helpTip = "Max Width (Ceiling): Absolute physical boundary in pixels.";
 
         var sldMaxWidth = grpMaxWidthRow.add("slider", undefined, 600, 100, 1920);
         sldMaxWidth.alignment = ["fill", "center"];
 
         var txtMaxWidth = grpMaxWidthRow.add("edittext", undefined, "600");
-        txtMaxWidth.preferredSize = [50, 22];
+        txtMaxWidth.preferredSize = [44, 22];
 
         var lblPx1 = grpMaxWidthRow.add("statictext", undefined, "px");
         lblPx1.preferredSize = [18, -1];
@@ -1783,14 +1798,15 @@
         grpDesiredWidthRow.alignChildren = ["fill", "center"];
         grpDesiredWidthRow.spacing = 6;
 
-        var lblDesiredWidth = grpDesiredWidthRow.add("statictext", undefined, "Desired Approx Width:");
-        lblDesiredWidth.preferredSize = [130, -1];
+        var lblDesiredWidth = grpDesiredWidthRow.add("statictext", undefined, "Desired:");
+        lblDesiredWidth.preferredSize = [80, -1];
+        lblDesiredWidth.helpTip = "Desired Approx Width: Target visual width (always < Max Width).";
 
         var sldDesiredWidth = grpDesiredWidthRow.add("slider", undefined, 500, 60, 1900);
         sldDesiredWidth.alignment = ["fill", "center"];
 
         var txtDesiredWidth = grpDesiredWidthRow.add("edittext", undefined, "500");
-        txtDesiredWidth.preferredSize = [50, 22];
+        txtDesiredWidth.preferredSize = [44, 22];
 
         var lblPx2 = grpDesiredWidthRow.add("statictext", undefined, "px");
         lblPx2.preferredSize = [18, -1];
@@ -1858,30 +1874,33 @@
         var pnlMethod = win.add("panel", undefined, "Wrap Method & Language");
         pnlMethod.orientation = "column";
         pnlMethod.alignChildren = ["fill", "top"];
-        pnlMethod.spacing = 6;
-        pnlMethod.margins = 8;
+        pnlMethod.spacing = 5;
+        pnlMethod.margins = [8, 6, 8, 6];
 
         var grpMethodRow = pnlMethod.add("group");
         grpMethodRow.orientation = "row";
         grpMethodRow.alignChildren = ["left", "center"];
         grpMethodRow.spacing = 6;
-        grpMethodRow.add("statictext", undefined, "Method:");
+        var lblM = grpMethodRow.add("statictext", undefined, "Method:");
+        lblM.preferredSize = [65, -1];
 
         var ddMethod = grpMethodRow.add("dropdownlist", undefined, [
-            "1. Balanced Paragraph (Knuth-Plass InDesign)",
-            "2. Greedy Fit (Typographically Polished)",
-            "3. Optical Pyramid (Centered Stanza Card)",
-            "4. Reverse Pyramid (Headline / Lead-in)",
-            "5. Compact Block (Max Density)"
+            "1. Balanced (Knuth-Plass)",
+            "2. Greedy Fit (Fast)",
+            "3. Optical Pyramid (Cards)",
+            "4. Reverse Pyramid (Headline)",
+            "5. Compact Block (Density)"
         ]);
         ddMethod.selection = 0;
         ddMethod.alignment = ["fill", "center"];
+        ddMethod.preferredSize = [150, 22];
 
         var grpLangRow = pnlMethod.add("group");
         grpLangRow.orientation = "row";
         grpLangRow.alignChildren = ["left", "center"];
         grpLangRow.spacing = 6;
-        grpLangRow.add("statictext", undefined, "Language:");
+        var lblL = grpLangRow.add("statictext", undefined, "Language:");
+        lblL.preferredSize = [65, -1];
 
         var ddLanguage = grpLangRow.add("dropdownlist", undefined, [
             "English (US/UK)",
@@ -1889,92 +1908,111 @@
             "French (Français)",
             "German (Deutsch)",
             "Italian (Italiano)",
-            "Universal (Latin General)"
+            "Universal (Latin)"
         ]);
         ddLanguage.selection = 0;
         ddLanguage.alignment = ["fill", "center"];
+        ddLanguage.preferredSize = [150, 22];
 
-        var chkHyphen = pnlMethod.add("checkbox", undefined, "Enable Multilingual Hyphenation (-)");
+        var chkHyphen = pnlMethod.add("checkbox", undefined, "Enable Hyphenation (-)");
         chkHyphen.value = true;
+        chkHyphen.helpTip = "Enables multilingual algorithmic syllabification and hyphenation.";
 
-        var chkRemoveBreaks = pnlMethod.add("checkbox", undefined, "Remove Existing Line Breaks Before Wrapping");
+        var chkRemoveBreaks = pnlMethod.add("checkbox", undefined, "Remove Existing Line Breaks");
         chkRemoveBreaks.value = true;
+        chkRemoveBreaks.helpTip = "Strips existing manual carriage returns (\\r, \\n) before wrapping into a clean paragraph.";
 
         // --- Micro-Typographic Options Panel ---
         var pnlMicro = win.add("panel", undefined, "Micro-Typography & Semantic Units");
         pnlMicro.orientation = "column";
         pnlMicro.alignChildren = ["fill", "top"];
-        pnlMicro.spacing = 5;
-        pnlMicro.margins = 8;
+        pnlMicro.spacing = 4;
+        pnlMicro.margins = [8, 6, 8, 6];
 
-        var chkWidows = pnlMicro.add("checkbox", undefined, "Prevent Widows & Orphans (Keep last words together)");
+        var chkWidows = pnlMicro.add("checkbox", undefined, "Prevent Widows & Orphans");
         chkWidows.value = true;
+        chkWidows.helpTip = "Binds the last words together so single words never sit alone on a line.";
 
-        var chkDangling = pnlMicro.add("checkbox", undefined, "Avoid Dangling Short Words & Prepositions (NBSP)");
+        var chkDangling = pnlMicro.add("checkbox", undefined, "Avoid Dangling Short Words (NBSP)");
         chkDangling.value = true;
+        chkDangling.helpTip = "Binds short prepositions and articles (in, on, of, the) to the next word with non-breaking space.";
 
-        var chkNumbers = pnlMicro.add("checkbox", undefined, "Keep Numbers, Units & Currencies Bound (e.g. 100 px)");
+        var chkNumbers = pnlMicro.add("checkbox", undefined, "Keep Numbers & Units Bound");
         chkNumbers.value = true;
+        chkNumbers.helpTip = "Binds numbers to their following unit or symbol (e.g. 100 px, 50 %).";
 
-        var chkHonorifics = pnlMicro.add("checkbox", undefined, "Keep Honorifics & Abbreviations Together (Dr. / e.g.)");
+        var chkHonorifics = pnlMicro.add("checkbox", undefined, "Keep Honorifics & Titles Bound");
         chkHonorifics.value = true;
+        chkHonorifics.helpTip = "Binds titles and abbreviations (e.g. Dr. Smith, Mr. Jones).";
 
         // --- Position & Anchor Alignment Panel ---
         var pnlAlignment = win.add("panel", undefined, "Position & Anchor Alignment");
         pnlAlignment.orientation = "column";
         pnlAlignment.alignChildren = ["fill", "top"];
-        pnlAlignment.spacing = 6;
-        pnlAlignment.margins = 8;
+        pnlAlignment.spacing = 4;
+        pnlAlignment.margins = [8, 6, 8, 6];
 
         // 1. Visually Match Original Text Position (Default: ON)
-        var chkMatchPos = pnlAlignment.add("checkbox", undefined, "Visually Match Position of Original Text");
+        var chkMatchPos = pnlAlignment.add("checkbox", undefined, "Visually Match Original Position");
         chkMatchPos.value = true;
+        chkMatchPos.helpTip = "Keeps the wrapped text visually pinned to the original text's location on the composition.";
 
         var grpMatchRef = pnlAlignment.add("group");
         grpMatchRef.orientation = "row";
         grpMatchRef.alignChildren = ["left", "center"];
-        grpMatchRef.spacing = 6;
-        grpMatchRef.margins = [16, 0, 0, 0];
-        grpMatchRef.add("statictext", undefined, "Match Alignment:");
+        grpMatchRef.spacing = 4;
+        grpMatchRef.margins = [14, 0, 0, 0];
+        var lblMatchRef = grpMatchRef.add("statictext", undefined, "Ref Mode:");
+        lblMatchRef.preferredSize = [65, -1];
+        lblMatchRef.helpTip = "Reference origin used when repositioning the wrapped paragraph.";
 
         var ddMatchRef = grpMatchRef.add("dropdownlist", undefined, [
-            "By Text Justification (Natural Flow)",
-            "Visual Center (Symmetric Expansion)",
+            "By Justification (Natural)",
+            "Visual Center (Symmetric)",
             "Top Edge (First Line Fixed)"
         ]);
         ddMatchRef.selection = 0;
+        ddMatchRef.preferredSize = [150, 22];
+        ddMatchRef.alignment = ["fill", "center"];
 
         chkMatchPos.onClick = function () {
             ddMatchRef.enabled = chkMatchPos.value;
         };
 
         // 2. Anchor Point Auto-Alignment (AE-Align-AnchorPoint)
-        var chkAutoAlign = pnlAlignment.add("checkbox", undefined, "Auto-Align Anchor Point to Text Alignment");
+        var chkAutoAlign = pnlAlignment.add("checkbox", undefined, "Auto-Align Anchor Point");
         chkAutoAlign.value = true;
+        chkAutoAlign.helpTip = "Automatically repositions layer anchor point based on paragraph alignment (left, center, right).";
 
         var grpAlignMode = pnlAlignment.add("group");
-        grpAlignMode.orientation = "row";
-        grpAlignMode.alignChildren = ["left", "center"];
-        grpAlignMode.spacing = 10;
-        grpAlignMode.margins = [16, 0, 0, 0];
+        grpAlignMode.orientation = "column";
+        grpAlignMode.alignChildren = ["left", "top"];
+        grpAlignMode.spacing = 3;
+        grpAlignMode.margins = [14, 0, 0, 0];
 
         var rbAlignOnce = grpAlignMode.add("radiobutton", undefined, "Apply Once (Baked Position)");
-        var rbAlignExpr = grpAlignMode.add("radiobutton", undefined, "Live Expression (Updates if alignment changes)");
+        var rbAlignExpr = grpAlignMode.add("radiobutton", undefined, "Live Expression (Dynamic)");
         rbAlignOnce.value = true;
+        rbAlignOnce.helpTip = "Computes and sets the anchor point and position values statically once.";
+        rbAlignExpr.helpTip = "Applies an expression so the anchor point dynamically updates if text alignment changes.";
 
         var grpAlignVert = pnlAlignment.add("group");
         grpAlignVert.orientation = "row";
         grpAlignVert.alignChildren = ["left", "center"];
-        grpAlignVert.spacing = 6;
-        grpAlignVert.margins = [16, 0, 0, 0];
-        grpAlignVert.add("statictext", undefined, "Vertical Anchor:");
+        grpAlignVert.spacing = 4;
+        grpAlignVert.margins = [14, 0, 0, 0];
+        var lblVertAlign = grpAlignVert.add("statictext", undefined, "Vertical:");
+        lblVertAlign.preferredSize = [65, -1];
+        lblVertAlign.helpTip = "Vertical anchor point placement.";
 
         var ddVertAlign = grpAlignVert.add("dropdownlist", undefined, [
-            "Top (Paragraph standard)",
+            "Top (Standard)",
             "Center (Middle)",
             "Bottom"
         ]);
         ddVertAlign.selection = 0;
+        ddVertAlign.preferredSize = [150, 22];
+        ddVertAlign.alignment = ["fill", "center"];
 
         chkAutoAlign.onClick = function () {
             var en = chkAutoAlign.value;
@@ -1989,15 +2027,18 @@
         grpSubBtns.alignChildren = ["fill", "center"];
         grpSubBtns.spacing = 6;
 
-        var btnRestore = grpSubBtns.add("button", undefined, "↺ Restore Original Text");
-        var btnDemo    = grpSubBtns.add("button", undefined, "📝 Create Demo Text");
+        var btnRestore = grpSubBtns.add("button", undefined, "↺ Restore Original");
+        var btnDemo    = grpSubBtns.add("button", undefined, "📝 Create Demo");
         btnRestore.preferredSize = [-1, 26];
         btnDemo.preferredSize    = [-1, 26];
+        btnRestore.helpTip = "Restores the original unwrapped text, box dimensions, position, and removes script-generated expressions.";
+        btnDemo.helpTip = "Creates a sample paragraph in the active composition for instant testing.";
 
         // --- Primary Action Button ---
-        var btnExecute = win.add("button", undefined, "✨ Wrap Text into Pleasant Paragraph");
+        var btnExecute = win.add("button", undefined, "✨ Wrap Paragraph");
         btnExecute.alignment = ["fill", "center"];
-        btnExecute.preferredSize = [-1, 36];
+        btnExecute.preferredSize = [-1, 34];
+        btnExecute.helpTip = "Analyzes, hyphenates, and wraps the selected text layer with optical micro-typography.";
 
         // ---------------------------------------------------------------------
         // Event Listeners & UI Logic
@@ -2007,16 +2048,25 @@
             var comp = getActiveComposition();
             if (!comp) {
                 lblTargetStatus.text = "No active composition found.";
+                lblTargetStatus.helpTip = lblTargetStatus.text;
                 return null;
             }
             var textLayer = getSelectedTextLayer(comp);
             if (!textLayer) {
-                lblTargetStatus.text = "Please select a Point or Box Text layer.";
+                lblTargetStatus.text = "Select a Point or Box Text layer.";
+                lblTargetStatus.helpTip = lblTargetStatus.text;
                 return null;
             }
             var doc = getTextDocument(textLayer);
             var isBox = Boolean(doc && doc.boxText);
-            lblTargetStatus.text = textLayer.name + " (" + (isBox ? "Box Text" : "Point Text") + ")";
+            var typeStr = isBox ? "Box Text" : "Point Text";
+            var rawName = textLayer.name || "Text Layer";
+            var shortName = rawName;
+            if (shortName.length > 20) {
+                shortName = shortName.substring(0, 18) + "...";
+            }
+            lblTargetStatus.text = shortName + " (" + typeStr + ")";
+            lblTargetStatus.helpTip = rawName + " (" + typeStr + ")";
             return textLayer;
         }
 
@@ -2138,11 +2188,18 @@
         // Initial detection
         updateTargetStatus();
 
+        if (win.layout) {
+            win.layout.layout(true);
+        }
+        win.onResizing = win.onResize = function () {
+            if (this.layout) {
+                this.layout.resize();
+            }
+        };
+
         if (win instanceof Window) {
             win.center();
             win.show();
-        } else if (win.layout) {
-            win.layout.layout(true);
         }
 
         return win;
