@@ -1605,7 +1605,7 @@
                 }
             };
 
-            // Resizing logic for All Border Lines & Corners (Active on focus & when undocked)
+            // Resizing logic for All Border Lines & Corners (Active in both Docked and Floating modes)
             const initResizer = (resizerEl, mode) => {
                 if (!resizerEl) return;
                 resizerEl.addEventListener('pointerdown', (e) => {
@@ -1619,6 +1619,11 @@
                     const startH = winRect.height;
                     const startLeft = this._floatingPos ? this._floatingPos.left : winRect.left;
 
+                    const leftCol = document.getElementById('ae-left-column');
+                    const workspace = document.getElementById('ae-workspace');
+                    const startLeftColW = leftCol ? leftCol.getBoundingClientRect().width : 0;
+                    const wsWidth = workspace ? workspace.getBoundingClientRect().width : window.innerWidth;
+
                     winDiv.classList.add('is-resizing');
                     document.body.classList.add('scriptui-resizing-active');
 
@@ -1626,23 +1631,39 @@
                         const dx = ev.clientX - startX;
                         const dy = ev.clientY - startY;
 
-                        // Width resizing (Right, Left, Corners)
-                        if (mode === 'corner' || mode === 'right') {
-                            if (this.isDocked) {
-                                const newW = Math.max(260, Math.min(window.innerWidth - 30, Math.round(startW + dx * 2)));
+                        if (this.isDocked) {
+                            // Docked mode resizing
+                            if (mode === 'left' || mode === 'corner-bl') {
+                                // Dragging left border in docked mode expands the panel & dock column smoothly
+                                if (leftCol && startLeftColW > 0) {
+                                    const minLeftW = 280;
+                                    const maxLeftW = Math.max(minLeftW, wsWidth - 280);
+                                    const newLeftW = Math.min(Math.max(startLeftColW + dx, minLeftW), maxLeftW);
+                                    leftCol.style.width = newLeftW + 'px';
+                                    try { localStorage.setItem('ae_panel_width_left', newLeftW); } catch (err) {}
+                                    window.dispatchEvent(new Event('resize'));
+                                }
+                                const newW = Math.max(260, Math.min(wsWidth - 300, Math.round(startW - dx)));
                                 winDiv.style.width = newW + 'px';
                                 this._width = newW;
-                            } else {
-                                const newW = Math.max(260, Math.min(window.innerWidth - 20, Math.round(startW + dx)));
+                            } else if (mode === 'right' || mode === 'corner') {
+                                const newW = Math.max(260, Math.min(wsWidth - 300, Math.round(startW + dx)));
                                 winDiv.style.width = newW + 'px';
                                 this._width = newW;
                             }
-                        } else if (mode === 'left' || mode === 'corner-bl') {
-                            if (this.isDocked) {
-                                const newW = Math.max(260, Math.min(window.innerWidth - 30, Math.round(startW - dx * 2)));
+
+                            if (mode === 'bottom' || mode === 'corner' || mode === 'corner-bl') {
+                                const newH = Math.max(160, Math.min(window.innerHeight - 30, Math.round(startH + dy)));
+                                winDiv.style.height = newH + 'px';
+                                this._height = newH;
+                            }
+                        } else {
+                            // Floating mode resizing
+                            if (mode === 'corner' || mode === 'right') {
+                                const newW = Math.max(260, Math.min(window.innerWidth - 20, Math.round(startW + dx)));
                                 winDiv.style.width = newW + 'px';
                                 this._width = newW;
-                            } else {
+                            } else if (mode === 'left' || mode === 'corner-bl') {
                                 const newW = Math.max(260, Math.min(startLeft + startW - 20, Math.round(startW - dx)));
                                 const newLeft = Math.round(startLeft + (startW - newW));
                                 winDiv.style.width = newW + 'px';
@@ -1650,13 +1671,12 @@
                                 this._width = newW;
                                 if (this._floatingPos) this._floatingPos.left = newLeft;
                             }
-                        }
 
-                        // Height resizing (Bottom, Corners)
-                        if (mode === 'bottom' || mode === 'corner' || mode === 'corner-bl') {
-                            const newH = Math.max(160, Math.min(window.innerHeight - 30, Math.round(startH + dy)));
-                            winDiv.style.height = newH + 'px';
-                            this._height = newH;
+                            if (mode === 'bottom' || mode === 'corner' || mode === 'corner-bl') {
+                                const newH = Math.max(160, Math.min(window.innerHeight - 30, Math.round(startH + dy)));
+                                winDiv.style.height = newH + 'px';
+                                this._height = newH;
+                            }
                         }
 
                         ScriptUIWindow._lastSize = { width: this._width, height: this._height };
@@ -1690,8 +1710,10 @@
             if (rLeft) initResizer(rLeft, 'left');
             initResizer(rBottom, 'bottom');
 
-            // Dragging logic on Floating Titlebar & Tab Bar (Draggable floating window + Drag-to-undock / Drag-to-dock)
-            const initDrag = (dragEl) => {
+            // Dragging logic:
+            // 1. Floating Titlebar moves floating window freely (NEVER docks, allowing placement anywhere over the right area)
+            // 2. Tab Bar (Window Title) allows undocking when dragged from dock, and docks back when dropped over dock area
+            const initDrag = (dragEl, canDockOnDrop = false) => {
                 dragEl.addEventListener('pointerdown', (e) => {
                     if (e.target.closest('.scriptui-hamburger-btn') || e.target.closest('.scriptui-floating-close-btn') || e.target.closest('.scriptui-panel-menu')) return;
                     e.preventDefault();
@@ -1737,8 +1759,8 @@
                         this._floatingPos = { left: newLeft, top: newTop };
                         ScriptUIWindow._lastFloatingPos = this._floatingPos;
 
-                        // Highlight dock drop zone if hovering over dock host
-                        if (dockHost) {
+                        // Only highlight dock drop zone when dragging by the window title tab
+                        if (canDockOnDrop && dockHost) {
                             const dockRect = dockHost.getBoundingClientRect();
                             const isOverDock = (ev.clientX >= dockRect.left && ev.clientX <= dockRect.right &&
                                                 ev.clientY >= dockRect.top && ev.clientY <= dockRect.bottom);
@@ -1755,14 +1777,16 @@
                         dragEl.classList.remove('is-dragging');
 
                         if (dockHost) {
-                            const dockRect = dockHost.getBoundingClientRect();
-                            const isOverDock = (ev.clientX >= dockRect.left && ev.clientX <= dockRect.right &&
-                                                ev.clientY >= dockRect.top && ev.clientY <= dockRect.bottom);
                             dockHost.classList.remove('drag-over');
 
-                            // If dropped inside dock host, dock back!
-                            if (isOverDock && isDragging) {
-                                this.dock();
+                            // Dock ONLY if dragging by the window title tab (canDockOnDrop === true)
+                            if (canDockOnDrop) {
+                                const dockRect = dockHost.getBoundingClientRect();
+                                const isOverDock = (ev.clientX >= dockRect.left && ev.clientX <= dockRect.right &&
+                                                    ev.clientY >= dockRect.top && ev.clientY <= dockRect.bottom);
+                                if (isOverDock && isDragging) {
+                                    this.dock();
+                                }
                             }
                         }
                     };
@@ -1773,8 +1797,10 @@
                 });
             };
 
-            initDrag(titlebar);
-            initDrag(tabBar);
+            // Floating titlebar moves floating window freely (never auto-docks)
+            initDrag(titlebar, false);
+            // Window title tab (matches user screenshot) undocks on drag and docks when dropped over right area
+            initDrag(tabBar, true);
         }
 
         show() {
