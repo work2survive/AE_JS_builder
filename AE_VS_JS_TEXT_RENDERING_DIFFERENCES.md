@@ -1361,32 +1361,48 @@ In web browsers, newline characters (`\n`, `\r\n`) are standard. In native After
 
 ---
 
-### 22.6 Persistent State Storage via Expression Comment Payloads
+### 22.6 Persistent State Storage via Expression Comment Payloads & Idempotent Re-wrapping
 
-To provide non-destructive operation with a 1-click **"↺ Restore Original Text"** feature, the original pre-wrap text, geometry, and box type must persist across project saves (`.aep`) without modifying the user's composition structure.
+To provide non-destructive operation with a 1-click **"↺ Restore Original Text"** feature and idempotent re-wrapping when switching wrap methods, the original pre-wrap text, geometry, box type, position, and anchor point must persist across project saves (`.aep`) without modifying the user's composition hierarchy.
 
 Because native After Effects expression controls do not offer a dedicated string property, state is persisted using an **Expression Comment Payload** on an `ADBE Slider Control`:
 
 ```javascript
-// 1. Create or retrieve state effect:
+// 1. Guard: Check if pristine original state was already captured:
+var existing = readOriginalState(textLayer);
+if (existing && existing.text) return; // Never overwrite pristine original text!
+
+// 2. Create or retrieve state effect:
 var fxParade = textLayer.property("ADBE Effect Parade");
 var eff = fxParade.property("Advanced Text Wrap") || fxParade.addProperty("ADBE Slider Control");
 eff.name = "Advanced Text Wrap";
 
-// 2. Encode state payload into the Slider property's expression:
+// 3. Encode full geometry & transform state payload into the Slider property's expression:
 var payload = {
-    text: originalText,
-    isBox: isBox,
-    boxSize: boxSize || [0, 0]
+    text: originalText,                  // Preserves original manual breaks (\r, \n)
+    isBox: isBox,                        // Point Text vs. Paragraph Box Text
+    boxSize: boxSize || null,            // [width, height]
+    boxPos: boxPos || null,              // [left, top]
+    position: [pos[0], pos[1], pos[2]],  // Original pre-wrap position
+    anchorPoint: [ap[0], ap[1], ap[2]],  // Original pre-wrap anchor point
+    anchorExpr: apProp.expression || "",
+    posExpr: posProp.expression || ""
 };
 var encoded = encodeURIComponent(JSON.stringify(payload));
 eff.property(1).expression = "/* AdvancedTextWrapState:" + encoded + " */\nvalue;";
 
-// 3. Mirror in layer.comment for native After Effects metadata inspection:
+// 4. Mirror in layer.comment for native After Effects metadata inspection:
 textLayer.comment = "AdvancedTextWrap:" + originalText;
 ```
 
-When the user clicks "Restore Original Text", the script reads `eff.property(1).expression` or `textLayer.comment`, parses the JSON payload, and restores the original text and box dimensions seamlessly.
+#### Idempotent Multi-Pass Wrapping
+When the user switches wrap methods (e.g., from Balanced to Optical Pyramid or changes the Max Width slider), the engine checks `readOriginalState(textLayer)`. If existing state is found, it uses `existingState.text` as the starting raw text. This prevents compounding line breaks or losing the original manual paragraph structure across repeated wrapping passes.
+
+When the user clicks **"↺ Restore Original Text"**, the script reads the payload and restores:
+1. `doc.text = state.text` and `doc.boxTextSize = state.boxSize`
+2. `anchorPoint.expression = state.anchorExpr`, `anchorPoint.setValue(state.anchorPoint)`
+3. `position.expression = state.posExpr`, `position.setValue(state.position)`
+4. Removes the state effect cleanly without popup alerts.
 
 ---
 
@@ -1400,6 +1416,29 @@ When the user clicks "Restore Original Text", the script reads `eff.property(1).
    Always execute `AE_Advanced_Text_Wrap.jsx` **first**. Once the paragraph has achieved optimal balance and line breaks (`\r`), run `AE-replace-color-emojis`. The emoji engine will read the exact visual line geometry and place vector shapes precisely on the wrapped lines.
 3. **Execution Order with Text Highlights (`AE-Text-Highlight`)**:
    Because `AE_Text_Highlight` identifies words and phrases across visual lines, wrapping the text first ensures highlights fit the final line lengths. Furthermore, because `\u00A0` (NBSP) is treated as whitespace (`\s`), target search queries (e.g. `"peace of mind"`) match seamlessly across non-breaking spaces.
+
+---
+
+### 22.8 Anchor Point Auto-Alignment to Text Justification (`AE-Align-AnchorPoint` Integration)
+
+In motion design typography, aligning the layer Anchor Point to the text layer's active justification ensures that scale transitions, text animators, and responsive bounds expand naturally from the visual origin of the paragraph:
+- **Left Justified** $\to$ Anchor Point placed at the visual Left edge ($X = \text{bounds.left}$)
+- **Center Justified** $\to$ Anchor Point placed at the horizontal Center ($X = \text{bounds.left} + \text{bounds.width}/2$)
+- **Right Justified** $\to$ Anchor Point placed at the visual Right edge ($X = \text{bounds.left} + \text{bounds.width}$)
+- **Vertical Anchor** $\to$ Defaults to Top ($Y = \text{bounds.top}$), matching natural paragraph downward flow.
+
+#### Mode A: Apply Once (Zero-Shift Baked Position)
+To shift the anchor point without altering the layer's on-screen pixels, the script computes the displacement $\Delta \vec{A} = \vec{A}_{\text{target}} - \vec{A}_{\text{current}}$, scales it by the layer scale $\vec{S} = [s_x, s_y, s_z]$, and rotates it through 2D rotation $\mathbf{R}(\theta)$ or 3D Euler angles (Z-Y-X rotation + Orientation):
+$$\Delta \vec{P} = \mathbf{R} \cdot (\vec{S} \odot \Delta \vec{A})$$
+$$\vec{P}_{\text{new}} = \vec{P}_{\text{current}} + \Delta \vec{P}$$
+This guarantees sub-pixel visual content invariance ($0.00\text{px}$ jump).
+
+#### Mode B: Live Expression (Reactive to Justification Changes)
+When dynamic reactivity is desired, expressions are applied to `anchorPoint` and `position`:
+1. **`anchorPoint.expression`**:
+   Reads `thisLayer.text.sourceText.value.justification` and dynamically branches $X$ between `r.left`, `r.left + r.width/2`, and `r.left + r.width`.
+2. **`position.expression`**:
+   Computes $(\text{targetX} - \text{origA}[0]) \cdot s_x$ and adds the rotated offset to `value`, keeping the text anchored in place if the user changes justification in the AE Character panel.
 
 
 ---

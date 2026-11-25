@@ -1,6 +1,6 @@
 // Co-authored & architected with Google DeepMind Antigravity.
 // =============================================================================
-// ADOBE AFTER EFFECTS EXTENDSCRIPT & SCRIPTUI PANEL: AE ADVANCED TEXT WRAP v1.0.0
+// ADOBE AFTER EFFECTS EXTENDSCRIPT & SCRIPTUI PANEL: AE ADVANCED TEXT WRAP v1.2.0
 // =============================================================================
 //
 // PURPOSE:
@@ -27,17 +27,23 @@
 //      - Binds numbers and following units/symbols (e.g., "100 px", "50 %", "25 kg").
 //      - Binds honorifics and abbreviations (e.g., "Dr. Smith", "e.g. typography").
 //      - Widow & orphan prevention (ensures last line never has a lonely single word).
-//   5. Max Text Width Constraint:
-//      - Interactive pixel constraint slider and edittext with live feedback.
-//   6. Non-Destructive State Storage & One-Click Restore:
-//      - Stores original text and geometry inside an "Advanced Text Wrap" Slider Control effect
-//        expression and layer comment.
-//      - One-click restoration to the exact pre-wrap state.
-//   7. Universal Compatibility:
+//   5. Dual Width Constraints (Ceiling & Desired Target):
+//      - Max Width (Ceiling): Absolute pixel constraint boundary.
+//      - Desired Approx Width: Desired visual paragraph width (always < Max Width).
+//   6. Non-Destructive State Storage & Idempotent Re-wrapping:
+//      - Stores pristine original text (preserving manual breaks \r/\n), box dimensions,
+//        layer position, and anchor point inside an "Advanced Text Wrap" Slider Control effect.
+//      - When switching wrap methods or parameters, always reads from original pristine text.
+//      - One-click restoration back to exact original state and coordinates.
+//   7. Anchor Point Auto-Alignment (AE-Align-AnchorPoint Mechanics):
+//      - Auto-aligns layer Anchor Point according to text justification (Left -> Left edge,
+//        Center -> Center, Right -> Right edge). Default: ON.
+//      - Choice between Apply Once (zero-shift baked position) or Live Expression (reactive to justification changes).
+//      - Scale, rotation, and 3D orientation-safe position compensation (Zero Content Jump).
+//   8. Universal Compatibility:
 //      - Works identically on Point Text and Paragraph (Box) Text.
 //      - Works across all text alignments (Left, Center, Right, Justified).
-//      - 100% interoperable with AE-Text-Highlight and AE-replace-color-emojis
-//        (surrogate-pair emoji safety, preserves character indices).
+//      - 100% interoperable with AE-Text-Highlight and AE-replace-color-emojis.
 //
 // REPOSITORY:
 //   https://github.com/work2survive/AE-advanced-text-wrap
@@ -50,7 +56,7 @@
     "use strict";
 
     var SCRIPT_TITLE   = "AE Advanced Text Wrap";
-    var SCRIPT_VERSION = "v1.0.0";
+    var SCRIPT_VERSION = "v1.2.0";
     var GITHUB_URL     = "https://github.com/work2survive/AE-advanced-text-wrap";
     var README_URL     = "https://github.com/work2survive/AE-advanced-text-wrap/blob/main/README.md";
 
@@ -778,12 +784,22 @@
     // -------------------------------------------------------------------------
     var EFFECT_NAME = "Advanced Text Wrap";
 
+    // -------------------------------------------------------------------------
+    // 7. Non-Destructive State Storage & One-Click Restore Engine
+    // -------------------------------------------------------------------------
+
     /**
-     * Stores original pre-wrap text and geometry in an effect expression and layer comment.
+     * Stores original pre-wrap text, box dimensions, position, and anchor point
+     * in an effect expression and layer comment.
+     * Guarded: will NEVER overwrite an existing stored original state!
      */
-    function storeOriginalState(textLayer, origText, isBox, boxSize) {
+    function storeOriginalState(textLayer, origText, isBox, boxSize, boxPos, origPos, origAP, anchorExpr, posExpr) {
         if (!textLayer) return;
         try {
+            // Guard: preserve pristine original state across multiple re-wraps
+            var existing = readOriginalState(textLayer);
+            if (existing && existing.text) return;
+
             var fxParade = textLayer.property("ADBE Effect Parade") || textLayer.property("Effects");
             if (!fxParade) return;
 
@@ -797,11 +813,15 @@
                 eff.name = EFFECT_NAME;
                 var sliderProp = eff.property("ADBE Slider Control-0001") || eff.property(1);
                 if (sliderProp) {
-                    // Encode state into expression comment payload
                     var payload = {
                         text: origText,
-                        isBox: isBox,
-                        boxSize: boxSize || [0, 0]
+                        isBox: Boolean(isBox),
+                        boxSize: boxSize || null,
+                        boxPos: boxPos || null,
+                        position: (origPos && origPos.length >= 2) ? [origPos[0], origPos[1], (origPos.length > 2 ? origPos[2] : 0)] : null,
+                        anchorPoint: (origAP && origAP.length >= 2) ? [origAP[0], origAP[1], (origAP.length > 2 ? origAP[2] : 0)] : null,
+                        anchorExpr: anchorExpr || "",
+                        posExpr: posExpr || ""
                     };
                     var jsonStr = "";
                     try {
@@ -813,7 +833,7 @@
                 }
             }
 
-            // Also mirror in layer.comment for native AE inspector persistence
+            // Also mirror text in layer.comment for native AE inspector persistence
             try {
                 if (textLayer.comment !== undefined && (!textLayer.comment || textLayer.comment.indexOf("AdvancedTextWrap") === -1)) {
                     textLayer.comment = "AdvancedTextWrap:" + origText;
@@ -841,7 +861,16 @@
                             try {
                                 return JSON.parse(decoded);
                             } catch (eParse) {
-                                return { text: decoded, isBox: false, boxSize: null };
+                                return {
+                                    text: decoded,
+                                    isBox: false,
+                                    boxSize: null,
+                                    boxPos: null,
+                                    position: null,
+                                    anchorPoint: null,
+                                    anchorExpr: "",
+                                    posExpr: ""
+                                };
                             }
                         }
                     }
@@ -853,7 +882,12 @@
                 return {
                     text: textLayer.comment.slice("AdvancedTextWrap:".length),
                     isBox: false,
-                    boxSize: null
+                    boxSize: null,
+                    boxPos: null,
+                    position: null,
+                    anchorPoint: null,
+                    anchorExpr: "",
+                    posExpr: ""
                 };
             }
         } catch (eRead) {}
@@ -861,7 +895,8 @@
     }
 
     /**
-     * Restores the layer back to its original unmodified text and geometry.
+     * Restores the layer back to its original unmodified text, box geometry,
+     * position, and anchor point.
      */
     function restoreOriginalText(textLayer) {
         if (!textLayer) return false;
@@ -872,6 +907,7 @@
         var docProp = textProp ? (textProp.property("ADBE Text Document") || textLayer.property("Source Text")) : textLayer.property("Source Text");
         if (!docProp) return false;
 
+        // 1. Restore Source Text & Box Geometry
         var doc = docProp.value;
         if (doc) {
             doc.text = state.text;
@@ -879,6 +915,7 @@
                 try {
                     doc.boxText = true;
                     doc.boxTextSize = state.boxSize;
+                    if (state.boxPos) doc.boxTextPos = state.boxPos;
                 } catch (eBox) {}
             }
             docProp.setValue(doc);
@@ -886,11 +923,416 @@
             docProp.setValue(state.text);
         }
 
+        // 2. Restore Transform: Position & Anchor Point
+        var is3D = Boolean(textLayer.threeDLayer);
+        var transform = textLayer.property("Transform");
+        if (transform) {
+            var apProp = transform.property("Anchor Point");
+            var posProp = transform.property("Position");
+
+            if (apProp) {
+                try {
+                    apProp.expression = state.anchorExpr || "";
+                } catch (eAE) {}
+                if (state.anchorPoint && typeof state.anchorPoint[0] === "number") {
+                    try {
+                        if (is3D) {
+                            apProp.setValue([state.anchorPoint[0], state.anchorPoint[1], state.anchorPoint[2] || 0]);
+                        } else {
+                            apProp.setValue([state.anchorPoint[0], state.anchorPoint[1]]);
+                        }
+                    } catch (eAS) {}
+                }
+            }
+
+            if (posProp) {
+                try {
+                    posProp.expression = state.posExpr || "";
+                } catch (ePE) {}
+                if (state.position && typeof state.position[0] === "number") {
+                    try {
+                        if (posProp.dimensionsSeparated) {
+                            var xP = transform.property("X Position");
+                            var yP = transform.property("Y Position");
+                            var zP = is3D ? transform.property("Z Position") : null;
+                            if (xP) xP.setValue(state.position[0]);
+                            if (yP) yP.setValue(state.position[1]);
+                            if (zP) zP.setValue(state.position[2] || 0);
+                        } else {
+                            if (is3D) {
+                                posProp.setValue([state.position[0], state.position[1], state.position[2] || 0]);
+                            } else {
+                                posProp.setValue([state.position[0], state.position[1]]);
+                            }
+                        }
+                    } catch (ePS) {}
+                }
+            }
+        }
+
+        // 3. Remove effect and clear layer comment
+        try {
+            var fxParade = textLayer.property("ADBE Effect Parade") || textLayer.property("Effects");
+            if (fxParade) {
+                var eff = fxParade.property(EFFECT_NAME);
+                if (eff) eff.remove();
+            }
+        } catch (eRem) {}
+
+        try {
+            if (textLayer.comment && textLayer.comment.indexOf("AdvancedTextWrap:") === 0) {
+                textLayer.comment = "";
+            }
+        } catch (eCom) {}
+
         return true;
     }
 
     // -------------------------------------------------------------------------
-    // 8. Main Text Wrapping Orchestration
+    // 8. Anchor Point Auto-Alignment Engine (AE-Align-AnchorPoint Mechanics)
+    // -------------------------------------------------------------------------
+
+    /**
+     * Determines text layer bounding box via sourceRectAtTime or box text definition
+     */
+    function getLayerSourceRectBounds(layer, compTime) {
+        if (!layer) return { left: 0, top: 0, width: 100, height: 100 };
+        var t = (compTime !== undefined) ? compTime : 0;
+
+        if (typeof layer.sourceRectAtTime === "function") {
+            try {
+                var sr = layer.sourceRectAtTime(t, false);
+                if (sr && (sr.width !== 0 || sr.height !== 0 || sr.left !== 0 || sr.top !== 0)) {
+                    return { left: sr.left, top: sr.top, width: sr.width, height: sr.height };
+                }
+            } catch (eSR) {}
+        }
+
+        try {
+            var textProp = layer.property("ADBE Text Properties") || layer.property("Text");
+            if (textProp) {
+                var docProp = textProp.property("ADBE Text Document") || layer.property("Source Text");
+                if (docProp && docProp.value) {
+                    var doc = docProp.value;
+                    if (doc.boxText && doc.boxTextSize) {
+                        var bPos = doc.boxTextPos || [0, 0];
+                        return { left: bPos[0], top: bPos[1], width: doc.boxTextSize[0], height: doc.boxTextSize[1] };
+                    }
+                }
+            }
+        } catch (eText) {}
+
+        return { left: 0, top: 0, width: 100, height: 100 };
+    }
+
+    /**
+     * Computes target [tx, ty] anchor coordinate from bounding box and alignment modes
+     */
+    function computeTargetAnchor(bounds, xMode, yMode) {
+        var tx = bounds.left;
+        if (xMode === "center") {
+            tx = bounds.left + bounds.width / 2;
+        } else if (xMode === "right") {
+            tx = bounds.left + bounds.width;
+        }
+
+        var ty = bounds.top;
+        if (yMode === "center") {
+            ty = bounds.top + bounds.height / 2;
+        } else if (yMode === "bottom") {
+            ty = bounds.top + bounds.height;
+        }
+
+        return [tx, ty];
+    }
+
+    /**
+     * Rotates displacement vector by layer 2D rotation or 3D orientation & Euler rotations
+     */
+    function applyTransformRotation(v, layer, is3D) {
+        var transform = layer.property("Transform");
+        if (!transform) return v;
+
+        if (!is3D) {
+            var rotProp = transform.property("Rotation");
+            var rz = rotProp ? (rotProp.value || 0) : 0;
+            if (Math.abs(rz) > 0.0001) {
+                var rad = rz * (Math.PI / 180);
+                return [
+                    v[0] * Math.cos(rad) - v[1] * Math.sin(rad),
+                    v[0] * Math.sin(rad) + v[1] * Math.cos(rad),
+                    v[2] || 0
+                ];
+            }
+            return v;
+        }
+
+        var orientProp = transform.property("Orientation");
+        var xRotProp = transform.property("X Rotation");
+        var yRotProp = transform.property("Y Rotation");
+        var zRotProp = transform.property("Z Rotation") || transform.property("Rotation");
+
+        var oVal = (orientProp && orientProp.value) ? orientProp.value : [0, 0, 0];
+        var xRot = (xRotProp && typeof xRotProp.value === "number") ? xRotProp.value : 0;
+        var yRot = (yRotProp && typeof yRotProp.value === "number") ? yRotProp.value : 0;
+        var zRot = (zRotProp && typeof zRotProp.value === "number") ? zRotProp.value : 0;
+
+        function rotX(vec, deg) {
+            if (!deg || Math.abs(deg) < 0.0001) return vec;
+            var r = deg * (Math.PI / 180);
+            var c = Math.cos(r), s = Math.sin(r);
+            return [vec[0], vec[1] * c - vec[2] * s, vec[1] * s + vec[2] * c];
+        }
+        function rotY(vec, deg) {
+            if (!deg || Math.abs(deg) < 0.0001) return vec;
+            var r = deg * (Math.PI / 180);
+            var c = Math.cos(r), s = Math.sin(r);
+            return [vec[0] * c + vec[2] * s, vec[1], -vec[0] * s + vec[2] * c];
+        }
+        function rotZ(vec, deg) {
+            if (!deg || Math.abs(deg) < 0.0001) return vec;
+            var r = deg * (Math.PI / 180);
+            var c = Math.cos(r), s = Math.sin(r);
+            return [vec[0] * c - vec[1] * s, vec[0] * s + vec[1] * c, vec[2]];
+        }
+
+        var res = [v[0], v[1], v[2] || 0];
+        if (zRot) res = rotZ(res, zRot);
+        if (yRot) res = rotY(res, yRot);
+        if (xRot) res = rotX(res, xRot);
+        if (oVal[2]) res = rotZ(res, oVal[2]);
+        if (oVal[1]) res = rotY(res, oVal[1]);
+        if (oVal[0]) res = rotX(res, oVal[0]);
+        return res;
+    }
+
+    /**
+     * Detects current text justification ("left", "center", "right") from layer TextDocument
+     */
+    function detectLayerJustification(textLayer) {
+        if (!textLayer) return "left";
+        try {
+            var doc = getTextDocument(textLayer);
+            if (doc && doc.justification !== undefined) {
+                var j = doc.justification;
+                if (j === 7414 || j === 7417 || j === "center") return "center";
+                if (j === 7413 || j === 7416 || j === "right") return "right";
+                return "left";
+            }
+            var srcProp = textLayer.property("Source Text") || textLayer.sourceText;
+            if (srcProp && srcProp.value && srcProp.value.justification !== undefined) {
+                var j2 = srcProp.value.justification;
+                if (j2 === 7414 || j2 === 7417 || j2 === "center") return "center";
+                if (j2 === 7413 || j2 === 7416 || j2 === "right") return "right";
+                return "left";
+            }
+            if (textLayer.justification) {
+                var j3 = textLayer.justification;
+                if (j3 === 7414 || j3 === 7417 || j3 === "center") return "center";
+                if (j3 === 7413 || j3 === 7416 || j3 === "right") return "right";
+                return "left";
+            }
+        } catch (e) {}
+        return "left";
+    }
+
+    /**
+     * Generates dynamic Anchor Point expression that reacts to justification changes
+     */
+    function buildDynamicAlignmentAnchorExpression(yMode, is3D) {
+        var zPart = is3D ? ", (value.length > 2 ? value[2] : 0)" : "";
+        var exprY = (yMode === "center") ? "r.top + r.height / 2" : (yMode === "bottom" ? "r.top + r.height" : "r.top");
+        return "// AE Advanced Text Wrap (Dynamic Alignment Anchor)\n" +
+               "const r = sourceRectAtTime(time, false);\n" +
+               "let j = 7412;\n" +
+               "try {\n" +
+               "    const rawDoc = thisLayer.text ? thisLayer.text.sourceText : thisLayer.sourceText;\n" +
+               "    const doc = (rawDoc && rawDoc.value) ? rawDoc.value : rawDoc;\n" +
+               "    if (doc && doc.justification !== undefined) j = doc.justification;\n" +
+               "} catch (e) {}\n" +
+               "let targetX = r.left;\n" +
+               "if (j === 7414 || j === 7417 || j === 'center') {\n" +
+               "    targetX = r.left + r.width / 2;\n" +
+               "} else if (j === 7413 || j === 7416 || j === 'right') {\n" +
+               "    targetX = r.left + r.width;\n" +
+               "}\n" +
+               "const targetY = " + exprY + ";\n" +
+               "[targetX, targetY" + zPart + "];";
+    }
+
+    /**
+     * Generates scale and rotation safe Position expression matching dynamic anchor shift
+     */
+    function buildDynamicAlignmentPositionExpression(yMode, is3D, baseA) {
+        var baseAx = (baseA && typeof baseA[0] === "number") ? baseA[0] : 0;
+        var baseAy = (baseA && typeof baseA[1] === "number") ? baseA[1] : 0;
+        var baseAz = (baseA && typeof baseA[2] === "number") ? baseA[2] : 0;
+        var exprY = (yMode === "center") ? "r.top + r.height / 2" : (yMode === "bottom" ? "r.top + r.height" : "r.top");
+
+        var banner = "// AE Advanced Text Wrap (Dynamic Alignment Position Compensator)\n";
+        var boundsBlock = "const r = sourceRectAtTime(time, false);\n" +
+                          "let j = 7412;\n" +
+                          "try {\n" +
+                          "    const rawDoc = thisLayer.text ? thisLayer.text.sourceText : thisLayer.sourceText;\n" +
+                          "    const doc = (rawDoc && rawDoc.value) ? rawDoc.value : rawDoc;\n" +
+                          "    if (doc && doc.justification !== undefined) j = doc.justification;\n" +
+                          "} catch (e) {}\n" +
+                          "let targetX = r.left;\n" +
+                          "if (j === 7414 || j === 7417 || j === 'center') {\n" +
+                          "    targetX = r.left + r.width / 2;\n" +
+                          "} else if (j === 7413 || j === 7416 || j === 'right') {\n" +
+                          "    targetX = r.left + r.width;\n" +
+                          "}\n" +
+                          "const targetY = " + exprY + ";\n";
+
+        if (is3D) {
+            return banner +
+                boundsBlock +
+                "const s = [\n" +
+                "    transform.scale[0] / 100,\n" +
+                "    transform.scale[1] / 100,\n" +
+                "    (transform.scale.length > 2 ? transform.scale[2] : 100) / 100\n" +
+                "];\n" +
+                "let origA = [" + baseAx + ", " + baseAy + ", " + baseAz + "];\n" +
+                "const dx = (targetX - origA[0]) * s[0];\n" +
+                "const dy = (targetY - origA[1]) * s[1];\n" +
+                "const dz = 0;\n" +
+                "function rotX(v, deg) {\n" +
+                "    if (!deg) return v;\n" +
+                "    const rad = deg * (Math.PI / 180), c = Math.cos(rad), sn = Math.sin(rad);\n" +
+                "    return [v[0], v[1] * c - v[2] * sn, v[1] * sn + v[2] * c];\n" +
+                "}\n" +
+                "function rotY(v, deg) {\n" +
+                "    if (!deg) return v;\n" +
+                "    const rad = deg * (Math.PI / 180), c = Math.cos(rad), sn = Math.sin(rad);\n" +
+                "    return [v[0] * c + v[2] * sn, v[1], -v[0] * sn + v[2] * c];\n" +
+                "}\n" +
+                "function rotZ(v, deg) {\n" +
+                "    if (!deg) return v;\n" +
+                "    const rad = deg * (Math.PI / 180), c = Math.cos(rad), sn = Math.sin(rad);\n" +
+                "    return [v[0] * c - v[1] * sn, v[0] * sn + v[1] * c, v[2]];\n" +
+                "}\n" +
+                "let v = [dx, dy, dz];\n" +
+                "try {\n" +
+                "    const xr = transform.xRotation ? (transform.xRotation.value || transform.xRotation) : 0;\n" +
+                "    const yr = transform.yRotation ? (transform.yRotation.value || transform.yRotation) : 0;\n" +
+                "    const zr = transform.zRotation ? (transform.zRotation.value || transform.zRotation) : (transform.rotation ? (transform.rotation.value || transform.rotation) : 0);\n" +
+                "    if (zr) v = rotZ(v, zr);\n" +
+                "    if (yr) v = rotY(v, yr);\n" +
+                "    if (xr) v = rotX(v, xr);\n" +
+                "} catch (eR) {}\n" +
+                "try {\n" +
+                "    const o = transform.orientation;\n" +
+                "    if (o) {\n" +
+                "        if (o[2]) v = rotZ(v, o[2]);\n" +
+                "        if (o[1]) v = rotY(v, o[1]);\n" +
+                "        if (o[0]) v = rotX(v, o[0]);\n" +
+                "    }\n" +
+                "} catch (eO) {}\n" +
+                "[value[0] + v[0], value[1] + v[1], (value.length > 2 ? value[2] : 0) + v[2]];";
+        }
+
+        return banner +
+            boundsBlock +
+            "const s = [transform.scale[0] / 100, transform.scale[1] / 100];\n" +
+            "let origA = [" + baseAx + ", " + baseAy + "];\n" +
+            "const dx = (targetX - origA[0]) * s[0];\n" +
+            "const dy = (targetY - origA[1]) * s[1];\n" +
+            "const rot = transform.rotation;\n" +
+            "if (rot && Math.abs(rot) > 0.0001) {\n" +
+            "    const rad = rot * (Math.PI / 180);\n" +
+            "    const rx = dx * Math.cos(rad) - dy * Math.sin(rad);\n" +
+            "    const ry = dx * Math.sin(rad) + dy * Math.cos(rad);\n" +
+            "    [value[0] + rx, value[1] + ry];\n" +
+            "} else {\n" +
+            "    [value[0] + dx, value[1] + dy];\n" +
+            "}";
+    }
+
+    /**
+     * Aligns the layer Anchor Point according to text justification
+     * Mode: 'once' (zero-shift baked position) or 'expression' (live reactive expression)
+     */
+    function alignTextLayerAnchor(textLayer, alignMode, verticalAlign, baseAnchor) {
+        if (!textLayer) return false;
+        var comp = textLayer.containingComp;
+        var curTime = comp ? comp.time : 0;
+        var is3D = Boolean(textLayer.threeDLayer);
+
+        var transform = textLayer.property("Transform");
+        if (!transform) return false;
+
+        var apProp = transform.property("Anchor Point");
+        var posProp = transform.property("Position");
+        var scaleProp = transform.property("Scale");
+        if (!apProp || !posProp) return false;
+
+        var curA = apProp.value;
+        var curPos = posProp.value;
+        var curScale = scaleProp ? scaleProp.value : [100, 100, 100];
+
+        var yMode = verticalAlign || "top";
+
+        if (alignMode === "expression") {
+            var baseA = baseAnchor || curA;
+            var aExpr = buildDynamicAlignmentAnchorExpression(yMode, is3D);
+            var pExpr = buildDynamicAlignmentPositionExpression(yMode, is3D, baseA);
+
+            if (posProp.dimensionsSeparated) {
+                try { posProp.dimensionsSeparated = false; } catch (eDim) {}
+            }
+            apProp.expression = aExpr;
+            posProp.expression = pExpr;
+            return true;
+        } else {
+            // One-Time Static Bake Mode
+            var xMode = detectLayerJustification(textLayer);
+            var bounds = getLayerSourceRectBounds(textLayer, curTime);
+            var targetA = computeTargetAnchor(bounds, xMode, yMode);
+
+            var sx = (curScale[0] || 100) / 100;
+            var sy = (curScale[1] || 100) / 100;
+            var sz = is3D ? ((curScale.length > 2 ? curScale[2] : 100) / 100) : 1;
+
+            var deltaAx = targetA[0] - curA[0];
+            var deltaAy = targetA[1] - curA[1];
+            var deltaAz = 0;
+
+            var sdx = deltaAx * sx;
+            var sdy = deltaAy * sy;
+            var sdz = deltaAz * sz;
+
+            var pDelta = applyTransformRotation([sdx, sdy, sdz], textLayer, is3D);
+
+            try { apProp.expression = ""; } catch (eAE) {}
+            try { posProp.expression = ""; } catch (ePE) {}
+
+            if (is3D) {
+                apProp.setValue([targetA[0], targetA[1], (curA.length > 2 ? curA[2] : 0)]);
+            } else {
+                apProp.setValue([targetA[0], targetA[1]]);
+            }
+
+            if (posProp.dimensionsSeparated) {
+                var xP = transform.property("X Position");
+                var yP = transform.property("Y Position");
+                var zP = is3D ? transform.property("Z Position") : null;
+                if (xP) xP.setValue(xP.value + pDelta[0]);
+                if (yP) yP.setValue(yP.value + pDelta[1]);
+                if (zP) zP.setValue(zP.value + pDelta[2]);
+            } else {
+                if (is3D) {
+                    posProp.setValue([curPos[0] + pDelta[0], curPos[1] + pDelta[1], (curPos.length > 2 ? curPos[2] : 0) + pDelta[2]]);
+                } else {
+                    posProp.setValue([curPos[0] + pDelta[0], curPos[1] + pDelta[1]]);
+                }
+            }
+            return true;
+        }
+    }
+
+    // -------------------------------------------------------------------------
+    // 9. Main Text Wrapping Orchestration
     // -------------------------------------------------------------------------
 
     function executeTextWrap(comp, textLayer, options) {
@@ -901,16 +1343,41 @@
         if (!docProp) return false;
 
         var doc = docProp.value;
-        var fullText = getTextLayerString(textLayer);
-        if (!fullText || trimString(fullText).length === 0) return false;
+        var transform = textLayer.property("Transform");
+        var apProp = transform ? transform.property("Anchor Point") : null;
+        var posProp = transform ? transform.property("Position") : null;
 
-        var isBox = Boolean(doc && doc.boxText === true);
-        var origBoxSize = (doc && doc.boxTextSize) ? [doc.boxTextSize[0], doc.boxTextSize[1]] : null;
-
-        // 1. Store original text in effect before mutating
+        // 1. Retrieve or capture pristine original state
         var existingState = readOriginalState(textLayer);
-        if (!existingState) {
-            storeOriginalState(textLayer, fullText, isBox, origBoxSize);
+        var rawTextToWrap = "";
+        var isBox = false;
+        var origBoxSize = null;
+        var origBoxPos = null;
+        var baseAnchor = null;
+        var basePos = null;
+
+        if (existingState && existingState.text) {
+            // Re-wrapping from previously wrapped layer: Use pristine original state!
+            rawTextToWrap = existingState.text;
+            isBox = Boolean(existingState.isBox);
+            origBoxSize = existingState.boxSize;
+            origBoxPos = existingState.boxPos;
+            baseAnchor = existingState.anchorPoint;
+            basePos = existingState.position;
+        } else {
+            // First time wrapping: snapshot pristine original state from layer!
+            rawTextToWrap = getTextLayerString(textLayer);
+            if (!rawTextToWrap || trimString(rawTextToWrap).length === 0) return false;
+
+            isBox = Boolean(doc && doc.boxText === true);
+            origBoxSize = (doc && doc.boxTextSize) ? [doc.boxTextSize[0], doc.boxTextSize[1]] : null;
+            origBoxPos = (doc && doc.boxTextPos) ? [doc.boxTextPos[0], doc.boxTextPos[1]] : null;
+            baseAnchor = apProp ? [apProp.value[0], apProp.value[1], (apProp.value.length > 2 ? apProp.value[2] : 0)] : [0, 0, 0];
+            basePos = posProp ? [posProp.value[0], posProp.value[1], (posProp.value.length > 2 ? posProp.value[2] : 0)] : [0, 0, 0];
+            var origAnchorExpr = apProp ? (apProp.expression || "") : "";
+            var origPosExpr = posProp ? (posProp.expression || "") : "";
+
+            storeOriginalState(textLayer, rawTextToWrap, isBox, origBoxSize, origBoxPos, basePos, baseAnchor, origAnchorExpr, origPosExpr);
         }
 
         // 2. Initialize accurate measurement engine
@@ -922,14 +1389,14 @@
 
         try {
             // 3. Apply semantic & micro-typographic bindings (prepositions, numbers, widows)
-            var preprocessed = applySemanticBindings(fullText, options.language, {
+            var preprocessed = applySemanticBindings(rawTextToWrap, options.language, {
                 bindNumbers: options.bindNumbers,
                 bindHonorifics: options.bindHonorifics,
                 avoidDanglingShort: options.avoidDanglingShort,
                 preventWidows: options.preventWidows
             });
 
-            // 4. Split by manual line breaks / paragraphs
+            // 4. Split by manual line breaks / paragraphs (preserving intentional breaks)
             var rawParagraphs = preprocessed.split(/\r\n|\r|\n/);
             var finalWrappedLines = [];
 
@@ -985,7 +1452,12 @@
                 docProp.setValue(wrappedFullText);
             }
 
-            // 7. Update effect status
+            // 7. Auto-align Anchor Point if enabled
+            if (options.autoAlignAnchor) {
+                alignTextLayerAnchor(textLayer, options.alignMode, options.verticalAlign, baseAnchor);
+            }
+
+            // 8. Update effect status slider
             var fxParade = textLayer.property("ADBE Effect Parade") || textLayer.property("Effects");
             if (fxParade) {
                 var eff = fxParade.property(EFFECT_NAME);
@@ -1205,6 +1677,47 @@
         var chkHonorifics = pnlMicro.add("checkbox", undefined, "Keep Honorifics & Abbreviations Together (Dr. / e.g.)");
         chkHonorifics.value = true;
 
+        // --- Anchor Point Auto-Alignment Panel (AE-Align-AnchorPoint) ---
+        var pnlAnchor = win.add("panel", undefined, "Anchor Point Auto-Alignment");
+        pnlAnchor.orientation = "column";
+        pnlAnchor.alignChildren = ["fill", "top"];
+        pnlAnchor.spacing = 6;
+        pnlAnchor.margins = 8;
+
+        var chkAutoAlign = pnlAnchor.add("checkbox", undefined, "Auto-Align Anchor Point to Text Alignment");
+        chkAutoAlign.value = true;
+
+        var grpAlignMode = pnlAnchor.add("group");
+        grpAlignMode.orientation = "row";
+        grpAlignMode.alignChildren = ["left", "center"];
+        grpAlignMode.spacing = 10;
+        grpAlignMode.margins = [16, 0, 0, 0];
+
+        var rbAlignOnce = grpAlignMode.add("radiobutton", undefined, "Apply Once (Baked Position)");
+        var rbAlignExpr = grpAlignMode.add("radiobutton", undefined, "Live Expression (Updates if alignment changes)");
+        rbAlignOnce.value = true;
+
+        var grpAlignVert = pnlAnchor.add("group");
+        grpAlignVert.orientation = "row";
+        grpAlignVert.alignChildren = ["left", "center"];
+        grpAlignVert.spacing = 6;
+        grpAlignVert.margins = [16, 0, 0, 0];
+        grpAlignVert.add("statictext", undefined, "Vertical Anchor:");
+
+        var ddVertAlign = grpAlignVert.add("dropdownlist", undefined, [
+            "Top (Paragraph standard)",
+            "Center (Middle)",
+            "Bottom"
+        ]);
+        ddVertAlign.selection = 0;
+
+        chkAutoAlign.onClick = function () {
+            var en = chkAutoAlign.value;
+            rbAlignOnce.enabled = en;
+            rbAlignExpr.enabled = en;
+            ddVertAlign.enabled = en;
+        };
+
         // --- Secondary Action Buttons ---
         var grpSubBtns = win.add("group");
         grpSubBtns.orientation = "row";
@@ -1278,19 +1791,20 @@
         btnRestore.onClick = function () {
             var comp = getActiveComposition();
             if (!comp) {
-                alert("No active composition.");
+                lblTargetStatus.text = "No active composition.";
                 return;
             }
             var textLayer = getSelectedTextLayer(comp);
             if (!textLayer) {
-                alert("Please select the wrapped text layer to restore.");
+                lblTargetStatus.text = "Please select the wrapped text layer to restore.";
                 return;
             }
             var restored = restoreOriginalText(textLayer);
             if (restored) {
+                lblTargetStatus.text = "Restored original text & geometry.";
                 updateTargetStatus();
             } else {
-                alert("No stored original text found on this layer.");
+                lblTargetStatus.text = "No stored original text found on this layer.";
             }
         };
 
@@ -1309,6 +1823,9 @@
             var methodKeys = ["balanced", "greedy", "pyramid", "reverse_pyramid", "compact"];
             var langKeys = ["english", "spanish", "french", "german", "italian", "universal"];
 
+            var vertIdx = (ddVertAlign.selection ? ddVertAlign.selection.index : 0);
+            var vAlign = (vertIdx === 1) ? "center" : ((vertIdx === 2) ? "bottom" : "top");
+
             var opts = {
                 maxWidth: parseInt(txtMaxWidth.text, 10) || 600,
                 desiredWidth: parseInt(txtDesiredWidth.text, 10) || 500,
@@ -1319,7 +1836,10 @@
                 preventWidows: chkWidows.value,
                 avoidDanglingShort: chkDangling.value,
                 bindNumbers: chkNumbers.value,
-                bindHonorifics: chkHonorifics.value
+                bindHonorifics: chkHonorifics.value,
+                autoAlignAnchor: chkAutoAlign.value,
+                alignMode: rbAlignExpr.value ? "expression" : "once",
+                verticalAlign: vAlign
             };
 
             app.beginUndoGroup("AE Advanced Text Wrap");
