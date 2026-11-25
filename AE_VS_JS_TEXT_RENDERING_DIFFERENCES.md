@@ -1681,6 +1681,29 @@ When tools bundle multiple feature domains (e.g. Width constraints, algorithmic 
 3. **Fixed Action Footer**: Place secondary utility buttons (`Restore Original`, `Create Demo`) and the primary action trigger (`Wrap Paragraph`) pinned at the very bottom of the window, outside the tabs.
 4. **Vertical Space Savings**: Reduces total panel height by more than **50%** (from ~700px down to ~340px), guaranteeing complete visibility on small laptop displays and narrow After Effects docking panels without requiring scrollbars.
 
+### 27.5 Full Fluid Responsiveness & Preventing Fixed Width Traps (The AE Text Highlight Standard)
+
+A notorious pitfall when designing ScriptUI panels is accidental layout locking, where controls remain trapped at a narrow fixed width (e.g. 260px) when the designer widens the dockable panel in After Effects, creating enormous empty black margins.
+
+**Key Architectural Rules for 100% Fluid Horizontal Stretching:**
+1. **Never Hardcode `win.preferredSize` or `win.minimumSize` on Dockable Panels**:
+   - Setting `win.preferredSize = [260, -1]` or `win.preferredSize.width = 280` permanently locks ScriptUI's auto-layout solver. When the user expands the workspace panel to 400px–600px, ScriptUI enforces the preferred width of 260px, causing child elements to freeze in a narrow column.
+   - Omit `win.preferredSize` entirely on dockable panels. Let After Effects pass the native docking slot bounds directly into `win`.
+2. **Dimension-Specific Sizing Over 2D Arrays**:
+   - In ExtendScript, setting 2D arrays like `lbl.preferredSize = [85, -1]` or `btn.preferredSize = [-1, 32]` frequently introduces layout bugs on Windows.
+   - Use explicit 1D property setters: `lbl.preferredSize.width = 85;`, `txt.preferredSize.width = 45;`, `btn.preferredSize.height = 36;`.
+3. **Fluid Slider & Dropdown Rows**:
+   - Row container: `grp.alignChildren = ["fill", "center"];` (omit `alignment = ["fill", "top"]` on inner groups to avoid layout conflicts).
+   - Label: fixed width `lbl.preferredSize.width = 85;`.
+   - Slider or Dropdown: set `alignment = ["fill", "center"];` without a fixed width so it expands dynamically to consume all available space between the label and value box.
+   - Value box: fixed width `txt.preferredSize.width = 45;`.
+4. **Action Button Height Locking**:
+   - Set `btn.preferredSize.height = 36;` instead of `[-1, 32]` with `alignment = ["fill", "center"]`. This ensures the button fills 100% of the horizontal panel width while staying strictly 36px tall, preventing vertical stretching into a giant square at the bottom of the palette.
+5. **Clean Status Headers**:
+   - Replace cluttered multi-panel headers with a streamlined single-line group matching `AE Text Highlight`:
+     `var lblStatus = grp.add("statictext", undefined, "🎯 Target: ...", { truncate: "middle" }); lblStatus.alignment = ["fill", "center"];`
+     `var btnRefresh = grp.add("button", undefined, "🔄 Refresh"); btnRefresh.preferredSize.width = 75;`
+
 ---
 
 ## 28. Dynamic Paragraph Alignment Detection in After Effects Expressions (TextStyle.justification vs. Universal Geometric Ratio)
