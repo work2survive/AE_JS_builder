@@ -954,7 +954,7 @@
         var b = Math.max(15, h / 2);
         var meanR = (a + b) / 2;
 
-        var hasTail = (tailType && tailType !== "none");
+        var hasTail = (tailType && tailType !== "none" && tailType !== "thought_bubbles");
         var rad = tailAngleDeg * (Math.PI / 180);
         while (rad < 0) rad += 2 * Math.PI;
         while (rad >= 2 * Math.PI) rad -= 2 * Math.PI;
@@ -966,18 +966,43 @@
         var inTangents = [];
         var outTangents = [];
 
+        // Helper: Superellipse point calculation for squircle
+        function getSquirclePoint(t, sa, sb, n) {
+            var cosT = Math.cos(t), sinT = Math.sin(t);
+            var signCos = (cosT < 0) ? -1 : 1;
+            var signSin = (sinT < 0) ? -1 : 1;
+            return [
+                sa * signCos * Math.pow(Math.abs(cosT), 2 / n),
+                sb * signSin * Math.pow(Math.abs(sinT), 2 / n)
+            ];
+        }
+
         // ---------------------------------------------------------------------
-        // CASE A: CLASSIC SPEECH OVAL (Seamless Bézier Ellipse + Tail)
+        // CASE 1: CLASSIC OVAL or CONVEX SQUIRCLE (Modern Graphic Novel)
         // ---------------------------------------------------------------------
-        if (bodyType === "oval") {
+        if (bodyType === "oval" || bodyType === "squircle") {
+            var isSquircle = (bodyType === "squircle");
+            var nExp = isSquircle ? 3.2 : 2.0;
+
             if (!hasTail) {
-                // 4-Quadrant perfect ellipse
-                var kappa = 0.55228475;
-                var kx = a * kappa;
-                var ky = b * kappa;
-                vertices = [[a, 0], [0, b], [-a, 0], [0, -b]];
-                inTangents = [[0, -ky], [kx, 0], [0, ky], [-kx, 0]];
-                outTangents = [[0, ky], [-kx, 0], [0, -ky], [kx, 0]];
+                var stepsNoTail = isSquircle ? 16 : 4;
+                if (!isSquircle) {
+                    var kappa = 0.55228475;
+                    var kx = a * kappa, ky = b * kappa;
+                    vertices = [[a, 0], [0, b], [-a, 0], [0, -b]];
+                    inTangents = [[0, -ky], [kx, 0], [0, ky], [-kx, 0]];
+                    outTangents = [[0, ky], [-kx, 0], [0, -ky], [kx, 0]];
+                    return { vertices: vertices, inTangents: inTangents, outTangents: outTangents, closed: true };
+                }
+                var dtheta = (2 * Math.PI) / stepsNoTail;
+                for (var si = 0; si < stepsNoTail; si++) {
+                    var th = si * dtheta;
+                    vertices.push(getSquirclePoint(th, a, b, nExp));
+                    var stx = -a * Math.sin(th) * (dtheta / 3);
+                    var sty = b * Math.cos(th) * (dtheta / 3);
+                    inTangents.push([-stx, -sty]);
+                    outTangents.push([stx, sty]);
+                }
                 return { vertices: vertices, inTangents: inTangents, outTangents: outTangents, closed: true };
             }
 
@@ -991,48 +1016,41 @@
 
             for (var i = 0; i <= steps; i++) {
                 var t = ang2 + i * dt;
-                var vx = a * Math.cos(t);
-                var vy = b * Math.sin(t);
-                vertices.push([vx, vy]);
-
+                if (isSquircle) {
+                    vertices.push(getSquirclePoint(t, a, b, nExp));
+                } else {
+                    vertices.push([a * Math.cos(t), b * Math.sin(t)]);
+                }
                 var tx = -a * Math.sin(t) * (dt / 3);
                 var ty = b * Math.cos(t) * (dt / 3);
                 inTangents.push([-tx, -ty]);
                 outTangents.push([tx, ty]);
             }
 
-            // Vertices[steps] is at ang1 (B1). Tail tip connects B1 -> Tip -> B2.
             var b1 = vertices[vertices.length - 1];
             var b2 = vertices[0];
 
-            var v1x = tipX - b1[0];
-            var v1y = tipY - b1[1];
+            var v1x = tipX - b1[0], v1y = tipY - b1[1];
             var len1 = Math.sqrt(v1x * v1x + v1y * v1y) || 1;
-            var n1x = -v1y / len1;
-            var n1y = v1x / len1;
+            var n1x = -v1y / len1, n1y = v1x / len1;
 
-            var v2x = b2[0] - tipX;
-            var v2y = b2[1] - tipY;
+            var v2x = b2[0] - tipX, v2y = b2[1] - tipY;
             var len2 = Math.sqrt(v2x * v2x + v2y * v2y) || 1;
-            var n2x = -v2y / len2;
-            var n2y = v2x / len2;
+            var n2x = -v2y / len2, n2y = v2x / len2;
 
-            var curveAmount = (tailType === "straight_cone" || tailType === "wide_wedge") ? 0 : (tailCurvature * 0.40);
+            var curveAmount = (tailType === "straight_cone" || tailType === "side_wedge" || tailType === "wide_wedge") ? 0 : (tailCurvature * 0.40);
 
             outTangents[outTangents.length - 1] = [v1x * 0.35 + n1x * len1 * curveAmount, v1y * 0.35 + n1y * len1 * curveAmount];
-
-            // Add Tip vertex
             vertices.push([tipX, tipY]);
             inTangents.push([-v1x * 0.25 + n1x * len1 * (curveAmount * 0.5), -v1y * 0.25 + n1y * len1 * (curveAmount * 0.5)]);
             outTangents.push([v2x * 0.25 - n2x * len2 * (curveAmount * 0.5), v2y * 0.25 - n2y * len2 * (curveAmount * 0.5)]);
-
             inTangents[0] = [-v2x * 0.35 - n2x * len2 * curveAmount, -v2y * 0.35 - n2y * len2 * curveAmount];
 
             return { vertices: vertices, inTangents: inTangents, outTangents: outTangents, closed: true };
         }
 
         // ---------------------------------------------------------------------
-        // CASE B: ACTION / SHOUT BURST (Spiky Explosion)
+        // CASE 2: ACTION / SHOUT BURST (Spiky Explosion)
         // ---------------------------------------------------------------------
         if (bodyType === "shout") {
             var pts = Math.max(8, Math.min(36, burstSpikes || 16));
@@ -1048,7 +1066,6 @@
                 var diffAng = Math.abs(pAng - rad);
                 if (diffAng > Math.PI) diffAng = 2 * Math.PI - diffAng;
 
-                // Elongate the spike closest to the tail angle towards Tip
                 if (hasTail && isSpike && diffAng < (Math.PI / pts)) {
                     vertices.push([tipX, tipY]);
                 } else {
@@ -1061,7 +1078,7 @@
         }
 
         // ---------------------------------------------------------------------
-        // CASE C: THOUGHT CLOUD (Scalloped Puffs)
+        // CASE 3: THOUGHT CLOUD (Scalloped Arcs)
         // ---------------------------------------------------------------------
         if (bodyType === "thought") {
             var cloudPuffs = 12;
@@ -1071,7 +1088,6 @@
                 var cx = a * Math.cos(cAng);
                 var cy = b * Math.sin(cAng);
                 vertices.push([cx, cy]);
-
                 var pTanX = -a * Math.sin(cAng) * 0.28;
                 var pTanY = b * Math.cos(cAng) * 0.28;
                 inTangents.push([-pTanX, -pTanY]);
@@ -1081,15 +1097,194 @@
         }
 
         // ---------------------------------------------------------------------
-        // CASE D: MODERN ROUNDED RECTANGLE / CAPTION BOX / WHISPER
+        // CASE 4: ANGULAR TILTED POLYGON (Dynamic Manga Box - image_2)
+        // ---------------------------------------------------------------------
+        if (bodyType === "polygon") {
+            var v0 = [-a * 0.96, -b * 0.88];
+            var v1 = [a * 0.90, -b * 1.08];
+            var v2 = [a * 1.04, b * 0.92];
+            var v3 = [-a * 0.90, b * 1.08];
+
+            function addPolyPt(pt) {
+                vertices.push(pt);
+                inTangents.push([0, 0]);
+                outTangents.push([0, 0]);
+            }
+
+            addPolyPt(v0);
+            addPolyPt(v1);
+            addPolyPt(v2);
+
+            if (hasTail) {
+                if (tailType === "corner") {
+                    if (tipX <= 0) {
+                        var bxMid = (v2[0] + v3[0]) / 2;
+                        var byMid = (v2[1] + v3[1]) / 2;
+                        addPolyPt([bxMid, byMid]);
+                        addPolyPt([tipX, tipY]);
+                        addPolyPt([-a * 0.94, b * 0.4]);
+                    } else {
+                        addPolyPt([tipX, tipY]);
+                        addPolyPt(v3);
+                    }
+                } else if (tailType === "side_wedge") {
+                    addPolyPt(v3);
+                    if (tipX <= 0) {
+                        addPolyPt([-a * 0.92, b * 0.25]);
+                        addPolyPt([tipX, tipY]);
+                        addPolyPt([-a * 0.94, -b * 0.25]);
+                    } else {
+                        // right side wedge
+                        var lastI = vertices.length - 1;
+                        vertices.splice(lastI, 0, [a * 0.96, b * 0.25], [tipX, tipY], [a * 0.96, -b * 0.25]);
+                        inTangents.splice(lastI, 0, [0, 0], [0, 0], [0, 0]);
+                        outTangents.splice(lastI, 0, [0, 0], [0, 0], [0, 0]);
+                    }
+                } else {
+                    var bpx = Math.max(-a * 0.65, Math.min(a * 0.65, tipX));
+                    var halfWPoly = tailBaseW / 2;
+                    addPolyPt([bpx + halfWPoly, b]);
+                    addPolyPt([tipX, tipY]);
+                    addPolyPt([bpx - halfWPoly, b]);
+                    addPolyPt(v3);
+                }
+            } else {
+                addPolyPt(v3);
+            }
+
+            return { vertices: vertices, inTangents: inTangents, outTangents: outTangents, closed: true };
+        }
+
+        // ---------------------------------------------------------------------
+        // CASE 5: DOCKED FLAT-TOP BALLOON (Panel Border Bubble - image)
+        // ---------------------------------------------------------------------
+        if (bodyType === "docked") {
+            var rDock = Math.min(Math.min(a * 0.5, b * 0.5), cornerRadius || 28);
+            var KDock = 0.55228475;
+            var rKD = rDock * KDock;
+            var halfWD = tailBaseW / 2;
+
+            function addDockPt(pt, ti, to) {
+                vertices.push(pt);
+                inTangents.push(ti || [0, 0]);
+                outTangents.push(to || [0, 0]);
+            }
+
+            // Top-left sharp corner
+            addDockPt([-a, -b]);
+            // Top-right sharp corner
+            addDockPt([a, -b]);
+            // Right vertical edge down to bottom-right corner fillet
+            addDockPt([a, b - rDock]);
+            addDockPt([a - rDock, b], [0, rKD], [0, 0]);
+
+            if (hasTail) {
+                if (tailType === "corner") {
+                    if (tipX <= 0) {
+                        addDockPt([-a + rDock, b]);
+                        addDockPt([tipX, tipY]);
+                        addDockPt([-a, b - rDock]);
+                    } else {
+                        var lastIdx = vertices.length - 1;
+                        vertices[lastIdx] = [tipX, tipY];
+                        inTangents[lastIdx] = [0, 0];
+                        outTangents[lastIdx] = [0, 0];
+                        addDockPt([-a + rDock, b]);
+                        addDockPt([-a, b - rDock], [rKD, 0], [0, -rKD]);
+                    }
+                } else {
+                    var bxDock = Math.max(-a + rDock + halfWD + 8, Math.min(a - rDock - halfWD - 8, tipX));
+                    addDockPt([bxDock + halfWD, b]);
+                    addDockPt([tipX, tipY]);
+                    addDockPt([bxDock - halfWD, b]);
+                    addDockPt([-a + rDock, b]);
+                    addDockPt([-a, b - rDock], [rKD, 0], [0, -rKD]);
+                }
+            } else {
+                addDockPt([-a + rDock, b]);
+                addDockPt([-a, b - rDock], [rKD, 0], [0, -rKD]);
+            }
+
+            return { vertices: vertices, inTangents: inTangents, outTangents: outTangents, closed: true };
+        }
+
+        // ---------------------------------------------------------------------
+        // CASE 6: STEPPED TEXT-FITTED CONTOUR (Line Hugging - image_3)
+        // ---------------------------------------------------------------------
+        if (bodyType === "stepped") {
+            var rSt = Math.min(14, cornerRadius || 14);
+            var KSt = 0.55228475;
+            var rKS = rSt * KSt;
+            var w1 = a * 0.78, w2 = a * 1.02, w3 = a * 0.86;
+            var y12 = -b * 0.33, y23 = b * 0.33;
+            var halfWS = tailBaseW / 2;
+
+            function addStPt(pt, ti, to) {
+                vertices.push(pt);
+                inTangents.push(ti || [0, 0]);
+                outTangents.push(to || [0, 0]);
+            }
+
+            // Top edge
+            addStPt([-w1 + rSt, -b]);
+            addStPt([w1 - rSt, -b]);
+            // Top-right fillet
+            addStPt([w1, -b + rSt], [0, -rKS], [0, 0]);
+            // Tier 1 right edge down
+            addStPt([w1, y12 - rSt]);
+            // Step out to Tier 2
+            addStPt([w1 + rSt, y12], [-rKS, 0], [0, 0]);
+            addStPt([w2 - rSt, y12], [0, 0], [rKS, 0]);
+            addStPt([w2, y12 + rSt], [0, -rKS], [0, 0]);
+            // Tier 2 right edge down
+            addStPt([w2, y23 - rSt]);
+            // Step in to Tier 3
+            addStPt([w2 - rSt, y23], [0, 0], [-rKS, 0]);
+            addStPt([w3 + rSt, y23], [rKS, 0], [0, 0]);
+            addStPt([w3, y23 + rSt], [0, -rKS], [0, 0]);
+            // Tier 3 right edge down
+            addStPt([w3, b - rSt]);
+            // Bottom-right fillet
+            addStPt([w3 - rSt, b], [0, rKS], [0, 0]);
+
+            if (hasTail) {
+                var bxSt = Math.max(-w3 + rSt + halfWS + 6, Math.min(w3 - rSt - halfWS - 6, tipX));
+                addStPt([bxSt + halfWS, b]);
+                addStPt([tipX, tipY]);
+                addStPt([bxSt - halfWS, b]);
+            }
+
+            // Bottom-left fillet
+            addStPt([-w3 + rSt, b]);
+            addStPt([-w3, b - rSt], [rKS, 0], [0, -rKS]);
+            // Tier 3 left edge up
+            addStPt([-w3, y23 + rSt]);
+            // Step out to Tier 2
+            addStPt([-w3 - rSt, y23], [rKS, 0], [0, 0]);
+            addStPt([-w2 + rSt, y23], [0, 0], [-rKS, 0]);
+            addStPt([-w2, y23 - rSt], [0, rKS], [0, 0]);
+            // Tier 2 left edge up
+            addStPt([-w2, y12 + rSt]);
+            // Step in to Tier 1
+            addStPt([-w2 + rSt, y12], [0, 0], [rKS, 0]);
+            addStPt([-w1 - rSt, y12], [-rKS, 0], [0, 0]);
+            addStPt([-w1, y12 - rSt], [0, rKS], [0, 0]);
+            // Tier 1 left edge up
+            addStPt([-w1, -b + rSt]);
+            // Top-left fillet
+            addStPt([-w1 + rSt, -b], [0, -rKS], [0, 0]);
+
+            return { vertices: vertices, inTangents: inTangents, outTangents: outTangents, closed: true };
+        }
+
+        // ---------------------------------------------------------------------
+        // CASE 7: MODERN ROUNDED RECTANGLE / CAPTION BOX / WHISPER
         // ---------------------------------------------------------------------
         var r = (bodyType === "caption") ? 0 : Math.min(Math.min(a, b), cornerRadius || 28);
         var K = 0.55228475;
         var rK = r * K;
+        var halfW = tailBaseW / 2;
 
-        // Base 8-point rounded rectangle vertices:
-        // [0: Top-L bottom], [1: Top-L right], [2: Top-R left], [3: Top-R bottom],
-        // [4: Bot-R top], [5: Bot-R left], [6: Bot-L right], [7: Bot-L top]
         var rectPts = [
             [-a, -b + r], [-a + r, -b],
             [a - r, -b],  [a, -b + r],
@@ -1113,25 +1308,68 @@
             return { vertices: rectPts, inTangents: rectIn, outTangents: rectOut, closed: true };
         }
 
-        // If tail is attached to rounded rect:
-        // Determine closest edge: 0:Top (-b), 1:Right (+a), 2:Bottom (+b), 3:Left (-a)
+        // Integrated corner tail (image_5 & image_6)
+        if (tailType === "corner") {
+            for (var cvi = 0; cvi < rectPts.length; cvi++) {
+                if (tipX <= 0 && cvi === 6) { // Bottom-left corner
+                    vertices.push([-a + r, b]);
+                    inTangents.push([0, 0]); outTangents.push([0, 0]);
+                    vertices.push([tipX, tipY]);
+                    inTangents.push([0, 0]); outTangents.push([0, 0]);
+                    vertices.push([-a, b - r]);
+                    inTangents.push([0, 0]); outTangents.push([0, 0]);
+                    cvi++; // skip pt 7
+                    continue;
+                }
+                if (tipX > 0 && cvi === 4) { // Bottom-right corner
+                    vertices.push([a, b - r]);
+                    inTangents.push([0, 0]); outTangents.push([0, 0]);
+                    vertices.push([tipX, tipY]);
+                    inTangents.push([0, 0]); outTangents.push([0, 0]);
+                    vertices.push([a - r, b]);
+                    inTangents.push([0, 0]); outTangents.push([0, 0]);
+                    cvi++; // skip pt 5
+                    continue;
+                }
+                vertices.push(rectPts[cvi]);
+                inTangents.push(rectIn[cvi]);
+                outTangents.push(rectOut[cvi]);
+            }
+            return { vertices: vertices, inTangents: inTangents, outTangents: outTangents, closed: true };
+        }
+
+        // Side-pointing wedge (image_2)
+        if (tailType === "side_wedge") {
+            for (var swi = 0; swi < rectPts.length; swi++) {
+                vertices.push(rectPts[swi]);
+                inTangents.push(rectIn[swi]);
+                outTangents.push(rectOut[swi]);
+
+                if (tipX <= 0 && swi === 7) { // Left wall
+                    vertices.push([-a, -halfW]); inTangents.push([0, 0]); outTangents.push([0, 0]);
+                    vertices.push([tipX, tipY]); inTangents.push([0, 0]); outTangents.push([0, 0]);
+                    vertices.push([-a, halfW]);  inTangents.push([0, 0]); outTangents.push([0, 0]);
+                } else if (tipX > 0 && swi === 3) { // Right wall
+                    vertices.push([a, -halfW]);  inTangents.push([0, 0]); outTangents.push([0, 0]);
+                    vertices.push([tipX, tipY]); inTangents.push([0, 0]); outTangents.push([0, 0]);
+                    vertices.push([a, halfW]);   inTangents.push([0, 0]); outTangents.push([0, 0]);
+                }
+            }
+            return { vertices: vertices, inTangents: inTangents, outTangents: outTangents, closed: true };
+        }
+
         var edgeIdx = 2; // Default bottom
         if (rad >= Math.PI * 0.25 && rad < Math.PI * 0.75) edgeIdx = 2; // Bottom
         else if (rad >= Math.PI * 0.75 && rad < Math.PI * 1.25) edgeIdx = 3; // Left
         else if (rad >= Math.PI * 1.25 && rad < Math.PI * 1.75) edgeIdx = 0; // Top
         else edgeIdx = 1; // Right
 
-        var halfW = tailBaseW / 2;
-        var curveFact = (tailType === "straight_cone") ? 0 : (tailCurvature * 0.35);
-
-        // Splice tail into target edge
         for (var vi = 0; vi < rectPts.length; vi++) {
             vertices.push(rectPts[vi]);
             inTangents.push(rectIn[vi]);
             outTangents.push(rectOut[vi]);
 
-            // Insert tail between appropriate edge points
-            if (edgeIdx === 2 && vi === 5) { // Bottom edge [5 -> 6]
+            if (edgeIdx === 2 && vi === 5) { // Bottom edge
                 var bx = Math.max(-a + r + halfW + 10, Math.min(a - r - halfW - 10, tipX));
                 vertices.push([bx + halfW, b]);
                 inTangents.push([0, 0]);
@@ -1144,7 +1382,7 @@
                 vertices.push([bx - halfW, b]);
                 inTangents.push([(tipX - (bx - halfW)) * 0.3, (tipY - b) * 0.3]);
                 outTangents.push([0, 0]);
-            } else if (edgeIdx === 0 && vi === 1) { // Top edge [1 -> 2]
+            } else if (edgeIdx === 0 && vi === 1) { // Top edge
                 var txPos = Math.max(-a + r + halfW + 10, Math.min(a - r - halfW - 10, tipX));
                 vertices.push([txPos - halfW, -b]);
                 inTangents.push([0, 0]);
@@ -1226,6 +1464,35 @@
         var textCenterLocalX = textBounds.left + (textBounds.width / 2);
         var textCenterLocalY = textBounds.top + (textBounds.height / 2);
 
+        var textPos = [comp.width / 2, comp.height / 2, 0];
+        try {
+            if (textLayer.transform && textLayer.transform.position) {
+                textPos = textLayer.transform.position.value;
+            }
+        } catch (eP) {}
+
+        // Check if user already moved the in-comp 🎯 Tail Target null
+        if (comp.layers) {
+            for (var clChk = 1; clChk <= comp.layers.length; clChk++) {
+                var chkL = comp.layers[clChk];
+                if (chkL && chkL.name === LAYER_TARGET_NAME && chkL.transform && chkL.transform.position) {
+                    try {
+                        var ePos = chkL.transform.position.value;
+                        var bCenterX = textPos[0] + textCenterLocalX;
+                        var bCenterY = textPos[1] + textCenterLocalY;
+                        var dX = ePos[0] - bCenterX;
+                        var dY = ePos[1] - bCenterY;
+                        var computedDist = Math.sqrt(dX * dX + dY * dY);
+                        if (computedDist > 10) {
+                            params.tailDist = Math.round(computedDist);
+                            params.tailAngle = Math.round(Math.atan2(dY, dX) * (180 / Math.PI));
+                        }
+                    } catch (eTargCalc) {}
+                    break;
+                }
+            }
+        }
+
         // Clean up previous comic bubble layers from composition
         if (comp.layers) {
             for (var cl = comp.layers.length; cl >= 1; cl--) {
@@ -1238,13 +1505,6 @@
 
         // 4. Create Dedicated In-Comp "🎯 Tail Target" Null Layer
         var targetNull = null;
-        var textPos = [comp.width / 2, comp.height / 2, 0];
-        try {
-            if (textLayer.transform && textLayer.transform.position) {
-                textPos = textLayer.transform.position.value;
-            }
-        } catch (eP) {}
-
         var tailRad = params.tailAngle * (Math.PI / 180);
         var targetCompX = textPos[0] + textCenterLocalX + (params.tailDist * Math.cos(tailRad));
         var targetCompY = textPos[1] + textCenterLocalY + (params.tailDist * Math.sin(tailRad));
@@ -1317,8 +1577,8 @@
             } catch (eSetPath) {}
         }
 
-        // If Thought Cloud with chain bubbles, add 3 descending thought circles
-        if (params.bodyType === "thought" && params.tailType !== "none") {
+        // If Thought Bubbles, add 3 descending thought circles
+        if ((params.tailType === "thought_bubbles" || params.bodyType === "thought") && params.tailType !== "none") {
             var thoughtPuffs = [
                 { frac: 0.35, r: 18 },
                 { frac: 0.65, r: 11 },
@@ -1362,7 +1622,7 @@
             }
             if (stroke.property("Line Join")) stroke.property("Line Join").setValue(2); // Round join
             if (stroke.property("Line Cap")) stroke.property("Line Cap").setValue(2);  // Round cap
-            if (params.bodyType === "whisper") {
+            if (params.bodyType === "whisper" || params.isWhisperDashed) {
                 // Dashed stroke for whisper
                 try {
                     var dashes = stroke.property("Dashes") || stroke.property("ADBE Vector Stroke Dashes");
@@ -1660,11 +1920,15 @@
         grpBodyRow.add("statictext", undefined, "Bubble Shape:");
         var ddBodyType = grpBodyRow.add("dropdownlist", undefined, [
             "Classic Speech Oval (Ellipse)",
+            "Convex Squircle (Graphic Novel)",
             "Modern Rounded Rectangle (Pill)",
+            "Angular Tilted Polygon (Dynamic Box)",
+            "Stepped Text-Fitted Contour",
+            "Docked Flat-Top Balloon (Panel Edge)",
             "Action / Shout Burst (Explosion)",
             "Thought Cloud (Scalloped Arcs)",
-            "Whisper Bubble (Dashed Stroke)",
-            "Golden Age Caption Box (Rectangle)"
+            "Whisper Bubble (Dashed Outline)",
+            "Golden Age Caption Box (Sharp Rect)"
         ]);
         ddBodyType.selection = 0;
         ddBodyType.preferredSize = [165, 22];
@@ -1676,11 +1940,13 @@
         var ddTailType = grpTailRow.add("dropdownlist", undefined, [
             "Curved Hook / Horn (Classic Comic)",
             "Straight Cone / Triangle (Direct)",
+            "Side-Pointing Wedge (Horizontal)",
+            "Corner Pointer / Tail (Integrated)",
             "Wide Speech Wedge",
-            "Thought Bubbles (3 Diminishing Circles)",
+            "Thought Bubbles (Chain of Circles)",
             "Lightning / Electric Bolt (Broadcast)",
             "Scream Spike (Action Barb)",
-            "None (Floating / Caption)"
+            "None (Floating / Caption Box)"
         ]);
         ddTailType.selection = 0;
         ddTailType.preferredSize = [165, 22];
@@ -1844,6 +2110,26 @@
         grpStrokeW.add("statictext", undefined, "px");
         sldStrokeW.onChanging = function() { txtStrokeW.text = String(Math.round(sldStrokeW.value)); };
 
+        var chkWhisperDashes = tabStyle.add("checkbox", undefined, "Dashed Outline (Whisper / Soft Speech)");
+        chkWhisperDashes.value = false;
+
+        // Comic Punch Word Highlight
+        var pnlHighlight = tabStyle.add("panel", undefined, "Punch Word Highlight Accent");
+        pnlHighlight.orientation = "column";
+        pnlHighlight.alignChildren = ["fill", "top"];
+        pnlHighlight.spacing = 4;
+        pnlHighlight.margins = [6, 4, 6, 4];
+
+        var grpHiRow = pnlHighlight.add("group");
+        grpHiRow.orientation = "row";
+        grpHiRow.alignChildren = ["left", "center"];
+        var chkHighlight = grpHiRow.add("checkbox", undefined, "Highlight:");
+        chkHighlight.value = false;
+        var txtHighlightWords = grpHiRow.add("edittext", undefined, "POW, EVERYTHING, ARGUMENT");
+        txtHighlightWords.preferredSize = [140, 20];
+
+        var cpHighlight = createColorPickerRow(pnlHighlight, "Accent Color:", "#FFE600");
+
         // Quick Comic Theme Palette Swatches
         var pnlThemes = tabStyle.add("panel", undefined, "Quick Comic Theme Palettes");
         pnlThemes.orientation = "row";
@@ -1988,8 +2274,29 @@
             }
 
             var wrapMethods = ["balanced", "greedy", "pyramid", "reverse_pyramid", "compact"];
-            var bodyTypes = ["oval", "rounded_rect", "shout", "thought", "whisper", "caption"];
-            var tailTypes = ["curved_hook", "straight_cone", "wide_wedge", "thought_bubbles", "lightning_bolt", "scream_barb", "none"];
+            var bodyTypes = [
+                "oval",
+                "squircle",
+                "rounded_rect",
+                "polygon",
+                "stepped",
+                "docked",
+                "shout",
+                "thought",
+                "whisper",
+                "caption"
+            ];
+            var tailTypes = [
+                "curved_hook",
+                "straight_cone",
+                "side_wedge",
+                "corner",
+                "wide_wedge",
+                "thought_bubbles",
+                "lightning_bolt",
+                "scream_barb",
+                "none"
+            ];
             var animInTypes = ["bounce", "zoom", "slide", "fade", "none"];
             var animOutTypes = ["shrink", "fade", "puff", "none"];
 
@@ -2021,10 +2328,11 @@
                 bgOpacity: 100,
                 strokeColor: cpStroke.getColor(),
                 strokeWidth: parseFloat(txtStrokeW.text) || 5,
+                isWhisperDashed: chkWhisperDashes.value,
 
-                enableHighlight: false,
-                highlightWords: "",
-                highlightColor: "#FFE600",
+                enableHighlight: chkHighlight.value,
+                highlightWords: txtHighlightWords.text,
+                highlightColor: cpHighlight.getColor(),
 
                 animInPreset: animInTypes[ddAnimIn.selection ? ddAnimIn.selection.index : 0] || "bounce",
                 animOutPreset: animOutTypes[ddAnimOut.selection ? ddAnimOut.selection.index : 0] || "shrink",
