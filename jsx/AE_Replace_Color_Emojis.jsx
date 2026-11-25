@@ -716,7 +716,6 @@
                 alert("No emojis detected in text layer '" + textLayer.name + "'.");
                 return;
             }
-            alert("Successfully replaced " + res.emojiCount + " emoji(s) with native vector shapes!");
         };
 
         if (win && !isDockable && typeof win.show === "function") {
