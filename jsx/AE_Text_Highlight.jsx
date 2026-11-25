@@ -28,6 +28,18 @@
 //   6. AE Text Highlight Repository:
 //      https://github.com/work2survive/AE-Text-Highlight
 //
+// NEW IN v2.2.2:
+//   - Smart Text Layer Resolver (Matches AE Align Anchor Point): When no text layer is actively
+//     selected (e.g. Focus is on ScriptUI panel or layer selection dropped), getSelectedTextLayer
+//     automatically scans comp.layers to identify and target existing text layers without forcing
+//     the user to manually re-select or throwing blocking alerts.
+//   - Auto-Create Dummy Text Box Fallback: If the composition has no text layers (or is empty),
+//     clicking "Build Highlights" or launching in an empty comp automatically creates a centered
+//     dummy text box (createDummyTextBox(comp)) and aligns it, exactly mirroring AE Align Anchor Point.
+//   - Robust Canonical isTextLayer(layer): Checks native ExtendScript layer instanceof TextLayer,
+//     layer.matchName === "ADBE Text Layer", and canonical 'ADBE Text Properties' / 'Source Text'
+//     without any fragile shape contents traps.
+//
 // NEW IN v2.2.1:
 //   - Critical Bug Fix in Native After Effects Text Layer Detection: Fixed bug where After Effects
 //     alerted "Please select a text layer in your active composition first" even when a text layer was selected.
@@ -73,7 +85,7 @@
     "use strict";
 
     var SCRIPT_TITLE    = "AE Text Highlight";
-    var SCRIPT_VERSION  = "v2.2.1";
+    var SCRIPT_VERSION  = "v2.2.2";
     var GITHUB_REPO_URL = "https://github.com/work2survive/AE-Text-Highlight";
 
     // -------------------------------------------------------------------------
@@ -479,33 +491,28 @@
         // 1. Simulator / Mock environment flag checks
         try {
             if (layer.isText === true) return true;
-            if (layer.isText === false || layer.isShape === true) return false;
+            if (layer.isText === false) return false;
         } catch (eMock) {}
 
         // 2. Camera or Light layer early exit
         try {
+            if (typeof CameraLayer !== "undefined" && layer instanceof CameraLayer) return false;
+            if (typeof LightLayer !== "undefined" && layer instanceof LightLayer) return false;
             if (layer.matchName === "ADBE Camera Layer" || layer.matchName === "ADBE Light Layer") return false;
         } catch (eCL) {}
 
-        // 3. Shape layer early exit
-        try {
-            if (layer.matchName === "ADBE Vector Layer") return false;
-            if (typeof layer.property === "function") {
-                var contents = layer.property("ADBE Root Vectors Group") || layer.property("Contents");
-                if (contents !== null) {
-                    var textP = layer.property("ADBE Text Properties") || layer.property("Source Text");
-                    if (textP === null) return false;
-                }
-            }
-        } catch (eShape) {}
-
-        // 4. Native After Effects TextLayer instanceof check
+        // 3. ExtendScript native TextLayer instanceof check
         try {
             if (typeof TextLayer !== "undefined" && layer instanceof TextLayer) return true;
         } catch (eTL) {}
 
+        // 4. Exact matchName check
+        try {
+            if (layer.matchName === "ADBE Text Layer") return true;
+        } catch (eMN) {}
+
         // 5. Canonical After Effects property check:
-        // In After Effects ExtendScript, ONLY Text Layers possess "ADBE Text Properties" or "Source Text".
+        // In After Effects ExtendScript, text layers have "ADBE Text Properties" or "Source Text".
         try {
             if (typeof layer.property === "function") {
                 if (layer.property("ADBE Text Properties") !== null) return true;
@@ -518,7 +525,7 @@
         try {
             if (layer.sourceText !== undefined && layer.sourceText !== null) return true;
             if (layer.textDocument !== undefined && layer.textDocument !== null) return true;
-            if (layer.text && (layer.text.sourceText || (layer.text.property && layer.text.property("Source Text")))) return true;
+            if (layer.text && (layer.text.sourceText || (typeof layer.text.property === "function" && layer.text.property("Source Text")))) return true;
         } catch (eDirect) {}
 
         return false;
@@ -608,27 +615,6 @@
         return null;
     }
 
-    function getSelectedTextLayer(comp) {
-        if (!comp) {
-            comp = getActiveComposition();
-        }
-        if (!comp || (typeof CompItem !== "undefined" && !(comp instanceof CompItem) && !comp.layers)) return null;
-        var sel = comp.selectedLayers;
-        if (sel && sel.length > 0) {
-            for (var i = 0; i < sel.length; i++) {
-                if (sel[i] && isTextLayer(sel[i])) return sel[i];
-            }
-            for (var j = 0; j < sel.length; j++) {
-                var p = sel[j] ? sel[j].parent : null;
-                while (p) {
-                    if (isTextLayer(p)) return p;
-                    p = p.parent;
-                }
-            }
-        }
-        return null;
-    }
-
     function selectSingleLayer(comp, targetLayer) {
         if (!comp || !targetLayer) return;
         var total = (typeof comp.numLayers !== "undefined") ? comp.numLayers : (comp.layers ? comp.layers.length : 0);
@@ -666,6 +652,116 @@
                 }
             }
         } catch (eDOM) {}
+    }
+
+    /**
+     * Creates a dummy centered text box matching AE Align Anchor Point behavior
+     */
+    function createDummyTextBox(comp) {
+        if (!comp) return null;
+        var centerPos = [comp.width / 2, comp.height / 2, 0];
+        var boxW = Math.round(comp.width * 0.52);
+        var boxH = 260;
+        var dummyText = LOREM_IPSUM_RAW;
+
+        var textLayer;
+        if (typeof comp.layers.addBoxText === "function") {
+            try {
+                textLayer = comp.layers.addBoxText([boxW, boxH], dummyText);
+            } catch (eB) {
+                textLayer = comp.layers.addText(dummyText);
+            }
+        } else if (typeof comp.layers.addText === "function") {
+            textLayer = comp.layers.addText(dummyText);
+        } else {
+            return null;
+        }
+
+        if (!textLayer) return null;
+
+        textLayer.name = "Demo Text Layer (Lorem Ipsum)";
+        try {
+            if (textLayer.transform && textLayer.transform.position) {
+                textLayer.transform.position.setValue(centerPos);
+            }
+            if (textLayer.transform && textLayer.transform.anchorPoint) {
+                textLayer.transform.anchorPoint.setValue([boxW / 2, boxH / 2, 0]);
+            }
+        } catch (eTrans) {}
+
+        try {
+            var docProp = textLayer.property("ADBE Text Properties")
+                ? textLayer.property("ADBE Text Properties").property("ADBE Text Document")
+                : textLayer.property("Source Text");
+            if (docProp && docProp.value) {
+                var doc = docProp.value;
+                doc.fontSize = 28;
+                doc.font = "Arial-BoldMT";
+                doc.fillColor = [1.0, 1.0, 1.0];
+                doc.autoLeading = false;
+                doc.leading = 38;
+                try {
+                    doc.justification = (typeof ParagraphJustification !== "undefined" && ParagraphJustification.LEFT_JUSTIFY !== undefined)
+                        ? ParagraphJustification.LEFT_JUSTIFY
+                        : 7412;
+                } catch (eJ) {}
+                docProp.setValue(doc);
+            }
+        } catch (eDoc) {}
+
+        selectSingleLayer(comp, textLayer);
+        return textLayer;
+    }
+
+    /**
+     * Obtains the target text layer.
+     * 1. Checks comp.selectedLayers (direct or parent of helper layer).
+     * 2. If no text layer selected, scans comp.layers for any existing text layer.
+     * 3. If allowFallback is true and no text layer exists, auto-creates dummy text box.
+     */
+    function getSelectedTextLayer(comp, allowFallback) {
+        if (!comp) {
+            comp = getActiveComposition();
+        }
+        if (!comp || (typeof CompItem !== "undefined" && !(comp instanceof CompItem) && !comp.layers)) return null;
+
+        // 1. Direct layer selection
+        var sel = comp.selectedLayers;
+        if (sel && sel.length > 0) {
+            for (var i = 0; i < sel.length; i++) {
+                if (sel[i] && isTextLayer(sel[i])) return sel[i];
+            }
+            for (var j = 0; j < sel.length; j++) {
+                var p = sel[j] ? sel[j].parent : null;
+                while (p) {
+                    if (isTextLayer(p)) return p;
+                    p = p.parent;
+                }
+            }
+        }
+
+        // 2. Scan all layers in comp for any existing text layer
+        var total = (typeof comp.numLayers !== "undefined") ? comp.numLayers : (comp.layers ? comp.layers.length : 0);
+        if (total > 0) {
+            for (var k = 1; k <= total; k++) {
+                var lyr = (typeof comp.layer === "function") ? comp.layer(k) : (comp.layers[k] || comp.layers[k - 1]);
+                if (lyr && isTextLayer(lyr)) {
+                    selectSingleLayer(comp, lyr);
+                    return lyr;
+                }
+            }
+        }
+
+        // 3. Auto-create dummy text box fallback if allowed
+        if (allowFallback) {
+            var newDummy = createDummyTextBox(comp);
+            if (newDummy) {
+                selectSingleLayer(comp, newDummy);
+                return newDummy;
+            }
+        }
+
+        return null;
     }
 
     function getJustificationName(textDoc, textLayer) {
@@ -2927,15 +3023,24 @@
                 lblStatus.text = "⚠️ No active composition open.";
                 return null;
             }
-            var textLayer = getSelectedTextLayer(comp);
+            var textLayer = getSelectedTextLayer(comp, false);
             if (!textLayer) {
-                lblStatus.text = "ℹ️ No Text Layer selected. Please select a text layer in your composition.";
+                var totalLayers = (typeof comp.numLayers !== "undefined") ? comp.numLayers : (comp.layers ? comp.layers.length : 0);
+                if (totalLayers === 0) {
+                    lblStatus.text = "ℹ️ Composition is empty. (Will auto-create demo text on Build)";
+                } else {
+                    lblStatus.text = "ℹ️ No Text Layer selected. (Will auto-detect or create on Build)";
+                }
                 return null;
             }
-            var props = getTextBoxProperties(comp, textLayer);
-            var justName = props ? props.justification : "left";
-            var typeName = (props && props.isBox) ? ("Box Text " + Math.round(props.boxWidth) + "px") : "Point Text";
-            lblStatus.text = "🎯 Target: \"" + textLayer.name + "\" (" + typeName + ", " + justName + " justified)";
+            try {
+                var props = getTextBoxProperties(comp, textLayer);
+                var justName = props ? props.justification : "left";
+                var typeName = (props && props.isBox) ? ("Box Text " + Math.round(props.boxWidth) + "px") : "Point Text";
+                lblStatus.text = "🎯 Target: \"" + textLayer.name + "\" (" + typeName + ", " + justName + " justified)";
+            } catch (eProps) {
+                lblStatus.text = "🎯 Target: \"" + textLayer.name + "\" (Text Layer)";
+            }
             return textLayer;
         }
 
@@ -3017,12 +3122,14 @@
         updateSepUI();
 
         btnRefresh.onClick = function () {
+            var comp = getActiveComposition();
+            if (comp) getSelectedTextLayer(comp, true);
             updateSelectionStatus();
         };
 
         btnRepick.onClick = function () {
             var comp = getActiveComposition();
-            var textLayer = comp ? getSelectedTextLayer(comp) : null;
+            var textLayer = comp ? getSelectedTextLayer(comp, false) : null;
             var raw = textLayer ? getTextLayerString(textLayer) : LOREM_IPSUM_RAW;
             var auto = extractRandomWordsAndSentence(raw);
             var sepIdx = ddlSeparator.selection ? ddlSeparator.selection.index : 0;
@@ -3090,9 +3197,9 @@
                 }
             }
 
-            var textLayer = getSelectedTextLayer(comp);
+            var textLayer = getSelectedTextLayer(comp, true);
             if (!textLayer) {
-                alert("Please select a text layer in your active composition first.");
+                alert("Please select or create a text layer in your active composition first.");
                 return;
             }
 
@@ -3178,8 +3285,17 @@
             }
         }
 
-        // Initial state sync
-        updateSelectionStatus();
+        // Initial setup matching AE Align Anchor Point: if comp is empty, create dummy text box
+        (function initialSetup() {
+            var comp = getActiveComposition();
+            if (comp && (typeof CompItem === "undefined" || (comp instanceof CompItem) || comp.layers)) {
+                var total = (typeof comp.numLayers !== "undefined") ? comp.numLayers : (comp.layers ? comp.layers.length : 0);
+                if (total === 0) {
+                    createDummyTextBox(comp);
+                }
+            }
+            updateSelectionStatus();
+        })();
 
         if (win instanceof Window) {
             win.center();
@@ -3215,6 +3331,7 @@
         win.lblStatus = lblStatus;
         win.updateSelectionStatus = updateSelectionStatus;
         win.getSelectedTextLayer = getSelectedTextLayer;
+        win.createDummyTextBox = createDummyTextBox;
 
         return win;
     }
