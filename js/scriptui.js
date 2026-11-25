@@ -1543,7 +1543,7 @@
             else this.dock();
         }
 
-        _setupWindowEvents(winDiv, titlebar, tabBar, rCorner, rRight, rBottom) {
+        _setupWindowEvents(winDiv, titlebar, tabBar, rCorner, rRight, rBottom, rLeft, rCornerBL) {
             const hamburgerBtn = tabBar.querySelector('.scriptui-hamburger-btn');
             const menu = tabBar.querySelector('.scriptui-panel-menu');
             const closeBtnOS = titlebar.querySelector('.scriptui-floating-close-btn');
@@ -1605,10 +1605,10 @@
                 }
             };
 
-            // Resizing logic for Corner, Right Edge, and Bottom Edge (ONLY active when undocked)
+            // Resizing logic for All Border Lines & Corners (Active on focus & when undocked)
             const initResizer = (resizerEl, mode) => {
+                if (!resizerEl) return;
                 resizerEl.addEventListener('pointerdown', (e) => {
-                    if (this.isDocked) return;
                     e.preventDefault();
                     e.stopPropagation();
                     this.setFocus(true);
@@ -1617,18 +1617,48 @@
                     const winRect = winDiv.getBoundingClientRect();
                     const startW = winRect.width;
                     const startH = winRect.height;
+                    const startLeft = this._floatingPos ? this._floatingPos.left : winRect.left;
+
+                    winDiv.classList.add('is-resizing');
+                    document.body.classList.add('scriptui-resizing-active');
 
                     const onPointerMove = (ev) => {
+                        const dx = ev.clientX - startX;
+                        const dy = ev.clientY - startY;
+
+                        // Width resizing (Right, Left, Corners)
                         if (mode === 'corner' || mode === 'right') {
-                            const newW = Math.max(260, Math.min(window.innerWidth - 20, Math.round(startW + (ev.clientX - startX))));
-                            winDiv.style.width = newW + 'px';
-                            this._width = newW;
+                            if (this.isDocked) {
+                                const newW = Math.max(260, Math.min(window.innerWidth - 30, Math.round(startW + dx * 2)));
+                                winDiv.style.width = newW + 'px';
+                                this._width = newW;
+                            } else {
+                                const newW = Math.max(260, Math.min(window.innerWidth - 20, Math.round(startW + dx)));
+                                winDiv.style.width = newW + 'px';
+                                this._width = newW;
+                            }
+                        } else if (mode === 'left' || mode === 'corner-bl') {
+                            if (this.isDocked) {
+                                const newW = Math.max(260, Math.min(window.innerWidth - 30, Math.round(startW - dx * 2)));
+                                winDiv.style.width = newW + 'px';
+                                this._width = newW;
+                            } else {
+                                const newW = Math.max(260, Math.min(startLeft + startW - 20, Math.round(startW - dx)));
+                                const newLeft = Math.round(startLeft + (startW - newW));
+                                winDiv.style.width = newW + 'px';
+                                winDiv.style.left = newLeft + 'px';
+                                this._width = newW;
+                                if (this._floatingPos) this._floatingPos.left = newLeft;
+                            }
                         }
-                        if (mode === 'corner' || mode === 'bottom') {
-                            const newH = Math.max(140, Math.min(window.innerHeight - 20, Math.round(startH + (ev.clientY - startY))));
+
+                        // Height resizing (Bottom, Corners)
+                        if (mode === 'bottom' || mode === 'corner' || mode === 'corner-bl') {
+                            const newH = Math.max(160, Math.min(window.innerHeight - 30, Math.round(startH + dy)));
                             winDiv.style.height = newH + 'px';
                             this._height = newH;
                         }
+
                         ScriptUIWindow._lastSize = { width: this._width, height: this._height };
                         if (typeof this.onResizing === 'function') {
                             try { this.onResizing(); } catch (err) {}
@@ -1639,6 +1669,10 @@
                         document.removeEventListener('pointermove', onPointerMove);
                         document.removeEventListener('pointerup', onPointerUp);
                         document.removeEventListener('pointercancel', onPointerUp);
+
+                        winDiv.classList.remove('is-resizing');
+                        document.body.classList.remove('scriptui-resizing-active');
+
                         if (typeof this.onResize === 'function') {
                             try { this.onResize(); } catch (err) {}
                         }
@@ -1651,7 +1685,9 @@
             };
 
             initResizer(rCorner, 'corner');
+            if (rCornerBL) initResizer(rCornerBL, 'corner-bl');
             initResizer(rRight, 'right');
+            if (rLeft) initResizer(rLeft, 'left');
             initResizer(rBottom, 'bottom');
 
             // Dragging logic on Floating Titlebar & Tab Bar (Draggable floating window + Drag-to-undock / Drag-to-dock)
@@ -1799,26 +1835,36 @@
             }
             winDiv.appendChild(body);
 
-            // 4. Resizers: Corner (Both), Right Edge (Width), Bottom Edge (Height) - only active when undocked
+            // 4. Resizers: All Border Lines and Corners
             const rCorner = document.createElement('div');
-            rCorner.className = 'scriptui-resizer-corner';
-            rCorner.title = 'Drag to resize panel (Width & Height)';
+            rCorner.className = 'scriptui-resizer-corner scriptui-resizer-corner-br';
+            rCorner.title = 'Drag border to resize panel (Width & Height)';
             winDiv.appendChild(rCorner);
+
+            const rCornerBL = document.createElement('div');
+            rCornerBL.className = 'scriptui-resizer-corner-bl';
+            rCornerBL.title = 'Drag border to resize panel (Width & Height)';
+            winDiv.appendChild(rCornerBL);
 
             const rRight = document.createElement('div');
             rRight.className = 'scriptui-resizer-right';
-            rRight.title = 'Drag to resize width';
+            rRight.title = 'Drag right border to resize width';
             winDiv.appendChild(rRight);
+
+            const rLeft = document.createElement('div');
+            rLeft.className = 'scriptui-resizer-left';
+            rLeft.title = 'Drag left border to resize width';
+            winDiv.appendChild(rLeft);
 
             const rBottom = document.createElement('div');
             rBottom.className = 'scriptui-resizer-bottom';
-            rBottom.title = 'Drag to resize height';
+            rBottom.title = 'Drag bottom border to resize height';
             winDiv.appendChild(rBottom);
 
             this.domWrapper = winDiv;
 
             // Setup Event Handlers: Dragging, Resizing, Dock/Undock, Buttons, Focus
-            this._setupWindowEvents(winDiv, titlebar, tabBar, rCorner, rRight, rBottom);
+            this._setupWindowEvents(winDiv, titlebar, tabBar, rCorner, rRight, rBottom, rLeft, rCornerBL);
 
             // Mount to DOM based on dock state
             if (this.isDocked) {

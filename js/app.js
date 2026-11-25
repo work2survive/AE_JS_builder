@@ -14,7 +14,7 @@
         return '1.2.36';
     }
 
-    const APP_VERSION = '1.2.36';
+    const APP_VERSION = '1.2.37';
     global.EMULATOR_VERSION = APP_VERSION;
     global.AE_TEXT_GUIDE_URL = 'https://github.com/work2survive/AE_JS_builder/blob/main/AE_VS_JS_TEXT_RENDERING_DIFFERENCES.md';
     global.AE_ANCHOR_POINT_GUIDE_URL = 'https://github.com/work2survive/AE-Align-AnchorPoint/blob/main/README.md';
@@ -2203,13 +2203,13 @@
                 const folder = isSample ? 'samples' : 'jsx';
                 const fname = val.slice(isSample ? 7 : 4);
                 const fileMap = isSample ? sampleFiles : jsxFiles;
-                const manifestList = isSample ? (window.SAMPLE_FOLDER_FILES || window.BUILTIN_SAMPLES) : (window.JSX_FOLDER_FILES || window.__JSX_PRESETS__);
+                const manifestList = isSample ? (window.SAMPLE_FOLDER_FILES || window.BUILTIN_SAMPLES || window.SAMPLE_MANIFEST) : (window.JSX_FOLDER_FILES || window.__JSX_PRESETS__ || window.JSX_MANIFEST);
                 const fileObj = fileMap.get(fname);
                 let code = fileObj ? fileObj.code : null;
 
                 // If code not cached, look in the folder manifest
                 if (!code && manifestList && Array.isArray(manifestList)) {
-                    const found = manifestList.find(f => (typeof f === 'object' && f.filename === fname));
+                    const found = manifestList.find(f => (typeof f === 'object' && (f.filename === fname || f.name === fname)));
                     if (found && found.code) code = found.code;
                 }
 
@@ -2299,8 +2299,8 @@
 
         async function populatePresetsDropdown() {
             // Load manifests immediately
-            loadManifestInto(window.JSX_FOLDER_FILES || window.__JSX_PRESETS__, jsxFiles, 'jsx');
-            loadManifestInto(window.SAMPLE_FOLDER_FILES || window.BUILTIN_SAMPLES, sampleFiles, 'samples');
+            loadManifestInto(window.JSX_FOLDER_FILES || window.__JSX_PRESETS__ || window.JSX_MANIFEST, jsxFiles, 'jsx');
+            loadManifestInto(window.SAMPLE_FOLDER_FILES || window.BUILTIN_SAMPLES || window.SAMPLE_MANIFEST, sampleFiles, 'samples');
 
             // Also ingest any items from window.PRESETS if present
             if (typeof PRESETS !== 'undefined' && PRESETS) {
