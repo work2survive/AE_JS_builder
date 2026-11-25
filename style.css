@@ -782,15 +782,14 @@ body.body-viewport-panning {
 }
 
 .scriptui-window-container {
-    background: #232323;
-    border: 1px solid #383838;
+    background: #202020;
+    border: 2px solid #383838;
     border-radius: 4px;
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.45);
     overflow: hidden;
-    width: 100%;
-    max-width: 480px;
+    width: 480px;
     min-width: 260px;
-    min-height: 140px;
+    min-height: 400px;
     margin: 0 auto;
     font-size: 11px;
     color: #cccccc;
@@ -799,7 +798,13 @@ body.body-viewport-panning {
     display: flex;
     flex-direction: column;
     box-sizing: border-box;
-    transition: box-shadow 0.15s ease;
+    transition: border-color 0.12s ease, box-shadow 0.12s ease;
+}
+
+/* Focused Panel: Blue Outline (Matches image_4.png, image_5.png, image_6.png) */
+.scriptui-window-container.is-focused {
+    border-color: #4096f3 !important;
+    box-shadow: 0 0 0 1px rgba(64, 150, 243, 0.4), 0 12px 36px rgba(0, 0, 0, 0.7) !important;
 }
 
 .scriptui-window-container.scriptui-floating {
@@ -808,107 +813,167 @@ body.body-viewport-panning {
     margin: 0 !important;
     max-width: none !important;
     max-height: calc(100vh - 40px) !important;
-    box-shadow: 0 12px 36px rgba(0, 0, 0, 0.75), 0 0 0 1px rgba(255, 255, 255, 0.15) !important;
-    border: 1px solid #4a4a4a !important;
+    box-shadow: 0 14px 40px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.1) !important;
 }
 
 .scriptui-window-container.is-dragging {
     opacity: 0.94;
-    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.85), 0 0 0 1px var(--ae-blue) !important;
+    box-shadow: 0 18px 50px rgba(0, 0, 0, 0.9), 0 0 0 2px #4096f3 !important;
 }
 
-.scriptui-window-header {
-    background: #2b2b2b;
-    padding: 5px 8px;
-    border-bottom: 1px solid #383838;
-    display: flex;
+/* Floating Window OS Titlebar (Shown ONLY when undocked, matches image_4.png) */
+.scriptui-floating-titlebar {
+    display: none;
+    height: 26px;
+    background: #ececec;
+    align-items: center;
     justify-content: space-between;
-    align-items: center;
-    font-weight: 600;
-    font-size: 11px;
-    color: #cccccc;
+    padding-left: 10px;
+    cursor: grab;
     user-select: none;
-    cursor: grab;
+    border-bottom: 1px solid #d0d0d0;
     flex-shrink: 0;
-    gap: 8px;
 }
 
-.scriptui-window-header:active,
-.scriptui-window-header.is-dragging {
-    cursor: grabbing;
-    background: #333333;
-}
-
-.scriptui-header-left {
+.scriptui-window-container.scriptui-floating .scriptui-floating-titlebar {
     display: flex;
-    align-items: center;
-    gap: 6px;
-    min-width: 0;
-    flex: 1;
 }
 
-.scriptui-drag-grip {
-    color: #666666;
-    font-size: 11px;
-    letter-spacing: -1px;
-    cursor: grab;
-    line-height: 1;
+.scriptui-floating-titlebar:active,
+.scriptui-floating-titlebar.is-dragging {
+    cursor: grabbing;
 }
 
-.scriptui-window-title {
+.scriptui-floating-title-text {
+    font-size: 12px;
+    font-weight: 500;
+    color: #222222;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    font-weight: 600;
-    color: #dddddd;
 }
 
-.scriptui-window-badge {
-    background: rgba(44, 140, 255, 0.2);
-    color: var(--ae-blue);
-    border: 1px solid rgba(44, 140, 255, 0.4);
-    border-radius: 3px;
-    font-size: 9px;
-    font-weight: 500;
-    padding: 1px 4px;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
+.scriptui-floating-close-btn {
+    width: 38px;
+    height: 26px;
+    background: #c75050;
+    color: #ffffff;
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 14px;
+    line-height: 1;
+    transition: background-color 0.15s ease;
+    margin: 0;
+    padding: 0;
+}
+
+.scriptui-floating-close-btn:hover {
+    background: #e81123;
+}
+
+/* Panel Tab Bar (Matches image_2.png and image_4.png) */
+.scriptui-tab-bar-ae {
+    display: flex;
+    align-items: center;
+    background: #1e1e1e;
+    padding: 6px 12px 4px 12px;
+    border-bottom: 1px solid #2d2d2d;
+    user-select: none;
+    position: relative;
+    flex-shrink: 0;
+    cursor: grab;
+}
+
+.scriptui-tab-bar-ae:active {
+    cursor: grabbing;
+}
+
+.scriptui-tab-item-ae {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    position: relative;
+    padding-bottom: 3px;
+    border-bottom: 2px solid #4096f3;
+}
+
+.scriptui-tab-title-ae {
+    font-size: 11px;
+    font-weight: 600;
+    color: #e0e0e0;
+    letter-spacing: 0.3px;
     white-space: nowrap;
 }
 
-.scriptui-header-actions {
-    display: flex;
-    align-items: center;
-    gap: 2px;
-    flex-shrink: 0;
-}
-
-.scriptui-hdr-btn {
+.scriptui-hamburger-btn {
     background: transparent;
     border: none;
-    color: #888888;
+    color: #aaaaaa;
     cursor: pointer;
-    padding: 3px 5px;
-    border-radius: 3px;
+    padding: 2px 4px;
+    border-radius: 2px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     line-height: 1;
-    transition: color 0.15s ease, background-color 0.15s ease;
+    font-size: 13px;
+    font-weight: bold;
+    transition: color 0.12s ease, background-color 0.12s ease;
 }
 
-.scriptui-hdr-btn:hover {
+.scriptui-hamburger-btn:hover {
     color: #ffffff;
-    background-color: rgba(255, 255, 255, 0.1);
+    background-color: rgba(255, 255, 255, 0.15);
 }
 
-.scriptui-hdr-btn.scriptui-close-btn {
-    font-size: 15px;
-    padding: 1px 5px;
+/* After Effects Context Menu (Matches image_2.png) */
+.scriptui-panel-menu {
+    position: absolute;
+    top: 32px;
+    left: 12px;
+    background-color: #f9f9f9;
+    border: 1px solid #c8c8c8;
+    border-radius: 4px;
+    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.45);
+    z-index: 20000;
+    padding: 4px 0;
+    min-width: 200px;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    user-select: none;
 }
-.scriptui-hdr-btn.scriptui-close-btn:hover {
-    color: #ff6b6b;
-    background-color: rgba(255, 107, 107, 0.2);
+
+.scriptui-menu-item {
+    padding: 6px 16px;
+    font-size: 12px;
+    color: #1a1a1a;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: background-color 0.08s ease, color 0.08s ease;
+}
+
+.scriptui-menu-item:hover:not(.disabled) {
+    background-color: #0078d4;
+    color: #ffffff;
+}
+
+.scriptui-menu-item.disabled {
+    color: #9e9e9e;
+    cursor: default;
+}
+
+.scriptui-menu-item .menu-arrow {
+    font-size: 10px;
+    color: #777777;
+    margin-left: 12px;
+}
+
+.scriptui-menu-item:hover:not(.disabled) .menu-arrow {
+    color: #ffffff;
 }
 
 .scriptui-window-body {
@@ -918,7 +983,19 @@ body.body-viewport-panning {
     flex: 1;
 }
 
-/* Resize Handles */
+/* Resize Handles (ONLY visible when undocked) */
+.scriptui-window-container:not(.scriptui-floating) .scriptui-resizer-corner,
+.scriptui-window-container:not(.scriptui-floating) .scriptui-resizer-right,
+.scriptui-window-container:not(.scriptui-floating) .scriptui-resizer-bottom {
+    display: none !important;
+}
+
+.scriptui-window-container.scriptui-floating .scriptui-resizer-corner,
+.scriptui-window-container.scriptui-floating .scriptui-resizer-right,
+.scriptui-window-container.scriptui-floating .scriptui-resizer-bottom {
+    display: block;
+}
+
 .scriptui-resizer-corner {
     position: absolute;
     right: 0;

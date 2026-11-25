@@ -8,13 +8,13 @@
     'use strict';
 
     // -------------------------------------------------------------
-    // Version Management (v1.2.35)
+    // Version Management (v1.2.36)
     // -------------------------------------------------------------
     function computeDailyVersion() {
-        return '1.2.35';
+        return '1.2.36';
     }
 
-    const APP_VERSION = '1.2.35';
+    const APP_VERSION = '1.2.36';
     global.EMULATOR_VERSION = APP_VERSION;
     global.AE_TEXT_GUIDE_URL = 'https://github.com/work2survive/AE_JS_builder/blob/main/AE_VS_JS_TEXT_RENDERING_DIFFERENCES.md';
     global.AE_ANCHOR_POINT_GUIDE_URL = 'https://github.com/work2survive/AE-Align-AnchorPoint/blob/main/README.md';
