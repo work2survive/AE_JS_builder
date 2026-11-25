@@ -1584,6 +1584,10 @@
 
         if (!layer) return null;
 
+        // Randomize the name of the layer: "dummy text" + random hex number
+        const randHex = Math.floor(Math.random() * 0xffffff).toString(16).padStart(6, '0');
+        layer.name = 'dummy text' + randHex;
+
         // Determine whether viewport background is bright or dark to ensure maximum readability and contrast
         const isBrightBg = isViewportBackgroundBright(comp);
         const textColor = isBrightBg ? [0.08, 0.08, 0.08] : [1, 1, 1]; // Dark charcoal (#141414) on bright bg, pure white on dark bg
