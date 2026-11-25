@@ -192,6 +192,11 @@ The simulator automatically detects and loads standalone production-ready After 
    - **Repository**: [work2survive/AE-replace-color-emojis](https://github.com/work2survive/AE-replace-color-emojis)
    - **Live Demo**: [https://work2survive.github.io/AE_JS_builder/?jsx=AE_Replace_Color_Emojis.jsx&autobuild=true](https://work2survive.github.io/AE_JS_builder/?jsx=AE_Replace_Color_Emojis.jsx&autobuild=true)
 
+14. **[AE Comic Text Bubble](https://github.com/work2survive/AE-comic-text-bubble)** (`jsx/AE_Comic_Text_Bubble.jsx` - v1.0):
+   - Interactive comic and speech balloon generator combining the Knuth-Plass typography engine of `AE-advanced-text-wrap`, the emoji insertion suite of `AE-replace-color-emojis`, the word measurement & highlighting of `AE-Text-Highlight`, and the zero-shift invariant mathematics of `AE-Align-AnchorPoint`. Features 6 balloon body styles (Oval, Pill, Action Burst, Thought Cloud, Whisper, Caption Box), 7 tail pointer styles (Curved Hook, Straight Cone, Wedge, Thought Puffs, Lightning, Scream Barb, None), an interactive 2D drag-and-drop target controller linked to an in-comp `"🎯 Tail Target"` null, stroke and fill color pickers, and dynamic comic entrance/exit bounce and zoom transitions.
+   - **Repository**: [work2survive/AE-comic-text-bubble](https://github.com/work2survive/AE-comic-text-bubble)
+   - **Live Demo**: [https://work2survive.github.io/AE_JS_builder/?jsx=AE_Comic_Text_Bubble.jsx&autobuild=true](https://work2survive.github.io/AE_JS_builder/?jsx=AE_Comic_Text_Bubble.jsx&autobuild=true)
+
 #### Built-in Samples (`samples/` Folder)
 
 The simulator includes built-in sample scripts located in [`samples/`](samples/) demonstrating ScriptUI, kinetic typography, expressions, and 3D primitives:
@@ -267,6 +272,7 @@ The production tools built and tested inside this simulator are also available a
 - **[AE Get Emojis](https://github.com/work2survive/AE_Get_Emojis)**: Full-color vector emoji search, catalog indexer, and native After Effects shape layer generator supporting OpenMoji & Twemoji with emoticon parsing and bidirectional Unicode conversion (v1.0).
 - **[AE Replace Color Emojis](https://github.com/work2survive/AE-replace-color-emojis)**: Detects monochrome font emojis and emoticons in text layers, calculates exact sub-pixel coordinates, hides font glyphs via Text Animator, and replaces them with native full-color vector shape layers (v1.0).
 - **[AE Align Anchor Point](https://github.com/work2survive/AE-Align-AnchorPoint)**: Zero-shift anchor point alignment panel and expression engine with mathematical compensation invariance (v1.1.0).
+- **[AE Comic Text Bubble](https://github.com/work2survive/AE-comic-text-bubble)**: Parametric comic & speech balloon generator with drag-and-drop tail targeting, 6 balloon styles, 7 tail styles, advanced text wrapping, and comic bounce transitions (v1.0).
 
 ---
 
