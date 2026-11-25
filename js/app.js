@@ -1438,6 +1438,52 @@
     }
 
     // -------------------------------------------------------------
+    // Helper: Determine whether the viewport background is bright or dark
+    // Used to ensure optimal readability and high contrast for dummy text.
+    // -------------------------------------------------------------
+    function isViewportBackgroundBright(comp) {
+        // 1. Check explicit theme class on viewport panel
+        const vpPanel = document.getElementById('ae-viewport-panel') || document.querySelector('.ae-viewport-panel');
+        if (vpPanel && vpPanel.classList.contains('ae-theme-bright')) {
+            return true;
+        }
+
+        // 2. Check renderer or global theme state
+        if (window.__aeViewportTheme === 'bright') return true;
+        if (typeof renderer !== 'undefined' && renderer && renderer.viewportTheme === 'bright') return true;
+        if (typeof localStorage !== 'undefined') {
+            try {
+                if (localStorage.getItem('ae_viewport_theme') === 'bright') return true;
+            } catch (e) {}
+        }
+
+        // 3. Check computed background color of viewport panel
+        if (vpPanel && typeof window !== 'undefined' && window.getComputedStyle) {
+            try {
+                const bg = window.getComputedStyle(vpPanel).backgroundColor;
+                const m = bg && bg.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
+                if (m) {
+                    const lum = (0.299 * parseInt(m[1], 10) + 0.587 * parseInt(m[2], 10) + 0.114 * parseInt(m[3], 10)) / 255;
+                    if (lum > 0.5) return true;
+                }
+            } catch (e) {}
+        }
+
+        // 4. Check active comp bgColor (if custom bright background was set on the comp)
+        if (comp && Array.isArray(comp.bgColor)) {
+            const mult = Math.max(comp.bgColor[0] || 0, comp.bgColor[1] || 0, comp.bgColor[2] || 0) <= 1.0 ? 1 : (1 / 255);
+            const r = (comp.bgColor[0] || 0) * mult;
+            const g = (comp.bgColor[1] || 0) * mult;
+            const b = (comp.bgColor[2] || 0) * mult;
+            const compLum = 0.299 * r + 0.587 * g + 0.114 * b;
+            if (compLum > 0.5) return true;
+        }
+
+        return false;
+    }
+    global.isViewportBackgroundBright = isViewportBackgroundBright;
+
+    // -------------------------------------------------------------
     // Dummy Text Creator
     // Creates a random Point or Box text layer centered in the viewport
     // with random font, size, leading, alignment, and ~50 words.
@@ -1538,6 +1584,10 @@
 
         if (!layer) return null;
 
+        // Determine whether viewport background is bright or dark to ensure maximum readability and contrast
+        const isBrightBg = isViewportBackgroundBright(comp);
+        const textColor = isBrightBg ? [0.08, 0.08, 0.08] : [1, 1, 1]; // Dark charcoal (#141414) on bright bg, pure white on dark bg
+
         // Apply TextDocument styling
         let textDoc = null;
         if (layer.sourceText && layer.sourceText.value && typeof layer.sourceText.value === 'object') {
@@ -1551,7 +1601,8 @@
             textDoc.font = fontName;
             textDoc.fontFamily = fontName;
             textDoc.fontSize = fontSize;
-            textDoc.fillColor = [1, 1, 1];
+            textDoc.fillColor = textColor;
+            textDoc.applyFill = true;
             textDoc.justification = alignChoice.just;
             textDoc.autoLeading = false;
             textDoc.leading = leading;
@@ -1566,6 +1617,7 @@
         }
 
         // Direct layer properties for emulator renderer
+        layer.fontColor = textColor;
         layer.fontFamily = fontName;
         layer.font = fontName;
         layer.fontSize = fontSize;
@@ -1573,6 +1625,7 @@
         layer.leading = leading;
         layer.autoLeading = false;
         layer.emojiFontFamily = "'Noto Color Emoji', 'Segoe UI Emoji', 'Apple Color Emoji', sans-serif";
+        layer._isDummyText = true;
         if (isBox) {
             layer.boxText = true;
             layer.boxTextSize = [targetWidth, boxHeight];
@@ -1667,7 +1720,7 @@
         }, 50);
 
         window.dispatchEvent(new CustomEvent('ae-layer-selection-changed', { detail: { layer: layer } }));
-        appendConsole(`Created dummy ${typeLabel} (${is3D ? `3D, Z: ${posZ}px` : '2D'}) layer "${layer.name}" (${fontName}, ${fontSize}px, ${alignChoice.name}, leading ${leading}px) with randomized anchor point [${randAnchorX}, ${randAnchorY}] centered in viewport with red cross child.`);
+        appendConsole(`Created dummy ${typeLabel} (${is3D ? `3D, Z: ${posZ}px` : '2D'}) layer "${layer.name}" (${fontName}, ${fontSize}px, ${alignChoice.name}, leading ${leading}px, ${isBrightBg ? 'dark text #141414' : 'bright text #ffffff'}) with randomized anchor point [${randAnchorX}, ${randAnchorY}] centered in viewport with red cross child.`);
         return layer;
     }
     global.createDummyTextLayer = createDummyTextLayer;

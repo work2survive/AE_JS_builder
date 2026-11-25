@@ -439,6 +439,25 @@
                 themeBtn.innerHTML = isBright ? this.getSunIconSvg() : this.getMoonIconSvg();
                 themeBtn.classList.toggle('active', isBright);
             }
+
+            // Adapt existing dummy text layers to ensure optimal contrast when switching viewport themes
+            if (this.comp && this.comp.layers) {
+                const allLayers = Array.isArray(this.comp.layers) ? this.comp.layers : (this.comp.layers._layers || []);
+                let modified = false;
+                const newTextColor = isBright ? [0.08, 0.08, 0.08] : [1, 1, 1];
+                allLayers.forEach(l => {
+                    if (l && l._isDummyText) {
+                        if (l.sourceText && l.sourceText.value && typeof l.sourceText.value === 'object') {
+                            l.sourceText.value.fillColor = newTextColor;
+                        }
+                        l.fontColor = newTextColor;
+                        modified = true;
+                    }
+                });
+                if (modified) {
+                    this.render(this.comp.time || 0);
+                }
+            }
         }
 
         toggleViewportTheme() {
