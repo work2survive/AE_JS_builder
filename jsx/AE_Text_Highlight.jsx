@@ -1,6 +1,6 @@
 // Co-authored & architected with Google DeepMind Antigravity.
 // =============================================================================
-// ADOBE AFTER EFFECTS EXTENDSCRIPT & SCRIPTUI PANEL: AE TEXT HIGHLIGHT v3.0.0
+// ADOBE AFTER EFFECTS EXTENDSCRIPT & SCRIPTUI PANEL: AE TEXT HIGHLIGHT v3.0.1
 // =============================================================================
 //
 // PURPOSE:
@@ -8,17 +8,20 @@
 //   Creates a non-destructive vector shape layer parented directly to your text layer,
 //   pinpointing target words, multi-word phrases, or clauses with sub-pixel precision.
 //
-// KEY DESIGN PRINCIPLES (GROUND-UP REWRITE v3.0.0):
+// KEY DESIGN PRINCIPLES (v3.0.1):
 //   1. 100% Deterministic & Idempotent:
 //      Running the script multiple times on the same layer cleanly updates the highlights.
-//      No stacked duplicate layers, no orphaned helper layers, no random word selection.
-//   2. Zero Premature Layer Creation:
+//      No stacked duplicate layers, no orphaned helper layers.
+//   2. Contextual Sample Words Picker:
+//      Clicking "Sample Targets" dynamically inspects the selected text layer and picks
+//      a couple of random words directly from its source text.
+//   3. Zero Premature Layer Creation:
 //      Zero layers or temp items are created on startup, window focus, or selection check.
 //      Layers are created ONLY when the user explicitly clicks "Build Highlights".
-//   3. Non-Destructive to Original Text:
+//   4. Non-Destructive to Original Text:
 //      Never mutates the original text layer's anchor point, position, scale, or orientation.
 //      Highlights are parented to the text layer and compensate for the text's local anchor point.
-//   4. Robust Multi-Word & Comma Support:
+//   5. Robust Multi-Word & Comma Support:
 //      Highlights full sentences and phrases with internal commas (e.g. "peace of mind, body, and soul").
 //
 // REPOSITORY: https://github.com/work2survive/AE-Text-Highlight
@@ -28,7 +31,7 @@
     "use strict";
 
     var SCRIPT_TITLE   = "AE Text Highlight";
-    var SCRIPT_VERSION = "v3.0.0";
+    var SCRIPT_VERSION = "v3.0.1";
     var GITHUB_URL     = "https://github.com/work2survive/AE-Text-Highlight";
 
     // Default target words (deterministic across all runs)
@@ -122,6 +125,40 @@
             if (arr[i].toLowerCase() === val.toLowerCase()) return true;
         }
         return false;
+    }
+
+    /**
+     * Extracts a couple of random distinct words from the source text
+     */
+    function pickRandomWordsFromText(fullText, count) {
+        if (!fullText) return [];
+        var allWords = fullText.match(/[A-Za-z0-9_\u00C0-\u024F\u1E00-\u1EFF'-]{3,}/g);
+        if (!allWords || allWords.length === 0) {
+            allWords = fullText.match(/\S+/g) || [];
+        }
+        if (allWords.length === 0) return [];
+
+        var unique = [];
+        var seen = {};
+        for (var i = 0; i < allWords.length; i++) {
+            var w = allWords[i].replace(/^[^\w]+|[^\w]+$/g, "");
+            var low = w.toLowerCase();
+            if (w.length >= 2 && !seen[low]) {
+                seen[low] = true;
+                unique.push(w);
+            }
+        }
+        if (unique.length === 0) unique = allWords;
+
+        var targetCount = Math.min(count || 3, unique.length);
+        var chosen = [];
+        var copy = unique.slice(0);
+        for (var c = 0; c < targetCount; c++) {
+            var rIdx = Math.floor(Math.random() * copy.length);
+            chosen.push(copy[rIdx]);
+            copy.splice(rIdx, 1);
+        }
+        return chosen;
     }
 
     // -------------------------------------------------------------------------
@@ -572,7 +609,25 @@
         var btnClear = grpQuick.add("button", undefined, "Clear");
 
         btnSample.onClick = function () {
-            txtTargets.text = DEFAULT_TARGETS.join("\n");
+            var comp = getActiveComposition();
+            var textLayer = comp ? getSelectedTextLayer(comp) : null;
+            var fullText = "";
+            if (textLayer) {
+                var docProp = textLayer.property("Source Text");
+                if (!docProp) {
+                    try { docProp = textLayer.property("ADBE Text Properties").property("ADBE Text Document"); } catch (eTP) {}
+                }
+                if (docProp && docProp.value) {
+                    fullText = String(docProp.value.text || "");
+                }
+            }
+
+            var picked = pickRandomWordsFromText(fullText, 3);
+            if (picked.length > 0) {
+                txtTargets.text = picked.join("\n");
+            } else {
+                txtTargets.text = DEFAULT_TARGETS.join("\n");
+            }
         };
         btnClear.onClick = function () {
             txtTargets.text = "";
@@ -797,10 +852,12 @@
         win.buildHighlightsRig = buildHighlightsRig;
         win.removeExistingHighlights = removeExistingHighlights;
         win.parseTargets = parseTargets;
+        win.pickRandomWordsFromText = pickRandomWordsFromText;
         win.updateStatus = updateStatus;
         win.getSelectedTextLayer = getSelectedTextLayer;
         win.btnBuild = btnBuild;
         win.btnRemove = btnRemove;
+        win.btnSample = btnSample;
         win.txtTargets = txtTargets;
 
         return win;
