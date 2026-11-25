@@ -38,6 +38,8 @@
 (function(thisObj) {
     "use strict";
 
+    var SCRIPT_VERSION = "v1.3";
+
     // -------------------------------------------------------------------------
     // 1. ScriptUI Window / Dockable Panel Initialization
     // -------------------------------------------------------------------------

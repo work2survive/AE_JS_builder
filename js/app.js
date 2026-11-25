@@ -8,13 +8,13 @@
     'use strict';
 
     // -------------------------------------------------------------
-    // Version Management (v1.2.23)
+    // Version Management (v1.2.24)
     // -------------------------------------------------------------
     function computeDailyVersion() {
-        return '1.2.23';
+        return '1.2.24';
     }
 
-    const APP_VERSION = '1.2.23';
+    const APP_VERSION = '1.2.24';
     global.EMULATOR_VERSION = APP_VERSION;
     global.AE_TEXT_GUIDE_URL = 'https://github.com/work2survive/AE_JS_builder/blob/main/AE_VS_JS_TEXT_RENDERING_DIFFERENCES.md';
     global.AE_ANCHOR_POINT_GUIDE_URL = 'https://github.com/work2survive/AE-Align-AnchorPoint/blob/main/README.md';
@@ -2522,15 +2522,62 @@
             }
         });
 
+        // Helper: Extract version string from JSX code
+        function extractScriptVersion(code) {
+            if (!code || typeof code !== 'string') return null;
+            // 1. Explicit variable: SCRIPT_VERSION / VERSION / APP_VERSION = "v1.2.3"
+            const varMatch = code.match(/(?:var|const|let)\s+(?:SCRIPT_VERSION|VERSION|APP_VERSION)\s*=\s*['"]v?([0-9]+(?:\.[0-9]+)+[a-zA-Z0-9._-]*)['"]/i);
+            if (varMatch && varMatch[1]) return 'v' + varMatch[1].replace(/^v/i, '');
+
+            // 2. JSDoc or header comment: @version 1.2.3 or Version: 1.2.3
+            const docMatch = code.match(/@version\s+v?([0-9]+(?:\.[0-9]+)+[a-zA-Z0-9._-]*)/i) ||
+                             code.match(/(?:\/\/|\/\*|\*)\s*(?:Script\s*)?Version\s*[:=-]?\s*v?([0-9]+(?:\.[0-9]+)+[a-zA-Z0-9._-]*)/i);
+            if (docMatch && docMatch[1]) return 'v' + docMatch[1].replace(/^v/i, '');
+
+            // 3. String header literal e.g. "v1.3 - Parametric 3D Shape Layer..."
+            const headerMatch = code.match(/['"`]\s*v([0-9]+(?:\.[0-9]+)+[a-zA-Z0-9._-]*)\s*-\s*[^'"`]+['"`]/i);
+            if (headerMatch && headerMatch[1]) return 'v' + headerMatch[1].replace(/^v/i, '');
+
+            return null;
+        }
+
+        // Helper: Construct download filename containing version number
+        function buildDownloadFilename(rawFilename, code) {
+            let name = (rawFilename || '').trim();
+            if (!name) name = 'script.jsx';
+            name = name.replace(/\s*\([^)]*Remote URL[^)]*\)/i, '').trim();
+            name = name.replace(/\.(jsx|js|txt)$/i, '');
+
+            const scriptVersion = extractScriptVersion(code);
+            const version = scriptVersion || ('v' + APP_VERSION);
+            const normalizedVersion = version.startsWith('v') || version.startsWith('V') ? version : ('v' + version);
+
+            const escapedVersion = normalizedVersion.replace(/\./g, '\\.');
+            const alreadyHasExactVersion = new RegExp('[_-]' + escapedVersion + '$', 'i').test(name);
+            const alreadyHasAnyVersion = /([_-]v?[0-9]+(?:\.[0-9]+)+[a-zA-Z0-9._-]*)$/i.test(name);
+
+            if (alreadyHasExactVersion) {
+                return name + '.jsx';
+            }
+            if (alreadyHasAnyVersion) {
+                if (scriptVersion) {
+                    name = name.replace(/([_-]v?[0-9]+(?:\.[0-9]+)+[a-zA-Z0-9._-]*)$/i, '');
+                    return name + '_' + normalizedVersion + '.jsx';
+                } else {
+                    return name + '.jsx';
+                }
+            }
+            return name + '_' + normalizedVersion + '.jsx';
+        }
+        global.buildDownloadFilename = buildDownloadFilename;
+
         // File Download Handler ("Download .JSX")
         const btnDownloadJSX = document.getElementById('btn-download-jsx');
         if (btnDownloadJSX) {
             btnDownloadJSX.onclick = () => {
                 const code = codeTextarea.value || '';
-                let filename = (currentFilenameEl && currentFilenameEl.textContent.trim()) || 'script.jsx';
-                if (!filename.toLowerCase().endsWith('.jsx') && !filename.toLowerCase().endsWith('.js')) {
-                    filename += '.jsx';
-                }
+                const rawName = (currentFilenameEl && currentFilenameEl.textContent) || 'script.jsx';
+                const filename = buildDownloadFilename(rawName, code);
                 const blob = new Blob([code], { type: 'text/javascript;charset=utf-8' });
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a');
