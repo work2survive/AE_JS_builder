@@ -468,9 +468,11 @@
 
     /**
      * Method 1: Balanced Paragraph (Knuth-Plass Dynamic Programming Style)
-     * Finds global line break sequence that minimizes raggedness variance across lines.
+     * Finds global line break sequence that minimizes raggedness variance across lines,
+     * targeting desiredW while strictly respecting maxW.
      */
-    function wrapBalanced(paraText, maxW, lang, useHyphen, minWordLen, measurer, spaceW) {
+    function wrapBalanced(paraText, maxW, desiredW, lang, useHyphen, minWordLen, measurer, spaceW) {
+        if (!desiredW || desiredW >= maxW) desiredW = Math.max(50, maxW - 20);
         var tokens = tokenizeParagraph(paraText, lang, useHyphen, minWordLen, measurer);
         if (tokens.length === 0) return [""];
 
@@ -506,7 +508,7 @@
                         var pfxW = measurer.measureAdvance(pfx + "-");
                         var testHyphenW = (j === i) ? pfxW : (currentLineWidth - tok.width + spaceW + pfxW);
                         if (testHyphenW <= maxW) {
-                            var slackH = maxW - testHyphenW;
+                            var slackH = Math.abs(desiredW - testHyphenW);
                             var penaltyH = (slackH * slackH) + 8000 + cost[j]; // hyphen penalty
                             if (penaltyH < cost[i]) {
                                 cost[i] = penaltyH;
@@ -518,19 +520,24 @@
                     break;
                 }
 
-                var slack = maxW - currentLineWidth;
                 var lineCost = 0;
+                var deltaDesired = currentLineWidth - desiredW;
 
                 if (j === n - 1) {
                     // Last line of paragraph: slack penalty is relaxed, but penalize severe widow
-                    if (currentLineWidth < maxW * 0.25 && n > 1) {
+                    if (currentLineWidth < desiredW * 0.25 && n > 1) {
                         lineCost = 50000; // Widow penalty
                     } else {
                         lineCost = 0; // Natural last line
                     }
                 } else {
-                    // Intermediate line: quadratic slack penalty promotes uniform margins
-                    lineCost = slack * slack;
+                    // Intermediate line: quadratic deviation relative to desiredW
+                    if (deltaDesired <= 0) {
+                        lineCost = deltaDesired * deltaDesired;
+                    } else {
+                        // Beyond desiredW up to maxW: progressive soft pressure
+                        lineCost = deltaDesired * deltaDesired * 1.6;
+                    }
                 }
 
                 var totalCost = lineCost + cost[j + 1];
@@ -573,8 +580,10 @@
 
     /**
      * Method 2: Greedy First-Fit (Polished Standard with Micro-Typographic Guardrails)
+     * Fits up to desiredW and allows overflow only up to maxW when optimal.
      */
-    function wrapGreedy(paraText, maxW, lang, useHyphen, minWordLen, measurer, spaceW) {
+    function wrapGreedy(paraText, maxW, desiredW, lang, useHyphen, minWordLen, measurer, spaceW) {
+        if (!desiredW || desiredW >= maxW) desiredW = Math.max(50, maxW - 20);
         var tokens = tokenizeParagraph(paraText, lang, useHyphen, minWordLen, measurer);
         if (tokens.length === 0) return [""];
 
@@ -586,11 +595,23 @@
             var tok = tokens[i];
             var addW = (curTokens.length === 0) ? tok.width : (spaceW + tok.width);
 
-            if (curWidth + addW <= maxW) {
+            if (curWidth + addW <= desiredW) {
                 curTokens.push(tok.text);
                 curWidth += addW;
+            } else if (curWidth + addW <= maxW) {
+                // If adding token brings line closer to desiredW than breaking, or if line is very short
+                var distBefore = Math.abs(desiredW - curWidth);
+                var distAfter = Math.abs((curWidth + addW) - desiredW);
+                if (distAfter <= distBefore || curTokens.length === 0 || curWidth < desiredW * 0.45) {
+                    curTokens.push(tok.text);
+                    curWidth += addW;
+                } else {
+                    lines.push(curTokens.join(" "));
+                    curTokens = [tok.text];
+                    curWidth = tok.width;
+                }
             } else {
-                // If token exceeds line, attempt hyphenation if enabled
+                // If token exceeds maxW, attempt hyphenation if enabled
                 var hyphenated = false;
                 if (useHyphen && tok.syllables && tok.syllables.length > 1) {
                     var s1 = tok.syllables[0];
@@ -644,19 +665,21 @@
     /**
      * Method 3: Optical Pyramid (Centered Stanza Card - Lines Expand Symmetrically)
      */
-    function wrapOpticalPyramid(paraText, maxW, lang, useHyphen, minWordLen, measurer, spaceW) {
+    function wrapOpticalPyramid(paraText, maxW, desiredW, lang, useHyphen, minWordLen, measurer, spaceW) {
+        if (!desiredW || desiredW >= maxW) desiredW = Math.max(50, maxW - 20);
         var words = paraText.match(/\S+/g) || [];
         if (words.length === 0) return [""];
         if (words.length <= 3) return [words.join(" ")];
 
-        // Target 3 to 4 graded steps
+        // Target 3 to 4 graded steps up to desiredW (capped by maxW)
         var stepCount = Math.min(5, Math.max(2, Math.ceil(words.length / 4)));
         var lines = [];
         var wordIdx = 0;
 
         for (var step = 1; step <= stepCount; step++) {
             var stepFraction = step / stepCount;
-            var stepMax = Math.max(maxW * 0.40, maxW * stepFraction);
+            var stepTarget = Math.max(desiredW * 0.40, desiredW * stepFraction);
+            var stepMax = Math.min(maxW, stepTarget);
             var lineWords = [];
             var lineW = 0;
 
@@ -695,7 +718,8 @@
     /**
      * Method 4: Reverse Pyramid (Headline / Lead-In Style - Lines Taper Downwards)
      */
-    function wrapReversePyramid(paraText, maxW, lang, useHyphen, minWordLen, measurer, spaceW) {
+    function wrapReversePyramid(paraText, maxW, desiredW, lang, useHyphen, minWordLen, measurer, spaceW) {
+        if (!desiredW || desiredW >= maxW) desiredW = Math.max(50, maxW - 20);
         var words = paraText.match(/\S+/g) || [];
         if (words.length === 0) return [""];
         if (words.length <= 3) return [words.join(" ")];
@@ -706,7 +730,8 @@
 
         for (var step = 0; step < stepCount; step++) {
             var taperRatio = 1.0 - (step * (0.55 / stepCount));
-            var stepMax = Math.max(maxW * 0.35, maxW * taperRatio);
+            var stepTarget = Math.max(desiredW * 0.35, desiredW * taperRatio);
+            var stepMax = Math.min(maxW, stepTarget);
             var lineWords = [];
             var lineW = 0;
 
@@ -731,11 +756,11 @@
         }
 
         if (wordIdx < words.length) {
-            var remaining = [];
+            var remaining2 = [];
             while (wordIdx < words.length) {
-                remaining.push(words[wordIdx++]);
+                remaining2.push(words[wordIdx++]);
             }
-            lines.push(remaining.join(" "));
+            lines.push(remaining2.join(" "));
         }
 
         return lines;
@@ -744,9 +769,8 @@
     /**
      * Method 5: Compact Block (Tightly Pack Lines up to Max Width)
      */
-    function wrapCompactBlock(paraText, maxW, lang, useHyphen, minWordLen, measurer, spaceW) {
-        // Greedy fit without relaxing last line width
-        return wrapGreedy(paraText, maxW, lang, useHyphen, minWordLen, measurer, spaceW);
+    function wrapCompactBlock(paraText, maxW, desiredW, lang, useHyphen, minWordLen, measurer, spaceW) {
+        return wrapGreedy(paraText, maxW, desiredW, lang, useHyphen, minWordLen, measurer, spaceW);
     }
 
     // -------------------------------------------------------------------------
@@ -893,6 +917,8 @@
         var measurer = createTextMeasurer(comp, textLayer, doc);
         var spaceW = measurer.measureAdvance(" ");
         var maxW = options.maxWidth || 600;
+        var desiredW = options.desiredWidth || Math.max(50, maxW - 100);
+        if (desiredW >= maxW) desiredW = Math.max(50, maxW - 20);
 
         try {
             // 3. Apply semantic & micro-typographic bindings (prepositions, numbers, widows)
@@ -917,20 +943,20 @@
                 var paraLines = [];
                 switch (options.method) {
                     case "balanced":
-                        paraLines = wrapBalanced(pText, maxW, options.language, options.useHyphen, options.minWordLen, measurer, spaceW);
+                        paraLines = wrapBalanced(pText, maxW, desiredW, options.language, options.useHyphen, options.minWordLen, measurer, spaceW);
                         break;
                     case "pyramid":
-                        paraLines = wrapOpticalPyramid(pText, maxW, options.language, options.useHyphen, options.minWordLen, measurer, spaceW);
+                        paraLines = wrapOpticalPyramid(pText, maxW, desiredW, options.language, options.useHyphen, options.minWordLen, measurer, spaceW);
                         break;
                     case "reverse_pyramid":
-                        paraLines = wrapReversePyramid(pText, maxW, options.language, options.useHyphen, options.minWordLen, measurer, spaceW);
+                        paraLines = wrapReversePyramid(pText, maxW, desiredW, options.language, options.useHyphen, options.minWordLen, measurer, spaceW);
                         break;
                     case "compact":
-                        paraLines = wrapCompactBlock(pText, maxW, options.language, options.useHyphen, options.minWordLen, measurer, spaceW);
+                        paraLines = wrapCompactBlock(pText, maxW, desiredW, options.language, options.useHyphen, options.minWordLen, measurer, spaceW);
                         break;
                     case "greedy":
                     default:
-                        paraLines = wrapGreedy(pText, maxW, options.language, options.useHyphen, options.minWordLen, measurer, spaceW);
+                        paraLines = wrapGreedy(pText, maxW, desiredW, options.language, options.useHyphen, options.minWordLen, measurer, spaceW);
                         break;
                 }
 
@@ -1015,39 +1041,105 @@
         var btnRefresh = pnlTarget.add("button", undefined, "Refresh");
         btnRefresh.preferredSize = [65, 24];
 
-        // --- Max Width Constraint Panel ---
-        var pnlWidth = win.add("panel", undefined, "Max Text Width Constraint");
+        // --- Width Constraints Panel ---
+        var pnlWidth = win.add("panel", undefined, "Width Constraints (px)");
         pnlWidth.orientation = "column";
         pnlWidth.alignChildren = ["fill", "top"];
         pnlWidth.spacing = 6;
         pnlWidth.margins = 8;
 
-        var grpWidthRow = pnlWidth.add("group");
-        grpWidthRow.orientation = "row";
-        grpWidthRow.alignChildren = ["fill", "center"];
-        grpWidthRow.spacing = 6;
+        // 1. Max Text Width Constraint (Ceiling)
+        var grpMaxWidthRow = pnlWidth.add("group");
+        grpMaxWidthRow.orientation = "row";
+        grpMaxWidthRow.alignChildren = ["fill", "center"];
+        grpMaxWidthRow.spacing = 6;
 
-        var sldWidth = grpWidthRow.add("slider", undefined, 600, 100, 1920);
-        sldWidth.alignment = ["fill", "center"];
+        var lblMaxWidth = grpMaxWidthRow.add("statictext", undefined, "Max Width (Ceiling):");
+        lblMaxWidth.preferredSize = [130, -1];
 
-        var txtWidth = grpWidthRow.add("edittext", undefined, "600");
-        txtWidth.preferredSize = [55, 22];
+        var sldMaxWidth = grpMaxWidthRow.add("slider", undefined, 600, 100, 1920);
+        sldMaxWidth.alignment = ["fill", "center"];
 
-        var lblPx = grpWidthRow.add("statictext", undefined, "px");
-        lblPx.preferredSize = [20, -1];
+        var txtMaxWidth = grpMaxWidthRow.add("edittext", undefined, "600");
+        txtMaxWidth.preferredSize = [50, 22];
 
-        sldWidth.onChanging = function () {
-            txtWidth.text = String(Math.round(sldWidth.value));
+        var lblPx1 = grpMaxWidthRow.add("statictext", undefined, "px");
+        lblPx1.preferredSize = [18, -1];
+
+        // 2. Desired Approx Width (Target - Always strictly smaller than Max Width)
+        var grpDesiredWidthRow = pnlWidth.add("group");
+        grpDesiredWidthRow.orientation = "row";
+        grpDesiredWidthRow.alignChildren = ["fill", "center"];
+        grpDesiredWidthRow.spacing = 6;
+
+        var lblDesiredWidth = grpDesiredWidthRow.add("statictext", undefined, "Desired Approx Width:");
+        lblDesiredWidth.preferredSize = [130, -1];
+
+        var sldDesiredWidth = grpDesiredWidthRow.add("slider", undefined, 500, 60, 1900);
+        sldDesiredWidth.alignment = ["fill", "center"];
+
+        var txtDesiredWidth = grpDesiredWidthRow.add("edittext", undefined, "500");
+        txtDesiredWidth.preferredSize = [50, 22];
+
+        var lblPx2 = grpDesiredWidthRow.add("statictext", undefined, "px");
+        lblPx2.preferredSize = [18, -1];
+
+        // Two-way synchronization enforcing: desired approx width is ALWAYS strictly smaller than max width
+        function syncWidthConstraints(source) {
+            var maxV = Math.round(sldMaxWidth.value);
+            var desV = Math.round(sldDesiredWidth.value);
+
+            // Desired width must always be smaller than max width (buffer of at least 20px)
+            if (desV >= maxV) {
+                desV = Math.max(50, maxV - 20);
+                sldDesiredWidth.value = desV;
+            }
+
+            txtMaxWidth.text = String(maxV);
+            txtDesiredWidth.text = String(desV);
+        }
+
+        sldMaxWidth.onChanging = function () {
+            var maxV = Math.round(sldMaxWidth.value);
+            txtMaxWidth.text = String(maxV);
+            var desV = Math.round(sldDesiredWidth.value);
+            if (desV >= maxV) {
+                desV = Math.max(50, maxV - 20);
+                sldDesiredWidth.value = desV;
+                txtDesiredWidth.text = String(desV);
+            }
         };
-        sldWidth.onChange = function () {
-            txtWidth.text = String(Math.round(sldWidth.value));
+        sldMaxWidth.onChange = function () {
+            syncWidthConstraints("max");
         };
-        txtWidth.onChange = function () {
-            var val = parseInt(txtWidth.text, 10);
+        txtMaxWidth.onChange = function () {
+            var val = parseInt(txtMaxWidth.text, 10);
             if (!isNaN(val)) {
                 val = Math.max(100, Math.min(1920, val));
-                sldWidth.value = val;
-                txtWidth.text = String(val);
+                sldMaxWidth.value = val;
+                syncWidthConstraints("max");
+            }
+        };
+
+        sldDesiredWidth.onChanging = function () {
+            var maxV = Math.round(sldMaxWidth.value);
+            var desV = Math.round(sldDesiredWidth.value);
+            if (desV >= maxV) {
+                desV = Math.max(50, maxV - 20);
+                sldDesiredWidth.value = desV;
+            }
+            txtDesiredWidth.text = String(desV);
+        };
+        sldDesiredWidth.onChange = function () {
+            syncWidthConstraints("desired");
+        };
+        txtDesiredWidth.onChange = function () {
+            var val = parseInt(txtDesiredWidth.text, 10);
+            if (!isNaN(val)) {
+                var maxV = Math.round(sldMaxWidth.value);
+                val = Math.max(50, Math.min(maxV - 20, val));
+                sldDesiredWidth.value = val;
+                txtDesiredWidth.text = String(val);
             }
         };
 
@@ -1218,7 +1310,8 @@
             var langKeys = ["english", "spanish", "french", "german", "italian", "universal"];
 
             var opts = {
-                maxWidth: parseInt(txtWidth.text, 10) || 600,
+                maxWidth: parseInt(txtMaxWidth.text, 10) || 600,
+                desiredWidth: parseInt(txtDesiredWidth.text, 10) || 500,
                 method: methodKeys[ddMethod.selection ? ddMethod.selection.index : 0] || "balanced",
                 language: langKeys[ddLanguage.selection ? ddLanguage.selection.index : 0] || "english",
                 useHyphen: chkHyphen.value,

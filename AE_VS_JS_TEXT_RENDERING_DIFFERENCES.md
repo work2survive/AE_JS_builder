@@ -1270,32 +1270,37 @@ BALANCED PARAGRAPH COMPOSITION (Knuth-Plass / InDesign Style)
 
 ---
 
-### 22.2 Knuth-Plass Dynamic Line Breaking & Aesthetic Penalty Functions
+### 22.2 Knuth-Plass Dynamic Line Breaking & Dual-Constraint Optimization
 
 To generate visually harmonious paragraphs, `AE_Advanced_Text_Wrap.jsx` implements an algorithmic paragraph composer inspired by Donald Knuth and Michael Plass's line-breaking algorithm (used in $\text{\TeX}$ and Adobe InDesign's Paragraph Composer).
 
-For a paragraph consisting of tokens $T_1, T_2, \dots, T_n$ with target maximum width $W_{\text{max}}$:
+Rather than enforcing a single rigid boundary, the composer introduces **Dual Constraints**:
+- **Desired Approx Width ($W_{\text{target}}$)**: The aesthetic ideal line length around which the lines harmonize.
+- **Max Width Ceiling ($W_{\text{max}}$)**: The strict physical boundary limit ($W_{\text{target}} < W_{\text{max}}$).
 
-1. **Line Slack ($\Delta_k$)**:
-   $$\Delta_k = W_{\text{max}} - \text{Width}(\text{Line}_k)$$
+For a paragraph consisting of tokens $T_1, T_2, \dots, T_n$:
+
+1. **Line Slack ($\Delta_k$) Relative to Desired Target ($W_{\text{target}}$)**:
+   $$\Delta_k = W_{\text{target}} - \text{Width}(\text{Line}_k)$$
 
 2. **Penalty Function ($P_{\text{line}}$)**:
    $$P_{\text{line}} = \begin{cases}
-   \infty & \text{if } \text{Width} > W_{\text{max}} \\
-   \Delta_k^2 + P_{\text{hyphen}} + P_{\text{ladder}} & \text{if } k < M \text{ (intermediate line)} \\
+   \infty & \text{if } \text{Width} > W_{\text{max}} \text{ (hard ceiling overflow)} \\
+   \Delta_k^2 + P_{\text{hyphen}} + P_{\text{ladder}} & \text{if } k < M \text{ and } \Delta_k \ge 0 \\
+   1.6 \cdot \Delta_k^2 + P_{\text{hyphen}} + P_{\text{ladder}} & \text{if } k < M \text{ and } \text{Width} > W_{\text{target}} \text{ (breathing headroom)} \\
    P_{\text{widow}}(\text{Width}) & \text{if } k = M \text{ (last line of paragraph)}
    \end{cases}$$
 
 3. **Widow Penalty ($P_{\text{widow}}$)**:
    $$P_{\text{widow}} = \begin{cases}
-   50000 & \text{if } \text{Width}_M < 0.25 \times W_{\text{max}} \text{ or single word} \\
-   0 & \text{if } \text{Width}_M \ge 0.25 \times W_{\text{max}} \text{ (natural ending)}
+   50000 & \text{if } \text{Width}_M < 0.25 \times W_{\text{target}} \text{ or single word} \\
+   0 & \text{if } \text{Width}_M \ge 0.25 \times W_{\text{target}} \text{ (natural ending)}
    \end{cases}$$
 
 4. **Dynamic Programming Recurrence**:
    Let $C[i]$ be the minimum penalty to wrap tokens from index $i$ to the end of the paragraph $n$:
    $$C[i] = \min_{i < j \le n} \left( P_{\text{line}}(T_i \dots T_{j-1}) + C[j] \right)$$
-   This evaluates the global paragraph in $O(n^2)$ time (typically under 3 milliseconds in ExtendScript for paragraphs under 200 words), yielding mathematically optimal line balance.
+   This evaluates the global paragraph in $O(n^2)$ time (typically under 3 milliseconds in ExtendScript for paragraphs under 200 words), yielding mathematically optimal line balance. Allowing lines to expand gracefully beyond $W_{\text{target}}$ up to $W_{\text{max}}$ eliminates awkward forced breaks while strictly guaranteeing containment within your design layout.
 
 ---
 
