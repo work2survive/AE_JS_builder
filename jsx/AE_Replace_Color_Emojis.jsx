@@ -333,7 +333,8 @@
         return sl;
     }
 
-    function addEmojiVectorGroup(masterContents, shapes, posX, posY, fontSize) {
+    function addEmojiVectorGroup(masterContents, shapes, posX, posY, fontSize, sizeMultiplier) {
+        var mult = (typeof sizeMultiplier === "number" ? sizeMultiplier : 130) / 100.0;
         var emoGrp = masterContents.addProperty("ADBE Vector Group");
         var emoContents = emoGrp.property("ADBE Vectors Group") || emoGrp.property("Contents") || emoGrp;
 
@@ -357,7 +358,7 @@
 
             var pScale = tr.property("ADBE Vector Scale") || tr.property("Scale");
             if (pScale && pScale.setValue) {
-                var scalePct = ((fontSize / 72.0) * 100);
+                var scalePct = ((fontSize * mult / 72.0) * 100);
                 pScale.setValue([scalePct, scalePct]);
                 try {
                     pScale.expression = [
@@ -532,12 +533,14 @@
         shapeLayer.transform.position.setValue([-origAP[0], -origAP[1], 0]);
         shapeLayer.transform.scale.setValue([100, 100, 100]);
 
+        var effMultiplier = (typeof options.sizeMultiplier === "number" ? options.sizeMultiplier : 130);
+
         // Attach effect sliders
         var fx = shapeLayer.property("ADBE Effect Parade") || shapeLayer.property("Effects");
         if (fx) {
             ensureSlider(fx, "Emoji Source (1=OM,2=TW,3=Flat,4=Blk)", (options.sourceId === "twemoji_color" ? 2 : 1));
             ensureSlider(fx, "Emoji Size (px)", props.fontSize);
-            ensureSlider(fx, "Emoji Size Multiplier %", (typeof options.sizeMultiplier === "number" ? options.sizeMultiplier : 100));
+            ensureSlider(fx, "Emoji Size Multiplier %", effMultiplier);
             ensureSlider(fx, "Outline Width %", 100);
             var chk = fx.addProperty("ADBE Checkbox Control");
             chk.name = "Show Outlines";
@@ -551,7 +554,7 @@
         for (var mi = 0; mi < matchedEmojis.length; mi++) {
             var item = matchedEmojis[mi];
             var shapes = getShapesForEmoji(item.hexcode, options.sourceId);
-            var grp = addEmojiVectorGroup(masterContents, shapes, item.posX, item.posY, props.fontSize);
+            var grp = addEmojiVectorGroup(masterContents, shapes, item.posX, item.posY, props.fontSize, effMultiplier);
             grp.name = "Emoji " + item.char + " [U+" + item.hexcode + "]";
         }
 
@@ -707,7 +710,7 @@
             if (!textLayer) { alert("Please select a text layer containing emojis."); return; }
 
             var styleId = (ddStyle.selection && ddStyle.selection.index === 1) ? "twemoji_color" : "openmoji_color";
-            var res = replaceEmojisInLayer(comp, textLayer, { sourceId: styleId, sizeMultiplier: 100, offsetX: 0, offsetY: 0 });
+            var res = replaceEmojisInLayer(comp, textLayer, { sourceId: styleId, sizeMultiplier: 130, offsetX: 0, offsetY: 0 });
 
             if (!res || res.emojiCount === 0) {
                 alert("No emojis detected in text layer '" + textLayer.name + "'.");
