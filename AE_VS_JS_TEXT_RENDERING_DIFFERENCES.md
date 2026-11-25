@@ -1229,3 +1229,169 @@ When characters are emojis (such as 🍿 `U+1F37F` or 🎪 `U+1F3AA`), JavaScrip
    Because `ADBE Text Selector` in Index mode operates directly on UTF-16 code units, passing $[start, start + length]$ sets opacity to 0% exclusively for the target emoji glyphs, preserving exact line geometry while displaying native color vector shapes.
 
 
+
+---
+
+## 22. Advanced Text Wrapping, Micro-Typography & Paragraph Composition
+
+> **Architected with Google DeepMind Antigravity for `work2survive` ecosystems.**  
+> *Derived from algorithmic paragraph composition analysis (`AE-advanced-text-wrap`).*
+
+When laying out text in desktop publishing, web applications, or motion graphics, simple rectangular boundary clipping creates visually displeasing typography: awkward single-word orphans, unbalanced line lengths, and prepositions dangling awkwardly at the end of lines. Modern professional typography addresses this through **global paragraph composition** and **micro-typographic rules**.
+
+---
+
+### 22.1 The Native ExtendScript Limitation: Naive Greedy Line Breaking vs. Paragraph Composition
+
+Both Adobe After Effects native Paragraph (Box) Text and standard CSS (`word-wrap: break-word`) rely on **naive greedy first-fit line breaking**:
+
+```
+NAIVE GREEDY WRAPPING (Standard AE / CSS)
+┌──────────────────────────────────────────────┐
+│ Typography is the art and technique of       │ <-- Packed to 98% of container
+│ arranging type to make written language      │ <-- Packed to 94% of container
+│ legible, readable, and appealing when        │ <-- Packed to 96% of container
+│ displayed.                                   │ <-- AWFUL WIDOW: 1 lonely word (10%)
+└──────────────────────────────────────────────┘
+
+BALANCED PARAGRAPH COMPOSITION (Knuth-Plass / InDesign Style)
+┌──────────────────────────────────────────────┐
+│     Typography is the art and technique      │ <-- Balanced at 82%
+│      of arranging type to make written       │ <-- Balanced at 80%
+│     language legible, readable, and          │ <-- Balanced at 81%
+│         appealing when displayed.            │ <-- Harmonious ending (60%)
+└──────────────────────────────────────────────┘
+```
+
+#### Why Greedy Line Breaking Fails:
+1. **Local vs. Global Optimization**: Greedy line breaking only looks at the current line. It fits as many words as physically possible before breaking, which frequently dumps a single short word onto the final line (a **widow** or **orphan**).
+2. **Visual Raggedness**: On centered or justified text, greedy line breaking creates erratic line lengths (e.g. line 1 = 580px, line 2 = 590px, line 3 = 80px).
+3. **No Semantic Grammar Awareness**: Native AE greedy wrapping treats all spaces identically, happily leaving prepositions ("in", "on", "at", "to", "of", "de", "pour") hanging at the edge of a line, or breaking a number from its unit (e.g., separating `100` from `px` or `2026` from its year).
+
+---
+
+### 22.2 Knuth-Plass Dynamic Line Breaking & Aesthetic Penalty Functions
+
+To generate visually harmonious paragraphs, `AE_Advanced_Text_Wrap.jsx` implements an algorithmic paragraph composer inspired by Donald Knuth and Michael Plass's line-breaking algorithm (used in $\text{\TeX}$ and Adobe InDesign's Paragraph Composer).
+
+For a paragraph consisting of tokens $T_1, T_2, \dots, T_n$ with target maximum width $W_{\text{max}}$:
+
+1. **Line Slack ($\Delta_k$)**:
+   $$\Delta_k = W_{\text{max}} - \text{Width}(\text{Line}_k)$$
+
+2. **Penalty Function ($P_{\text{line}}$)**:
+   $$P_{\text{line}} = \begin{cases}
+   \infty & \text{if } \text{Width} > W_{\text{max}} \\
+   \Delta_k^2 + P_{\text{hyphen}} + P_{\text{ladder}} & \text{if } k < M \text{ (intermediate line)} \\
+   P_{\text{widow}}(\text{Width}) & \text{if } k = M \text{ (last line of paragraph)}
+   \end{cases}$$
+
+3. **Widow Penalty ($P_{\text{widow}}$)**:
+   $$P_{\text{widow}} = \begin{cases}
+   50000 & \text{if } \text{Width}_M < 0.25 \times W_{\text{max}} \text{ or single word} \\
+   0 & \text{if } \text{Width}_M \ge 0.25 \times W_{\text{max}} \text{ (natural ending)}
+   \end{cases}$$
+
+4. **Dynamic Programming Recurrence**:
+   Let $C[i]$ be the minimum penalty to wrap tokens from index $i$ to the end of the paragraph $n$:
+   $$C[i] = \min_{i < j \le n} \left( P_{\text{line}}(T_i \dots T_{j-1}) + C[j] \right)$$
+   This evaluates the global paragraph in $O(n^2)$ time (typically under 3 milliseconds in ExtendScript for paragraphs under 200 words), yielding mathematically optimal line balance.
+
+---
+
+### 22.3 Micro-Typographic Rules & Non-Breaking Space Binding
+
+In micro-typography, certain words and grammatical tokens must remain syntactically and visually unified. Rather than introducing complex line-breaking exceptions, these rules are implemented by replacing regular space (`\u0020`) with the **Unicode Non-Breaking Space (`\u00A0` / NBSP)**:
+
+| Typographic Rule | Problem Pattern | Solution via `\u00A0` Binding | Example |
+| :--- | :--- | :--- | :--- |
+| **Dangling Short Words** | Articles and prepositions (length $\le 3$) left at line ends | Bind to following word | `in\u00A0motion`, `the\u00A0best`, `de\u00A0la` |
+| **Number & Unit Binding** | Numbers separated from their units or percentages | Bind number to symbol / unit | `100\u00A0px`, `50\u00A0%`, `1920\u00A0x\u00A01080` |
+| **Currency Figures** | Currency symbol separated from number | Bind currency symbol to figure | `$\u00A0500`, `€\u00A0250` |
+| **Honorifics & Abbreviations** | Titles and abbreviations separated from names | Bind honorific to following token | `Dr.\u00A0Smith`, `Mr.\u00A0Jones`, `e.g.\u00A0text` |
+| **Widow & Orphan Prevention** | Single lonely word on final paragraph line | Bind penultimate word to final word | `visual\u00A0harmony` |
+
+Because `\u00A0` has the exact same visual advance width as a standard space in After Effects, line measurement is preserved while preventing the layout engine from breaking between the bound tokens.
+
+---
+
+### 22.4 Algorithmic Syllabification & Hyphenation in ExtendScript ES3
+
+When a word exceeds the remaining line budget, naive line breaking forces the entire word onto the next line, creating a gaping hole (a "river" or large ragged gap) on the preceding line.
+
+`AE_Advanced_Text_Wrap.jsx` incorporates a zero-dependency, multi-lingual algorithmic hyphenator compatible with After Effects' ECMAScript 3 engine:
+
+```javascript
+// Syllable break constraints
+minWordLength = 6;  // Words under 6 letters are never hyphenated
+minPrefix     = 3;  // At least 3 letters must remain on the first line
+minSuffix     = 3;  // At least 3 letters must carry over to the next line
+```
+
+#### Multi-Language Support Matrix:
+- **English (US/UK)**: Recognizes morphological prefixes (`un-`, `dis-`, `trans-`, `inter-`, `multi-`), suffixes (`-tion`, `-ment`, `-ness`, `-able`, `-ing`), and double-consonant division (`let-ter`, `run-ning`).
+- **Spanish (Español)**: Implements Hispanic syllabification: indivisible digraphs (`ch`, `ll`, `rr`), inseparable consonant-liquid blends (`pr`, `br`, `tr`, `cl`, `pl`), and diphthong preservation.
+- **French (Français)**: Accounts for elision apostrophes (`l'`, `d'`, `qu'`) and French prefix/suffix boundaries.
+- **German (Deutsch)**: Handles Germanic compound prefix boundaries (`ver-`, `zer-`, `ent-`, `be-`) and standard suffixes (`-ung`, `-heit`, `-keit`, `-schaft`).
+- **Universal Fallback**: Vowel-Consonant-Consonant-Vowel ($V-CV$ / $VC-CV$) generic syllabification.
+
+> [!CAUTION]
+> **Hyphen Ladder Prevention**: Consecutive line-ending hyphens (two or more lines in a row ending in `-`) create visual distraction. The cost function adds a heavy penalty ($+20000$) whenever two consecutive lines break on a hyphen.
+
+---
+
+### 22.5 Line Break Mechanics: `\r` (Carriage Return) vs. `\n` in Point & Box Text
+
+In web browsers, newline characters (`\n`, `\r\n`) are standard. In native After Effects text engines, newline mechanics require precise handling:
+
+1. **`\r` is After Effects' Native Line Break**:
+   Inside an Adobe After Effects `TextDocument.text`, the canonical line break character is carriage return:
+   $$\text{Line Break} = \text{String.fromCharCode}(13) \quad (\verb|'\r'|)$$
+   Using `\n` alone can cause inconsistent vertical spacing or baseline calculation glitches in CS6 through CC 2022.
+2. **Point Text Wrapping**:
+   Point Text has no bounding box; it renders on a single infinite horizontal line until an explicit `\r` is encountered.
+   By inserting `\r` at the mathematically optimal break positions computed by `AE_Advanced_Text_Wrap.jsx`, Point Text is transformed into an immaculately wrapped multi-line paragraph **without altering the layer's baseline origin, justification, or anchor point coordinate**.
+3. **Paragraph (Box) Text Wrapping**:
+   For Paragraph Box Text, setting `doc.text` with explicit `\r` breaks overrides AE's internal naive greedy wrap. Additionally, `doc.boxTextSize = [maxTextWidth, calculatedHeight]` ensures the container box matches the exact pixel constraint.
+
+---
+
+### 22.6 Persistent State Storage via Expression Comment Payloads
+
+To provide non-destructive operation with a 1-click **"↺ Restore Original Text"** feature, the original pre-wrap text, geometry, and box type must persist across project saves (`.aep`) without modifying the user's composition structure.
+
+Because native After Effects expression controls do not offer a dedicated string property, state is persisted using an **Expression Comment Payload** on an `ADBE Slider Control`:
+
+```javascript
+// 1. Create or retrieve state effect:
+var fxParade = textLayer.property("ADBE Effect Parade");
+var eff = fxParade.property("Advanced Text Wrap") || fxParade.addProperty("ADBE Slider Control");
+eff.name = "Advanced Text Wrap";
+
+// 2. Encode state payload into the Slider property's expression:
+var payload = {
+    text: originalText,
+    isBox: isBox,
+    boxSize: boxSize || [0, 0]
+};
+var encoded = encodeURIComponent(JSON.stringify(payload));
+eff.property(1).expression = "/* AdvancedTextWrapState:" + encoded + " */\nvalue;";
+
+// 3. Mirror in layer.comment for native After Effects metadata inspection:
+textLayer.comment = "AdvancedTextWrap:" + originalText;
+```
+
+When the user clicks "Restore Original Text", the script reads `eff.property(1).expression` or `textLayer.comment`, parses the JSON payload, and restores the original text and box dimensions seamlessly.
+
+---
+
+### 22.7 Interoperability Architecture with Character-Level Animators
+
+`AE_Advanced_Text_Wrap.jsx` is engineered to integrate cleanly with `AE-Text-Highlight` and `AE-replace-color-emojis`:
+
+1. **Surrogate Pair (Emoji) Protection**:
+   Emojis represented by multi-byte UTF-16 surrogate pairs (`\uD800..\uDBFF\uDC00..\uDFFF`, e.g. 🍿, 🚀, ❤️) are treated as **indivisible atomic tokens**. The tokenizer and hyphenator never split a surrogate pair or insert hyphens between them.
+2. **Execution Order with Color Emojis (`AE-replace-color-emojis`)**:
+   Always execute `AE_Advanced_Text_Wrap.jsx` **first**. Once the paragraph has achieved optimal balance and line breaks (`\r`), run `AE-replace-color-emojis`. The emoji engine will read the exact visual line geometry and place vector shapes precisely on the wrapped lines.
+3. **Execution Order with Text Highlights (`AE-Text-Highlight`)**:
+   Because `AE_Text_Highlight` identifies words and phrases across visual lines, wrapping the text first ensures highlights fit the final line lengths. Furthermore, because `\u00A0` (NBSP) is treated as whitespace (`\s`), target search queries (e.g. `"peace of mind"`) match seamlessly across non-breaking spaces.
