@@ -23,6 +23,7 @@
 //      - Configurable minimum word length, minimum prefix, and minimum suffix.
 //      - Prevents hyphen ladders (consecutive line-ending hyphens).
 //   4. Micro-Typographic Rules & Semantic Unit Binding:
+//      - Option to remove existing text breaks (\r, \n) before wrapping (Default: ON).
 //      - Non-breaking spaces (U+00A0) prevent dangling short words / prepositions.
 //      - Binds numbers and following units/symbols (e.g., "100 px", "50 %", "25 kg").
 //      - Binds honorifics and abbreviations (e.g., "Dr. Smith", "e.g. typography").
@@ -61,7 +62,7 @@
     "use strict";
 
     var SCRIPT_TITLE   = "AE Advanced Text Wrap";
-    var SCRIPT_VERSION = "v1.3.1";
+    var SCRIPT_VERSION = "v1.4.0";
     var GITHUB_URL     = "https://github.com/work2survive/AE-advanced-text-wrap";
     var README_URL     = "https://github.com/work2survive/AE-advanced-text-wrap/blob/main/README.md";
 
@@ -96,6 +97,15 @@
     function trimEnd(str) {
         if (!str) return "";
         return String(str).replace(/[\s\uFEFF\xA0]+$/g, "");
+    }
+
+    /**
+     * Strips existing manual line breaks and carriage returns (\r, \n, \u2028, \u2029),
+     * collapsing adjoining whitespace into a single clean space.
+     */
+    function stripExistingLineBreaks(str) {
+        if (!str) return "";
+        return String(str).replace(/[ \t]*[\r\n\u2028\u2029]+[ \t]*/g, " ");
     }
 
     function arrayIndexOf(arr, val) {
@@ -1603,15 +1613,21 @@
         if (desiredW >= maxW) desiredW = Math.max(50, maxW - 20);
 
         try {
+            var removeBreaks = (options.removeExistingBreaks !== undefined) ? Boolean(options.removeExistingBreaks) : true;
+            var textToWrap = rawTextToWrap;
+            if (removeBreaks) {
+                textToWrap = stripExistingLineBreaks(textToWrap);
+            }
+
             // 3. Apply semantic & micro-typographic bindings (prepositions, numbers, widows)
-            var preprocessed = applySemanticBindings(rawTextToWrap, options.language, {
+            var preprocessed = applySemanticBindings(textToWrap, options.language, {
                 bindNumbers: options.bindNumbers,
                 bindHonorifics: options.bindHonorifics,
                 avoidDanglingShort: options.avoidDanglingShort,
                 preventWidows: options.preventWidows
             });
 
-            // 4. Split by manual line breaks / paragraphs (preserving intentional breaks)
+            // 4. Split by manual line breaks / paragraphs (preserving intentional breaks if not stripped)
             var rawParagraphs = preprocessed.split(/\r\n|\r|\n/);
             var finalWrappedLines = [];
 
@@ -1881,6 +1897,9 @@
         var chkHyphen = pnlMethod.add("checkbox", undefined, "Enable Multilingual Hyphenation (-)");
         chkHyphen.value = true;
 
+        var chkRemoveBreaks = pnlMethod.add("checkbox", undefined, "Remove Existing Line Breaks Before Wrapping");
+        chkRemoveBreaks.value = true;
+
         // --- Micro-Typographic Options Panel ---
         var pnlMicro = win.add("panel", undefined, "Micro-Typography & Semantic Units");
         pnlMicro.orientation = "column";
@@ -2088,6 +2107,7 @@
                 method: methodKeys[ddMethod.selection ? ddMethod.selection.index : 0] || "balanced",
                 language: langKeys[ddLanguage.selection ? ddLanguage.selection.index : 0] || "english",
                 useHyphen: chkHyphen.value,
+                removeExistingBreaks: chkRemoveBreaks.value,
                 minWordLen: 6,
                 preventWidows: chkWidows.value,
                 avoidDanglingShort: chkDangling.value,

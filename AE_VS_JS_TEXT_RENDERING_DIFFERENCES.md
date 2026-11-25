@@ -1466,6 +1466,33 @@ When evaluated, the visual reference point on screen satisfies:
 $$\vec{P}_{\text{target}} + \mathbf{R} \cdot (\vec{S} \odot (\vec{R}_{\text{new}} - \vec{A}_{\text{cur}})) \equiv \vec{P}_{\text{base}} + \mathbf{R} \cdot (\vec{S} \odot (\vec{R}_{\text{orig}} - \vec{A}_{\text{base}}))$$
 This guarantees that centered titles expand symmetrically upwards and downwards, remaining centered exactly where the motion designer placed them.
 
+---
+
+### 22.10 Preprocessing & Existing Line Break Removal (Continuous Flow)
+
+In motion graphics pipelines, text content imported from external copy decks, SRT subtitle files, teleprompters, or web clipboards frequently carries hard carriage returns (`\r`), newline characters (`\n`), or unicode separators (`\u2028`, `\u2029`) at arbitrary word boundaries.
+
+If an advanced wrapping algorithm processes pre-broken text naively:
+1. Every hard break forcibly ends the line, preventing the Knuth-Plass or greedy composer from considering words on subsequent lines for optimal hyphenation or paragraph balancing.
+2. Short, awkward lines from the source remain frozen, producing jagged, uneven text blocks.
+3. Micro-typographic rules (such as widow/orphan prevention and preposition binding) fail across hard break boundaries.
+
+#### Normalization Model
+To restore natural paragraph flow while maintaining non-destructive fidelity:
+1. **Pristine Snapshot First**: The engine records the unaltered text (including all original manual line breaks) into the effect expression payload `/* AdvancedTextWrapState:... */`.
+2. **Whitespace and Break Normalization**: When **Remove Existing Line Breaks** is enabled (Default: **ON**):
+   ```javascript
+   function stripExistingLineBreaks(str) {
+       if (!str) return "";
+       return String(str).replace(/[ \t]*[\r\n\u2028\u2029]+[ \t]*/g, " ");
+   }
+   ```
+   Adjoining spaces and tabs around line breaks are collapsed into a single space token (`0x20`), unifying disjointed fragments into a single continuous stream.
+3. **Cohesive Paragraph Shaping**: The Knuth-Plass dynamic programming solver is then free to calculate globally minimal raggedness over the entire text block.
+4. **Non-Destructive Reversibility**: Unchecking the option immediately allows the composer to respect manual line breaks, while clicking **↺ Restore Original Text** restores the exact pre-wrap text with its original manual breaks intact.
+
+---
+
 ## 23. Text Box Precomposition & Coordinate Transformation Architecture (Zero-Shift Affine Model)
 
 Precomposing a text box is a fundamental operation in advanced kinetic typography, subtitle animation, chat bubble generation, and lower-third rendering. However, in Adobe After Effects, nesting a text layer inside a new composition often results in visual displacement (the text "jumps" across the screen) due to discordant coordinate systems, uncompensated layer anchor points, and miscalculated precomp canvas origins.
