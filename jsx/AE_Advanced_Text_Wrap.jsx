@@ -1,6 +1,6 @@
 // Co-authored & architected with Google DeepMind Antigravity.
 // =============================================================================
-// ADOBE AFTER EFFECTS EXTENDSCRIPT & SCRIPTUI PANEL: AE ADVANCED TEXT WRAP v1.2.0
+// ADOBE AFTER EFFECTS EXTENDSCRIPT & SCRIPTUI PANEL: AE ADVANCED TEXT WRAP v1.3.0
 // =============================================================================
 //
 // PURPOSE:
@@ -32,15 +32,20 @@
 //      - Desired Approx Width: Desired visual paragraph width (always < Max Width).
 //   6. Non-Destructive State Storage & Idempotent Re-wrapping:
 //      - Stores pristine original text (preserving manual breaks \r/\n), box dimensions,
-//        layer position, and anchor point inside an "Advanced Text Wrap" Slider Control effect.
+//        layer position, anchor point, and bounding box inside an "Advanced Text Wrap" effect.
 //      - When switching wrap methods or parameters, always reads from original pristine text.
 //      - One-click restoration back to exact original state and coordinates.
-//   7. Anchor Point Auto-Alignment (AE-Align-AnchorPoint Mechanics):
+//   7. Visual Position Matching (Zero-Drift Paragraph Anchoring):
+//      - Visually matches the exact position of the original pre-wrap text once wrapped (Default: ON).
+//      - Three matching reference modes: By Text Justification (Natural Flow), Visual Center
+//        (Symmetric Expansion), or Top Edge (First Line Fixed).
+//      - Guarantees titles, lower-thirds, and centered cards never drop or drift when lines expand.
+//   8. Anchor Point Auto-Alignment (AE-Align-AnchorPoint Mechanics):
 //      - Auto-aligns layer Anchor Point according to text justification (Left -> Left edge,
 //        Center -> Center, Right -> Right edge). Default: ON.
 //      - Choice between Apply Once (zero-shift baked position) or Live Expression (reactive to justification changes).
 //      - Scale, rotation, and 3D orientation-safe position compensation (Zero Content Jump).
-//   8. Universal Compatibility:
+//   9. Universal Compatibility:
 //      - Works identically on Point Text and Paragraph (Box) Text.
 //      - Works across all text alignments (Left, Center, Right, Justified).
 //      - 100% interoperable with AE-Text-Highlight and AE-replace-color-emojis.
@@ -56,7 +61,7 @@
     "use strict";
 
     var SCRIPT_TITLE   = "AE Advanced Text Wrap";
-    var SCRIPT_VERSION = "v1.2.0";
+    var SCRIPT_VERSION = "v1.3.0";
     var GITHUB_URL     = "https://github.com/work2survive/AE-advanced-text-wrap";
     var README_URL     = "https://github.com/work2survive/AE-advanced-text-wrap/blob/main/README.md";
 
@@ -789,11 +794,11 @@
     // -------------------------------------------------------------------------
 
     /**
-     * Stores original pre-wrap text, box dimensions, position, and anchor point
+     * Stores original pre-wrap text, box dimensions, position, anchor point, and bounding box
      * in an effect expression and layer comment.
      * Guarded: will NEVER overwrite an existing stored original state!
      */
-    function storeOriginalState(textLayer, origText, isBox, boxSize, boxPos, origPos, origAP, anchorExpr, posExpr) {
+    function storeOriginalState(textLayer, origText, isBox, boxSize, boxPos, origPos, origAP, anchorExpr, posExpr, origBounds) {
         if (!textLayer) return;
         try {
             // Guard: preserve pristine original state across multiple re-wraps
@@ -821,7 +826,8 @@
                         position: (origPos && origPos.length >= 2) ? [origPos[0], origPos[1], (origPos.length > 2 ? origPos[2] : 0)] : null,
                         anchorPoint: (origAP && origAP.length >= 2) ? [origAP[0], origAP[1], (origAP.length > 2 ? origAP[2] : 0)] : null,
                         anchorExpr: anchorExpr || "",
-                        posExpr: posExpr || ""
+                        posExpr: posExpr || "",
+                        bounds: origBounds ? [origBounds.left, origBounds.top, origBounds.width, origBounds.height] : null
                     };
                     var jsonStr = "";
                     try {
@@ -869,7 +875,8 @@
                                     position: null,
                                     anchorPoint: null,
                                     anchorExpr: "",
-                                    posExpr: ""
+                                    posExpr: "",
+                                    bounds: null
                                 };
                             }
                         }
@@ -887,7 +894,8 @@
                     position: null,
                     anchorPoint: null,
                     anchorExpr: "",
-                    posExpr: ""
+                    posExpr: "",
+                    bounds: null
                 };
             }
         } catch (eRead) {}
@@ -1159,11 +1167,44 @@
                "const targetY = " + exprY + ";\n" +
                "[targetX, targetY" + zPart + "];";
     }
+    /**
+     * Computes the visual reference point for position matching
+     */
+    function computeReferencePoint(bounds, matchRefMode, justification) {
+        if (!bounds) return [0, 0];
+        var rx = bounds.left + bounds.width / 2;
+        var ry = bounds.top + bounds.height / 2;
+
+        if (matchRefMode === "justification") {
+            if (justification === "left") {
+                rx = bounds.left;
+            } else if (justification === "right") {
+                rx = bounds.left + bounds.width;
+            } else {
+                rx = bounds.left + bounds.width / 2;
+            }
+            ry = bounds.top + bounds.height / 2;
+        } else if (matchRefMode === "center") {
+            rx = bounds.left + bounds.width / 2;
+            ry = bounds.top + bounds.height / 2;
+        } else if (matchRefMode === "top") {
+            if (justification === "left") {
+                rx = bounds.left;
+            } else if (justification === "right") {
+                rx = bounds.left + bounds.width;
+            } else {
+                rx = bounds.left + bounds.width / 2;
+            }
+            ry = bounds.top;
+        }
+        return [rx, ry];
+    }
 
     /**
      * Generates scale and rotation safe Position expression matching dynamic anchor shift
+     * and visual position matching
      */
-    function buildDynamicAlignmentPositionExpression(yMode, is3D, baseA) {
+    function buildDynamicAlignmentPositionExpression(yMode, is3D, baseA, matchOriginalPos, matchRefMode, rOrig) {
         var baseAx = (baseA && typeof baseA[0] === "number") ? baseA[0] : 0;
         var baseAy = (baseA && typeof baseA[1] === "number") ? baseA[1] : 0;
         var baseAz = (baseA && typeof baseA[2] === "number") ? baseA[2] : 0;
@@ -1185,6 +1226,21 @@
                           "}\n" +
                           "const targetY = " + exprY + ";\n";
 
+        var matchBlock = "";
+        if (matchOriginalPos && rOrig) {
+            matchBlock = "let origRx = " + rOrig[0] + ";\n" +
+                         "let origRy = " + rOrig[1] + ";\n" +
+                         "let newRx = targetX;\n" +
+                         "let newRy = r.top + r.height / 2;\n" +
+                         (matchRefMode === "top" ? "newRy = r.top;\n" : "") +
+                         (matchRefMode === "center" ? "newRx = r.left + r.width / 2;\n" : "") +
+                         "const dx = ((targetX - origA[0]) - (newRx - origRx)) * s[0];\n" +
+                         "const dy = ((targetY - origA[1]) - (newRy - origRy)) * s[1];\n";
+        } else {
+            matchBlock = "const dx = (targetX - origA[0]) * s[0];\n" +
+                         "const dy = (targetY - origA[1]) * s[1];\n";
+        }
+
         if (is3D) {
             return banner +
                 boundsBlock +
@@ -1194,8 +1250,7 @@
                 "    (transform.scale.length > 2 ? transform.scale[2] : 100) / 100\n" +
                 "];\n" +
                 "let origA = [" + baseAx + ", " + baseAy + ", " + baseAz + "];\n" +
-                "const dx = (targetX - origA[0]) * s[0];\n" +
-                "const dy = (targetY - origA[1]) * s[1];\n" +
+                matchBlock +
                 "const dz = 0;\n" +
                 "function rotX(v, deg) {\n" +
                 "    if (!deg) return v;\n" +
@@ -1236,8 +1291,7 @@
             boundsBlock +
             "const s = [transform.scale[0] / 100, transform.scale[1] / 100];\n" +
             "let origA = [" + baseAx + ", " + baseAy + "];\n" +
-            "const dx = (targetX - origA[0]) * s[0];\n" +
-            "const dy = (targetY - origA[1]) * s[1];\n" +
+            matchBlock +
             "const rot = transform.rotation;\n" +
             "if (rot && Math.abs(rot) > 0.0001) {\n" +
             "    const rad = rot * (Math.PI / 180);\n" +
@@ -1253,7 +1307,7 @@
      * Aligns the layer Anchor Point according to text justification
      * Mode: 'once' (zero-shift baked position) or 'expression' (live reactive expression)
      */
-    function alignTextLayerAnchor(textLayer, alignMode, verticalAlign, baseAnchor) {
+    function alignTextLayerAnchor(textLayer, alignMode, verticalAlign, baseAnchor, matchOriginalPos, matchRefMode, rOrig) {
         if (!textLayer) return false;
         var comp = textLayer.containingComp;
         var curTime = comp ? comp.time : 0;
@@ -1276,7 +1330,7 @@
         if (alignMode === "expression") {
             var baseA = baseAnchor || curA;
             var aExpr = buildDynamicAlignmentAnchorExpression(yMode, is3D);
-            var pExpr = buildDynamicAlignmentPositionExpression(yMode, is3D, baseA);
+            var pExpr = buildDynamicAlignmentPositionExpression(yMode, is3D, baseA, matchOriginalPos, matchRefMode, rOrig);
 
             if (posProp.dimensionsSeparated) {
                 try { posProp.dimensionsSeparated = false; } catch (eDim) {}
@@ -1331,6 +1385,65 @@
         }
     }
 
+    /**
+     * Compensates layer Position so the wrapped text visually matches the original text position
+     */
+    function matchWrappedPosition(textLayer, origBounds, matchRefMode, baseAnchor, basePos, is3D) {
+        if (!textLayer || !origBounds) return false;
+        var transform = textLayer.property("Transform");
+        if (!transform) return false;
+
+        var posProp = transform.property("Position");
+        var apProp = transform.property("Anchor Point");
+        var scaleProp = transform.property("Scale");
+        if (!posProp || !apProp) return false;
+
+        var comp = textLayer.containingComp;
+        var curTime = comp ? comp.time : 0;
+        var curBounds = getLayerSourceRectBounds(textLayer, curTime);
+        var just = detectLayerJustification(textLayer);
+
+        var rOrig = computeReferencePoint(origBounds, matchRefMode, just);
+        var rNew = computeReferencePoint(curBounds, matchRefMode, just);
+
+        var curA = apProp.value;
+        var baseA = baseAnchor || curA;
+        var baseP = basePos || posProp.value;
+        var curScale = scaleProp ? scaleProp.value : [100, 100, 100];
+
+        var sx = (curScale[0] || 100) / 100;
+        var sy = (curScale[1] || 100) / 100;
+        var sz = is3D ? ((curScale.length > 2 ? curScale[2] : 100) / 100) : 1;
+
+        var deltaLocalX = (curA[0] - baseA[0]) - (rNew[0] - rOrig[0]);
+        var deltaLocalY = (curA[1] - baseA[1]) - (rNew[1] - rOrig[1]);
+        var deltaLocalZ = 0;
+
+        var pComp = applyTransformRotation([deltaLocalX * sx, deltaLocalY * sy, deltaLocalZ * sz], textLayer, is3D);
+
+        var targetPosX = baseP[0] + pComp[0];
+        var targetPosY = baseP[1] + pComp[1];
+        var targetPosZ = (baseP.length > 2 ? baseP[2] : 0) + pComp[2];
+
+        try { posProp.expression = ""; } catch (ePE) {}
+
+        if (posProp.dimensionsSeparated) {
+            var xP = transform.property("X Position");
+            var yP = transform.property("Y Position");
+            var zP = is3D ? transform.property("Z Position") : null;
+            if (xP) xP.setValue(targetPosX);
+            if (yP) yP.setValue(targetPosY);
+            if (zP) zP.setValue(targetPosZ);
+        } else {
+            if (is3D) {
+                posProp.setValue([targetPosX, targetPosY, targetPosZ]);
+            } else {
+                posProp.setValue([targetPosX, targetPosY]);
+            }
+        }
+        return true;
+    }
+
     // -------------------------------------------------------------------------
     // 9. Main Text Wrapping Orchestration
     // -------------------------------------------------------------------------
@@ -1346,6 +1459,7 @@
         var transform = textLayer.property("Transform");
         var apProp = transform ? transform.property("Anchor Point") : null;
         var posProp = transform ? transform.property("Position") : null;
+        var is3D = Boolean(textLayer.threeDLayer);
 
         // 1. Retrieve or capture pristine original state
         var existingState = readOriginalState(textLayer);
@@ -1355,6 +1469,7 @@
         var origBoxPos = null;
         var baseAnchor = null;
         var basePos = null;
+        var origBounds = null;
 
         if (existingState && existingState.text) {
             // Re-wrapping from previously wrapped layer: Use pristine original state!
@@ -1364,6 +1479,16 @@
             origBoxPos = existingState.boxPos;
             baseAnchor = existingState.anchorPoint;
             basePos = existingState.position;
+            if (existingState.bounds && existingState.bounds.length >= 4) {
+                origBounds = {
+                    left: existingState.bounds[0],
+                    top: existingState.bounds[1],
+                    width: existingState.bounds[2],
+                    height: existingState.bounds[3]
+                };
+            } else {
+                origBounds = getLayerSourceRectBounds(textLayer, comp.time);
+            }
         } else {
             // First time wrapping: snapshot pristine original state from layer!
             rawTextToWrap = getTextLayerString(textLayer);
@@ -1376,8 +1501,9 @@
             basePos = posProp ? [posProp.value[0], posProp.value[1], (posProp.value.length > 2 ? posProp.value[2] : 0)] : [0, 0, 0];
             var origAnchorExpr = apProp ? (apProp.expression || "") : "";
             var origPosExpr = posProp ? (posProp.expression || "") : "";
+            origBounds = getLayerSourceRectBounds(textLayer, comp.time);
 
-            storeOriginalState(textLayer, rawTextToWrap, isBox, origBoxSize, origBoxPos, basePos, baseAnchor, origAnchorExpr, origPosExpr);
+            storeOriginalState(textLayer, rawTextToWrap, isBox, origBoxSize, origBoxPos, basePos, baseAnchor, origAnchorExpr, origPosExpr, origBounds);
         }
 
         // 2. Initialize accurate measurement engine
@@ -1453,11 +1579,19 @@
             }
 
             // 7. Auto-align Anchor Point if enabled
+            var just = detectLayerJustification(textLayer);
+            var rOrig = computeReferencePoint(origBounds, options.matchRefMode, just);
+
             if (options.autoAlignAnchor) {
-                alignTextLayerAnchor(textLayer, options.alignMode, options.verticalAlign, baseAnchor);
+                alignTextLayerAnchor(textLayer, options.alignMode, options.verticalAlign, baseAnchor, options.matchOriginalPosition, options.matchRefMode, rOrig);
             }
 
-            // 8. Update effect status slider
+            // 8. Visually match original text position if enabled (default ON)
+            if (options.matchOriginalPosition && options.alignMode !== "expression") {
+                matchWrappedPosition(textLayer, origBounds, options.matchRefMode, baseAnchor, basePos, is3D);
+            }
+
+            // 9. Update effect status slider
             var fxParade = textLayer.property("ADBE Effect Parade") || textLayer.property("Effects");
             if (fxParade) {
                 var eff = fxParade.property(EFFECT_NAME);
@@ -1474,7 +1608,7 @@
     }
 
     // -------------------------------------------------------------------------
-    // 9. ScriptUI Panel & User Interface
+    // 10. ScriptUI Panel & User Interface
     // -------------------------------------------------------------------------
 
     function buildUI(thisObj) {
@@ -1677,17 +1811,40 @@
         var chkHonorifics = pnlMicro.add("checkbox", undefined, "Keep Honorifics & Abbreviations Together (Dr. / e.g.)");
         chkHonorifics.value = true;
 
-        // --- Anchor Point Auto-Alignment Panel (AE-Align-AnchorPoint) ---
-        var pnlAnchor = win.add("panel", undefined, "Anchor Point Auto-Alignment");
-        pnlAnchor.orientation = "column";
-        pnlAnchor.alignChildren = ["fill", "top"];
-        pnlAnchor.spacing = 6;
-        pnlAnchor.margins = 8;
+        // --- Position & Anchor Alignment Panel ---
+        var pnlAlignment = win.add("panel", undefined, "Position & Anchor Alignment");
+        pnlAlignment.orientation = "column";
+        pnlAlignment.alignChildren = ["fill", "top"];
+        pnlAlignment.spacing = 6;
+        pnlAlignment.margins = 8;
 
-        var chkAutoAlign = pnlAnchor.add("checkbox", undefined, "Auto-Align Anchor Point to Text Alignment");
+        // 1. Visually Match Original Text Position (Default: ON)
+        var chkMatchPos = pnlAlignment.add("checkbox", undefined, "Visually Match Position of Original Text");
+        chkMatchPos.value = true;
+
+        var grpMatchRef = pnlAlignment.add("group");
+        grpMatchRef.orientation = "row";
+        grpMatchRef.alignChildren = ["left", "center"];
+        grpMatchRef.spacing = 6;
+        grpMatchRef.margins = [16, 0, 0, 0];
+        grpMatchRef.add("statictext", undefined, "Match Alignment:");
+
+        var ddMatchRef = grpMatchRef.add("dropdownlist", undefined, [
+            "By Text Justification (Natural Flow)",
+            "Visual Center (Symmetric Expansion)",
+            "Top Edge (First Line Fixed)"
+        ]);
+        ddMatchRef.selection = 0;
+
+        chkMatchPos.onClick = function () {
+            ddMatchRef.enabled = chkMatchPos.value;
+        };
+
+        // 2. Anchor Point Auto-Alignment (AE-Align-AnchorPoint)
+        var chkAutoAlign = pnlAlignment.add("checkbox", undefined, "Auto-Align Anchor Point to Text Alignment");
         chkAutoAlign.value = true;
 
-        var grpAlignMode = pnlAnchor.add("group");
+        var grpAlignMode = pnlAlignment.add("group");
         grpAlignMode.orientation = "row";
         grpAlignMode.alignChildren = ["left", "center"];
         grpAlignMode.spacing = 10;
@@ -1697,7 +1854,7 @@
         var rbAlignExpr = grpAlignMode.add("radiobutton", undefined, "Live Expression (Updates if alignment changes)");
         rbAlignOnce.value = true;
 
-        var grpAlignVert = pnlAnchor.add("group");
+        var grpAlignVert = pnlAlignment.add("group");
         grpAlignVert.orientation = "row";
         grpAlignVert.alignChildren = ["left", "center"];
         grpAlignVert.spacing = 6;
@@ -1823,6 +1980,9 @@
             var methodKeys = ["balanced", "greedy", "pyramid", "reverse_pyramid", "compact"];
             var langKeys = ["english", "spanish", "french", "german", "italian", "universal"];
 
+            var matchRefIdx = (ddMatchRef.selection ? ddMatchRef.selection.index : 0);
+            var matchRefMode = (matchRefIdx === 1) ? "center" : ((matchRefIdx === 2) ? "top" : "justification");
+
             var vertIdx = (ddVertAlign.selection ? ddVertAlign.selection.index : 0);
             var vAlign = (vertIdx === 1) ? "center" : ((vertIdx === 2) ? "bottom" : "top");
 
@@ -1837,6 +1997,8 @@
                 avoidDanglingShort: chkDangling.value,
                 bindNumbers: chkNumbers.value,
                 bindHonorifics: chkHonorifics.value,
+                matchOriginalPosition: chkMatchPos.value,
+                matchRefMode: matchRefMode,
                 autoAlignAnchor: chkAutoAlign.value,
                 alignMode: rbAlignExpr.value ? "expression" : "once",
                 verticalAlign: vAlign

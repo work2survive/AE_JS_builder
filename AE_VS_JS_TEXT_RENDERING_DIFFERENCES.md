@@ -1440,8 +1440,31 @@ When dynamic reactivity is desired, expressions are applied to `anchorPoint` and
 2. **`position.expression`**:
    Computes $(\text{targetX} - \text{origA}[0]) \cdot s_x$ and adds the rotated offset to `value`, keeping the text anchored in place if the user changes justification in the AE Character panel.
 
-
 ---
+
+### 22.9 Visual Position Matching (Zero-Drift Paragraph Anchoring)
+
+When wrapping text from a single continuous line into a multi-line paragraph, the bounding box of the text expands. In native After Effects, new lines extend downward from line 1. For centered headlines, titles, or lower-thirds, this causes the visual center of the text block to drop downwards on screen.
+
+**Visual Position Matching** (Default: **Enabled / ON**) eliminates this displacement by pinning the visual reference point of the wrapped paragraph to the exact comp location of the original pre-wrap text:
+
+1. **Reference Point Selection ($\vec{R}$)**:
+   - **By Text Justification (Natural Flow)**:
+     - Left-Justified: $[\text{bounds.left}, \;\text{bounds.top} + \text{bounds.height}/2]$
+     - Center-Justified: $[\text{bounds.left} + \text{bounds.width}/2, \;\text{bounds.top} + \text{bounds.height}/2]$
+     - Right-Justified: $[\text{bounds.left} + \text{bounds.width}, \;\text{bounds.top} + \text{bounds.height}/2]$
+   - **Visual Center (Symmetric Expansion)**: $[\text{bounds.left} + \text{bounds.width}/2, \;\text{bounds.top} + \text{bounds.height}/2]$
+   - **Top Edge (First Line Fixed)**: $[R_x, \;\text{bounds.top}]$
+
+2. **Position Compensation Formula**:
+   Let $\vec{A}_{\text{cur}}$ be the active layer anchor point, $\vec{A}_{\text{base}}$ be the original anchor point, $\vec{R}_{\text{new}}$ be the wrapped reference point, and $\vec{R}_{\text{orig}}$ be the original pre-wrap reference point.
+   The local displacement is:
+   $$\vec{\delta}_{\text{local}} = (\vec{A}_{\text{cur}} - \vec{A}_{\text{base}}) - (\vec{R}_{\text{new}} - \vec{R}_{\text{orig}})$$
+   $$\vec{P}_{\text{target}} = \vec{P}_{\text{base}} + \mathbf{R}(\theta) \cdot (\vec{S} \odot \vec{\delta}_{\text{local}})$$
+
+When evaluated, the visual reference point on screen satisfies:
+$$\vec{P}_{\text{target}} + \mathbf{R} \cdot (\vec{S} \odot (\vec{R}_{\text{new}} - \vec{A}_{\text{cur}})) \equiv \vec{P}_{\text{base}} + \mathbf{R} \cdot (\vec{S} \odot (\vec{R}_{\text{orig}} - \vec{A}_{\text{base}}))$$
+This guarantees that centered titles expand symmetrically upwards and downwards, remaining centered exactly where the motion designer placed them.
 
 ## 23. Text Box Precomposition & Coordinate Transformation Architecture (Zero-Shift Affine Model)
 
