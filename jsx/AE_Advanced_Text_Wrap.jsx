@@ -62,7 +62,7 @@
     "use strict";
 
     var SCRIPT_TITLE   = "AE Advanced Text Wrap";
-    var SCRIPT_VERSION = "v1.4.1";
+    var SCRIPT_VERSION = "v1.4.2";
     var GITHUB_URL     = "https://github.com/work2survive/AE-advanced-text-wrap";
     var README_URL     = "https://github.com/work2survive/AE-advanced-text-wrap/blob/main/README.md";
 
@@ -1245,27 +1245,75 @@
 
     /**
      * Generates dynamic Anchor Point expression that reacts to justification changes
+     * Uses a multi-tiered approach:
+     * 1. AE 25.0+ TextStyle.justification API ("alignLeft", "alignCenter", "alignRight", "justifyFull")
+     * 2. Point Text geometric ratio: ratio = -2 * r.left / r.width (< 0.5: left, 0.5..1.5: center, >= 1.5: right)
+     * 3. Paragraph (Box) Text box boundaries comparison
      */
     function buildDynamicAlignmentAnchorExpression(yMode, is3D) {
         var zPart = is3D ? ", (value.length > 2 ? value[2] : 0)" : "";
         var exprY = (yMode === "center") ? "r.top + r.height / 2" : (yMode === "bottom" ? "r.top + r.height" : "r.top");
         return "// AE Advanced Text Wrap (Dynamic Alignment Anchor)\n" +
-               "const r = sourceRectAtTime(time, false);\n" +
-               "let j = 7412;\n" +
+               "var r = sourceRectAtTime(time, false);\n" +
+               "var align = \"left\";\n" +
+               "var detected = false;\n" +
                "try {\n" +
-               "    const rawDoc = thisLayer.text ? thisLayer.text.sourceText : thisLayer.sourceText;\n" +
-               "    const doc = (rawDoc && rawDoc.value) ? rawDoc.value : rawDoc;\n" +
-               "    if (doc && doc.justification !== undefined) j = doc.justification;\n" +
-               "} catch (e) {}\n" +
-               "let targetX = r.left;\n" +
-               "if (j === 7414 || j === 7417 || j === 'center') {\n" +
+               "    var st = thisLayer.text ? thisLayer.text.sourceText : thisLayer.sourceText;\n" +
+               "    var sObj = (st && st.style) ? st.style : ((st && typeof st.getStyleAt === \"function\") ? st.getStyleAt(0) : null);\n" +
+               "    if (sObj && sObj.justification !== undefined) {\n" +
+               "        var j = String(sObj.justification).toLowerCase();\n" +
+               "        if (j.indexOf(\"center\") !== -1 || j.indexOf(\"full\") !== -1) {\n" +
+               "            align = \"center\";\n" +
+               "            detected = true;\n" +
+               "        } else if (j.indexOf(\"right\") !== -1) {\n" +
+               "            align = \"right\";\n" +
+               "            detected = true;\n" +
+               "        } else if (j.indexOf(\"left\") !== -1) {\n" +
+               "            align = \"left\";\n" +
+               "            detected = true;\n" +
+               "        }\n" +
+               "    }\n" +
+               "} catch (eStyle) {}\n" +
+               "if (!detected && r.width > 0) {\n" +
+               "    try {\n" +
+               "        var st2 = thisLayer.text ? thisLayer.text.sourceText : thisLayer.sourceText;\n" +
+               "        var isBox = false;\n" +
+               "        var bw = 0;\n" +
+               "        if (st2 && st2.isParagraphText !== undefined) isBox = Boolean(st2.isParagraphText);\n" +
+               "        if (st2 && st2.boxTextSize && st2.boxTextSize[0]) {\n" +
+               "            bw = st2.boxTextSize[0];\n" +
+               "            isBox = true;\n" +
+               "        }\n" +
+               "        if (isBox && bw > 0) {\n" +
+               "            var dL = Math.abs(r.left);\n" +
+               "            var dC = Math.abs((r.left + r.width / 2) - bw / 2);\n" +
+               "            var dR = Math.abs((r.left + r.width) - bw);\n" +
+               "            if (dC < dL && dC < dR) align = \"center\";\n" +
+               "            else if (dR < dL && dR < dC) align = \"right\";\n" +
+               "            else align = \"left\";\n" +
+               "        } else {\n" +
+               "            var ratio = -2 * r.left / r.width;\n" +
+               "            if (ratio >= 0.5 && ratio < 1.5) align = \"center\";\n" +
+               "            else if (ratio >= 1.5) align = \"right\";\n" +
+               "            else align = \"left\";\n" +
+               "        }\n" +
+               "    } catch (eGeo) {\n" +
+               "        var ratio2 = -2 * r.left / r.width;\n" +
+               "        if (ratio2 >= 0.5 && ratio2 < 1.5) align = \"center\";\n" +
+               "        else if (ratio2 >= 1.5) align = \"right\";\n" +
+               "        else align = \"left\";\n" +
+               "    }\n" +
+               "}\n" +
+               "var targetX = r.left;\n" +
+               "if (align === \"center\") {\n" +
                "    targetX = r.left + r.width / 2;\n" +
-               "} else if (j === 7413 || j === 7416 || j === 'right') {\n" +
+               "} else if (align === \"right\") {\n" +
                "    targetX = r.left + r.width;\n" +
                "}\n" +
-               "const targetY = " + exprY + ";\n" +
+               "var targetY = " + exprY + ";\n" +
                "[targetX, targetY" + zPart + "];";
     }
+
     /**
      * Computes the visual reference point for position matching
      */
@@ -1303,80 +1351,122 @@
      * Generates scale and rotation safe Position expression matching dynamic anchor shift
      * and visual position matching
      */
-    function buildDynamicAlignmentPositionExpression(yMode, is3D, baseA, matchOriginalPos, matchRefMode, rOrig) {
+    function buildDynamicAlignmentPositionExpression(yMode, is3D, baseA, matchOriginalPos, matchRefMode, wrapRefOffset) {
         var baseAx = (baseA && typeof baseA[0] === "number") ? baseA[0] : 0;
         var baseAy = (baseA && typeof baseA[1] === "number") ? baseA[1] : 0;
         var baseAz = (baseA && typeof baseA[2] === "number") ? baseA[2] : 0;
         var exprY = (yMode === "center") ? "r.top + r.height / 2" : (yMode === "bottom" ? "r.top + r.height" : "r.top");
 
+        var offX = (wrapRefOffset && typeof wrapRefOffset[0] === "number") ? wrapRefOffset[0] : 0;
+        var offY = (wrapRefOffset && typeof wrapRefOffset[1] === "number") ? wrapRefOffset[1] : 0;
+
         var banner = "// AE Advanced Text Wrap (Dynamic Alignment Position Compensator)\n";
-        var boundsBlock = "const r = sourceRectAtTime(time, false);\n" +
-                          "let j = 7412;\n" +
+        var boundsBlock = "var r = sourceRectAtTime(time, false);\n" +
+                          "var align = \"left\";\n" +
+                          "var detected = false;\n" +
                           "try {\n" +
-                          "    const rawDoc = thisLayer.text ? thisLayer.text.sourceText : thisLayer.sourceText;\n" +
-                          "    const doc = (rawDoc && rawDoc.value) ? rawDoc.value : rawDoc;\n" +
-                          "    if (doc && doc.justification !== undefined) j = doc.justification;\n" +
-                          "} catch (e) {}\n" +
-                          "let targetX = r.left;\n" +
-                          "if (j === 7414 || j === 7417 || j === 'center') {\n" +
+                          "    var st = thisLayer.text ? thisLayer.text.sourceText : thisLayer.sourceText;\n" +
+                          "    var sObj = (st && st.style) ? st.style : ((st && typeof st.getStyleAt === \"function\") ? st.getStyleAt(0) : null);\n" +
+                          "    if (sObj && sObj.justification !== undefined) {\n" +
+                          "        var j = String(sObj.justification).toLowerCase();\n" +
+                          "        if (j.indexOf(\"center\") !== -1 || j.indexOf(\"full\") !== -1) {\n" +
+                          "            align = \"center\";\n" +
+                          "            detected = true;\n" +
+                          "        } else if (j.indexOf(\"right\") !== -1) {\n" +
+                          "            align = \"right\";\n" +
+                          "            detected = true;\n" +
+                          "        } else if (j.indexOf(\"left\") !== -1) {\n" +
+                          "            align = \"left\";\n" +
+                          "            detected = true;\n" +
+                          "        }\n" +
+                          "    }\n" +
+                          "} catch (eStyle) {}\n" +
+                          "if (!detected && r.width > 0) {\n" +
+                          "    try {\n" +
+                          "        var st2 = thisLayer.text ? thisLayer.text.sourceText : thisLayer.sourceText;\n" +
+                          "        var isBox = false;\n" +
+                          "        var bw = 0;\n" +
+                          "        if (st2 && st2.isParagraphText !== undefined) isBox = Boolean(st2.isParagraphText);\n" +
+                          "        if (st2 && st2.boxTextSize && st2.boxTextSize[0]) {\n" +
+                          "            bw = st2.boxTextSize[0];\n" +
+                          "            isBox = true;\n" +
+                          "        }\n" +
+                          "        if (isBox && bw > 0) {\n" +
+                          "            var dL = Math.abs(r.left);\n" +
+                          "            var dC = Math.abs((r.left + r.width / 2) - bw / 2);\n" +
+                          "            var dR = Math.abs((r.left + r.width) - bw);\n" +
+                          "            if (dC < dL && dC < dR) align = \"center\";\n" +
+                          "            else if (dR < dL && dR < dC) align = \"right\";\n" +
+                          "            else align = \"left\";\n" +
+                          "        } else {\n" +
+                          "            var ratio = -2 * r.left / r.width;\n" +
+                          "            if (ratio >= 0.5 && ratio < 1.5) align = \"center\";\n" +
+                          "            else if (ratio >= 1.5) align = \"right\";\n" +
+                          "            else align = \"left\";\n" +
+                          "        }\n" +
+                          "    } catch (eGeo) {\n" +
+                          "        var ratio2 = -2 * r.left / r.width;\n" +
+                          "        if (ratio2 >= 0.5 && ratio2 < 1.5) align = \"center\";\n" +
+                          "        else if (ratio2 >= 1.5) align = \"right\";\n" +
+                          "        else align = \"left\";\n" +
+                          "    }\n" +
+                          "}\n" +
+                          "var targetX = r.left;\n" +
+                          "if (align === \"center\") {\n" +
                           "    targetX = r.left + r.width / 2;\n" +
-                          "} else if (j === 7413 || j === 7416 || j === 'right') {\n" +
+                          "} else if (align === \"right\") {\n" +
                           "    targetX = r.left + r.width;\n" +
                           "}\n" +
-                          "const targetY = " + exprY + ";\n";
+                          "var targetY = " + exprY + ";\n";
 
         var matchBlock = "";
-        if (matchOriginalPos && rOrig) {
-            matchBlock = "let origRx = " + rOrig[0] + ";\n" +
-                         "let origRy = " + rOrig[1] + ";\n" +
-                         "let newRx = targetX;\n" +
-                         "let newRy = r.top + r.height / 2;\n" +
-                         (matchRefMode === "top" ? "newRy = r.top;\n" : "") +
-                         (matchRefMode === "center" ? "newRx = r.left + r.width / 2;\n" : "") +
-                         "const dx = ((targetX - origA[0]) - (newRx - origRx)) * s[0];\n" +
-                         "const dy = ((targetY - origA[1]) - (newRy - origRy)) * s[1];\n";
+        if (matchOriginalPos && (offX !== 0 || offY !== 0)) {
+            matchBlock = "var offX = " + offX + ";\n" +
+                         "var offY = " + offY + ";\n" +
+                         "var dx = ((targetX - origA[0]) - offX) * s[0];\n" +
+                         "var dy = ((targetY - origA[1]) - offY) * s[1];\n";
         } else {
-            matchBlock = "const dx = (targetX - origA[0]) * s[0];\n" +
-                         "const dy = (targetY - origA[1]) * s[1];\n";
+            matchBlock = "var dx = (targetX - origA[0]) * s[0];\n" +
+                         "var dy = (targetY - origA[1]) * s[1];\n";
         }
 
         if (is3D) {
             return banner +
                 boundsBlock +
-                "const s = [\n" +
+                "var s = [\n" +
                 "    transform.scale[0] / 100,\n" +
                 "    transform.scale[1] / 100,\n" +
                 "    (transform.scale.length > 2 ? transform.scale[2] : 100) / 100\n" +
                 "];\n" +
-                "let origA = [" + baseAx + ", " + baseAy + ", " + baseAz + "];\n" +
+                "var origA = [" + baseAx + ", " + baseAy + ", " + baseAz + "];\n" +
                 matchBlock +
-                "const dz = 0;\n" +
-                "function rotX(v, deg) {\n" +
-                "    if (!deg) return v;\n" +
-                "    const rad = deg * (Math.PI / 180), c = Math.cos(rad), sn = Math.sin(rad);\n" +
-                "    return [v[0], v[1] * c - v[2] * sn, v[1] * sn + v[2] * c];\n" +
+                "var dz = 0;\n" +
+                "function rotX(vec, deg) {\n" +
+                "    if (!deg) return vec;\n" +
+                "    var rad = deg * (Math.PI / 180), c = Math.cos(rad), sn = Math.sin(rad);\n" +
+                "    return [vec[0], vec[1] * c - vec[2] * sn, vec[1] * sn + vec[2] * c];\n" +
                 "}\n" +
-                "function rotY(v, deg) {\n" +
-                "    if (!deg) return v;\n" +
-                "    const rad = deg * (Math.PI / 180), c = Math.cos(rad), sn = Math.sin(rad);\n" +
-                "    return [v[0] * c + v[2] * sn, v[1], -v[0] * sn + v[2] * c];\n" +
+                "function rotY(vec, deg) {\n" +
+                "    if (!deg) return vec;\n" +
+                "    var rad = deg * (Math.PI / 180), c = Math.cos(rad), sn = Math.sin(rad);\n" +
+                "    return [vec[0] * c + vec[2] * sn, vec[1], -vec[0] * sn + vec[2] * c];\n" +
                 "}\n" +
-                "function rotZ(v, deg) {\n" +
-                "    if (!deg) return v;\n" +
-                "    const rad = deg * (Math.PI / 180), c = Math.cos(rad), sn = Math.sin(rad);\n" +
-                "    return [v[0] * c - v[1] * sn, v[0] * sn + v[1] * c, v[2]];\n" +
+                "function rotZ(vec, deg) {\n" +
+                "    if (!deg) return vec;\n" +
+                "    var rad = deg * (Math.PI / 180), c = Math.cos(rad), sn = Math.sin(rad);\n" +
+                "    return [vec[0] * c - vec[1] * sn, vec[0] * sn + vec[1] * c, vec[2]];\n" +
                 "}\n" +
-                "let v = [dx, dy, dz];\n" +
+                "var v = [dx, dy, dz];\n" +
                 "try {\n" +
-                "    const xr = transform.xRotation ? (transform.xRotation.value || transform.xRotation) : 0;\n" +
-                "    const yr = transform.yRotation ? (transform.yRotation.value || transform.yRotation) : 0;\n" +
-                "    const zr = transform.zRotation ? (transform.zRotation.value || transform.zRotation) : (transform.rotation ? (transform.rotation.value || transform.rotation) : 0);\n" +
+                "    var xr = transform.xRotation ? (transform.xRotation.value || transform.xRotation) : 0;\n" +
+                "    var yr = transform.yRotation ? (transform.yRotation.value || transform.yRotation) : 0;\n" +
+                "    var zr = transform.zRotation ? (transform.zRotation.value || transform.zRotation) : (transform.rotation ? (transform.rotation.value || transform.rotation) : 0);\n" +
                 "    if (zr) v = rotZ(v, zr);\n" +
                 "    if (yr) v = rotY(v, yr);\n" +
                 "    if (xr) v = rotX(v, xr);\n" +
                 "} catch (eR) {}\n" +
                 "try {\n" +
-                "    const o = transform.orientation;\n" +
+                "    var o = transform.orientation;\n" +
                 "    if (o) {\n" +
                 "        if (o[2]) v = rotZ(v, o[2]);\n" +
                 "        if (o[1]) v = rotY(v, o[1]);\n" +
@@ -1388,14 +1478,14 @@
 
         return banner +
             boundsBlock +
-            "const s = [transform.scale[0] / 100, transform.scale[1] / 100];\n" +
-            "let origA = [" + baseAx + ", " + baseAy + "];\n" +
+            "var s = [transform.scale[0] / 100, transform.scale[1] / 100];\n" +
+            "var origA = [" + baseAx + ", " + baseAy + "];\n" +
             matchBlock +
-            "const rot = transform.rotation;\n" +
+            "var rot = transform.rotation;\n" +
             "if (rot && Math.abs(rot) > 0.0001) {\n" +
-            "    const rad = rot * (Math.PI / 180);\n" +
-            "    const rx = dx * Math.cos(rad) - dy * Math.sin(rad);\n" +
-            "    const ry = dx * Math.sin(rad) + dy * Math.cos(rad);\n" +
+            "    var rad = rot * (Math.PI / 180);\n" +
+            "    var rx = dx * Math.cos(rad) - dy * Math.sin(rad);\n" +
+            "    var ry = dx * Math.sin(rad) + dy * Math.cos(rad);\n" +
             "    [value[0] + rx, value[1] + ry];\n" +
             "} else {\n" +
             "    [value[0] + dx, value[1] + dy];\n" +
@@ -1406,7 +1496,7 @@
      * Aligns the layer Anchor Point according to text justification
      * Mode: 'once' (zero-shift baked position) or 'expression' (live reactive expression)
      */
-    function alignTextLayerAnchor(textLayer, alignMode, verticalAlign, baseAnchor, matchOriginalPos, matchRefMode, rOrig) {
+    function alignTextLayerAnchor(textLayer, alignMode, verticalAlign, baseAnchor, matchOriginalPos, matchRefMode, wrapRefOffset) {
         if (!textLayer) return false;
         var comp = textLayer.containingComp;
         var curTime = comp ? comp.time : 0;
@@ -1429,7 +1519,7 @@
         if (alignMode === "expression") {
             var baseA = baseAnchor || curA;
             var aExpr = buildDynamicAlignmentAnchorExpression(yMode, is3D);
-            var pExpr = buildDynamicAlignmentPositionExpression(yMode, is3D, baseA, matchOriginalPos, matchRefMode, rOrig);
+            var pExpr = buildDynamicAlignmentPositionExpression(yMode, is3D, baseA, matchOriginalPos, matchRefMode, wrapRefOffset);
 
             if (posProp.dimensionsSeparated) {
                 try { posProp.dimensionsSeparated = false; } catch (eDim) {}
@@ -1686,9 +1776,12 @@
             // 7. Auto-align Anchor Point if enabled
             var just = detectLayerJustification(textLayer);
             var rOrig = computeReferencePoint(origBounds, options.matchRefMode, just);
+            var curBounds = getLayerSourceRectBounds(textLayer, comp.time);
+            var rNew = computeReferencePoint(curBounds, options.matchRefMode, just);
+            var wrapRefOffset = [rNew[0] - rOrig[0], rNew[1] - rOrig[1]];
 
             if (options.autoAlignAnchor) {
-                alignTextLayerAnchor(textLayer, options.alignMode, options.verticalAlign, baseAnchor, options.matchOriginalPosition, options.matchRefMode, rOrig);
+                alignTextLayerAnchor(textLayer, options.alignMode, options.verticalAlign, baseAnchor, options.matchOriginalPosition, options.matchRefMode, wrapRefOffset);
             }
 
             // 8. Visually match original text position if enabled (default ON)

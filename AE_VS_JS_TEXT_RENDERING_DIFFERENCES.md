@@ -1668,3 +1668,160 @@ win.onResizing = win.onResize = function () {
 };
 ```
 
+---
+
+## 28. Dynamic Paragraph Alignment Detection in After Effects Expressions (TextStyle.justification vs. Universal Geometric Ratio)
+
+When building kinetic typography rigs or auto-alignment scripts in Adobe After Effects, users often want layers to automatically adapt their **Anchor Point** and **Position** if paragraph alignment (Left, Center, or Right) is changed later in the Paragraph panel.
+
+However, writing an expression to detect paragraph justification in After Effects is notoriously difficult due to critical architectural differences between ExtendScript scripts and the Expressions engine.
+
+### 28.1 The Expression Engine Trap: `sourceText.value` is a Primitive String
+
+In ExtendScript scripts, accessing `layer.property("Source Text").value` returns a rich `TextDocument` object containing attributes such as `justification`, `fontSize`, `font`, and `boxText`.
+
+In After Effects Expressions:
+1. `thisLayer.text.sourceText.value` evaluates to a **primitive JavaScript String** (e.g. `"The quick brown fox"`).
+2. Consequently, expressions like `thisLayer.text.sourceText.value.justification` or `doc.justification` evaluate to `undefined`.
+3. If an expression uses a `try/catch` block falling back to Left alignment (`7412`), the expression is **permanently trapped in Left alignment** and never responds to Paragraph panel changes!
+
+```javascript
+// CATASTROPHIC BUG: In expressions, rawDoc.value is a string, NOT a TextDocument!
+var rawDoc = thisLayer.text.sourceText;
+var j = 7412;
+try {
+    var doc = rawDoc.value; // doc is "Sample text" (primitive string)
+    if (doc && doc.justification !== undefined) { // always undefined!
+        j = doc.justification;
+    }
+} catch (e) {}
+// j remains 7412 forever, anchor point is permanently glued to the left!
+```
+
+---
+
+### 28.2 Modern AE 25.0+ API: `TextStyle.justification`
+
+Starting in **After Effects 25.0** (October 2024), Adobe enhanced the Expression typography engine with `TextStyle.justification`. Expressions can access style information via:
+```javascript
+var st = thisLayer.text.sourceText;
+var style = null;
+if (st.style) {
+    style = st.style;
+} else if (typeof st.getStyleAt === "function") {
+    style = st.getStyleAt(0, time);
+}
+
+if (style && style.justification) {
+    // Returns string tokens: "alignLeft", "alignCenter", "alignRight", "justifyFull"
+}
+```
+
+While powerful, relying solely on `TextStyle.justification` breaks in AE 24.x, 23.x, and all earlier versions, throwing an expression error and disabling the layer's rig.
+
+---
+
+### 28.3 Universal Cross-Version Alignment Detection via Geometric Ratio
+
+For universal compatibility across all After Effects versions (CS6 through CC 2026+) and expression engines (JavaScript and Legacy ExtendScript), paragraph alignment can be reliably inferred from the layer's native origin relative to its `sourceRectAtTime()` bounding box.
+
+In After Effects **Point Text**:
+- Text glyphs are positioned relative to the insertion origin `(0, 0)`.
+- **Left Justified**: Text starts at `x = 0` and flows rightwards. Therefore, `r.left ≈ 0`.
+- **Center Justified**: Text is centered on `x = 0`. Therefore, `r.left ≈ -r.width / 2`.
+- **Right Justified**: Text ends at `x = 0` and flows leftwards. Therefore, `r.left ≈ -r.width`.
+
+#### The Geometric Ratio Invariant:
+We define the geometric justification ratio:
+$$\text{ratio} = \frac{-2 \times r.\text{left}}{r.\text{width}}$$
+
+| Alignment | `r.left` Value | Expected Ratio | Detection Threshold |
+| :--- | :--- | :---: | :--- |
+| **Left Align** | $r.\text{left} \approx 0$ | $0.0$ | $\text{ratio} < 0.5$ |
+| **Center Align** | $r.\text{left} \approx -\frac{r.\text{width}}{2}$ | $1.0$ | $0.5 \le \text{ratio} < 1.5$ |
+| **Right Align** | $r.\text{left} \approx -r.\text{width}$ | $2.0$ | $\text{ratio} \ge 1.5$ |
+
+For **Paragraph (Box) Text**:
+- If `boxTextSize` is present on `sourceText.style` or estimated, compare `r.left` against `boxWidth - r.width`. If centered within the box (`Math.abs(r.left - (boxWidth - r.width)/2) < 4`), it is Center aligned; if resting on the right margin (`r.left > (boxWidth - r.width) - 4`), it is Right aligned.
+
+---
+
+### 28.4 Complete Production Anchor Point & Position Dynamic Expressions
+
+By combining Tier 1 (`TextStyle.justification`) with Tier 2 (`Universal Geometric Ratio`), expressions react instantaneously in real-time whenever the designer clicks Left, Center, or Right in the AE Paragraph panel:
+
+#### Dynamic Anchor Point Expression:
+```javascript
+var r = sourceRectAtTime();
+var just = "left";
+
+// Tier 1: Modern AE 25.0+ TextStyle API
+try {
+    var st = thisLayer.text.sourceText;
+    var s = null;
+    if (st.style) s = st.style;
+    else if (typeof st.getStyleAt === "function") s = st.getStyleAt(0, time);
+    if (s && s.justification) {
+        var sj = s.justification;
+        if (sj === "alignCenter" || sj === 7414 || sj === "center") just = "center";
+        else if (sj === "alignRight" || sj === 7413 || sj === "right") just = "right";
+        else just = "left";
+    }
+} catch (e1) {}
+
+// Tier 2: Universal Geometric Ratio fallback (CS6 - CC 2026)
+if (just === "left" && r.width > 0) {
+    try {
+        var ratio = -2 * r.left / r.width;
+        if (ratio >= 1.5) just = "right";
+        else if (ratio >= 0.5) just = "center";
+    } catch (e2) {}
+}
+
+var targetX = r.left;
+if (just === "center") targetX = r.left + r.width / 2;
+else if (just === "right") targetX = r.left + r.width;
+
+var targetY = r.top;
+[targetX, targetY];
+```
+
+#### Dynamic Position Compensation Expression (Preserving Visual Placement):
+When the anchor point shifts dynamically to match paragraph alignment, the layer position must shift concurrently to keep the paragraph locked in its desired layout position:
+```javascript
+var r = sourceRectAtTime();
+var just = "left";
+try {
+    var st = thisLayer.text.sourceText;
+    var s = null;
+    if (st.style) s = st.style;
+    else if (typeof st.getStyleAt === "function") s = st.getStyleAt(0, time);
+    if (s && s.justification) {
+        var sj = s.justification;
+        if (sj === "alignCenter" || sj === 7414 || sj === "center") just = "center";
+        else if (sj === "alignRight" || sj === 7413 || sj === "right") just = "right";
+    }
+} catch (e1) {}
+
+if (just === "left" && r.width > 0) {
+    try {
+        var ratio = -2 * r.left / r.width;
+        if (ratio >= 1.5) just = "right";
+        else if (ratio >= 0.5) just = "center";
+    } catch (e2) {}
+}
+
+var targetX = r.left;
+if (just === "center") targetX = r.left + r.width / 2;
+else if (just === "right") targetX = r.left + r.width;
+
+var targetY = r.top;
+var p = value;
+[p[0] + (targetX - r.left), p[1] + (targetY - r.top)];
+```
+
+> [!TIP]
+> **Legacy ExtendScript Engine Compatibility**:
+> Always use `var` instead of ES6 `let` or `const` in generated expressions. When an After Effects project is set to the **Legacy ExtendScript** expression engine in Project Settings, ES6 keywords cause a fatal expression syntax error.
+
+
