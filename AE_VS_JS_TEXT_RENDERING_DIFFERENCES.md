@@ -1395,3 +1395,142 @@ When the user clicks "Restore Original Text", the script reads `eff.property(1).
    Always execute `AE_Advanced_Text_Wrap.jsx` **first**. Once the paragraph has achieved optimal balance and line breaks (`\r`), run `AE-replace-color-emojis`. The emoji engine will read the exact visual line geometry and place vector shapes precisely on the wrapped lines.
 3. **Execution Order with Text Highlights (`AE-Text-Highlight`)**:
    Because `AE_Text_Highlight` identifies words and phrases across visual lines, wrapping the text first ensures highlights fit the final line lengths. Furthermore, because `\u00A0` (NBSP) is treated as whitespace (`\s`), target search queries (e.g. `"peace of mind"`) match seamlessly across non-breaking spaces.
+
+
+---
+
+## 23. Text Box Precomposition & Coordinate Transformation Architecture (Zero-Shift Affine Model)
+
+Precomposing a text box is a fundamental operation in advanced kinetic typography, subtitle animation, chat bubble generation, and lower-third rendering. However, in Adobe After Effects, nesting a text layer inside a new composition often results in visual displacement (the text "jumps" across the screen) due to discordant coordinate systems, uncompensated layer anchor points, and miscalculated precomp canvas origins.
+
+To achieve **100% Zero-Shift Visual Invariance** (down to 0.00px deviation in the host viewport), an ExtendScript tool must execute a synchronized 3-coordinate transformation:
+
+```
+[Layer Local Space]  ──(1) Offset inside Precomp──>  [Precomp Inner Canvas]
+       ▲                                                     │
+       │                                                     │
+       └───────────(2) Affine Transformation Matrix──────────┘
+                         [Parent Comp Viewport]
+```
+
+### 23.1 The Coordinate Systems
+1. **Target Layer Local Space**:
+   - For Paragraph (Box) Text: $[0, 0]$ is the top-left of the declared bounding box frame (or `boxTextPos`), while text glyphs start flowing at `y = firstBaseline`.
+   - For Point Text: $[0, 0]$ is the alphabetic baseline of line 1, while rendered glyphs ascend into negative $y$ (`top = -ascender`) and descend into positive $y$.
+2. **Precomp Canvas Space**:
+   - The new composition has width $W_{\text{precomp}} = \lceil W_{\text{box}} + 2 \times P_x \rceil$ and height $H_{\text{precomp}} = \lceil H_{\text{box}} + 2 \times P_y \rceil$, where $P_x, P_y$ represent exterior padding.
+   - The top-left corner of the precomp canvas is $[0, 0]$.
+   - The text bounding box must be pinned strictly to $[P_x, P_y]$ so that exterior margins enclose the typography uniformly.
+3. **Parent Composition Viewport**:
+   - The precomp layer occupies the parent comp at layer index $i$.
+   - The user selects one of 9 canonical anchor points $\vec{A}_{\text{precomp}}$ for the precomp layer (e.g., Top-Left $[0, 0]$, Center $[W_{\text{precomp}}/2, H_{\text{precomp}}/2]$, etc.).
+   - The precomp layer's position $\vec{P}_{\text{precomp}}$ must be compensated so that its visual text content maps identically to the text layer's previous world coordinates.
+
+### 23.2 The Mathematical Zero-Shift Position Compensation Formula
+
+Let:
+- $\vec{P}_{\text{orig}} = [P_x, P_y]$ be the original text layer position in the parent comp.
+- $\vec{A}_{\text{orig}} = [A_x, A_y]$ be the original text layer anchor point.
+- $\vec{S} = [s_x, s_y] = [\text{scale}[0]/100, \text{scale}[1]/100]$ be the layer scale factors.
+- $\theta$ be the layer rotation in radians ($\theta = \text{rotation} \times \pi / 180$).
+- $[x_{\text{min}}, y_{\text{min}}]$ be the top-left bounds of the text content in local space (`boxTextPos` or `sourceRectAtTime(0, false)`: `[sr.left, sr.top]`).
+- $P$ be the exterior padding in pixels.
+- $\vec{A}_{\text{precomp}} = [A_{px}, A_{py}]$ be the desired anchor point of the precomp layer.
+
+The net local displacement vector $\vec{\Delta}_{\text{local}}$ is:
+$$\vec{\Delta}_{\text{local}} = \begin{pmatrix} (x_{\text{min}} - P - A_x + A_{px}) \cdot s_x \\ (y_{\text{min}} - P - A_y + A_{py}) \cdot s_y \end{pmatrix}$$
+
+Applying the 2D rotation matrix $\mathbf{R}(\theta)$:
+$$\begin{pmatrix} \Delta_{\text{compX}} \\ \Delta_{\text{compY}} \end{pmatrix} = \begin{pmatrix} \cos\theta & -\sin\theta \\ \sin\theta & \cos\theta \end{pmatrix} \begin{pmatrix} \Delta_{\text{local}, x} \\ \Delta_{\text{local}, y} \end{pmatrix}$$
+
+The zero-shift position for the precomp layer in the parent comp is:
+$$\vec{P}_{\text{precomp}} = \begin{pmatrix} P_x + \Delta_{\text{compX}} \\ P_y + \Delta_{\text{compY}} \end{pmatrix}$$
+
+When this formula is evaluated:
+- If $P = 0$, $\vec{A}_{\text{precomp}} = \vec{A}_{\text{orig}}$, and $x_{\text{min}} = A_x$, then $\vec{P}_{\text{precomp}} = \vec{P}_{\text{orig}}$ with zero offset.
+- When exterior padding $P > 0$ is added, the precomp boundary expands outward, and the precomp position smoothly tracks the chosen anchor alignment without shifting the text glyphs by even 0.001 pixel.
+- Rotation $\theta$, scale $\vec{S}$, parent hierarchy (`precompLayer.parent = origLayer.parent`), and 3D status (`precompLayer.threeDLayer = origLayer.threeDLayer`) are completely preserved.
+
+---
+
+## 24. Exterior Padding Geometry vs. Paragraph Box Insets
+
+A frequent source of user confusion and layout bugs is conflating **Interior Padding (Insets)** with **Exterior Padding**.
+
+```
+       INTERIOR PADDING (BOX INSET)                  EXTERIOR PADDING (CANVAS EXPANSION)
+   ┌───────────────────────────────────┐             ┌─────────────────────────────────────────┐
+   │ ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░ │             │ ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░ │
+   │ ░░ ┌─────────────────────────┐ ░░ │             │ ░░  ┌─────────────────────────────┐ ░░  │
+   │ ░░ │ Text wraps in shrunken  │ ░░ │             │ ░░  │ Original Text Box           │ ░░  │
+   │ ░░ │ column:                 │ ░░ │             │ ░░  │ "The quick brown fox jumps" │ ░░  │
+   │ ░░ │ "The quick brown"       │ ░░ │             │ ░░  │ (Lines do NOT re-wrap!)     │ ░░  │
+   │ ░░ └─────────────────────────┘ ░░ │             │ ░░  └─────────────────────────────┘ ░░  │
+   │ ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░ │             │ ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░ │
+   └───────────────────────────────────┘             └─────────────────────────────────────────┘
+      Text frame fixed; text reflows!                   Text reflow locked; frame expands!
+```
+
+### 24.1 Mechanical Differences
+1. **Interior Inset (`TextDocument.boxInsetSpacing`)**:
+   - Confined strictly inside the declared `boxTextSize`.
+   - Shrinks the usable typesetting column width ($W_{\text{avail}} = W_{\text{box}} - 2 \times \text{inset}$).
+   - **Side effect**: Alters line wrap boundaries and word hyphenation, breaking carefully locked typographic line compositions.
+2. **Exterior Padding**:
+   - Preserves 100% of the internal text wrapping, glyph advance, and line layout.
+   - Expands the external precomp canvas and background card geometry outward by margin $P$:
+     $$W_{\text{precomp}} = \lceil W_{\text{box}} + 2 P_x \rceil, \quad H_{\text{precomp}} = \lceil H_{\text{box}} + 2 P_y \rceil$$
+   - Places the text layer inside the precomp at position $[P_x + (A_x - x_{\text{min}}), P_y + (A_y - y_{\text{min}})]$.
+   - Adds a procedural background card of size $[W_{\text{precomp}}, H_{\text{precomp}}]$ centered at $[W_{\text{precomp}}/2, H_{\text{precomp}}/2]$.
+   - Default value is **0px** (hugging the text box exactly), and can be expanded smoothly to create badges, buttons, speech bubbles, and highlighted callouts.
+
+### 24.2 Default Color Standardization
+In vector typography workflows, background padding cards default to **Fuchsia** (`#FF00FF`, RGB `[1.0, 0.0, 1.0]`) at 100% opacity. This high-contrast chromatic standard ensures immediate visual feedback across both dark and light comp backgrounds, alerting the designer to the exact exterior bounding region.
+
+---
+
+## 25. Kinetic Line and Word Splitting Without Font Corruption or Layer Index Shifting
+
+Splitting a text box into independent layers (for per-line stagger animations, per-word karaoke text, or physical 3D typography) is notoriously susceptible to two severe ExtendScript bugs:
+
+### 25.1 The "Layer Index Invalidation" Trap (The "W" Bug)
+When scripts iterate over lines or words while inserting temporary measurement layers (such as a dummy layer set to `"W"` to sample font height or advance):
+1. Calling `comp.layers.addText("W")` inserts the new layer at **index 1**, shifting all existing layers down by 1 (`layer(1)` becomes `layer(2)`).
+2. If the script was referencing `comp.layer(1)` as the target text layer, the target pointer is hijacked by the throwaway `"W"` layer.
+3. Furthermore, mutating `sampleDoc.text = "W"` on a shared `TextDocument` reference permanently overwrites the user's content with `"W"`. Subsequent line loops then generate layers displaying only the letter `"W"`.
+
+### 25.2 The Zero-Mutation Direct-Cloning Strategy
+To eliminate both font substitution and layer hijacking:
+1. **Pre-Extract Text and Segments Upfront**:
+   Extract all text strings into pure JavaScript arrays (`var lines = textString.split(/\r\n|\r|\n/);`) before performing any layer operations.
+2. **Clone via Native Layer Duplication (`origLayer.duplicate()`)**:
+   Never create blank layers via `comp.layers.addText()`. Duplicating the original text layer inside the precomp transfers 100% of all:
+   - Font family, weight, and PostScript name
+   - Font size, auto-leading, and tracking
+   - Faux bold, faux italic, small-caps, and ligatures
+   - Stroke over fill, stroke color, and stroke width
+   - Text animators, range selectors, layer effects, and motion blur settings
+3. **Independent Document Value Assignment**:
+   Update only the text content using each duplicate layer's isolated `Source Text` value:
+   ```javascript
+   var lineLayer = innerTextLayer.duplicate();
+   lineLayer.name = "Line " + (i + 1);
+   var lineDoc = lineLayer.property("Source Text").value;
+   lineDoc.text = lines[i];
+   try { lineDoc.boxText = false; } catch (eBT) {}
+   lineLayer.property("Source Text").setValue(lineDoc);
+   ```
+4. **In-Place Native Measurement**:
+   Measure word widths directly on the duplicated layer (`wordLayer.sourceRectAtTime(0, false).width`) rather than creating temporary throwaway layers.
+5. **Clean Removal of Source**:
+   After all child line or word layers are spawned and positioned, remove the original template text layer (`innerTextLayer.remove()`).
+
+---
+
+## 26. ScriptUI Architectural Standards for Typography Precomposers
+
+Modern After Effects ScriptUI tools must prioritize ergonomic single-panel workflows over cluttered, multi-tab sprawl:
+1. **Direct Visibility**: All critical parameters (Detection status, Auto/Manual dimensions, Exterior Padding slider, 9-point Anchor Matrix, Background Card toggle with color picker, and Primary Actions) should be reachable without flipping between tabs.
+2. **Interactive 9-Point Anchor Matrix**: A 3x3 button grid (`[TL][TC][TR] / [ML][ C][MR] / [BL][BC][BR]`) synced bidirectionally with a dropdown list gives immediate visual feedback of the active anchor point.
+3. **Dual-Environment Color Picker**: Swatches should support both desktop ExtendScript (`$.colorPicker()`) and web-based browser emulators (`window.openWindowsColorPicker()`), with instant hex text input validation (`#RRGGBB`).
+4. **Persistent Undo Groups**: Every operation must be wrapped in `app.beginUndoGroup()` and `app.endUndoGroup()` so designers can instantly revert with `Ctrl+Z` / `Cmd+Z`.

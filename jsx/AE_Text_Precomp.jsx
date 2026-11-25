@@ -1,67 +1,45 @@
 // Co-authored & architected with Google DeepMind Antigravity.
 // =============================================================================
-// ADOBE AFTER EFFECTS EXTENDSCRIPT & SCRIPTUI PANEL: AE TEXT PRECOMP v1.8.0
+// ADOBE AFTER EFFECTS EXTENDSCRIPT & SCRIPTUI PANEL: AE TEXT PRECOMP v2.0.0
 // =============================================================================
 //
 // PURPOSE:
-//   Precomposes a selected text box (paragraph or point text) into a neatly-sized
-//   composition with customizable exterior padding, dynamic top anchor point rigger,
-//   a procedural 2D rounded rectangle background card featuring 4 independent
-//   corner radii (based on AE_Extruded_Round_corners), and kinetic division actions:
-//   "Divide by Words" and "Divide by Lines".
+//   Clean, high-performance procedural typography precomposer for Adobe After Effects.
+//   Transforms any Point Text or Paragraph (Box) Text layer into an isolated,
+//   perfectly padded precomposition with:
+//     1. 100% Zero-Shift Content Invariance (Scale & Rotation-safe parent comp compensation).
+//     2. True Exterior Padding (Expands canvas outward without breaking text wrap or lines).
+//     3. Procedural Bézier Background Card with custom corner radii (Default: Fuchsia #FF00FF).
+//     4. Kinetic Line & Word Division without font substitution or layer hijacking (Fixes "W" bug).
+//     5. Ergonomic Single-Panel ScriptUI Interface with interactive 3x3 anchor matrix.
 //
-// REPOSITORY:
-//   https://github.com/work2survive/AE-text-precomp
+// ARCHITECTURAL REFERENCES & KNOWLEDGE BASE:
+//   1. AE vs. JS Text Rendering Differences Guide (Engine Metrics, Precomps & Coordinate Transforms):
+//      https://github.com/work2survive/AE_JS_builder/blob/main/AE_VS_JS_TEXT_RENDERING_DIFFERENCES.md
+//   2. AE Align Anchor Point (Zero-Shift Affine Transformation Matrix):
+//      https://github.com/work2survive/AE-Align-AnchorPoint
+//   3. AE Text Highlight (Direct-Cloning Line & Word Segmentation):
+//      https://github.com/work2survive/AE-Text-Highlight
+//   4. Interactive Custom Rounded Rect & Color Picker:
+//      https://github.com/work2survive/AE_Custom_Rounded_Rect
 //
-// COHERENCE & COMPATIBILITY REFERENCES:
-//   - Text Properties Extraction & In-Memory Store:
-//     https://github.com/work2survive/AE_JS_builder/blob/main/samples/Text_Properties_To_Effects.jsx
-//   - Procedural Rounded Corner Background Card & Color Picker:
-//     https://github.com/work2survive/AE_Extruded_Round_corners
-//   - Web Emulator Live Demo:
-//     https://work2survive.github.io/AE_JS_builder/?jsx=AE_Text_Precomp.jsx&autobuild=true
+// REPOSITORIES:
+//   - https://github.com/work2survive/AE-text-precomp
+//   - https://github.com/work2survive/AE_JS_builder
 //
-// KEY FEATURES:
-//   1. "Divide by Words" Action:
-//      - Creates an individual text layer for each word placed at its exact matching
-//        visual position with sub-pixel typographic kerning, then encapsulates inside precomp.
-//   2. "Divide by Lines" Action:
-//      - Creates an individual text layer for each line placed at its exact matching
-//        position with proper leading and justification, then encapsulates inside precomp.
-//   3. Zero-Shift Text Box Positioning:
-//      - The exact visual position of the original text box on screen is preserved
-//        pixel-for-pixel when precomposed, regardless of anchor point placement.
-//      - Whenever an anchor point is changed, position is automatically compensated
-//        using the layer's rotation and scale transformation matrix.
-//   4. Exterior Padding Architecture:
-//      - Padding is added to the exterior of the text box (default 0px, fuchsia background).
-//      - Text box dimensions are never shrunk by padding; precomposition canvas and background
-//        expand to accommodate (textboxWidth + 2*padding, textboxHeight + 2*padding).
-//   5. Coherent Text Properties Extraction Engine:
-//      - Follows Text_Properties_To_Effects.jsx for robust typography metrics,
-//        paragraph justification, box text detection, sourceRect bounds, and
-//        in-memory $.global.AE_TEXT_BOX_MEMORY caching.
-//   6. Procedural Rounded Background Card (AE_Extruded_Round_corners):
-//      - Creates an individual 4-corner rounded rectangle shape layer behind the text.
-//      - Interactive UI asks which corners will react to the padding to round.
-//      - 8-vertex Bézier path with W3C CSS proportional overlap protection.
-//      - Master Effect Controls (Radius Top-Left, Top-Right, Bottom-Right, Bottom-Left,
-//        Card Width, Card Height) with live parametric expressions on the Path property.
-//   7. Integrated Interactive Color Picker:
-//      - Custom swatch button + hex input (#RRGGBB) compatible with AE native
-//        $.colorPicker, Windows OS color picker, and AE_JS_builder web emulator.
+// LIVE DEMO:
+//   https://work2survive.github.io/AE_JS_builder/?jsx=AE_Text_Precomp.jsx&autobuild=true
 // =============================================================================
 
-(function(thisObj) {
+(function (thisObj) {
     "use strict";
 
-    var SCRIPT_NAME = "AE Text Precomp";
-    var SCRIPT_VERSION = "v1.7.0";
-    var TEXT_PROP_REF_URL = "https://github.com/work2survive/AE_JS_builder/blob/main/samples/Text_Properties_To_Effects.jsx";
-    var EXTRUDED_CORNERS_REF_URL = "https://github.com/work2survive/AE_Extruded_Round_corners";
+    var SCRIPT_NAME    = "AE Text Precomp";
+    var SCRIPT_VERSION = "v2.0.0";
+    var REPO_URL       = "https://github.com/work2survive/AE-text-precomp";
 
     // -------------------------------------------------------------------------
-    // 1. Global In-Memory Cache Initialization (from Text_Properties_To_Effects.jsx)
+    // 1. Safe Environment & Memory Store
     // -------------------------------------------------------------------------
     var globalObj = (typeof $ !== "undefined" && typeof $.global !== "undefined")
         ? $.global
@@ -72,889 +50,216 @@
     } else if (typeof $.global === "undefined") {
         $.global = globalObj;
     }
-    var $root = (typeof $ !== "undefined") ? $ : globalObj.$;
 
-    if (typeof $root.global.AE_TEXT_BOX_MEMORY === "undefined") {
-        $root.global.AE_TEXT_BOX_MEMORY = {
+    var $root = (typeof $ !== "undefined") ? $ : globalObj.$;
+    if (typeof $root.global.AE_TEXT_PRECOMP_MEMORY === "undefined") {
+        $root.global.AE_TEXT_PRECOMP_MEMORY = {
             layerName: "",
-            words: [],
-            wordWidths: [],
-            lines: [],
-            lineWidths: [],
-            spaceWidth: 0,
-            fontSize: 0,
-            boxWidth: 0,
-            boxHeight: 0,
-            totalWords: 0,
-            totalLines: 0,
-            maxLineWidth: 0,
-            maxWordWidth: 0,
+            detectedWidth: 800,
+            detectedHeight: 120,
+            isBoxText: false,
+            align: "left",
             timestamp: 0
         };
     }
 
     // -------------------------------------------------------------------------
-    // 2. ES3 Helpers & Polyfills
+    // 2. Color & Metric Utilities
     // -------------------------------------------------------------------------
-    function trimStr(str) {
-        if (!str) return "";
-        return String(str).replace(/^[\s\uFEFF\xA0]+|[\s\uFEFF\xA0]+$/g, "");
-    }
-
     function hexToRgb(hex) {
-        hex = String(hex).replace("#", "");
-        if (hex.length === 3) {
-            hex = hex.charAt(0) + hex.charAt(0) + hex.charAt(1) + hex.charAt(1) + hex.charAt(2) + hex.charAt(2);
+        if (!hex) return [1.0, 0.0, 1.0]; // Default Fuchsia
+        var cleanHex = hex.replace("#", "");
+        if (cleanHex.length === 3) {
+            cleanHex = cleanHex.charAt(0) + cleanHex.charAt(0) +
+                       cleanHex.charAt(1) + cleanHex.charAt(1) +
+                       cleanHex.charAt(2) + cleanHex.charAt(2);
         }
-        var num = parseInt(hex, 16);
+        var num = parseInt(cleanHex, 16);
+        if (isNaN(num)) return [1.0, 0.0, 1.0];
         return [
-            ((num >> 16) & 255) / 255, // Red (0.0 to 1.0)
-            ((num >> 8) & 255) / 255,  // Green (0.0 to 1.0)
-            (num & 255) / 255,         // Blue (0.0 to 1.0)
-            1.0                        // Alpha
+            ((num >> 16) & 255) / 255,
+            ((num >> 8) & 255) / 255,
+            (num & 255) / 255
         ];
     }
 
-
-    // High-precision measurement engine matching the browser SVG engine and AE calibrated tables
-    function measureTextExact(str, fontSize, fontName) {
-        if (!str) return 0;
-        var fs = Number(fontSize) || 28;
-        var cleanFont = trimStr(String(fontName || "Arial").replace(/['"]/g, ""));
-
-        // 1. If in browser / simulator environment, use Canvas 2D font metric
-        if (typeof document !== "undefined") {
-            try {
-                var c = document.getElementById("__ae_precomp_measure_canvas");
-                if (!c) {
-                    c = document.createElement("canvas");
-                    c.id = "__ae_precomp_measure_canvas";
-                    c.style.display = "none";
-                    document.body.appendChild(c);
-                }
-                var ctx = c.getContext("2d");
-                var fontLower = cleanFont.toLowerCase();
-                var fontStack = cleanFont;
-                if (fontLower.indexOf("courier") !== -1 || fontLower.indexOf("mono") !== -1) {
-                    fontStack = "'" + cleanFont + "', 'Courier New', monospace";
-                } else if (fontLower.indexOf("times") !== -1 || fontLower.indexOf("georgia") !== -1 || fontLower.indexOf("serif") !== -1) {
-                    fontStack = "'" + cleanFont + "', Georgia, 'Times New Roman', serif";
-                } else {
-                    fontStack = "'" + cleanFont + "', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
-                }
-                ctx.font = fs + "px " + fontStack;
-                var m = ctx.measureText(str).width;
-                if (m && !isNaN(m) && m > 0) return m;
-            } catch (e) {}
-        }
-
-        // 2. Calibrated typographic metric table for ExtendScript desktop fallback
-        var fontLower2 = cleanFont.toLowerCase();
-        if (fontLower2.indexOf("courier") !== -1 || fontLower2.indexOf("mono") !== -1) {
-            return str.length * fs * 0.60;
-        }
-
-        var isTrebuchet = (fontLower2.indexOf("trebuchet") !== -1);
-        var isVerdana   = (fontLower2.indexOf("verdana") !== -1);
-        var isImpact    = (fontLower2.indexOf("impact") !== -1);
-        var isTimes     = (fontLower2.indexOf("times") !== -1);
-        var isGeorgia   = (fontLower2.indexOf("georgia") !== -1 || fontLower2.indexOf("serif") !== -1);
-
-        var total = 0;
-        for (var i = 0; i < str.length; i++) {
-            var ch = str.charAt(i);
-            var code = ch.charCodeAt(0);
-            if (code === 32) {
-                total += isTrebuchet ? (fs * 0.30) : (isVerdana ? (fs * 0.35) : (isImpact ? (fs * 0.18) : (isGeorgia ? (fs * 0.24) : (isTimes ? (fs * 0.25) : (fs * 0.28)))));
-            } else if ("ijl|!.,:;'I`".indexOf(ch) !== -1) {
-                total += isTrebuchet ? (fs * 0.29) : (isVerdana ? (fs * 0.27) : (isImpact ? (fs * 0.27) : (isGeorgia ? (fs * 0.29) : (isTimes ? (fs * 0.28) : (fs * 0.22)))));
-            } else if ("frt[](){}".indexOf(ch) !== -1) {
-                total += isTrebuchet ? (fs * 0.35) : (isVerdana ? (fs * 0.38) : (isImpact ? (fs * 0.32) : (isGeorgia ? (fs * 0.38) : (isTimes ? (fs * 0.34) : (fs * 0.33)))));
-            } else if ("wmWM@#%&".indexOf(ch) !== -1) {
-                total += isTrebuchet ? (fs * 0.78) : (isVerdana ? (fs * 0.90) : (isImpact ? (fs * 0.75) : (isGeorgia ? (fs * 0.90) : (isTimes ? (fs * 0.85) : (fs * 0.83)))));
-            } else if (ch >= 'A' && ch <= 'Z') {
-                total += isTrebuchet ? (fs * 0.60) : (isVerdana ? (fs * 0.68) : (isImpact ? (fs * 0.52) : (isGeorgia ? (fs * 0.67) : (isTimes ? (fs * 0.70) : (fs * 0.67)))));
-            } else if (ch >= '0' && ch <= '9') {
-                total += isTrebuchet ? (fs * 0.54) : (isVerdana ? (fs * 0.60) : (isImpact ? (fs * 0.51) : (isGeorgia ? (fs * 0.52) : (isTimes ? (fs * 0.50) : (fs * 0.56)))));
-            } else if (code > 255) {
-                total += fs * 1.0;
-            } else {
-                total += isTrebuchet ? (fs * 0.54) : (isVerdana ? (fs * 0.60) : (isImpact ? (fs * 0.51) : (isGeorgia ? (fs * 0.50) : (isTimes ? (fs * 0.44) : (fs * 0.56)))));
-            }
-        }
-        return total;
+    function rgbToHex(rgb) {
+        if (!rgb || rgb.length < 3) return "#FF00FF";
+        var r = Math.max(0, Math.min(255, Math.round(rgb[0] * 255)));
+        var g = Math.max(0, Math.min(255, Math.round(rgb[1] * 255)));
+        var b = Math.max(0, Math.min(255, Math.round(rgb[2] * 255)));
+        var rHex = r.toString(16); if (rHex.length < 2) rHex = "0" + rHex;
+        var gHex = g.toString(16); if (gHex.length < 2) gHex = "0" + gHex;
+        var bHex = b.toString(16); if (bHex.length < 2) bHex = "0" + bHex;
+        return ("#" + rHex + gHex + bHex).toUpperCase();
     }
-
-    function applyTextDocStyling(targetLayer, sampleDoc, textContent, sourceLayer) {
-        if (!targetLayer) return;
-        try {
-            var prop = targetLayer.property("Source Text");
-            if (!prop) return;
-
-            // Strategy 1: Direct native TextDocument assignment from source text layer
-            // Setting a cloned TextDocument directly preserves 100% font identity, fontObject,
-            // kerning, tracking, faux styles, and fills without triggering AE's font substitution.
-            var directDone = false;
-            try {
-                var docToSet = null;
-                if (sourceLayer && isTextLayer(sourceLayer)) {
-                    var sProp = sourceLayer.property("Source Text");
-                    if (sProp && sProp.value) {
-                        docToSet = sProp.value;
-                    }
-                }
-
-                if (docToSet && !docToSet.boxText) {
-                    docToSet.text = textContent;
-                    prop.setValue(docToSet);
-                    var vCheck = prop.value;
-                    if (vCheck && vCheck.text === textContent) {
-                        directDone = true;
-                    }
-                }
-            } catch (eDir) {
-                directDone = false;
-            }
-
-            if (directDone) return;
-
-            // Strategy 2: Robust attribute-by-attribute transfer with FontObject priority
-            var doc = prop.value;
-            doc.text = textContent;
-
-            if (sampleDoc) {
-                // 1. Font Object Assignment (AE 24+ - highest priority, avoids substitute proxies)
-                var fontApplied = false;
-                if (sampleDoc.fontObject) {
-                    try {
-                        doc.fontObject = sampleDoc.fontObject;
-                        fontApplied = true;
-                    } catch (eFO) {
-                        fontApplied = false;
-                    }
-                }
-
-                // 2. Query Font Server via app.fonts if available (AE 24+)
-                if (!fontApplied && typeof app !== "undefined" && app.fonts) {
-                    try {
-                        if (sampleDoc.font && typeof app.fonts.getFontsByPostScriptName === "function") {
-                            var matchedFonts = app.fonts.getFontsByPostScriptName(sampleDoc.font);
-                            if (matchedFonts && matchedFonts.length > 0) {
-                                doc.fontObject = matchedFonts[0];
-                                fontApplied = true;
-                            }
-                        }
-                    } catch (eFMatch) {}
-
-                    if (!fontApplied && sampleDoc.fontFamily && typeof app.fonts.getFontsByFamilyNameAndStyleName === "function") {
-                        try {
-                            var matchedFonts2 = app.fonts.getFontsByFamilyNameAndStyleName(sampleDoc.fontFamily, sampleDoc.fontStyle || "Regular");
-                            if (matchedFonts2 && matchedFonts2.length > 0) {
-                                doc.fontObject = matchedFonts2[0];
-                                fontApplied = true;
-                            }
-                        } catch (eFMatch2) {}
-                    }
-                }
-
-                // 3. PostScript font name assignment (Standard across all AE versions)
-                if (!fontApplied && sampleDoc.font) {
-                    try {
-                        doc.font = sampleDoc.font;
-                        fontApplied = true;
-                    } catch (eF) {}
-                }
-
-                // 4. Font Size
-                if (typeof sampleDoc.fontSize === "number" && sampleDoc.fontSize > 0) {
-                    doc.fontSize = sampleDoc.fontSize;
-                }
-
-                // 5. Fill properties
-                if (typeof sampleDoc.applyFill !== "undefined") {
-                    doc.applyFill = sampleDoc.applyFill;
-                }
-                if (sampleDoc.applyFill && sampleDoc.fillColor) {
-                    try { doc.fillColor = sampleDoc.fillColor; } catch (eFC) {}
-                }
-
-                // 6. Stroke properties
-                if (typeof sampleDoc.applyStroke !== "undefined") {
-                    doc.applyStroke = sampleDoc.applyStroke;
-                }
-                if (sampleDoc.applyStroke && sampleDoc.strokeColor) {
-                    try { doc.strokeColor = sampleDoc.strokeColor; } catch (eSC) {}
-                    if (typeof sampleDoc.strokeWidth === "number") {
-                        doc.strokeWidth = sampleDoc.strokeWidth;
-                    }
-                }
-                if (typeof sampleDoc.strokeOverFill !== "undefined") {
-                    try { doc.strokeOverFill = sampleDoc.strokeOverFill; } catch (eSOF) {}
-                }
-
-                // 7. Typography spacing & scale
-                if (typeof sampleDoc.tracking !== "undefined") {
-                    try { doc.tracking = sampleDoc.tracking; } catch (eTr) {}
-                }
-                if (typeof sampleDoc.leading !== "undefined") {
-                    try { doc.leading = sampleDoc.leading; } catch (eLd) {}
-                }
-                if (typeof sampleDoc.autoLeading !== "undefined") {
-                    try { doc.autoLeading = sampleDoc.autoLeading; } catch (eAL) {}
-                }
-                if (typeof sampleDoc.baselineShift !== "undefined") {
-                    try { doc.baselineShift = sampleDoc.baselineShift; } catch (eBS) {}
-                }
-                if (typeof sampleDoc.horizontalScale !== "undefined") {
-                    try { doc.horizontalScale = sampleDoc.horizontalScale; } catch (eHS) {}
-                }
-                if (typeof sampleDoc.verticalScale !== "undefined") {
-                    try { doc.verticalScale = sampleDoc.verticalScale; } catch (eVS) {}
-                }
-                if (typeof sampleDoc.tsume !== "undefined") {
-                    try { doc.tsume = sampleDoc.tsume; } catch (eTs) {}
-                }
-
-                // 8. Faux styles & Caps options
-                if (typeof sampleDoc.fontCapsOption !== "undefined") {
-                    try { doc.fontCapsOption = sampleDoc.fontCapsOption; } catch (eFCO) {}
-                } else if (typeof sampleDoc.allCaps !== "undefined") {
-                    try { doc.allCaps = sampleDoc.allCaps; } catch (eAC) {}
-                }
-                if (typeof sampleDoc.smallCaps !== "undefined") {
-                    try { doc.smallCaps = sampleDoc.smallCaps; } catch (eSmC) {}
-                }
-                if (typeof sampleDoc.fauxBold !== "undefined") {
-                    try { doc.fauxBold = sampleDoc.fauxBold; } catch (eFB) {}
-                }
-                if (typeof sampleDoc.fauxItalic !== "undefined") {
-                    try { doc.fauxItalic = sampleDoc.fauxItalic; } catch (eFI) {}
-                }
-                if (typeof sampleDoc.fontBaselineOption !== "undefined") {
-                    try { doc.fontBaselineOption = sampleDoc.fontBaselineOption; } catch (eFBO) {}
-                }
-
-                // 9. Kerning & Ligatures
-                if (typeof sampleDoc.autoKernType !== "undefined") {
-                    try { doc.autoKernType = sampleDoc.autoKernType; } catch (eAKT) {}
-                }
-                if (typeof sampleDoc.ligature !== "undefined") {
-                    try { doc.ligature = sampleDoc.ligature; } catch (eLig) {}
-                }
-            }
-
-            prop.setValue(doc);
-        } catch (eStyle) {}
-    }
-
-    // -------------------------------------------------------------------------
-    // 3. TEXT PROPERTIES EXTRACTION ENGINE
-    //    Referenced from & coherent with:
-    //    https://github.com/work2survive/AE_JS_builder/blob/main/samples/Text_Properties_To_Effects.jsx
-    // -------------------------------------------------------------------------
 
     function isTextLayer(layer) {
         if (!layer) return false;
         try {
-            if (typeof TextLayer !== "undefined" && layer instanceof TextLayer) return true;
-        } catch (e) {}
-        try {
-            if (layer.property("ADBE Text Properties") !== null) return true;
-            if (layer.property("Source Text") !== null) return true;
-        } catch (e) {}
-        return false;
-    }
-
-    function getTextDocument(layer) {
-        if (!isTextLayer(layer)) return null;
-        try {
-            var srcText = layer.property("Source Text");
-            if (srcText) return srcText.value;
-        } catch (e) {}
-        return null;
-    }
-
-    function getTextLayerString(layer) {
-        if (!layer) return "";
-        try {
-            var doc = getTextDocument(layer);
-            if (doc) {
-                if (typeof doc.text === "string") return doc.text;
-                if (typeof doc === "string") return doc;
-            }
-        } catch (e) {}
-        try {
-            if (typeof layer.text === "string") return layer.text;
-        } catch (e2) {}
-        try {
-            var prop = layer.property("Source Text");
-            if (prop && prop.value) {
-                var v = prop.value;
-                if (typeof v.text === "string") return v.text;
-                return String(v);
-            }
-        } catch (e3) {}
-        return "";
-    }
-
-    function getSourceRect(layer) {
-        if (!layer || typeof layer.sourceRectAtTime !== "function") return null;
-        try {
-            var t = (typeof layer.time !== "undefined") ? layer.time : 0;
-            return layer.sourceRectAtTime(t, false);
+            return (
+                layer.property("ADBE Text Properties") !== null ||
+                layer.property("Text") !== null ||
+                (typeof LayerType !== "undefined" && layer.type === LayerType.TEXT)
+            );
         } catch (e) {
-            return null;
+            return false;
         }
     }
 
     function getSelectedTextLayer(comp) {
-        if (!comp) {
-            comp = app.project.activeItem;
-        }
         if (!comp || !(comp instanceof CompItem)) return null;
-
         var sel = comp.selectedLayers;
-        if (!sel || sel.length === 0) return null;
-
-        for (var i = 0; i < sel.length; i++) {
-            if (isTextLayer(sel[i])) {
-                return sel[i];
+        if (sel && sel.length > 0) {
+            for (var i = 0; i < sel.length; i++) {
+                if (isTextLayer(sel[i])) return sel[i];
             }
         }
         return null;
     }
 
-    /**
-     * Measures and stores in memory (from Text_Properties_To_Effects.jsx):
-     *   1. Array with each word detected in the text box.
-     *   2. Array with the width in pixels of each word.
-     *   3. Array with the width in pixels of each text line.
-     */
-    function measureAndStoreTextMetrics(comp, layer) {
-        if (!comp || !layer) return null;
-        if (!isTextLayer(layer)) return null;
-
-        var textDoc = getTextDocument(layer);
-        if (!textDoc) return null;
-
-        var fullText = String(textDoc.text || "");
-        if (fullText.length === 0) {
-            var emptyStore = {
-                layerName: layer.name,
-                layerIndex: layer.index,
-                fullText: "",
-                words: [],
-                wordWidths: [],
-                lines: [],
-                lineWidths: [],
-                spaceWidth: 0,
-                fontSize: textDoc.fontSize || 0,
-                font: textDoc.font || "",
-                boxWidth: 0,
-                boxHeight: 0,
-                totalWords: 0,
-                totalLines: 0,
-                maxLineWidth: 0,
-                maxWordWidth: 0,
-                timestamp: (new Date()).getTime()
-            };
-            $root.global.AE_TEXT_BOX_MEMORY = emptyStore;
-            try { layer._textMetrics = emptyStore; } catch (e) {}
-            return emptyStore;
-        }
-
-        var words = fullText.match(/\S+/g) || [];
-        var wordWidths = [];
-        var lines = [];
-        var lineWidths = [];
-        var spaceWidth = 0;
-
-        var isBox = false;
-        var boxWidth = 0;
-        var boxHeight = 0;
-        try {
-            if (textDoc.boxText && textDoc.boxTextSize) {
-                isBox = true;
-                boxWidth = textDoc.boxTextSize[0];
-                boxHeight = textDoc.boxTextSize[1];
-            }
-        } catch (eBox) {}
-
-        // Measure metrics safely and non-destructively without altering composition layers
-        var fontSize = textDoc.fontSize || 28;
-        var charRatio = fontSize * 0.52;
-        spaceWidth = Math.round((fontSize * 0.28) * 100) / 100;
-
-        for (var w = 0; w < words.length; w++) {
-            var ww = Math.round(words[w].length * charRatio * 100) / 100;
-            wordWidths.push(ww);
-        }
-
-        var paragraphs = fullText.split(/\r\n|\r|\n/);
-        for (var p = 0; p < paragraphs.length; p++) {
-            var para = paragraphs[p];
-            if (!isBox || boxWidth <= 0) {
-                lines.push(para);
-                lineWidths.push(Math.round(para.length * charRatio * 100) / 100);
-            } else {
-                var pWords = para.match(/\S+/g) || [];
-                if (pWords.length === 0) {
-                    lines.push("");
-                    lineWidths.push(0);
-                    continue;
-                }
-                var curLine = pWords[0];
-                var curW = curLine.length * charRatio;
-
-                for (var pw = 1; pw < pWords.length; pw++) {
-                    var testLine = curLine + " " + pWords[pw];
-                    var testW = testLine.length * charRatio;
-
-                    if (testW > boxWidth && curLine.length > 0) {
-                        lines.push(curLine);
-                        lineWidths.push(Math.round(curW * 100) / 100);
-                        curLine = pWords[pw];
-                        curW = curLine.length * charRatio;
-                    } else {
-                        curLine = testLine;
-                        curW = testW;
-                    }
-                }
-                lines.push(curLine);
-                lineWidths.push(Math.round(curW * 100) / 100);
-            }
-        }
-
-        var maxLW = 0;
-        for (var ml = 0; ml < lineWidths.length; ml++) {
-            if (lineWidths[ml] > maxLW) maxLW = lineWidths[ml];
-        }
-
-        var maxWW = 0;
-        for (var mw = 0; mw < wordWidths.length; mw++) {
-            if (wordWidths[mw] > maxWW) maxWW = wordWidths[mw];
-        }
-
-        var memoryStore = {
-            layerName: layer.name,
-            layerIndex: layer.index,
-            fullText: fullText,
-            words: words,
-            wordWidths: wordWidths,
-            lines: lines,
-            lineWidths: lineWidths,
-            spaceWidth: spaceWidth,
-            fontSize: textDoc.fontSize,
-            font: textDoc.font || "",
-            boxWidth: boxWidth,
-            boxHeight: boxHeight,
-            totalWords: words.length,
-            totalLines: lines.length,
-            maxLineWidth: maxLW,
-            maxWordWidth: maxWW,
-            timestamp: (new Date()).getTime()
-        };
-
-        $root.global.AE_TEXT_BOX_MEMORY = memoryStore;
-        try { layer._textMetrics = memoryStore; } catch (eMem) {}
-        return memoryStore;
-    }
-
-    /**
-     * High-level text metrics extractor coherent with Text_Properties_To_Effects.jsx
-     */
-    function getTextLayerMetrics(comp, layer) {
+    function getTextDocument(layer) {
         if (!layer) return null;
-
-        var rect = getSourceRect(layer);
-        if (!rect || typeof rect.width === "undefined") {
-            rect = { left: 0, top: 0, width: 800, height: 200 };
-        }
-
-        var textDoc = getTextDocument(layer);
-
-        // Store comprehensive metrics in memory
-        var metricsStore = null;
-        if (comp) {
-            try {
-                metricsStore = measureAndStoreTextMetrics(comp, layer);
-            } catch (eMeas) {}
-        }
-
-        var isBoxText = false;
-        var boxWidth = 0;
-        var boxHeight = 0;
-        var justification = 7412; // LEFT_JUSTIFY default
-        var align = "left";
-        var alignIndex = 0;       // 0: Left, 1: Center, 2: Right, 3: Justified
-        var alignRatio = 0.0;     // 0.0 (Left), 0.5 (Center), 1.0 (Right)
-        var font = "ArialMT";
-        var fontSize = 28;
-        var leading = 0;
-        var tracking = 0;
-        var baselineShift = 0;
-        var fillColor = [1, 1, 1, 1];
-        var strokeColor = [0, 0, 0, 1];
-        var strokeWidth = 0;
-
-        if (textDoc) {
-            try {
-                if (textDoc.font) font = textDoc.font;
-                if (textDoc.fontSize) fontSize = textDoc.fontSize;
-                if (typeof textDoc.justification !== "undefined") {
-                    justification = textDoc.justification;
-                }
-                if (textDoc.boxText && textDoc.boxTextSize) {
-                    isBoxText = true;
-                    boxWidth = textDoc.boxTextSize[0];
-                    boxHeight = textDoc.boxTextSize[1];
-                }
-                leading = textDoc.autoLeading ? (textDoc.fontSize * 1.2) : (textDoc.leading || 0);
-                tracking = textDoc.tracking || 0;
-                baselineShift = textDoc.baselineShift || 0;
-                if (textDoc.applyFill && textDoc.fillColor) {
-                    var fc = textDoc.fillColor;
-                    fillColor = [fc[0], fc[1], fc[2], 1.0];
-                }
-                if (textDoc.applyStroke && textDoc.strokeColor) {
-                    var sc = textDoc.strokeColor;
-                    strokeColor = [sc[0], sc[1], sc[2], 1.0];
-                    strokeWidth = textDoc.strokeWidth || 0;
-                }
-            } catch (eDoc) {}
-        }
-
-        // Justification evaluation coherent with Text_Properties_To_Effects.jsx
-        if (typeof ParagraphJustification !== "undefined") {
-            if (justification === ParagraphJustification.CENTER_JUSTIFY ||
-                justification === ParagraphJustification.FULL_JUSTIFY_LASTCENTER) {
-                align = "center";
-                alignIndex = 1;
-                alignRatio = 0.5;
-            } else if (justification === ParagraphJustification.RIGHT_JUSTIFY ||
-                       justification === ParagraphJustification.FULL_JUSTIFY_LASTRIGHT) {
-                align = "right";
-                alignIndex = 2;
-                alignRatio = 1.0;
-            } else if (justification === ParagraphJustification.LEFT_JUSTIFY ||
-                       justification === ParagraphJustification.FULL_JUSTIFY_LASTLEFT) {
-                align = "left";
-                alignIndex = 0;
-                alignRatio = 0.0;
-            } else {
-                align = "left";
-                alignIndex = 3;
-                alignRatio = 0.0;
+        try {
+            var textProp = layer.property("ADBE Text Properties") || layer.property("Text");
+            if (textProp) {
+                var docProp = textProp.property("ADBE Text Document") || layer.property("Source Text");
+                if (docProp && docProp.value) return docProp.value;
             }
-        } else {
-            if (justification == 7414 || justification == 7417) {
-                align = "center";
-                alignIndex = 1;
-                alignRatio = 0.5;
-            } else if (justification == 7413 || justification == 7416) {
-                align = "right";
-                alignIndex = 2;
-                alignRatio = 1.0;
-            } else {
-                align = "left";
-                alignIndex = 0;
-                alignRatio = 0.0;
-            }
-        }
-
-        var contentW = (metricsStore && metricsStore.maxLineWidth > 0) ? metricsStore.maxLineWidth : Math.ceil(rect.width);
-        var detW = (isBoxText && boxWidth > 0) ? Math.round(boxWidth) : (contentW > 0 ? Math.ceil(contentW) : Math.ceil(rect.width));
-        var detH = Math.ceil(rect.height);
-        if (metricsStore && metricsStore.totalLines && metricsStore.totalLines > 0) {
-            var fsVal = fontSize || 28;
-            var lVal = leading || (fsVal * 1.2);
-            var typoH = (fsVal * 1.0) + ((metricsStore.totalLines - 1) * lVal);
-            if (typoH > detH) detH = Math.ceil(typoH);
-        }
-
-        return {
-            layer: layer,
-            name: layer.name,
-            rect: rect,
-            isBoxText: isBoxText,
-            boxWidth: boxWidth,
-            boxHeight: boxHeight,
-            contentWidth: contentW,
-            detectedWidth: Math.max(10, detW),
-            detectedHeight: Math.max(10, detH),
-            justification: justification,
-            align: align,
-            alignIndex: alignIndex,
-            alignRatio: alignRatio,
-            font: font,
-            fontSize: fontSize,
-            leading: leading,
-            tracking: tracking,
-            baselineShift: baselineShift,
-            fillColor: fillColor,
-            strokeColor: strokeColor,
-            strokeWidth: strokeWidth,
-            memoryStore: metricsStore || $root.global.AE_TEXT_BOX_MEMORY
-        };
+        } catch (e) {}
+        return null;
     }
 
-    // -------------------------------------------------------------------------
-    // 4. Geometry & Anchor Point Helpers (AE_Align_Anchor_Point coherent)
-    // -------------------------------------------------------------------------
-    var COLOR_PRESETS = {
-        "Cyan":   [0.0, 0.95, 0.95],
-        "Red":    [1.0, 0.25, 0.25],
-        "Yellow": [1.0, 0.85, 0.15],
-        "Green":  [0.2, 0.90, 0.40],
-        "White":  [1.0, 1.0, 1.0]
-    };
-
-    var ALIGN_X_INDICES = { "left": 0, "center": 1, "right": 2 };
-    var ALIGN_Y_INDICES = { "top": 0, "center": 1, "bottom": 2 };
-    var BOUNDS_MODE_INDICES = { "sourceRect": 0, "stated": 1, "content": 0, "canvas": 1 };
-
-    /**
-     * Obtains the dynamic bounding box via sourceRectAtTime(time, false) with Box Text fallback
-     */
     function getLayerSourceRectBounds(layer, compTime) {
-        if (!layer) return { left: 0, top: 0, width: 100, height: 100 };
+        if (!layer) return { left: 0, top: 0, width: 800, height: 120 };
         var t = (compTime !== undefined) ? compTime : 0;
-
-        if (typeof layer.sourceRectAtTime === "function") {
-            try {
+        try {
+            if (typeof layer.sourceRectAtTime === "function") {
                 var sr = layer.sourceRectAtTime(t, false);
-                if (sr && (sr.width !== 0 || sr.height !== 0 || sr.left !== 0 || sr.top !== 0)) {
+                if (sr && (sr.width > 0 || sr.height > 0 || sr.left !== 0 || sr.top !== 0)) {
                     return { left: sr.left, top: sr.top, width: sr.width, height: sr.height };
                 }
-            } catch (eSR) {}
-        }
+            }
+        } catch (eSR) {}
 
-        try {
-            var textProp = layer.property("ADBE Text Properties") || layer.property("Text");
-            if (textProp) {
-                var docProp = textProp.property("ADBE Text Document") || layer.property("Source Text");
-                if (docProp && docProp.value) {
-                    var doc = docProp.value;
-                    if (doc.boxText && doc.boxTextSize) {
-                        var bPos = doc.boxTextPos || [0, 0];
-                        return { left: bPos[0], top: bPos[1], width: doc.boxTextSize[0], height: doc.boxTextSize[1] };
-                    }
+        var doc = getTextDocument(layer);
+        if (doc && doc.boxText && doc.boxTextSize) {
+            var bPos = doc.boxTextPos || [0, 0];
+            return {
+                left: bPos[0],
+                top: bPos[1],
+                width: doc.boxTextSize[0],
+                height: doc.boxTextSize[1]
+            };
+        }
+        return { left: 0, top: 0, width: 800, height: 120 };
+    }
+
+    function getTextLayerMetrics(comp, layer) {
+        if (!layer) return null;
+        var curTime = comp ? comp.time : 0;
+        var sr = getLayerSourceRectBounds(layer, curTime);
+        var doc = getTextDocument(layer);
+
+        var isBoxText = false;
+        var boxW = sr.width;
+        var boxH = sr.height;
+        var boxL = sr.left;
+        var boxT = sr.top;
+        var fontSize = 36;
+        var leading = 43.2;
+        var fontName = "Arial";
+        var tracking = 0;
+        var align = "left";
+        var rawText = "";
+
+        if (doc) {
+            isBoxText = Boolean(doc.boxText);
+            if (isBoxText && doc.boxTextSize) {
+                boxW = doc.boxTextSize[0];
+                boxH = doc.boxTextSize[1];
+                if (doc.boxTextPos) {
+                    boxL = doc.boxTextPos[0];
+                    boxT = doc.boxTextPos[1];
                 }
             }
-        } catch (eText) {}
+            if (typeof doc.fontSize === "number" && doc.fontSize > 0) fontSize = doc.fontSize;
+            if (typeof doc.leading === "number" && doc.leading > 0) leading = doc.leading;
+            else leading = fontSize * 1.2;
+            if (doc.font) fontName = doc.font;
+            if (typeof doc.tracking === "number") tracking = doc.tracking;
+            if (doc.text) rawText = doc.text;
 
-        var w = 0, h = 0;
-        if (layer.source && typeof layer.source.width === "number" && typeof layer.source.height === "number") {
-            w = layer.source.width; h = layer.source.height;
-        } else if (typeof layer.width === "number" && typeof layer.height === "number") {
-            w = layer.width; h = layer.height;
-        }
-        if (w > 0 && h > 0) return { left: 0, top: 0, width: w, height: h };
-
-        var cW = (layer.containingComp && layer.containingComp.width) ? layer.containingComp.width : 1920;
-        var cH = (layer.containingComp && layer.containingComp.height) ? layer.containingComp.height : 1080;
-        return { left: 0, top: 0, width: cW, height: cH };
-    }
-
-    /**
-     * Obtains stated / nominal dimensions (declared box text width/height, solid size, or precomp dimensions)
-     */
-    function getLayerStatedBounds(layer) {
-        if (!layer) return { left: 0, top: 0, width: 100, height: 100 };
-
-        try {
-            var textProp = layer.property("ADBE Text Properties") || layer.property("Text");
-            if (textProp) {
-                var docProp = textProp.property("ADBE Text Document") || layer.property("Source Text");
-                if (docProp && docProp.value) {
-                    var doc = docProp.value;
-                    if (doc.boxText && doc.boxTextSize) {
-                        var bPos = doc.boxTextPos || [0, 0];
-                        return { left: bPos[0], top: bPos[1], width: doc.boxTextSize[0], height: doc.boxTextSize[1] };
-                    }
-                }
-            }
-        } catch (eBox) {}
-
-        if (layer.source && typeof layer.source.width === "number" && typeof layer.source.height === "number") {
-            return { left: 0, top: 0, width: layer.source.width, height: layer.source.height };
-        }
-        if (typeof layer.width === "number" && typeof layer.height === "number" && layer.width > 0 && layer.height > 0) {
-            return { left: 0, top: 0, width: layer.width, height: layer.height };
-        }
-
-        return getLayerSourceRectBounds(layer, 0);
-    }
-
-    /**
-     * Computes the target [X, Y] anchor coordinates based on bounds and alignment modes (AE_Align_Anchor_Point)
-     */
-    function computeTargetAnchor(bounds, xMode, yMode) {
-        var tx = bounds.left;
-        if (xMode === "center") {
-            tx = bounds.left + bounds.width / 2;
-        } else if (xMode === "right") {
-            tx = bounds.left + bounds.width;
-        }
-
-        var ty = bounds.top;
-        if (yMode === "center") {
-            ty = bounds.top + bounds.height / 2;
-        } else if (yMode === "bottom") {
-            ty = bounds.top + bounds.height;
-        }
-
-        return [tx, ty];
-    }
-
-    /**
-     * Creates or updates a vector cross shape layer parented to targetLayer at [0, 0] (Guide Layer)
-     */
-    function attachAnchorCross(comp, targetLayer, crossSize, isGuide, colorName) {
-        if (!comp || !targetLayer) return null;
-        crossSize = Number(crossSize) || 30;
-        var strokeW = Math.max(2, Math.round(crossSize / 15));
-        var col = COLOR_PRESETS[colorName] || COLOR_PRESETS["Cyan"];
-        var crossName = "Anchor_Cross_" + targetLayer.name;
-
-        var crossLayer = null;
-        var numL = (typeof comp.numLayers === "number") ? comp.numLayers : comp.layers.length;
-        for (var i = 1; i <= numL; i++) {
-            var candidate = (typeof comp.layer === "function") ? comp.layer(i) : (comp.layers[i] || comp.layers[i - 1]);
-            if (candidate && candidate.parent === targetLayer &&
-               (candidate.name === crossName || candidate.name === "Anchor_Cross" || candidate.name.indexOf("Anchor_Cross_") === 0)) {
-                crossLayer = candidate;
-                break;
+            var just = doc.justification;
+            if (typeof ParagraphJustification !== "undefined") {
+                if (just === ParagraphJustification.CENTER_JUSTIFY) align = "center";
+                else if (just === ParagraphJustification.RIGHT_JUSTIFY) align = "right";
+                else align = "left";
+            } else {
+                if (just === 7414) align = "center";
+                else if (just === 7413) align = "right";
+                else align = "left";
             }
         }
 
-        if (!crossLayer) {
-            crossLayer = comp.layers.addShape();
-            crossLayer.name = crossName;
-        }
+        var lines = rawText.split(/\r\n|\r|\n/);
+        var words = rawText.replace(/\s+/g, " ").replace(/^\s+|\s+$/g, "").split(" ");
+        if (words.length === 1 && words[0] === "") words = [];
 
-        crossLayer.parent = null;
+        var metrics = {
+            layerName: layer.name,
+            isBoxText: isBoxText,
+            detectedWidth: Math.max(10, Math.round(boxW)),
+            detectedHeight: Math.max(10, Math.round(boxH)),
+            boxLeft: boxL,
+            boxTop: boxT,
+            fontSize: fontSize,
+            leading: leading,
+            fontName: fontName,
+            tracking: tracking,
+            align: align,
+            rawText: rawText,
+            lines: lines,
+            words: words,
+            totalWords: words.length,
+            totalLines: lines.length
+        };
 
-        var contents = crossLayer.property("Contents") || crossLayer.property("ADBE Root Vectors Group");
-        while (contents && contents.numProperties > 0) {
-            contents.property(1).remove();
-        }
-
-        var grp = contents.addProperty("ADBE Vector Group");
-        grp.name = "Crosshair Shapes";
-        var grpContents = grp.property("Contents");
-
-        var rectH = grpContents.addProperty("ADBE Vector Shape - Rect");
-        rectH.name = "Horizontal Bar";
-        rectH.property("Size").setValue([crossSize, strokeW]);
-        rectH.property("Position").setValue([0, 0]);
-
-        var rectV = grpContents.addProperty("ADBE Vector Shape - Rect");
-        rectV.name = "Vertical Bar";
-        rectV.property("Size").setValue([strokeW, crossSize]);
-        rectV.property("Position").setValue([0, 0]);
-
-        var dot = grpContents.addProperty("ADBE Vector Shape - Ellipse");
-        dot.name = "Center Pivot Dot";
-        dot.property("Size").setValue([strokeW * 3.0, strokeW * 3.0]);
-        dot.property("Position").setValue([0, 0]);
-
-        var fill = grpContents.addProperty("ADBE Vector Graphic - Fill");
-        fill.property("Color").setValue(col);
-
-        var ring = grpContents.addProperty("ADBE Vector Shape - Ellipse");
-        ring.name = "Reticle Outer Ring";
-        ring.property("Size").setValue([crossSize * 0.72, crossSize * 0.72]);
-        ring.property("Position").setValue([0, 0]);
-
-        var ringStroke = grpContents.addProperty("ADBE Vector Graphic - Stroke");
-        ringStroke.property("Color").setValue(col);
-        ringStroke.property("Stroke Width").setValue(1.5);
-
-        crossLayer.guideLayer = Boolean(isGuide);
-        crossLayer.threeDLayer = Boolean(targetLayer.threeDLayer);
-        crossLayer.label = 14;
-
-        var is3D = targetLayer.threeDLayer;
-        crossLayer.transform.anchorPoint.setValue(is3D ? [0, 0, 0] : [0, 0]);
-        crossLayer.transform.position.setValue(is3D ? [0, 0, 0] : [0, 0]);
-        crossLayer.transform.scale.setValue(is3D ? [100, 100, 100] : [100, 100]);
-        if (crossLayer.transform.rotation) crossLayer.transform.rotation.setValue(0);
-
-        crossLayer.parent = targetLayer;
-        try { crossLayer.moveBefore(targetLayer); } catch (eMB) {}
-
-        return crossLayer;
-    }
-
-    /**
-     * Stores alignment state directly on targetLayer as effect slider controls
-     */
-    function storeAlignmentEffect(layer, xMode, yMode, boundsMethod, baseA) {
-        if (!layer) return;
-        try {
-            var fxParade = layer.property("ADBE Effect Parade") || layer.property("Effects");
-            if (!fxParade) return;
-
-            var xVal = ALIGN_X_INDICES[xMode] !== undefined ? ALIGN_X_INDICES[xMode] : 0;
-            var yVal = ALIGN_Y_INDICES[yMode] !== undefined ? ALIGN_Y_INDICES[yMode] : 0;
-            var bVal = BOUNDS_MODE_INDICES[boundsMethod] !== undefined ? BOUNDS_MODE_INDICES[boundsMethod] : 0;
-
-            var effX = fxParade.property("Anchor Align X") || fxParade.addProperty("ADBE Slider Control");
-            if (effX) {
-                effX.name = "Anchor Align X";
-                var pX = effX.property("ADBE Slider Control-0001") || effX.property(1);
-                if (pX) pX.setValue(xVal);
-            }
-
-            var effY = fxParade.property("Anchor Align Y") || fxParade.addProperty("ADBE Slider Control");
-            if (effY) {
-                effY.name = "Anchor Align Y";
-                var pY = effY.property("ADBE Slider Control-0001") || effY.property(1);
-                if (pY) pY.setValue(yVal);
-            }
-
-            var effB = fxParade.property("Anchor Bounds Mode") || fxParade.addProperty("ADBE Slider Control");
-            if (effB) {
-                effB.name = "Anchor Bounds Mode";
-                var pB = effB.property("ADBE Slider Control-0001") || effB.property(1);
-                if (pB) pB.setValue(bVal);
-            }
-
-            try {
-                if (baseA && typeof baseA[0] === "number") {
-                    var effBasePt = fxParade.property("Anchor Base Point") || fxParade.addProperty("ADBE Point Control");
-                    if (effBasePt) {
-                        effBasePt.name = "Anchor Base Point";
-                        var pBasePt = effBasePt.property("ADBE Point Control-0001") || effBasePt.property(1);
-                        if (pBasePt) pBasePt.setValue([baseA[0], baseA[1]]);
-                    }
-                }
-            } catch (eBasePt) {}
-        } catch (eStore) {}
+        // Cache in global store
+        $root.global.AE_TEXT_PRECOMP_MEMORY = metrics;
+        return metrics;
     }
 
     // -------------------------------------------------------------------------
-    // 5. Bézier Rounded Rectangle Path Computation (AE_Extruded_Round_corners)
+    // 3. Procedural Bézier Rounded Rectangle Generator (AE_Custom_Rounded_Rect)
     // -------------------------------------------------------------------------
-    function computeRoundRectPathData(w, h, rTL, rTR, rBR, rBL) {
-        // W3C CSS Backgrounds and Borders Module Level 3 (§5.5 Corner Overlapping)
-        var topSum    = rTL + rTR;
-        var bottomSum = rBL + rBR;
-        var leftSum   = rTL + rBL;
-        var rightSum  = rTR + rBR;
+    function computeBezierRoundedRect(w, h, rTL, rTR, rBR, rBL, preventOverlap) {
+        w = Math.max(0, w);
+        h = Math.max(0, h);
+        rTL = Math.max(0, rTL);
+        rTR = Math.max(0, rTR);
+        rBR = Math.max(0, rBR);
+        rBL = Math.max(0, rBL);
 
-        var f = 1.0;
-        if (topSum > w && topSum > 0)       f = Math.min(f, w / topSum);
-        if (bottomSum > w && bottomSum > 0) f = Math.min(f, w / bottomSum);
-        if (leftSum > h && leftSum > 0)     f = Math.min(f, h / leftSum);
-        if (rightSum > h && rightSum > 0)   f = Math.min(f, h / rightSum);
+        if (preventOverlap) {
+            var topSum    = rTL + rTR;
+            var bottomSum = rBL + rBR;
+            var leftSum   = rTL + rBL;
+            var rightSum  = rTR + rBR;
 
-        rTL *= f;
-        rTR *= f;
-        rBR *= f;
-        rBL *= f;
+            var f = 1.0;
+            if (topSum > w && topSum > 0)       f = Math.min(f, w / topSum);
+            if (bottomSum > w && bottomSum > 0) f = Math.min(f, w / bottomSum);
+            if (leftSum > h && leftSum > 0)     f = Math.min(f, h / leftSum);
+            if (rightSum > h && rightSum > 0)   f = Math.min(f, h / rightSum);
 
+            rTL *= f;
+            rTR *= f;
+            rBR *= f;
+            rBL *= f;
+        }
+
+        var K = 0.5522847498307936;
         var halfW = w / 2;
         var halfH = h / 2;
         var xMin = -halfW;
@@ -962,16 +267,15 @@
         var yMin = -halfH;
         var yMax =  halfH;
 
-        var K = 0.5522847498307936; // 4 * (Math.sqrt(2) - 1) / 3
         var points = [
-            [xMin + rTL, yMin],
-            [xMax - rTR, yMin],
-            [xMax, yMin + rTR],
-            [xMax, yMax - rBR],
-            [xMax - rBR, yMax],
-            [xMin + rBL, yMax],
-            [xMin, yMax - rBL],
-            [xMin, yMin + rTL]
+            [xMin + rTL, yMin],        // P0: Top edge, TL curve end
+            [xMax - rTR, yMin],        // P1: Top edge, TR curve start
+            [xMax, yMin + rTR],        // P2: Right edge, TR curve end
+            [xMax, yMax - rBR],        // P3: Right edge, BR curve start
+            [xMax - rBR, yMax],        // P4: Bottom edge, BR curve end
+            [xMin + rBL, yMax],        // P5: Bottom edge, BL curve start
+            [xMin, yMax - rBL],        // P6: Left edge, BL curve end
+            [xMin, yMin + rTL]         // P7: Left edge, TL curve start
         ];
 
         var inTangents = [
@@ -1003,916 +307,293 @@
         };
     }
 
-
-    // -------------------------------------------------------------------------
-    // 6. Create Background Card Layer (Procedural Bézier Rounded Rectangle)
-    // -------------------------------------------------------------------------
-    function createBackgroundShapeLayer(comp, precompW, precompH, radii, hexColor, opacity) {
-        var bgLayer = null;
+    function addBackgroundCard(comp, w, h, radii, colorRgb, opacity) {
+        if (!comp || !(comp instanceof CompItem)) return null;
         try {
-            bgLayer = comp.layers.addShape();
-            bgLayer.name = "Background Card";
-        } catch (eAddShape) {
+            var shapeLayer = comp.layers.addShape();
+            shapeLayer.name = "Background Card";
+            shapeLayer.moveToEnd();
+
+            shapeLayer.property("Transform").property("Position").setValue([w / 2, h / 2]);
+            shapeLayer.property("Transform").property("Anchor Point").setValue([0, 0]);
+            if (typeof opacity === "number") {
+                shapeLayer.property("Transform").property("Opacity").setValue(Math.max(0, Math.min(100, opacity)));
+            }
+
+            var contents = shapeLayer.property("Contents") || shapeLayer.property("ADBE Root Vectors Group");
+            var shapeGroup = contents.addProperty("ADBE Vector Group");
+            shapeGroup.name = "Rounded Card Group";
+            var groupContents = shapeGroup.property("Contents") || shapeGroup.property("ADBE Vectors Group");
+
+            var pathData = computeBezierRoundedRect(w, h, radii.tl, radii.tr, radii.br, radii.bl, true);
+            var pathProp = groupContents.addProperty("ADBE Vector Shape - Path");
+            var shapeObj = new Shape();
+            shapeObj.vertices = pathData.points;
+            shapeObj.inTangents = pathData.inTangents;
+            shapeObj.outTangents = pathData.outTangents;
+            shapeObj.closed = true;
+            pathProp.property("Path").setValue(shapeObj);
+
+            var fillProp = groupContents.addProperty("ADBE Vector Graphic - Fill");
+            fillProp.property("Color").setValue([colorRgb[0], colorRgb[1], colorRgb[2], 1.0]);
+
+            return shapeLayer;
+        } catch (eBg) {
             return null;
         }
-
-        try {
-            // Place at center of precomposition (2D safe)
-            try {
-                bgLayer.transform.position.setValue([precompW / 2, precompH / 2]);
-                bgLayer.transform.anchorPoint.setValue([0, 0]);
-            } catch (eTf2D) {
-                try {
-                    bgLayer.transform.position.setValue([precompW / 2, precompH / 2, 0]);
-                    bgLayer.transform.anchorPoint.setValue([0, 0, 0]);
-                } catch (eTf3D) {}
-            }
-
-            // 1. Add Master Effect Controls first to prevent invalidating shape references later
-            try {
-                var fxGroup = bgLayer.property("ADBE Effect Parade") || bgLayer.property("Effects");
-                if (fxGroup) {
-                    var fxW = fxGroup.addProperty("ADBE Slider Control");
-                    fxW.name = "Card Width";
-                    fxW.property(1).setValue(precompW);
-
-                    var fxH = fxGroup.addProperty("ADBE Slider Control");
-                    fxH.name = "Card Height";
-                    fxH.property(1).setValue(precompH);
-
-                    var fxTL = fxGroup.addProperty("ADBE Slider Control");
-                    fxTL.name = "Radius Top-Left";
-                    fxTL.property(1).setValue(radii.rTL);
-
-                    var fxTR = fxGroup.addProperty("ADBE Slider Control");
-                    fxTR.name = "Radius Top-Right";
-                    fxTR.property(1).setValue(radii.rTR);
-
-                    var fxBR = fxGroup.addProperty("ADBE Slider Control");
-                    fxBR.name = "Radius Bottom-Right";
-                    fxBR.property(1).setValue(radii.rBR);
-
-                    var fxBL = fxGroup.addProperty("ADBE Slider Control");
-                    fxBL.name = "Radius Bottom-Left";
-                    fxBL.property(1).setValue(radii.rBL);
-                }
-            } catch (eFx) {}
-
-            // Helper to get fresh groupContents starting from bgLayer
-            function getFreshGrpContents() {
-                try {
-                    var r = bgLayer.property("ADBE Root Vectors Group") || bgLayer.property("Contents") || (bgLayer.property && bgLayer.property(1));
-                    if (!r) return null;
-                    var g = r.property("Rounded Card") || (r.numProperties >= 1 ? r.property(1) : null);
-                    if (!g) return null;
-                    return g.property("ADBE Vectors Group") || g.property("Contents") || (g.property && g.property(2)) || (g.property && g.property(1));
-                } catch (eFresh) {
-                    return null;
-                }
-            }
-
-            // 2. Add Shape Group with Path and Fill
-            try {
-                var rootVectors = bgLayer.property("ADBE Root Vectors Group") || bgLayer.property("Contents") || (bgLayer.property && bgLayer.property(1));
-                if (rootVectors) {
-                    var group = rootVectors.addProperty("ADBE Vector Group");
-                    try { group.name = "Rounded Card"; } catch (eGrpName) {}
-                }
-            } catch (eAddGrp) {}
-
-            var groupContents = getFreshGrpContents();
-            if (groupContents) {
-                try {
-                    groupContents.addProperty("ADBE Vector Shape - Group");
-                } catch (eG1) {
-                    try { groupContents.addProperty("Path"); } catch (eG2) {}
-                }
-            }
-
-            groupContents = getFreshGrpContents();
-            if (groupContents) {
-                try {
-                    groupContents.addProperty("ADBE Vector Graphic - Fill");
-                } catch (eF1) {
-                    try { groupContents.addProperty("Fill"); } catch (eF2) {}
-                }
-            }
-
-            // Re-query groupContents fresh after all additions to prevent stale references in AE C++ DOM
-            groupContents = getFreshGrpContents();
-
-            // 3. Configure Path
-            var shapeGroup = null;
-            if (groupContents) {
-                try {
-                    shapeGroup = groupContents.property("ADBE Vector Shape - Group") ||
-                                 groupContents.property("Rounded Path") ||
-                                 groupContents.property("Path 1") ||
-                                 (groupContents.numProperties >= 1 ? groupContents.property(1) : null);
-                } catch (eSG) {}
-            }
-
-            var pathProp = null;
-            if (shapeGroup) {
-                try { shapeGroup.name = "Rounded Path"; } catch (eName) {}
-                try {
-                    pathProp = shapeGroup.property("ADBE Vector Shape") ||
-                               shapeGroup.property("Path") ||
-                               shapeGroup.path ||
-                               (shapeGroup.numProperties >= 2 ? shapeGroup.property(2) : shapeGroup.property(1));
-                } catch (ePP) {}
-            }
-
-            // Static shape computation
-            var pathData = computeRoundRectPathData(precompW, precompH, radii.rTL, radii.rTR, radii.rBR, radii.rBL);
-            if (pathProp) {
-                try {
-                    var aeShape = new Shape();
-                    aeShape.vertices = pathData.points;
-                    aeShape.inTangents = pathData.inTangents;
-                    aeShape.outTangents = pathData.outTangents;
-                    aeShape.closed = true;
-                    pathProp.setValue(aeShape);
-                } catch (eShape) {}
-
-                var exprLines = [
-                    "// Parametric Rounded Rectangle Path (Individual Corners)",
-                    "try {",
-                    "    var w = Math.max(0, effect('Card Width')(1).value);",
-                    "    var h = Math.max(0, effect('Card Height')(1).value);",
-                    "    var rTL = Math.max(0, effect('Radius Top-Left')(1).value);",
-                    "    var rTR = Math.max(0, effect('Radius Top-Right')(1).value);",
-                    "    var rBR = Math.max(0, effect('Radius Bottom-Right')(1).value);",
-                    "    var rBL = Math.max(0, effect('Radius Bottom-Left')(1).value);",
-                    "    var topSum = rTL + rTR; var botSum = rBL + rBR; var leftSum = rTL + rBL; var rgtSum = rTR + rBR;",
-                    "    var f = 1.0;",
-                    "    if (topSum > w && topSum > 0) f = Math.min(f, w / topSum);",
-                    "    if (botSum > w && botSum > 0) f = Math.min(f, w / botSum);",
-                    "    if (leftSum > h && leftSum > 0) f = Math.min(f, h / leftSum);",
-                    "    if (rgtSum > h && rgtSum > 0) f = Math.min(f, h / rgtSum);",
-                    "    rTL *= f; rTR *= f; rBR *= f; rBL *= f;",
-                    "    var halfW = w / 2; var halfH = h / 2;",
-                    "    var xMin = -halfW; var xMax = halfW; var yMin = -halfH; var yMax = halfH;",
-                    "    var K = 0.5522847498307936;",
-                    "    var pts = [",
-                    "        [xMin + rTL, yMin], [xMax - rTR, yMin],",
-                    "        [xMax, yMin + rTR], [xMax, yMax - rBR],",
-                    "        [xMax - rBR, yMax], [xMin + rBL, yMax],",
-                    "        [xMin, yMax - rBL], [xMin, yMin + rTL]",
-                    "    ];",
-                    "    var inT = [",
-                    "        [-rTL * K, 0], [0, 0], [0, -rTR * K], [0, 0],",
-                    "        [rBR * K, 0], [0, 0], [0, rBL * K], [0, 0]",
-                    "    ];",
-                    "    var outT = [",
-                    "        [0, 0], [rTR * K, 0], [0, 0], [0, rBR * K],",
-                    "        [0, 0], [-rBL * K, 0], [0, 0], [0, -rTL * K]",
-                    "    ];",
-                    "    createPath(pts, inT, outT, true);",
-                    "} catch (err) {",
-                    "    value;",
-                    "}"
-                ];
-                try {
-                    pathProp.expression = exprLines.join("\n");
-                } catch (eExpr) {}
-            }
-
-            // 4. Configure Fill
-            groupContents = getFreshGrpContents();
-            var fill = null;
-            if (groupContents) {
-                try {
-                    fill = groupContents.property("ADBE Vector Graphic - Fill") ||
-                           groupContents.property("Fill 1") ||
-                           groupContents.property("Fill") ||
-                           (groupContents.numProperties >= 2 ? groupContents.property(2) : null);
-                } catch (eFG) {}
-            }
-
-            if (fill) {
-                var rgb = hexToRgb(hexColor || "#FF00FF");
-                try {
-                    fill.property("Color").setValue([rgb[0], rgb[1], rgb[2]]);
-                } catch (eCol) {
-                    try { fill.property("ADBE Vector Fill Color").setValue([rgb[0], rgb[1], rgb[2]]); } catch (eCol2) {}
-                }
-                try {
-                    if (fill.property("Opacity")) {
-                        fill.property("Opacity").setValue(opacity !== undefined ? opacity : 100);
-                    } else if (fill.property("ADBE Vector Fill Opacity")) {
-                        fill.property("ADBE Vector Fill Opacity").setValue(opacity !== undefined ? opacity : 100);
-                    }
-                } catch (eOp) {}
-            }
-        } catch (eAllCard) {}
-
-        return bgLayer;
     }
 
     // -------------------------------------------------------------------------
-    // 7. Core Precompose Engine
+    // 4. Zero-Shift Coordinate Transformation Engine
     // -------------------------------------------------------------------------
-    function precompTextLayer(options) {
-        var comp = app.project.activeItem;
-        if (!comp || !(comp instanceof CompItem)) {
-            comp = app.project.items.addComp("AE Text Precomp Demo", 1920, 1080, 1.0, 10.0, 30.0);
-            if (comp.openInViewer) comp.openInViewer();
-        }
-
-        var textLayer = getSelectedTextLayer(comp);
-        var padding = (typeof options.padding === "number") ? Math.max(0, options.padding) : 0;
-
-        if (!textLayer) {
-            throw new Error("Please select a text layer in your active composition first.");
-        }
-
-        var metrics = getTextLayerMetrics(comp, textLayer);
-
-        // Capture original full text string directly from textLayer before precompose
-        var originalFullText = "";
-        try {
-            originalFullText = getTextLayerString(textLayer);
-        } catch (eOrigText) {}
-        if (!originalFullText && metrics && metrics.fullText) {
-            originalFullText = metrics.fullText;
-        }
-
-        // Store original transforms and parenting before precompose
-        var origPos = textLayer.transform.position.value;
-        var origAnchor = textLayer.transform.anchorPoint.value;
-        var origScale = textLayer.transform.scale.value;
-        var origRot = 0;
-        try {
-            if (textLayer.transform.rotation) {
-                origRot = textLayer.transform.rotation.value;
-            } else if (textLayer.transform.zRotation) {
-                origRot = textLayer.transform.zRotation.value;
-            }
-        } catch (eRot) {}
-
-        var origParent = textLayer.parent;
-        var origName = textLayer.name;
-        var is3D = textLayer.threeDLayer;
-
-        // Alignment (auto-detected or overridden)
-        var align = metrics.align;
-        if (options.forceAlign && options.forceAlign !== "auto") {
-            align = options.forceAlign;
-        }
-
-        // ---------------------------------------------------------------------
-        // 1. Capture Original Layer Geometry & Reference Point (AE_Align_Anchor_Point)
-        // ---------------------------------------------------------------------
-        var origFs = metrics.fontSize || 28;
-        var ascenderHeightInit = Math.round((origFs * 0.78) * 100) / 100;
-
-        var boundsMethod = options.boundsMethod || (metrics.isBoxText ? "stated" : "sourceRect");
-        var origBounds = (boundsMethod === "stated") ? getLayerStatedBounds(textLayer) : getLayerSourceRectBounds(textLayer, comp.time);
-
-        var sx = (origScale && origScale.length > 0) ? (origScale[0] / 100.0) : 1.0;
-        var sy = (origScale && origScale.length > 1) ? (origScale[1] / 100.0) : 1.0;
-        var rad = (origRot || 0) * Math.PI / 180.0;
-        var cosA = Math.cos(rad);
-        var sinA = Math.sin(rad);
-
-        // Exact composition-space coordinate of the visual top-left corner of the content:
-        var pContentTopLeft = null;
-        try {
-            if (typeof textLayer.toComp === "function") {
-                pContentTopLeft = textLayer.toComp([origBounds.left, origBounds.top, 0]);
-                if (!pContentTopLeft || pContentTopLeft.length < 2) {
-                    pContentTopLeft = textLayer.toComp([origBounds.left, origBounds.top]);
-                }
-            }
-        } catch (eTC) {}
-
-        if (!pContentTopLeft || isNaN(pContentTopLeft[0]) || isNaN(pContentTopLeft[1])) {
-            var dxOrig = (origBounds.left - origAnchor[0]) * sx;
-            var dyOrig = (origBounds.top - origAnchor[1]) * sy;
-            pContentTopLeft = [
-                origPos[0] + (dxOrig * cosA - dyOrig * sinA),
-                origPos[1] + (dxOrig * sinA + dyOrig * cosA),
-                (origPos.length > 2 ? origPos[2] : 0)
-            ];
-        }
-
-        // ---------------------------------------------------------------------
-        // 2. Precomp Dimensions & Textbox Sizing (Exterior Padding Architecture)
-        // ---------------------------------------------------------------------
-        var textboxW = 800;
-        if (options.autoDetectWidth && metrics && metrics.detectedWidth) {
-            textboxW = Math.max(20, Math.round(metrics.detectedWidth));
-        } else {
-            textboxW = Math.max(20, Math.round(options.width || (metrics ? metrics.detectedWidth : 800) || 800));
-        }
-        // Padding is added to exterior of the text box
-        var precompW = Math.max(40, Math.round(textboxW + (padding * 2)));
-
-        var textboxH = 0;
-        if (options.autoHeight) {
-            var rawH = metrics.detectedHeight;
-            if (metrics.rect && metrics.rect.height) {
-                rawH = Math.max(rawH, Math.ceil(metrics.rect.height));
-            }
-            textboxH = Math.max(20, Math.round(rawH));
-        } else {
-            textboxH = Math.max(20, Math.round(options.height || 400));
-        }
-        // Padding is added to exterior of the text box
-        var precompH = Math.max(20, Math.round(textboxH + (padding * 2)));
-
-        // Precomposition Name
-        var precompName = trimStr(options.precompName);
-        if (!precompName) {
-            precompName = origName + " Comp";
-        }
-
-        // Capture pristine TextDocument before precomposing
-        var precompOrigDoc = getTextDocument(textLayer);
-
-        // Execute Precompose
-        var newComp = comp.layers.precompose([textLayer.index], precompName, true);
-        if (!newComp) {
-            var numItems = (typeof app.project.numItems !== "undefined") ? app.project.numItems : app.project.items.length;
-            for (var p = 1; p <= numItems; p++) {
-                var it = (typeof app.project.item === "function") ? app.project.item(p) : app.project.items[p - 1];
-                if (it && it.name === precompName && (it instanceof CompItem)) {
-                    newComp = it;
-                    break;
-                }
-            }
-        }
-
-        if (!newComp) {
-            throw new Error("Unable to create precomposition.");
-        }
-
-        // Set Precomposition Dimensions
-        newComp.width = precompW;
-        newComp.height = precompH;
-
-        // Find the resulting precomp layer in the parent comp safely
-        var precompLayer = null;
-        try {
-            precompLayer = comp.layer(precompName);
-        } catch (eFind1) {}
-
-        if (!precompLayer) {
-            try {
-                if (comp.selectedLayers && comp.selectedLayers.length > 0) {
-                    var s0 = comp.selectedLayers[0];
-                    if (s0 && s0.name === precompName) {
-                        precompLayer = s0;
-                    }
-                }
-            } catch (eFind2) {}
-        }
-
-        if (!precompLayer) {
-            try {
-                var totalL = (typeof comp.numLayers !== "undefined") ? comp.numLayers : comp.layers.length;
-                for (var i = 1; i <= totalL; i++) {
-                    try {
-                        var l = (typeof comp.layer === "function") ? comp.layer(i) : comp.layers[i - 1];
-                        if (l && l.name === precompName) {
-                            precompLayer = l;
-                            break;
-                        }
-                        if (l && typeof l.source !== "undefined" && l.source === newComp) {
-                            precompLayer = l;
-                            break;
-                        }
-                    } catch (eLCheck) {}
-                }
-            } catch (eFind3) {}
-        }
-
-        if (!precompLayer && comp.selectedLayers && comp.selectedLayers.length > 0) {
-            try { precompLayer = comp.selectedLayers[0]; } catch (eFind4) {}
-        }
-
-        // ---------------------------------------------------------------------
-        // 3. Inside newComp: Configure Inner Text Layer
-        // ---------------------------------------------------------------------
-        var innerTextLayer = null;
-        try {
-            innerTextLayer = (typeof newComp.layer === "function") ? newComp.layer(1) : newComp.layers[0];
-            if (innerTextLayer) {
-                innerTextLayer.name = "__ae_orig_text__";
-            }
-        } catch (eGetInner) {}
-
-        var divideMode = options.divideMode || "none";
-        var totalWordCount = 0;
-        var totalLineCount = 1;
-
-        if (innerTextLayer) {
-            var origDoc = getTextDocument(innerTextLayer) || precompOrigDoc;
-            var fs = (origDoc && origDoc.fontSize) ? origDoc.fontSize : (metrics.fontSize || 28);
-            var fn = (origDoc && origDoc.font) ? origDoc.font : (metrics.font || "ArialMT");
-            var lineStep = (origDoc && origDoc.autoLeading) ? (fs * 1.2) : ((origDoc && origDoc.leading) ? origDoc.leading : (fs * 1.2));
-            if (!lineStep || lineStep <= 0) lineStep = fs * 1.2;
-
-            if (divideMode === "words" || divideMode === "lines") {
-                // Resolve full text string reliably FIRST before creating any temporary layers
-                var fullText = originalFullText || "";
-                if (!fullText || fullText.length === 0) {
-                    try {
-                        var origLyrCheck = null;
-                        try { origLyrCheck = newComp.layer("__ae_orig_text__"); } catch (eFnd) {}
-                        if (!origLyrCheck) origLyrCheck = innerTextLayer;
-                        fullText = getTextLayerString(origLyrCheck);
-                    } catch (eGTLS) {}
-                }
-                if (!fullText || fullText.length === 0) {
-                    if (origDoc && typeof origDoc.text === "string" && origDoc.text.length > 0) {
-                        fullText = origDoc.text;
-                    } else if (metrics && metrics.fullText) {
-                        fullText = metrics.fullText;
-                    } else if (metrics && metrics.memoryStore && metrics.memoryStore.fullText) {
-                        fullText = metrics.memoryStore.fullText;
-                    }
-                }
-
-                // Reference to the original layer for cloning styles
-                var sourceRefLayer = null;
-                try {
-                    sourceRefLayer = newComp.layer("__ae_orig_text__");
-                } catch (eRefL) {}
-                if (!sourceRefLayer) sourceRefLayer = innerTextLayer;
-
-                // Temporary hidden text layer to measure exact sub-string widths in newComp
-                var measureLayer = null;
-                try {
-                    measureLayer = newComp.layers.addText("");
-                    measureLayer.enabled = false;
-                    measureLayer.name = "__ae_temp_measure__";
-                    applyTextDocStyling(measureLayer, origDoc, "", sourceRefLayer);
-                } catch (eML) {
-                    measureLayer = null;
-                }
-
-                // Calculate space character width for consistent inter-word spacing
-                var spaceWidth = 0;
-                if (measureLayer) {
-                    try {
-                        var dSp = measureLayer.property("Source Text").value;
-                        dSp.text = "A A";
-                        measureLayer.property("Source Text").setValue(dSp);
-                        var rSp1 = measureLayer.sourceRectAtTime(0, false);
-
-                        dSp.text = "AA";
-                        measureLayer.property("Source Text").setValue(dSp);
-                        var rSp2 = measureLayer.sourceRectAtTime(0, false);
-
-                        if (rSp1 && rSp2 && typeof rSp1.width === "number" && typeof rSp2.width === "number") {
-                            var diffSp = rSp1.width - rSp2.width;
-                            if (diffSp > 0) spaceWidth = Math.round(diffSp * 100) / 100;
-                        }
-                    } catch (eSpace) {}
-                }
-                if (!spaceWidth || spaceWidth <= 0) {
-                    spaceWidth = Math.round((fs * 0.28) * 100) / 100;
-                }
-
-                function measureSingleWord(w) {
-                    if (!w || w.length === 0) return 0;
-                    if (measureLayer) {
-                        try {
-                            var dW = measureLayer.property("Source Text").value;
-                            dW.text = w;
-                            measureLayer.property("Source Text").setValue(dW);
-                            var r = measureLayer.sourceRectAtTime(0, false);
-                            if (r && typeof r.width === "number" && r.width > 0) return r.width;
-                        } catch (eMW) {}
-                    }
-                    return measureTextExact(w, fs, fn);
-                }
-
-                var visualLines = [];
-                var rawParas = String(fullText).split(/\r\n|\r|\n/);
-                for (var p = 0; p < rawParas.length; p++) {
-                    var para = rawParas[p];
-                    if (!metrics.isBoxText || textboxW <= 0) {
-                        visualLines.push(para);
-                    } else {
-                        var pWords = para.match(/\S+/g) || [];
-                        if (pWords.length === 0) {
-                            visualLines.push("");
-                            continue;
-                        }
-                        var curLineWords = [pWords[0]];
-                        var curLineW = measureSingleWord(pWords[0]);
-                        for (var pw = 1; pw < pWords.length; pw++) {
-                            var wW = measureSingleWord(pWords[pw]);
-                            if ((curLineW + spaceWidth + wW) > textboxW && curLineWords.length > 0) {
-                                visualLines.push(curLineWords.join(" "));
-                                curLineWords = [pWords[pw]];
-                                curLineW = wW;
-                            } else {
-                                curLineWords.push(pWords[pw]);
-                                curLineW += spaceWidth + wW;
-                            }
-                        }
-                        if (curLineWords.length > 0) {
-                            visualLines.push(curLineWords.join(" "));
-                        }
-                    }
-                }
-                if (visualLines.length === 0) visualLines.push(fullText || "");
-                totalLineCount = visualLines.length;
-
-                // Measure exact width of each visual line and find maximum line width
-                var measuredLineWidths = [];
-                var maxLineContentW = 0;
-                for (var vIdx = 0; vIdx < visualLines.length; vIdx++) {
-                    var vStr = visualLines[vIdx];
-                    var vWords = vStr.match(/\S+/g) || [];
-                    var vW = 0;
-                    for (var vw = 0; vw < vWords.length; vw++) {
-                        vW += measureSingleWord(vWords[vw]);
-                    }
-                    vW += Math.max(0, vWords.length - 1) * spaceWidth;
-                    measuredLineWidths.push(vW);
-                    if (vW > maxLineContentW) maxLineContentW = vW;
-                }
-                if (maxLineContentW <= 0) maxLineContentW = (metrics && metrics.detectedWidth) ? metrics.detectedWidth : 200;
-
-                // Calibrate horizontal padding and width:
-                if (options.autoDetectWidth) {
-                    if (metrics && metrics.isBoxText && metrics.boxWidth > 0) {
-                        textboxW = Math.max(20, Math.round(metrics.boxWidth));
-                    } else {
-                        textboxW = Math.max(20, Math.round(maxLineContentW));
-                    }
-                    precompW = Math.max(40, Math.round(textboxW + (padding * 2)));
-                    newComp.width = precompW;
-                } else if (!options.width || options.width <= 0) {
-                    textboxW = Math.max(20, Math.round(maxLineContentW));
-                    precompW = Math.max(40, Math.round(textboxW + (padding * 2)));
-                    newComp.width = precompW;
-                } else {
-                    textboxW = Math.max(20, Math.round(options.width));
-                    precompW = Math.max(40, Math.round(textboxW + (padding * 2)));
-                    newComp.width = precompW;
-                }
-
-                // Calibrate symmetric vertical padding: measured from typographic ascender line to descender line
-                // (do not measure individual glyphs so that ascenders/descenders never shift padding)
-                var ascenderHeight = Math.round((fs * 0.78) * 100) / 100;
-                var descenderHeight = Math.round((fs * 0.22) * 100) / 100;
-                var lineCount = Math.max(1, visualLines.length);
-                var textTypoHeight = ascenderHeight + ((lineCount - 1) * lineStep) + descenderHeight;
-
-                if (options.autoHeight) {
-                    textboxH = Math.max(20, Math.round(textTypoHeight));
-                    precompH = Math.max(20, Math.round(textboxH + (padding * 2)));
-                    newComp.height = precompH;
-                }
-
-                // Baseline of first line is strictly top padding + ascenderHeight
-                var firstBaselineY = padding + ascenderHeight;
-
-                if (divideMode === "lines") {
-                    for (var li = 0; li < visualLines.length; li++) {
-                        var lineStr = visualLines[li];
-                        if (trimStr(lineStr).length === 0) continue;
-
-                        var lineW = (measuredLineWidths.length > li) ? measuredLineWidths[li] : 0;
-
-                        var lineLayer = newComp.layers.addText(lineStr);
-                        applyTextDocStyling(lineLayer, origDoc, lineStr, sourceRefLayer);
-                        lineLayer.name = "Line " + (li + 1) + ": " + (lineStr.length > 25 ? (lineStr.substr(0, 25) + "...") : lineStr);
-
-                        var rLine = lineLayer.sourceRectAtTime(0, false);
-                        var rLeftLine = (rLine && typeof rLine.left === "number") ? rLine.left : 0;
-
-                        var lineLeftX = padding;
-                        if (align === "center") {
-                            lineLeftX = padding + (textboxW - lineW) / 2;
-                        } else if (align === "right") {
-                            lineLeftX = padding + (textboxW - lineW);
-                        }
-                        var lineBaselineY = firstBaselineY + (li * lineStep);
-
-                        try {
-                            lineLayer.transform.anchorPoint.setValue([rLeftLine, 0]);
-                            lineLayer.transform.position.setValue([lineLeftX, lineBaselineY]);
-                        } catch (eLPos) {
-                            try {
-                                lineLayer.transform.anchorPoint.setValue([rLeftLine, 0, 0]);
-                                lineLayer.transform.position.setValue([lineLeftX, lineBaselineY, 0]);
-                            } catch (eLPos2) {}
-                        }
-                    }
-                } else if (divideMode === "words") {
-                    for (var li2 = 0; li2 < visualLines.length; li2++) {
-                        var lineStr2 = visualLines[li2];
-                        if (trimStr(lineStr2).length === 0) continue;
-
-                        var lineWords = lineStr2.match(/\S+/g) || [];
-                        if (lineWords.length === 0) continue;
-
-                        // Create word layers and measure their exact bounding boxes
-                        var lineLayers = [];
-                        var wordsWidths = [];
-                        var wordsLefts = [];
-                        var lineTotalW = 0;
-
-                        for (var wi = 0; wi < lineWords.length; wi++) {
-                            var wordText = lineWords[wi];
-                            var wordLayer = newComp.layers.addText(wordText);
-                            applyTextDocStyling(wordLayer, origDoc, wordText, sourceRefLayer);
-                            totalWordCount++;
-                            wordLayer.name = "Word " + totalWordCount + ": " + wordText;
-
-                            var rWord = wordLayer.sourceRectAtTime(0, false);
-                            var wWidth = (rWord && typeof rWord.width === "number" && rWord.width > 0)
-                                ? rWord.width
-                                : measureSingleWord(wordText);
-                            var wLeft = (rWord && typeof rWord.left === "number") ? rWord.left : 0;
-
-                            lineLayers.push(wordLayer);
-                            wordsWidths.push(wWidth);
-                            wordsLefts.push(wLeft);
-                            lineTotalW += wWidth;
-                        }
-
-                        lineTotalW += (lineWords.length - 1) * spaceWidth;
-
-                        var lineStartX = padding;
-                        if (align === "center") {
-                            lineStartX = padding + (textboxW - lineTotalW) / 2;
-                        } else if (align === "right") {
-                            lineStartX = padding + (textboxW - lineTotalW);
-                        }
-                        var lineBaselineY2 = firstBaselineY + (li2 * lineStep);
-
-                        var curX = lineStartX;
-                        for (var wi2 = 0; wi2 < lineLayers.length; wi2++) {
-                            var wLyr = lineLayers[wi2];
-                            var ww = wordsWidths[wi2];
-                            var wl = wordsLefts[wi2];
-
-                            try {
-                                wLyr.transform.anchorPoint.setValue([wl, 0]);
-                                wLyr.transform.position.setValue([curX, lineBaselineY2]);
-                            } catch (eWPos) {
-                                try {
-                                    wLyr.transform.anchorPoint.setValue([wl, 0, 0]);
-                                    wLyr.transform.position.setValue([curX, lineBaselineY2, 0]);
-                                } catch (eWPos2) {}
-                            }
-
-                            curX += ww + spaceWidth;
-                        }
-                    }
-                }
-
-                if (measureLayer) {
-                    try { measureLayer.remove(); } catch (eRemM) {}
-                }
-                try {
-                    var mCheck = newComp.layer("__ae_temp_measure__");
-                    if (mCheck) mCheck.remove();
-                } catch (eRemM2) {}
-
-                // Remove the undivided single text layer
-                try {
-                    var origToRemove = newComp.layer("__ae_orig_text__");
-                    if (origToRemove) origToRemove.remove();
-                } catch (eRemOrig) {}
-                try {
-                    if (innerTextLayer) innerTextLayer.remove();
-                } catch (eRemInner) {}
-                innerTextLayer = null;
-
-            } else {
-                // Standard single layer precomp
-                // Update boxText size to the reduced textbox width
-                if (metrics.isBoxText) {
-                    try {
-                        var inProp = innerTextLayer.property("Source Text");
-                        var inDoc = inProp ? inProp.value : null;
-                        if (inDoc) {
-                            if (typeof inDoc.setBoxTextSize === "function") {
-                                inDoc.setBoxTextSize([textboxW, textboxH]);
-                                inProp.setValue(inDoc);
-                            } else if (inDoc.boxTextSize) {
-                                inDoc.boxTextSize = [textboxW, textboxH];
-                                inProp.setValue(inDoc);
-                            }
-                        }
-                    } catch (eInBox) {}
-                }
-
-                var isInner3D = false;
-                try { isInner3D = !!innerTextLayer.threeDLayer; } catch (eInner3D) {}
-
-                var innerAnchorX = origBounds.left;
-                var innerAnchorY = origBounds.top;
-                var innerPosX = padding;
-                var innerPosY = padding;
-
-                if (!metrics.isBoxText) {
-                    if (align === "center") {
-                        innerPosX = padding + (textboxW - origBounds.width) / 2;
-                    } else if (align === "right") {
-                        innerPosX = precompW - padding - origBounds.width;
-                    }
-                }
-
-                try {
-                    if (isInner3D) {
-                        innerTextLayer.transform.anchorPoint.setValue([innerAnchorX, innerAnchorY, 0]);
-                        innerTextLayer.transform.position.setValue([innerPosX, innerPosY, 0]);
-                    } else {
-                        innerTextLayer.transform.anchorPoint.setValue([innerAnchorX, innerAnchorY]);
-                        innerTextLayer.transform.position.setValue([innerPosX, innerPosY]);
-                    }
-                } catch (eInPos) {
-                    try {
-                        innerTextLayer.transform.anchorPoint.setValue([innerAnchorX, innerAnchorY]);
-                        innerTextLayer.transform.position.setValue([innerPosX, innerPosY]);
-                    } catch (eInPos2) {}
-                }
-
-                try {
-                    if (isInner3D) {
-                        innerTextLayer.transform.scale.setValue([100, 100, 100]);
-                    } else {
-                        innerTextLayer.transform.scale.setValue([100, 100]);
-                    }
-                } catch (eInScale) {
-                    try { innerTextLayer.transform.scale.setValue([100, 100]); } catch (eInScale2) {}
-                }
-
-                try {
-                    if (innerTextLayer.transform.rotation) innerTextLayer.transform.rotation.setValue(0);
-                    if (innerTextLayer.transform.zRotation) innerTextLayer.transform.zRotation.setValue(0);
-                } catch (eZeroRot) {}
-            }
-        }
-
-        // Inside newComp: Add Background Card if requested
-        if (options.addBackground) {
-            try {
-                var radii = {
-                    rTL: options.corners.TL ? padding : 0,
-                    rTR: options.corners.TR ? padding : 0,
-                    rBR: options.corners.BR ? padding : 0,
-                    rBL: options.corners.BL ? padding : 0
-                };
-                var bgLayer = createBackgroundShapeLayer(
-                    newComp,
-                    precompW,
-                    precompH,
-                    radii,
-                    options.bgColor,
-                    options.bgOpacity
-                );
-
-                // Move background shape layer behind the text layer (moveToEnd is native AE ExtendScript)
-                if (bgLayer) {
-                    try {
-                        if (typeof bgLayer.moveToEnd === "function") {
-                            bgLayer.moveToEnd();
-                        } else if (typeof bgLayer.moveAfter === "function" && innerTextLayer) {
-                            bgLayer.moveAfter(innerTextLayer);
-                        }
-                    } catch (eMove) {}
-                }
-            } catch (eCard) {}
-        }
-
-        // ---------------------------------------------------------------------
-        // 4. In parent comp: Configure Precomp Layer (Zero-Shift Anchor & Pos)
-        // ---------------------------------------------------------------------
-        if (precompLayer) {
-            // Restore parenting FIRST so transforms operate in the exact original coordinate space
-            if (origParent) {
-                try { precompLayer.parent = origParent; } catch (ePar) {}
-            }
-
-            var anchorAlignPreset = options.anchorAlign || "auto";
-            if (anchorAlignPreset === "auto") {
-                if (align === "center") anchorAlignPreset = "top-center";
-                else if (align === "right") anchorAlignPreset = "top-right";
-                else anchorAlignPreset = "top-left";
-            }
-            if (!options.autoAnchor) {
-                anchorAlignPreset = "center";
-            }
-
-            var alignPresetMap = {
-                "top-left":   { x: "left",   y: "top" },
-                "top-center": { x: "center", y: "top" },
-                "top-right":  { x: "right",  y: "top" },
-                "mid-left":   { x: "left",   y: "center" },
-                "center":     { x: "center", y: "center" },
-                "mid-right":  { x: "right",  y: "center" },
-                "bot-left":   { x: "left",   y: "bottom" },
-                "bot-center": { x: "center", y: "bottom" },
-                "bot-right":  { x: "right",  y: "bottom" }
-            };
-            var alignMode = alignPresetMap[anchorAlignPreset] || { x: "left", y: "top" };
-
-            var anchorRefBounds;
-            if (options.anchorReference === "canvas") {
-                anchorRefBounds = { left: 0, top: 0, width: precompW, height: precompH };
-            } else {
-                anchorRefBounds = { left: padding, top: padding, width: textboxW, height: textboxH };
-            }
-
-            var targetA = computeTargetAnchor(anchorRefBounds, alignMode.x, alignMode.y);
-
-            // Zero-Shift affine transformation:
-            // Inside newComp, the text content's top-left is at [padding, padding].
-            // In the parent composition, that content point was at pContentTopLeft.
-            // When precompLayer has anchor point targetA, its position in parent comp must be:
-            var deltaAx = (targetA[0] - padding) * sx;
-            var deltaAy = (targetA[1] - padding) * sy;
-            var pDeltaX = deltaAx * cosA - deltaAy * sinA;
-            var pDeltaY = deltaAx * sinA + deltaAy * cosA;
-
-            var finalPosX = pContentTopLeft[0] + pDeltaX;
-            var finalPosY = pContentTopLeft[1] + pDeltaY;
-            var finalPosZ = (pContentTopLeft.length > 2) ? pContentTopLeft[2] : 0;
-
-            if (origParent && typeof origParent.fromComp === "function") {
-                try {
-                    var pPt = origParent.fromComp([finalPosX, finalPosY, finalPosZ]);
-                    if (pPt && pPt.length >= 2 && !isNaN(pPt[0]) && !isNaN(pPt[1])) {
-                        finalPosX = pPt[0];
-                        finalPosY = pPt[1];
-                        if (pPt.length > 2) finalPosZ = pPt[2];
-                    }
-                } catch (eFC) {}
-            }
-
-            if (is3D) {
-                try { precompLayer.threeDLayer = true; } catch (e3D) {}
-            }
-
-            try {
-                if (is3D) {
-                    precompLayer.transform.anchorPoint.setValue([targetA[0], targetA[1], 0]);
-                    precompLayer.transform.position.setValue([finalPosX, finalPosY, finalPosZ]);
-                } else {
-                    precompLayer.transform.anchorPoint.setValue([targetA[0], targetA[1]]);
-                    precompLayer.transform.position.setValue([finalPosX, finalPosY]);
-                }
-            } catch (ePrePos) {
-                try {
-                    precompLayer.transform.anchorPoint.setValue([targetA[0], targetA[1]]);
-                    precompLayer.transform.position.setValue([finalPosX, finalPosY]);
-                } catch (ePrePos2) {}
-            }
-
-            try {
-                precompLayer.transform.scale.setValue(origScale);
-            } catch (eScale) {}
-
-            try {
-                if (precompLayer.transform.rotation) precompLayer.transform.rotation.setValue(origRot);
-                if (precompLayer.transform.zRotation) precompLayer.transform.zRotation.setValue(origRot);
-            } catch (eSetRot) {}
-
-            // Attach Guide Crosshair Reticle if requested
-            if (options.createCross) {
-                try {
-                    attachAnchorCross(comp, precompLayer, options.crossSize || 30, true, options.crossColor || "Cyan");
-                } catch (eCross) {}
-            }
-
-            // Store Alignment State Effect Controls on the precomp layer
-            try {
-                storeAlignmentEffect(precompLayer, alignMode.x, alignMode.y, options.anchorReference || "content", targetA);
-            } catch (eStoreEff) {}
-
-            try { precompLayer.selected = true; } catch (eSel) {}
+    var ANCHOR_PRESETS = {
+        "TL": { label: "Top-Left",      fx: 0.0, fy: 0.0 },
+        "TC": { label: "Top-Center",    fx: 0.5, fy: 0.0 },
+        "TR": { label: "Top-Right",     fx: 1.0, fy: 0.0 },
+        "ML": { label: "Middle-Left",   fx: 0.0, fy: 0.5 },
+        "C":  { label: "Center",        fx: 0.5, fy: 0.5 },
+        "MR": { label: "Middle-Right",  fx: 1.0, fy: 0.5 },
+        "BL": { label: "Bottom-Left",   fx: 0.0, fy: 1.0 },
+        "BC": { label: "Bottom-Center", fx: 0.5, fy: 1.0 },
+        "BR": { label: "Bottom-Right",  fx: 1.0, fy: 1.0 }
+    };
+
+    function calculateZeroShiftPosition(textLayer, boxLeft, boxTop, padding, precompW, precompH, anchorKey) {
+        var posProp = textLayer.property("Transform").property("Position");
+        var apProp  = textLayer.property("Transform").property("Anchor Point");
+        var scProp  = textLayer.property("Transform").property("Scale");
+        var rotProp = textLayer.property("Transform").property("Rotation") || textLayer.property("Transform").property("Z Rotation");
+
+        var p = posProp ? posProp.value : [0, 0];
+        var a = apProp ? apProp.value : [0, 0];
+        var s = scProp ? scProp.value : [100, 100];
+        var rot = rotProp ? (rotProp.value || 0) : 0;
+
+        var sx = (s[0] || 100) / 100;
+        var sy = (s[1] || 100) / 100;
+        var rad = rot * (Math.PI / 180);
+
+        var preset = ANCHOR_PRESETS[anchorKey] || ANCHOR_PRESETS["TL"];
+        var targetPrecompAx = precompW * preset.fx;
+        var targetPrecompAy = precompH * preset.fy;
+
+        // Net displacement from original text layer anchor to precomp anchor
+        var deltaLocalX = (boxLeft - padding - a[0] + targetPrecompAx) * sx;
+        var deltaLocalY = (boxTop - padding - a[1] + targetPrecompAy) * sy;
+
+        var rotDeltaX = deltaLocalX * Math.cos(rad) - deltaLocalY * Math.sin(rad);
+        var rotDeltaY = deltaLocalX * Math.sin(rad) + deltaLocalY * Math.cos(rad);
+
+        var precompCompPos = [p[0] + rotDeltaX, p[1] + rotDeltaY];
+        if (textLayer.threeDLayer && p.length > 2) {
+            precompCompPos.push(p[2]);
         }
 
         return {
-            success: true,
-            newComp: newComp,
-            precompLayer: precompLayer,
-            width: precompW,
-            height: precompH,
-            textboxWidth: textboxW,
-            padding: padding,
-            align: align,
-            name: precompName,
-            divideMode: divideMode,
-            wordCount: totalWordCount,
-            lineCount: totalLineCount,
-            metrics: metrics
+            anchorPoint: [targetPrecompAx, targetPrecompAy],
+            position: precompCompPos,
+            scale: s,
+            rotation: rot
         };
     }
 
     // -------------------------------------------------------------------------
-    // 8. ScriptUI Color Picker (AE_Extruded_Round_corners pattern)
+    // 5. Precomposition & Division Execution Engine
+    // -------------------------------------------------------------------------
+    function executePrecomp(comp, targetLayer, options) {
+        if (!comp || !(comp instanceof CompItem)) {
+            throw new Error("No active composition found.");
+        }
+        if (!targetLayer || !isTextLayer(targetLayer)) {
+            throw new Error("Please select a text layer first.");
+        }
+
+        var metrics = getTextLayerMetrics(comp, targetLayer);
+        if (!metrics) throw new Error("Could not extract text metrics from layer.");
+
+        var width = options.autoWidth ? metrics.detectedWidth : Math.max(10, options.manualWidth);
+        var height = options.autoHeight ? metrics.detectedHeight : Math.max(10, options.manualHeight);
+        var padding = Math.max(0, options.padding || 0);
+
+        var precompW = Math.max(4, Math.ceil(width + (padding * 2)));
+        var precompH = Math.max(4, Math.ceil(height + (padding * 2)));
+
+        var targetIndex = targetLayer.index;
+        var targetParent = targetLayer.parent;
+        var target3D = targetLayer.threeDLayer;
+        var baseName = targetLayer.name.replace(/\s*Precomp$/, "");
+        var precompName = baseName + " Precomp";
+
+        var zeroShift = calculateZeroShiftPosition(
+            targetLayer,
+            metrics.boxLeft,
+            metrics.boxTop,
+            padding,
+            precompW,
+            precompH,
+            options.anchorKey || "TL"
+        );
+
+        app.beginUndoGroup(SCRIPT_NAME + ": " + (options.mode === "lines" ? "Divide by Lines" : (options.mode === "words" ? "Divide by Words" : "Precompose")));
+
+        try {
+            // 1. Precompose target layer natively (preserves all effects, masks, animators)
+            var precompItem = comp.layers.precompose([targetIndex], precompName, true);
+            if (!precompItem) throw new Error("Failed to precompose layer.");
+
+            // 2. Adjust precomp dimensions to encompass text box + exterior padding
+            precompItem.width = precompW;
+            precompItem.height = precompH;
+
+            var innerTextLayer = precompItem.layer(1);
+            if (!innerTextLayer) throw new Error("Inner layer missing in precomposition.");
+
+            var innerOrigAnchor = targetLayer.property("Transform").property("Anchor Point").value;
+
+            if (options.mode === "single") {
+                // Keep original text box intact, offset by exterior padding
+                innerTextLayer.property("Transform").property("Scale").setValue([100, 100]);
+                try {
+                    var innerRot = innerTextLayer.property("Transform").property("Rotation") ||
+                                   innerTextLayer.property("Transform").property("Z Rotation");
+                    if (innerRot) innerRot.setValue(0);
+                } catch (eIR) {}
+
+                var innerPosX = padding + innerOrigAnchor[0] - metrics.boxLeft;
+                var innerPosY = padding + innerOrigAnchor[1] - metrics.boxTop;
+                innerTextLayer.property("Transform").property("Position").setValue([innerPosX, innerPosY]);
+
+            } else if (options.mode === "lines") {
+                // Divide text by lines using native layer duplication (prevents "W" bug & font substitution)
+                var rawLines = metrics.lines;
+                if (!rawLines || rawLines.length === 0) rawLines = [metrics.rawText || "Text"];
+
+                var firstLineBaseline = (Math.abs(metrics.boxTop) > 0) ? Math.abs(metrics.boxTop) : (metrics.fontSize * 0.75);
+
+                for (var li = 0; li < rawLines.length; li++) {
+                    var lineLayer = innerTextLayer.duplicate();
+                    lineLayer.name = "Line " + (li + 1);
+
+                    var lineDoc = lineLayer.property("Source Text").value;
+                    lineDoc.text = rawLines[li];
+                    try { lineDoc.boxText = false; } catch (eBT) {}
+                    lineLayer.property("Source Text").setValue(lineDoc);
+
+                    var lineX = padding;
+                    if (metrics.align === "center") {
+                        lineX = precompW / 2;
+                    } else if (metrics.align === "right") {
+                        lineX = precompW - padding;
+                    }
+                    var lineY = padding + firstLineBaseline + (li * metrics.leading);
+
+                    lineLayer.property("Transform").property("Position").setValue([lineX, lineY]);
+                    lineLayer.property("Transform").property("Scale").setValue([100, 100]);
+                    try {
+                        var lRot = lineLayer.property("Transform").property("Rotation") ||
+                                   lineLayer.property("Transform").property("Z Rotation");
+                        if (lRot) lRot.setValue(0);
+                    } catch (eLR) {}
+                }
+                // Remove the template original layer
+                innerTextLayer.remove();
+
+            } else if (options.mode === "words") {
+                // Divide text by words
+                var rawLines2 = metrics.lines;
+                if (!rawLines2 || rawLines2.length === 0) rawLines2 = [metrics.rawText || "Text"];
+
+                var firstLineBaseline2 = (Math.abs(metrics.boxTop) > 0) ? Math.abs(metrics.boxTop) : (metrics.fontSize * 0.75);
+                var spaceWidth = metrics.fontSize * 0.28;
+                var wordCounter = 1;
+
+                for (var li2 = 0; li2 < rawLines2.length; li2++) {
+                    var lineWords = rawLines2[li2].replace(/^\s+|\s+$/g, "").split(/\s+/);
+                    if (lineWords.length === 0 || (lineWords.length === 1 && lineWords[0] === "")) continue;
+
+                    var curX = padding;
+                    var lineY2 = padding + firstLineBaseline2 + (li2 * metrics.leading);
+
+                    for (var wi = 0; wi < lineWords.length; wi++) {
+                        var wordLayer = innerTextLayer.duplicate();
+                        wordLayer.name = "Word " + wordCounter;
+                        wordCounter++;
+
+                        var wordDoc = wordLayer.property("Source Text").value;
+                        wordDoc.text = lineWords[wi];
+                        try { wordDoc.boxText = false; } catch (eBT2) {}
+                        wordLayer.property("Source Text").setValue(wordDoc);
+
+                        wordLayer.property("Transform").property("Position").setValue([curX, lineY2]);
+                        wordLayer.property("Transform").property("Scale").setValue([100, 100]);
+                        try {
+                            var wRot = wordLayer.property("Transform").property("Rotation") ||
+                                       wordLayer.property("Transform").property("Z Rotation");
+                            if (wRot) wRot.setValue(0);
+                        } catch (eWR) {}
+
+                        // Measure advance width of the real word layer
+                        var wBounds = wordLayer.sourceRectAtTime(0, false);
+                        var wordAdvance = (wBounds && wBounds.width > 0) ? wBounds.width : (metrics.fontSize * 0.6 * lineWords[wi].length);
+                        curX += wordAdvance + spaceWidth;
+                    }
+                }
+                // Remove the template original layer
+                innerTextLayer.remove();
+            }
+
+            // 3. Add Procedural Bézier Background Card (if enabled)
+            if (options.addBackgroundCard) {
+                addBackgroundCard(
+                    precompItem,
+                    precompW,
+                    precompH,
+                    options.radii || { tl: 16, tr: 16, br: 16, bl: 16 },
+                    options.bgColor || [1.0, 0.0, 1.0],
+                    options.bgOpacity !== undefined ? options.bgOpacity : 100
+                );
+            }
+
+            // 4. Configure precomp layer in parent comp with zero-shift compensation
+            var precompLayer = comp.layer(targetIndex);
+            if (precompLayer) {
+                precompLayer.property("Transform").property("Anchor Point").setValue(zeroShift.anchorPoint);
+                precompLayer.property("Transform").property("Position").setValue(zeroShift.position);
+                precompLayer.property("Transform").property("Scale").setValue(zeroShift.scale);
+                try {
+                    var pRotProp = precompLayer.property("Transform").property("Rotation") ||
+                                   precompLayer.property("Transform").property("Z Rotation");
+                    if (pRotProp) pRotProp.setValue(zeroShift.rotation);
+                } catch (ePR) {}
+
+                if (targetParent) precompLayer.parent = targetParent;
+                if (target3D) precompLayer.threeDLayer = true;
+
+                // Select precomp layer
+                try {
+                    for (var si = 1; si <= comp.layers.length; si++) {
+                        comp.layer(si).selected = false;
+                    }
+                    precompLayer.selected = true;
+                } catch (eSel) {}
+            }
+
+            app.endUndoGroup();
+            return {
+                precompItem: precompItem,
+                precompLayer: precompLayer,
+                width: precompW,
+                height: precompH
+            };
+
+        } catch (eExec) {
+            app.endUndoGroup();
+            throw eExec;
+        }
+    }
+
+    // -------------------------------------------------------------------------
+    // 6. Color Picker Helper (Supports Native & Web Simulator)
     // -------------------------------------------------------------------------
     function createColorPicker(parent, defaultHex) {
         var grp = parent.add("group");
@@ -1921,13 +602,12 @@
         grp.alignChildren = ["left", "center"];
 
         var btnSwatch = grp.add("button", undefined, "");
-        btnSwatch.preferredSize = [36, 22];
+        btnSwatch.preferredSize = [32, 22];
         btnSwatch.helpTip = "Click to pick color";
 
-        var txtHex = grp.add("edittext", undefined, defaultHex.toUpperCase());
+        var txtHex = grp.add("edittext", undefined, defaultHex);
         txtHex.preferredSize = [70, 22];
         txtHex.characters = 7;
-        txtHex.helpTip = "Direct hex color input (e.g. #1E222D)";
 
         var picker = {
             group: grp,
@@ -1938,14 +618,14 @@
             onChange: null
         };
 
-        btnSwatch.onDraw = function() {
+        btnSwatch.onDraw = function () {
             try {
                 var g = this.graphics;
                 var rgb = hexToRgb(picker._color);
                 var brush = g.newBrush(g.BrushType.SOLID_COLOR, [rgb[0], rgb[1], rgb[2], 1.0]);
-                var pen = g.newPen(g.PenType.SOLID_COLOR, [0.7, 0.7, 0.7, 1.0], 1);
+                var pen = g.newPen(g.PenType.SOLID_COLOR, [0.6, 0.6, 0.6, 1.0], 1);
                 g.newPath();
-                g.rectPath(0, 0, this.size ? this.size[0] : 36, this.size ? this.size[1] : 22);
+                g.rectPath(0, 0, this.size ? this.size[0] : 32, this.size ? this.size[1] : 22);
                 g.fillPath(brush);
                 g.strokePath(pen);
             } catch (e) {}
@@ -1964,7 +644,6 @@
 
             if (btnSwatch.domElement) {
                 btnSwatch.domElement.style.backgroundColor = newHex;
-                btnSwatch.domElement.style.background = newHex;
                 btnSwatch.domElement.style.border = "1px solid #777";
             }
 
@@ -1973,10 +652,10 @@
             }
         }
 
-        btnSwatch.onClick = function() {
-            var curHex = picker._color || "#1E222D";
+        btnSwatch.onClick = function () {
+            var curHex = picker._color || "#FF00FF";
             if (typeof window !== "undefined" && typeof window.openWindowsColorPicker === "function") {
-                window.openWindowsColorPicker(curHex, function(selectedHex) {
+                window.openWindowsColorPicker(curHex, function (selectedHex) {
                     setColor(selectedHex, true);
                 });
                 return;
@@ -1985,9 +664,7 @@
             var hexNum = parseInt(curHex.replace("#", ""), 16);
             var result = -1;
             if (typeof $.colorPicker === "function") {
-                result = $.colorPicker(hexNum, function(selectedHex) {
-                    setColor(selectedHex, true);
-                });
+                result = $.colorPicker(hexNum);
             }
             if (result !== -1 && result !== undefined && result !== null) {
                 var hexStr = Number(result).toString(16);
@@ -1996,7 +673,7 @@
             }
         };
 
-        txtHex.onChange = function() {
+        txtHex.onChange = function () {
             var val = txtHex.text.replace(/^\s+|\s+$/g, "");
             if (val.indexOf("#") !== 0) val = "#" + val;
             if (/^#[0-9A-Fa-f]{6}$/.test(val)) {
@@ -2006,13 +683,12 @@
             }
         };
 
-        picker.setColor = setColor;
         setColor(defaultHex, false);
         return picker;
     }
 
     // -------------------------------------------------------------------------
-    // 9. ScriptUI Window & Interface Panels
+    // 7. ScriptUI Streamlined Interface Construction
     // -------------------------------------------------------------------------
     var win = (thisObj instanceof Panel)
         ? thisObj
@@ -2023,553 +699,404 @@
 
     win.orientation = "column";
     win.alignChildren = ["fill", "top"];
-    win.spacing = 10;
-    win.margins = 12;
+    win.spacing = 8;
+    win.margins = 10;
 
     // --- Header ---
     var pnlHeader = win.add("panel", undefined, SCRIPT_NAME + " " + SCRIPT_VERSION);
     pnlHeader.orientation = "column";
     pnlHeader.alignChildren = ["fill", "top"];
-    pnlHeader.spacing = 3;
+    pnlHeader.spacing = 2;
     pnlHeader.margins = [10, 8, 10, 8];
 
-    var lblSubTitle = pnlHeader.add("statictext", undefined, "Text Box Precomposer with Padding, Auto Anchor & Rounded Background");
-    lblSubTitle.graphics.foregroundColor = win.graphics.newPen(win.graphics.PenType.SOLID_COLOR, [0.35, 0.65, 0.95, 1], 1);
+    var lblSubtitle = pnlHeader.add("statictext", undefined, "Clean Typography Precomposer with Zero-Shift & Exterior Padding");
+    lblSubtitle.graphics.foregroundColor = win.graphics.newPen(win.graphics.PenType.SOLID_COLOR, [0.35, 0.65, 0.95, 1], 1);
 
-    var lblRef = pnlHeader.add("statictext", undefined, "Metrics Engine: Text_Properties_To_Effects.jsx coherent");
-    lblRef.helpTip = TEXT_PROP_REF_URL;
+    // --- Target Detection Row ---
+    var grpDetect = pnlHeader.add("group");
+    grpDetect.orientation = "row";
+    grpDetect.alignment = ["fill", "top"];
+    grpDetect.spacing = 6;
 
-    // --- Main Tabbed Panel ---
-    var tpanel = win.add("tabbedpanel");
-    tpanel.alignChildren = ["fill", "top"];
-    tpanel.alignment = ["fill", "top"];
-
-    // =========================================================================
-    // TAB 1: PRECOMP
-    // =========================================================================
-    var tabPrecomp = tpanel.add("tab", undefined, "Precomp");
-    tabPrecomp.orientation = "column";
-    tabPrecomp.alignChildren = ["fill", "top"];
-    tabPrecomp.spacing = 8;
-    tabPrecomp.margins = 8;
-
-    // --- Detection & Status Panel ---
-    var pnlDetect = tabPrecomp.add("panel", undefined, "Text Layer Detection");
-    pnlDetect.orientation = "column";
-    pnlDetect.alignChildren = ["fill", "top"];
-    pnlDetect.spacing = 6;
-    pnlDetect.margins = 10;
-
-    var grpStatus = pnlDetect.add("group");
-    grpStatus.orientation = "row";
-    grpStatus.alignment = ["fill", "top"];
-    var lblStatusIcon = grpStatus.add("statictext", undefined, "[Layer]:");
-    lblStatusIcon.preferredSize = [60, -1];
-    var lblStatusText = grpStatus.add("statictext", undefined, "Scanning active selection...");
+    var lblStatusText = grpDetect.add("statictext", undefined, "Scanning active selection...");
     lblStatusText.alignment = ["fill", "center"];
 
-    // --- Section 1: Dimensions Panel ---
-    var pnlDims = tabPrecomp.add("panel", undefined, "Dimensions");
+    var btnRefresh = grpDetect.add("button", undefined, "Refresh");
+    btnRefresh.preferredSize = [65, 22];
+    btnRefresh.helpTip = "Rescans the active composition for selected text layers.";
+
+    // --- Panel: Dimensions & Exterior Padding ---
+    var pnlDims = win.add("panel", undefined, "Dimensions & Exterior Padding");
     pnlDims.orientation = "column";
     pnlDims.alignChildren = ["fill", "top"];
-    pnlDims.spacing = 8;
+    pnlDims.spacing = 6;
     pnlDims.margins = 10;
 
-    // Checkbox Option Before Width: Get Text Box Width From Selected Text Box
-    var grpAutoDetect = pnlDims.add("group");
-    grpAutoDetect.orientation = "row";
-    grpAutoDetect.alignment = ["fill", "top"];
-    var chkAutoDetectWidth = grpAutoDetect.add("checkbox", undefined, "automatic text box width");
-    chkAutoDetectWidth.value = true;
-    chkAutoDetectWidth.alignment = ["fill", "center"];
-    chkAutoDetectWidth.helpTip = "Automatically detects width from the selected text box/layer.";
+    // Width & Height Rows
+    var grpDimRow = pnlDims.add("group");
+    grpDimRow.orientation = "row";
+    grpDimRow.alignment = ["fill", "top"];
+    grpDimRow.spacing = 10;
 
-    var btnAutoDetect = grpAutoDetect.add("button", undefined, "Detect Now");
-    btnAutoDetect.preferredSize = [85, 22];
-    btnAutoDetect.alignment = ["right", "center"];
-    btnAutoDetect.helpTip = "Detects dimensions and justification from the currently selected text layer.";
+    var chkAutoWidth = grpDimRow.add("checkbox", undefined, "Auto Width");
+    chkAutoWidth.value = true;
+    var txtWidth = grpDimRow.add("edittext", undefined, "800");
+    txtWidth.preferredSize = [60, 22];
+    txtWidth.enabled = false;
 
-    // Width Row
-    var grpWidth = pnlDims.add("group");
-    grpWidth.orientation = "row";
-    grpWidth.alignment = ["fill", "top"];
-    var lblWidth = grpWidth.add("statictext", undefined, "Text Box Width (px):");
-    lblWidth.preferredSize = [135, -1];
-    var txtWidth = grpWidth.add("edittext", undefined, "800");
-    txtWidth.alignment = ["fill", "center"];
-
-    // Automatic Precomp Height Checkbox
-    var chkAutoHeight = pnlDims.add("checkbox", undefined, "automatic text box height");
+    var chkAutoHeight = grpDimRow.add("checkbox", undefined, "Auto Height");
     chkAutoHeight.value = true;
-    chkAutoHeight.helpTip = "Expands the height of the precomp to fit the textbox vertical size plus exterior padding.";
-
-    // Manual Height Row
-    var grpHeight = pnlDims.add("group");
-    grpHeight.orientation = "row";
-    grpHeight.alignment = ["fill", "top"];
-    var lblHeight = grpHeight.add("statictext", undefined, "Manual Height (px):");
-    lblHeight.preferredSize = [135, -1];
-    var txtHeight = grpHeight.add("edittext", undefined, "400");
-    txtHeight.alignment = ["fill", "center"];
+    var txtHeight = grpDimRow.add("edittext", undefined, "120");
+    txtHeight.preferredSize = [60, 22];
     txtHeight.enabled = false;
 
-    chkAutoHeight.onClick = function() {
-        txtHeight.enabled = !chkAutoHeight.value;
-    };
+    chkAutoWidth.onClick = function () { txtWidth.enabled = !chkAutoWidth.value; };
+    chkAutoHeight.onClick = function () { txtHeight.enabled = !chkAutoHeight.value; };
 
-    function syncAutoDetectedWidth() {
-        if (!chkAutoDetectWidth.value) return;
-        var comp = app.project.activeItem;
-        if (!comp || !(comp instanceof CompItem)) return;
-        var textLayer = getSelectedTextLayer(comp);
-        if (textLayer) {
-            var metrics = getTextLayerMetrics(comp, textLayer);
-            if (metrics && metrics.detectedWidth) {
-                txtWidth.text = String(Math.round(metrics.detectedWidth));
-            }
-        }
-    }
+    // Exterior Padding Row (Default: 0px)
+    var grpPad = pnlDims.add("group");
+    grpPad.orientation = "row";
+    grpPad.alignment = ["fill", "top"];
+    grpPad.spacing = 8;
 
-    chkAutoDetectWidth.onClick = function() {
-        if (chkAutoDetectWidth.value) {
-            syncAutoDetectedWidth();
-        }
-    };
-    txtWidth.onChange = function() {
-        if (chkAutoDetectWidth) {
-            chkAutoDetectWidth.value = false;
-        }
-    };
+    var lblPad = grpPad.add("statictext", undefined, "Exterior Padding (px):");
+    lblPad.preferredSize = [130, -1];
 
-    // --- Anchor Point Options Panel ---
-    var pnlAnchor = tabPrecomp.add("panel", undefined, "Anchor Point & Alignment (Zero-Shift Engine)");
-    pnlAnchor.orientation = "column";
-    pnlAnchor.alignChildren = ["fill", "top"];
-    pnlAnchor.spacing = 8;
-    pnlAnchor.margins = 10;
-
-    var chkAutoAnchor = pnlAnchor.add("checkbox", undefined, "Automatic Anchor Point Alignment");
-    chkAutoAnchor.value = true;
-    chkAutoAnchor.helpTip = "Enables zero-shift anchor point positioning using the AE_Align_Anchor_Point engine.";
-
-    var grpAlign = pnlAnchor.add("group");
-    grpAlign.orientation = "row";
-    grpAlign.alignment = ["fill", "top"];
-    var lblAlign = grpAlign.add("statictext", undefined, "Preset Alignment:");
-    lblAlign.preferredSize = [135, -1];
-    var dropAlign = grpAlign.add("dropdownlist", undefined, [
-        "Auto-detect from Text Justification",
-        "Top-Left",
-        "Top-Center",
-        "Top-Right",
-        "Middle-Left",
-        "Center",
-        "Middle-Right",
-        "Bottom-Left",
-        "Bottom-Center",
-        "Bottom-Right"
-    ]);
-    dropAlign.selection = 0;
-    dropAlign.alignment = ["fill", "center"];
-
-    // Reference Bounds (Text Content Box vs Precomp Canvas / Background Card)
-    var grpRef = pnlAnchor.add("group");
-    grpRef.orientation = "row";
-    grpRef.alignment = ["fill", "top"];
-    var lblRef = grpRef.add("statictext", undefined, "Anchor Reference:");
-    lblRef.preferredSize = [135, -1];
-    var radRefContent = grpRef.add("radiobutton", undefined, "Text Content Box");
-    var radRefCanvas = grpRef.add("radiobutton", undefined, "Precomp Canvas / Card");
-    radRefContent.value = true;
-    radRefContent.helpTip = "Aligns anchor relative to the text bounding box (offset by padding inside precomp).";
-    radRefCanvas.helpTip = "Aligns anchor relative to the overall precomp composition / card boundary [0, 0, W, H].";
-
-    // Reticle Crosshair Guide Layer
-    var grpCross = pnlAnchor.add("group");
-    grpCross.orientation = "row";
-    grpCross.alignment = ["fill", "top"];
-    var chkShowCross = grpCross.add("checkbox", undefined, "Anchor Reticle Guide Layer");
-    chkShowCross.value = false;
-    chkShowCross.helpTip = "Creates a guide-layer reticle crosshair pinned exactly to the anchor point.";
-    var lblCrossCol = grpCross.add("statictext", undefined, "Color:");
-    lblCrossCol.preferredSize = [45, -1];
-    var dropCrossCol = grpCross.add("dropdownlist", undefined, ["Cyan", "Red", "Yellow", "Green", "White"]);
-    dropCrossCol.selection = 0;
-    dropCrossCol.alignment = ["fill", "center"];
-
-    chkAutoAnchor.onClick = function() {
-        var en = chkAutoAnchor.value;
-        grpAlign.enabled = en;
-        grpRef.enabled = en;
-    };
-
-    // =========================================================================
-    // TAB 2: BACKGROUND
-    // =========================================================================
-    var tabBg = tpanel.add("tab", undefined, "Background");
-    tabBg.orientation = "column";
-    tabBg.alignChildren = ["fill", "top"];
-    tabBg.spacing = 8;
-    tabBg.margins = 8;
-
-    // --- Section 1: Exterior Padding Panel ---
-    var pnlPad = tabBg.add("panel", undefined, "Exterior Padding");
-    pnlPad.orientation = "column";
-    pnlPad.alignChildren = ["fill", "top"];
-    pnlPad.spacing = 8;
-    pnlPad.margins = 10;
-
-    // Padding Slider & Text Row (Default: 0px)
-    var grpPadRow = pnlPad.add("group");
-    grpPadRow.orientation = "row";
-    grpPadRow.alignment = ["fill", "top"];
-    var lblPad = grpPadRow.add("statictext", undefined, "Padding (px):");
-    lblPad.preferredSize = [135, -1];
-    var sldPad = grpPadRow.add("slider", undefined, 0, 0, 120);
+    var sldPad = grpPad.add("slider", undefined, 0, 0, 120);
     sldPad.minvalue = 0;
     sldPad.maxvalue = 120;
     sldPad.value = 0;
     sldPad.alignment = ["fill", "center"];
-    var txtPad = grpPadRow.add("edittext", undefined, "0");
-    txtPad.characters = 4;
 
-    sldPad.onChanging = sldPad.onChange = function() {
+    var txtPad = grpPad.add("edittext", undefined, "0");
+    txtPad.preferredSize = [40, 22];
+
+    sldPad.onChanging = sldPad.onChange = function () {
         txtPad.text = String(Math.round(sldPad.value));
     };
-    txtPad.onChange = function() {
+    txtPad.onChange = function () {
         var v = parseFloat(txtPad.text) || 0;
         sldPad.value = Math.max(0, Math.min(120, v));
     };
 
-    // --- Background Card & Rounded Corners Panel ---
-    var pnlBg = tabBg.add("panel", undefined, "Background Card (Custom Rounded Corners)");
+    var lblPadHint = pnlDims.add("statictext", undefined, "Exterior padding expands precomp canvas outward around text box.");
+    lblPadHint.graphics.foregroundColor = win.graphics.newPen(win.graphics.PenType.SOLID_COLOR, [0.55, 0.55, 0.55, 1], 1);
+
+    // --- Panel: Precomp Anchor Point (3x3 Matrix) ---
+    var pnlAnchor = win.add("panel", undefined, "Precomp Anchor Point (Zero-Shift)");
+    pnlAnchor.orientation = "row";
+    pnlAnchor.alignChildren = ["fill", "top"];
+    pnlAnchor.spacing = 12;
+    pnlAnchor.margins = 10;
+
+    var grpMatrix = pnlAnchor.add("group");
+    grpMatrix.orientation = "column";
+    grpMatrix.spacing = 3;
+
+    var r1 = grpMatrix.add("group"); r1.spacing = 3;
+    var btnTL = r1.add("button", undefined, "TL"); btnTL.preferredSize = [36, 22];
+    var btnTC = r1.add("button", undefined, "TC"); btnTC.preferredSize = [36, 22];
+    var btnTR = r1.add("button", undefined, "TR"); btnTR.preferredSize = [36, 22];
+
+    var r2 = grpMatrix.add("group"); r2.spacing = 3;
+    var btnML = r2.add("button", undefined, "ML"); btnML.preferredSize = [36, 22];
+    var btnC  = r2.add("button", undefined, " C "); btnC.preferredSize  = [36, 22];
+    var btnMR = r2.add("button", undefined, "MR"); btnMR.preferredSize = [36, 22];
+
+    var r3 = grpMatrix.add("group"); r3.spacing = 3;
+    var btnBL = r3.add("button", undefined, "BL"); btnBL.preferredSize = [36, 22];
+    var btnBC = r3.add("button", undefined, "BC"); btnBC.preferredSize = [36, 22];
+    var btnBR = r3.add("button", undefined, "BR"); btnBR.preferredSize = [36, 22];
+
+    var grpAnchorDetails = pnlAnchor.add("group");
+    grpAnchorDetails.orientation = "column";
+    grpAnchorDetails.alignChildren = ["left", "top"];
+    grpAnchorDetails.alignment = ["fill", "center"];
+    grpAnchorDetails.spacing = 6;
+
+    var dropAlign = grpAnchorDetails.add("dropdownlist", undefined, [
+        "Top-Left (TL)",
+        "Top-Center (TC)",
+        "Top-Right (TR)",
+        "Middle-Left (ML)",
+        "Center (C)",
+        "Middle-Right (MR)",
+        "Bottom-Left (BL)",
+        "Bottom-Center (BC)",
+        "Bottom-Right (BR)"
+    ]);
+    dropAlign.preferredSize = [160, 24];
+    dropAlign.selection = 0;
+
+    var lblAnchorDesc = grpAnchorDetails.add("statictext", undefined, "Invariance: 0.00px visual shift");
+    lblAnchorDesc.graphics.foregroundColor = win.graphics.newPen(win.graphics.PenType.SOLID_COLOR, [0.35, 0.75, 0.45, 1], 1);
+
+    var matrixButtons = {
+        "TL": btnTL, "TC": btnTC, "TR": btnTR,
+        "ML": btnML, "C": btnC,   "MR": btnMR,
+        "BL": btnBL, "BC": btnBC, "BR": btnBR
+    };
+    var currentAnchorKey = "TL";
+
+    function setAnchorSelection(key) {
+        if (!ANCHOR_PRESETS[key]) key = "TL";
+        currentAnchorKey = key;
+        var keys = ["TL", "TC", "TR", "ML", "C", "MR", "BL", "BC", "BR"];
+        for (var ki = 0; ki < keys.length; ki++) {
+            if (keys[ki] === key) {
+                dropAlign.selection = ki;
+                break;
+            }
+        }
+    }
+
+    btnTL.onClick = function () { setAnchorSelection("TL"); };
+    btnTC.onClick = function () { setAnchorSelection("TC"); };
+    btnTR.onClick = function () { setAnchorSelection("TR"); };
+    btnML.onClick = function () { setAnchorSelection("ML"); };
+    btnC.onClick  = function () { setAnchorSelection("C");  };
+    btnMR.onClick = function () { setAnchorSelection("MR"); };
+    btnBL.onClick = function () { setAnchorSelection("BL"); };
+    btnBC.onClick = function () { setAnchorSelection("BC"); };
+    btnBR.onClick = function () { setAnchorSelection("BR"); };
+
+    dropAlign.onChange = function () {
+        var idx = dropAlign.selection ? dropAlign.selection.index : 0;
+        var keys = ["TL", "TC", "TR", "ML", "C", "MR", "BL", "BC", "BR"];
+        currentAnchorKey = keys[idx] || "TL";
+    };
+
+    // --- Panel: Background Card (Bézier Shape Layer) ---
+    var pnlBg = win.add("panel", undefined, "Background Card (Shape Layer)");
     pnlBg.orientation = "column";
     pnlBg.alignChildren = ["fill", "top"];
-    pnlBg.spacing = 8;
+    pnlBg.spacing = 6;
     pnlBg.margins = 10;
 
     var chkAddBg = pnlBg.add("checkbox", undefined, "Add Background Card (Bézier Shape Layer)");
     chkAddBg.value = true;
-    chkAddBg.helpTip = "Creates a shape layer behind the text with 4 independent corner radii (AE_Extruded_Round_corners).";
 
-    // Corners Selection Section
-    var grpCornerTitle = pnlBg.add("group");
-    grpCornerTitle.orientation = "row";
-    grpCornerTitle.alignment = ["fill", "top"];
-    var lblWhichCorners = grpCornerTitle.add("statictext", undefined, "Corners reacting to padding:");
-    lblWhichCorners.preferredSize = [180, -1];
+    // Color & Opacity Row (Default: Fuchsia #FF00FF)
+    var grpBgColorRow = pnlBg.add("group");
+    grpBgColorRow.orientation = "row";
+    grpBgColorRow.alignment = ["fill", "top"];
+    grpBgColorRow.spacing = 8;
 
-    // 2x2 Grid of Corners
-    var grpCornerGrid = pnlBg.add("group");
-    grpCornerGrid.orientation = "column";
-    grpCornerGrid.alignChildren = ["fill", "top"];
-    grpCornerGrid.spacing = 4;
-    grpCornerGrid.margins = [10, 0, 0, 0];
+    var lblCol = grpBgColorRow.add("statictext", undefined, "Color:");
+    var cpBg = createColorPicker(grpBgColorRow, "#FF00FF");
 
-    var grpCornersRow1 = grpCornerGrid.add("group");
-    grpCornersRow1.orientation = "row";
-    grpCornersRow1.spacing = 20;
-    var chkTL = grpCornersRow1.add("checkbox", undefined, "Top-Left (TL)");
-    chkTL.value = true;
-    var chkTR = grpCornersRow1.add("checkbox", undefined, "Top-Right (TR)");
-    chkTR.value = true;
+    var lblOp = grpBgColorRow.add("statictext", undefined, "Opacity:");
+    var sldOp = grpBgColorRow.add("slider", undefined, 100, 0, 100);
+    sldOp.minvalue = 0;
+    sldOp.maxvalue = 100;
+    sldOp.value = 100;
+    sldOp.preferredSize = [60, 20];
+    var txtOp = grpBgColorRow.add("edittext", undefined, "100");
+    txtOp.preferredSize = [35, 22];
 
-    var grpCornersRow2 = grpCornerGrid.add("group");
-    grpCornersRow2.orientation = "row";
-    grpCornersRow2.spacing = 20;
-    var chkBL = grpCornersRow2.add("checkbox", undefined, "Bottom-Left (BL)");
-    chkBL.value = true;
-    var chkBR = grpCornersRow2.add("checkbox", undefined, "Bottom-Right (BR)");
-    chkBR.value = true;
+    sldOp.onChanging = sldOp.onChange = function () { txtOp.text = String(Math.round(sldOp.value)); };
+    txtOp.onChange = function () {
+        var v = parseFloat(txtOp.text) || 0;
+        sldOp.value = Math.max(0, Math.min(100, v));
+    };
+
+    // Corner Radius Row
+    var grpRadii = pnlBg.add("group");
+    grpRadii.orientation = "row";
+    grpRadii.alignment = ["fill", "top"];
+    grpRadii.spacing = 8;
+
+    var lblRadius = grpRadii.add("statictext", undefined, "Corner Radius:");
+    var sldRadius = grpRadii.add("slider", undefined, 16, 0, 60);
+    sldRadius.minvalue = 0;
+    sldRadius.maxvalue = 60;
+    sldRadius.value = 16;
+    sldRadius.alignment = ["fill", "center"];
+    var txtRadius = grpRadii.add("edittext", undefined, "16");
+    txtRadius.preferredSize = [35, 22];
+
+    sldRadius.onChanging = sldRadius.onChange = function () { txtRadius.text = String(Math.round(sldRadius.value)); };
+    txtRadius.onChange = function () {
+        var v = parseFloat(txtRadius.text) || 0;
+        sldRadius.value = Math.max(0, Math.min(60, v));
+    };
 
     // Quick Corner Presets
-    var grpQuickCorners = pnlBg.add("group");
-    grpQuickCorners.orientation = "row";
-    grpQuickCorners.alignment = ["fill", "top"];
-    var btnAllCorners = grpQuickCorners.add("button", undefined, "All 4");
-    btnAllCorners.preferredSize = [60, 20];
-    var btnTopCorners = grpQuickCorners.add("button", undefined, "Top Only");
-    btnTopCorners.preferredSize = [65, 20];
-    var btnChatBubble = grpQuickCorners.add("button", undefined, "Chat Bubble");
-    btnChatBubble.preferredSize = [75, 20];
-    var btnNoCorners = grpQuickCorners.add("button", undefined, "Sharp (0)");
-    btnNoCorners.preferredSize = [65, 20];
+    var grpCornerPresets = pnlBg.add("group");
+    grpCornerPresets.orientation = "row";
+    grpCornerPresets.alignment = ["fill", "top"];
+    grpCornerPresets.spacing = 6;
 
-    btnAllCorners.onClick = function() { chkTL.value = true; chkTR.value = true; chkBL.value = true; chkBR.value = true; };
-    btnTopCorners.onClick = function() { chkTL.value = true; chkTR.value = true; chkBL.value = false; chkBR.value = false; };
-    btnChatBubble.onClick = function() { chkTL.value = true; chkTR.value = true; chkBR.value = true; chkBL.value = false; };
-    btnNoCorners.onClick = function() { chkTL.value = false; chkTR.value = false; chkBL.value = false; chkBR.value = false; };
+    var btnAllCorners = grpCornerPresets.add("button", undefined, "All 4");
+    btnAllCorners.preferredSize = [60, 22];
+    var btnTopCorners = grpCornerPresets.add("button", undefined, "Top Only");
+    btnTopCorners.preferredSize = [65, 22];
+    var btnChatBubble = grpCornerPresets.add("button", undefined, "Bubble");
+    btnChatBubble.preferredSize = [60, 22];
+    var btnSharp = grpCornerPresets.add("button", undefined, "Sharp (0)");
+    btnSharp.preferredSize = [65, 22];
 
-    // Background Color & Opacity (Default: Fuchsia #FF00FF)
-    var grpBgColor = pnlBg.add("group");
-    grpBgColor.orientation = "row";
-    grpBgColor.alignment = ["fill", "top"];
-    var lblBgCol = grpBgColor.add("statictext", undefined, "Background Color:");
-    lblBgCol.preferredSize = [135, -1];
-    var cpBgColor = createColorPicker(grpBgColor, "#FF00FF");
+    var cornerConfig = { tl: true, tr: true, br: true, bl: true };
+    btnAllCorners.onClick = function () { cornerConfig = { tl: true, tr: true, br: true, bl: true }; sldRadius.value = 16; txtRadius.text = "16"; };
+    btnTopCorners.onClick = function () { cornerConfig = { tl: true, tr: true, br: false, bl: false }; };
+    btnChatBubble.onClick = function () { cornerConfig = { tl: true, tr: true, br: true, bl: false }; };
+    btnSharp.onClick      = function () { cornerConfig = { tl: false, tr: false, br: false, bl: false }; sldRadius.value = 0; txtRadius.text = "0"; };
 
-    var grpBgOp = pnlBg.add("group");
-    grpBgOp.orientation = "row";
-    grpBgOp.alignment = ["fill", "top"];
-    var lblBgOp = grpBgOp.add("statictext", undefined, "Opacity (%):");
-    lblBgOp.preferredSize = [135, -1];
-    var sldBgOp = grpBgOp.add("slider", undefined, 100, 0, 100);
-    sldBgOp.minvalue = 0;
-    sldBgOp.maxvalue = 100;
-    sldBgOp.value = 100;
-    sldBgOp.alignment = ["fill", "center"];
-    var txtBgOp = grpBgOp.add("edittext", undefined, "100");
-    txtBgOp.characters = 4;
-
-    sldBgOp.onChanging = sldBgOp.onChange = function() {
-        txtBgOp.text = String(Math.round(sldBgOp.value));
-    };
-    txtBgOp.onChange = function() {
-        var v = parseFloat(txtBgOp.text) || 0;
-        sldBgOp.value = Math.max(0, Math.min(100, v));
-    };
-
-    chkAddBg.onClick = function() {
+    chkAddBg.onClick = function () {
         var on = chkAddBg.value;
-        chkTL.enabled = on;
-        chkTR.enabled = on;
-        chkBL.enabled = on;
-        chkBR.enabled = on;
+        cpBg.button.enabled = on;
+        cpBg.edittext.enabled = on;
+        sldOp.enabled = on;
+        txtOp.enabled = on;
+        sldRadius.enabled = on;
+        txtRadius.enabled = on;
         btnAllCorners.enabled = on;
         btnTopCorners.enabled = on;
         btnChatBubble.enabled = on;
-        btnNoCorners.enabled = on;
-        cpBgColor.button.enabled = on;
-        cpBgColor.edittext.enabled = on;
-        sldBgOp.enabled = on;
-        txtBgOp.enabled = on;
+        btnSharp.enabled = on;
     };
 
-    try {
-        tpanel.selection = tabPrecomp;
-    } catch(eTab) {
-        try { tpanel.selection = 0; } catch(eTab2) {}
-    }
-
-    // --- Action Buttons ---
+    // --- Panel: Actions ---
     var pnlActions = win.add("panel", undefined, "Actions");
     pnlActions.orientation = "column";
     pnlActions.alignChildren = ["fill", "top"];
-    pnlActions.spacing = 8;
+    pnlActions.spacing = 6;
     pnlActions.margins = 10;
 
-    var btnPrecomp = pnlActions.add("button", undefined, "Precomp Selected Text Box");
+    var btnPrecomp = pnlActions.add("button", undefined, "Precompose Text Box");
     btnPrecomp.preferredSize = [-1, 32];
-    btnPrecomp.helpTip = "Precompose selected text box as a single layer with padding, auto anchor & rounded background.";
+    btnPrecomp.helpTip = "Precomposes text box with exterior padding, zero-shift anchor and background card.";
 
-    var grpDivide = pnlActions.add("group");
-    grpDivide.orientation = "row";
-    grpDivide.alignment = ["fill", "top"];
-    grpDivide.spacing = 8;
+    var grpSubActions = pnlActions.add("group");
+    grpSubActions.orientation = "row";
+    grpSubActions.alignment = ["fill", "top"];
+    grpSubActions.spacing = 8;
 
-    var btnDivideWords = grpDivide.add("button", undefined, "Divide by Words");
-    btnDivideWords.alignment = ["fill", "center"];
-    btnDivideWords.preferredSize = [-1, 30];
-    btnDivideWords.helpTip = "Creates a text layer for each word in matching position, then precomposes.";
-
-    var btnDivideLines = grpDivide.add("button", undefined, "Divide by Lines");
+    var btnDivideLines = grpSubActions.add("button", undefined, "Divide by Lines");
     btnDivideLines.alignment = ["fill", "center"];
-    btnDivideLines.preferredSize = [-1, 30];
-    btnDivideLines.helpTip = "Creates a text layer for each line in matching position, then precomposes.";
+    btnDivideLines.preferredSize = [-1, 26];
+    btnDivideLines.helpTip = "Extracts each line as its own layer inside precomp with matching styling.";
 
+    var btnDivideWords = grpSubActions.add("button", undefined, "Divide by Words");
+    btnDivideWords.alignment = ["fill", "center"];
+    btnDivideWords.preferredSize = [-1, 26];
+    btnDivideWords.helpTip = "Extracts each word as its own layer inside precomp with matching styling.";
 
+    // --- Status & Footer ---
     var lblFeedback = win.add("statictext", undefined, "Ready.");
     lblFeedback.alignment = ["fill", "bottom"];
 
-    // --- Link Footer ---
     var grpFooter = win.add("group");
     grpFooter.orientation = "row";
     grpFooter.alignment = ["fill", "bottom"];
     grpFooter.alignChildren = ["center", "center"];
-    grpFooter.margins = [0, 4, 0, 0];
     var lblRepo = grpFooter.add("statictext", undefined, "GitHub: work2survive/AE-text-precomp");
-    lblRepo.helpTip = "https://github.com/work2survive/AE-text-precomp";
-    lblRepo.onClick = function() {
-        var url = "https://github.com/work2survive/AE-text-precomp";
+    lblRepo.helpTip = REPO_URL;
+    lblRepo.onClick = function () {
         if (typeof window !== "undefined" && window.open) {
-            window.open(url, "_blank");
+            window.open(REPO_URL, "_blank");
         } else if ($.os && $.os.indexOf("Windows") !== -1) {
-            system.callSystem('explorer "' + url + '"');
+            system.callSystem('explorer "' + REPO_URL + '"');
         } else if (typeof system !== "undefined" && system.callSystem) {
-            system.callSystem('open "' + url + '"');
+            system.callSystem('open "' + REPO_URL + '"');
         }
     };
 
     // -------------------------------------------------------------------------
-    // 10. UI Event Handlers & State Sync
+    // 8. Event Wiring & Sync
     // -------------------------------------------------------------------------
-    function syncLayerDetection() {
+    function syncDetection() {
         var comp = app.project.activeItem;
         if (!comp || !(comp instanceof CompItem)) {
             lblStatusText.text = "No active composition found.";
-            btnAutoDetect.enabled = false;
             return null;
         }
 
         var textLayer = getSelectedTextLayer(comp);
         if (textLayer) {
             var metrics = getTextLayerMetrics(comp, textLayer);
-            var typeStr = metrics.isBoxText ? "Paragraph Box" : "Point Text";
-            var alignStr = metrics.align.toUpperCase();
-            var wordCount = (metrics.memoryStore && metrics.memoryStore.totalWords) ? (" | " + metrics.memoryStore.totalWords + " words") : "";
-            lblStatusText.text = "'" + textLayer.name + "' (" + typeStr + ", " + alignStr + wordCount + ")";
-            btnAutoDetect.enabled = true;
+            var typeStr = metrics.isBoxText ? "Box Text" : "Point Text";
+            lblStatusText.text = "'" + textLayer.name + "' (" + typeStr + ", " + metrics.align.toUpperCase() + ", " + metrics.detectedWidth + "x" + metrics.detectedHeight + "px)";
 
-            // Automatically update Text Box Width if option is checked
-            if (chkAutoDetectWidth && chkAutoDetectWidth.value && metrics && metrics.detectedWidth) {
-                txtWidth.text = String(Math.round(metrics.detectedWidth));
-            }
-            return metrics;
+            if (chkAutoWidth.value) txtWidth.text = String(metrics.detectedWidth);
+            if (chkAutoHeight.value) txtHeight.text = String(metrics.detectedHeight);
+
+            if (metrics.align === "center") setAnchorSelection("TC");
+            else if (metrics.align === "right") setAnchorSelection("TR");
+            else setAnchorSelection("TL");
+
+            return { comp: comp, layer: textLayer, metrics: metrics };
         } else {
-            lblStatusText.text = "No text layer selected";
-            btnAutoDetect.enabled = false;
-            return null;
+            lblStatusText.text = "No text layer selected.";
+            return { comp: comp, layer: null, metrics: null };
         }
     }
 
-    btnAutoDetect.onClick = function() {
-        var metrics = syncLayerDetection();
-        if (metrics) {
-            txtWidth.text = String(Math.round(metrics.detectedWidth));
-            txtHeight.text = String(Math.round(metrics.detectedHeight));
-
-            if (metrics.align === "center") {
-                dropAlign.selection = 2; // Top-Center
-            } else if (metrics.align === "right") {
-                dropAlign.selection = 3; // Top-Right
-            } else {
-                dropAlign.selection = 1; // Top-Left
-            }
-
-            lblFeedback.text = "Auto-detected text box: " + Math.round(metrics.detectedWidth) + "x" + Math.round(metrics.detectedHeight) + "px (" + metrics.align + ")";
+    btnRefresh.onClick = function () {
+        var res = syncDetection();
+        if (res && res.layer) {
+            lblFeedback.text = "Detected text box: " + res.metrics.detectedWidth + "x" + res.metrics.detectedHeight + "px (" + res.metrics.align + ")";
         } else {
-            alert("Please select a text layer in your active composition first.");
+            lblFeedback.text = "Please select a text layer.";
         }
     };
 
-    function executePrecomp(divideMode) {
+    function runAction(mode) {
         var comp = app.project.activeItem;
         if (!comp || !(comp instanceof CompItem)) {
-            alert("No active composition found. Please open a composition and select a text layer.");
+            lblFeedback.text = "Error: Please open a composition.";
             return;
         }
-
         var textLayer = getSelectedTextLayer(comp);
         if (!textLayer) {
-            alert("Please select a text layer in your active composition first.");
+            lblFeedback.text = "Error: Please select a text layer first.";
             return;
         }
 
-        var actionName = "AE Text Precomp";
-        if (divideMode === "words") actionName = "AE Text Precomp (Divide by Words)";
-        else if (divideMode === "lines") actionName = "AE Text Precomp (Divide by Lines)";
+        var rVal = parseFloat(txtRadius.text) || 0;
+        var radii = {
+            tl: cornerConfig.tl ? rVal : 0,
+            tr: cornerConfig.tr ? rVal : 0,
+            br: cornerConfig.br ? rVal : 0,
+            bl: cornerConfig.bl ? rVal : 0
+        };
 
-        if (app.beginUndoGroup) app.beginUndoGroup(actionName);
+        var options = {
+            mode: mode,
+            autoWidth: chkAutoWidth.value,
+            manualWidth: parseFloat(txtWidth.text) || 800,
+            autoHeight: chkAutoHeight.value,
+            manualHeight: parseFloat(txtHeight.text) || 120,
+            padding: parseFloat(txtPad.text) || 0,
+            anchorKey: currentAnchorKey,
+            addBackgroundCard: chkAddBg.value,
+            bgColor: hexToRgb(cpBg.value),
+            bgOpacity: parseFloat(txtOp.text) || 100,
+            radii: radii
+        };
+
         try {
-            var w = parseFloat(txtWidth.text) || 800;
-            var h = parseFloat(txtHeight.text) || 400;
-            var autoH = chkAutoHeight.value;
-            var autoAnc = chkAutoAnchor.value;
-            var padVal = parseFloat(txtPad.text) || 0;
-
-            var anchorAlign = "auto";
-            if (dropAlign.selection) {
-                var selIdx = dropAlign.selection.index;
-                var presetNames = [
-                    "auto",
-                    "top-left",
-                    "top-center",
-                    "top-right",
-                    "mid-left",
-                    "center",
-                    "mid-right",
-                    "bot-left",
-                    "bot-center",
-                    "bot-right"
-                ];
-                if (selIdx >= 0 && selIdx < presetNames.length) {
-                    anchorAlign = presetNames[selIdx];
-                }
-            }
-
-            var anchorRef = (radRefCanvas && radRefCanvas.value) ? "canvas" : "content";
-            var createCross = chkShowCross ? chkShowCross.value : false;
-            var crossColor = (dropCrossCol && dropCrossCol.selection) ? dropCrossCol.selection.text : "Cyan";
-
-            var addBg = chkAddBg.value;
-            var corners = {
-                TL: chkTL.value,
-                TR: chkTR.value,
-                BR: chkBR.value,
-                BL: chkBL.value
-            };
-            var bgColor = cpBgColor._color || "#FF00FF";
-            var bgOpacity = parseFloat(txtBgOp.text) || 100;
-
-            var res = precompTextLayer({
-                width: w,
-                height: h,
-                padding: padVal,
-                autoHeight: autoH,
-                autoAnchor: autoAnc,
-                anchorAlign: anchorAlign,
-                anchorReference: anchorRef,
-                createCross: createCross,
-                crossColor: crossColor,
-                autoDetectWidth: chkAutoDetectWidth.value,
-                forceAlign: "auto",
-                addBackground: addBg,
-                corners: corners,
-                bgColor: bgColor,
-                bgOpacity: bgOpacity,
-                divideMode: divideMode || "none"
-            });
-
-            try {
-                syncLayerDetection();
-            } catch (eSync) {}
-
-            var msg = "";
-            if (divideMode === "words") {
-                msg = "Precomposed '" + res.name + "' divided into " + (res.wordCount || 0) + " word layers [" + res.width + "x" + res.height + "px]";
-            } else if (divideMode === "lines") {
-                msg = "Precomposed '" + res.name + "' divided into " + (res.lineCount || 0) + " line layers [" + res.width + "x" + res.height + "px]";
-            } else {
-                msg = "Precomposed '" + res.name + "' [" + res.width + "x" + res.height + "px, Padding: " + res.padding + "px, Textbox: " + res.textboxWidth + "px]";
-            }
-            lblFeedback.text = msg;
-        } catch (err) {
-            alert("Error precomposing text box" + (err.line ? (" at line " + err.line) : "") + ":\n" + (err.message || err.toString()));
-        } finally {
-            if (app.endUndoGroup) app.endUndoGroup();
+            var result = executePrecomp(comp, textLayer, options);
+            lblFeedback.text = "Success: " + result.precompItem.name + " (" + result.width + "x" + result.height + "px)";
+            syncDetection();
+        } catch (eErr) {
+            lblFeedback.text = "Error: " + eErr.message;
         }
     }
 
-    btnPrecomp.onClick = function() {
-        executePrecomp("none");
-    };
+    btnPrecomp.onClick     = function () { runAction("single"); };
+    btnDivideLines.onClick = function () { runAction("lines"); };
+    btnDivideWords.onClick = function () { runAction("words"); };
 
-    btnDivideWords.onClick = function() {
-        executePrecomp("words");
-    };
+    // Initial sync
+    try {
+        if (win instanceof Window) {
+            win.center();
+            win.show();
+        } else {
+            win.layout.layout(true);
+        }
+        syncDetection();
+    } catch (eInit) {}
 
-    btnDivideLines.onClick = function() {
-        executePrecomp("lines");
-    };
-
-    // Initial check
-    syncLayerDetection();
-
-    win.layout.layout(true);
-    win.onResizing = win.onResize = function() { this.layout.resize(); };
-
-    if (win instanceof Window) {
-        win.center();
-        win.show();
-    }
 })(this);
