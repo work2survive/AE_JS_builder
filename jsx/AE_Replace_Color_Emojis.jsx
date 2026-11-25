@@ -630,15 +630,20 @@
         ddStyle.selection = 0;
         ddStyle.alignment = ["fill", "center"];
 
-        // Actions
-        var grpBtns = win.add("group");
-        grpBtns.orientation = "row";
-        grpBtns.alignChildren = ["fill", "center"];
-        grpBtns.spacing = 6;
+        // Utility Actions (Restore + Demo Text)
+        var grpSubBtns = win.add("group");
+        grpSubBtns.orientation = "row";
+        grpSubBtns.alignChildren = ["fill", "center"];
+        grpSubBtns.spacing = 6;
+        var btnRestore = grpSubBtns.add("button", undefined, "↺ Restore Original Text");
+        var btnDemo    = grpSubBtns.add("button", undefined, "📝 Demo Text");
+        btnRestore.preferredSize = [-1, 26];
+        btnDemo.preferredSize    = [-1, 26];
 
-        var btnExecute = grpBtns.add("button", undefined, "✨ Replace Font Emojis with Color Emojis");
-        var btnRestore = grpBtns.add("button", undefined, "↺ Restore Original Text");
-        var btnDemo    = win.add("button", undefined, "📝 Demo Text");
+        // Primary Action (Prominent big button at bottom)
+        var btnExecute = win.add("button", undefined, "✨ Replace Font Emojis with Color Emojis");
+        btnExecute.alignment = ["fill", "center"];
+        btnExecute.preferredSize = [-1, 36];
 
         function getActiveComp() {
             var activeApp = (typeof app !== "undefined") ? app : globalObj.app;
