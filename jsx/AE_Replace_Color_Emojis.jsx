@@ -214,24 +214,40 @@
         var boxWidth = 0;
         var boxPos = [0, 0];
         try {
-            if (textDoc.boxText && textDoc.boxTextSize) {
+            if ((textDoc.boxText || layer.boxText) && (textDoc.boxTextSize || layer.boxTextSize)) {
                 isBox = true;
-                boxWidth = textDoc.boxTextSize[0];
+                var bSize = textDoc.boxTextSize || layer.boxTextSize;
+                boxWidth = bSize[0];
                 if (textDoc.boxTextPos) boxPos = textDoc.boxTextPos;
+                else if (layer.boxTextPos) boxPos = layer.boxTextPos;
             }
         } catch (eB) {}
 
         var fullText = String(textDoc.text || "");
-        var lines = fullText.split(/\r\n|\r|\n/);
 
         var just = "left";
         try {
-            var j = textDoc.justification;
+            var j = (textDoc && textDoc.justification !== undefined) ? textDoc.justification : layer.justification;
             if (typeof ParagraphJustification !== "undefined") {
-                if (j === ParagraphJustification.CENTER_JUSTIFY) just = "center";
-                else if (j === ParagraphJustification.RIGHT_JUSTIFY) just = "right";
-            } else if (j === 7413 || j === "center") just = "center";
-            else if (j === 7414 || j === "right") just = "right";
+                if (j === ParagraphJustification.CENTER_JUSTIFY ||
+                    j === ParagraphJustification.JUSTIFY_LAST_CENTER ||
+                    (typeof ParagraphJustification.FULL_JUSTIFY_LASTCENTER !== "undefined" && j === ParagraphJustification.FULL_JUSTIFY_LASTCENTER)) {
+                    just = "center";
+                } else if (j === ParagraphJustification.RIGHT_JUSTIFY ||
+                           j === ParagraphJustification.JUSTIFY_LAST_RIGHT ||
+                           (typeof ParagraphJustification.FULL_JUSTIFY_LASTRIGHT !== "undefined" && j === ParagraphJustification.FULL_JUSTIFY_LASTRIGHT)) {
+                    just = "right";
+                }
+            }
+            if (j == 7414 || j == 7417 || j == 2 || j === "center" || j === "CENTER_JUSTIFY") {
+                just = "center";
+            } else if (j == 7413 || j == 7416 || j == 1 || j === "right" || j === "RIGHT_JUSTIFY") {
+                just = "right";
+            } else if (typeof j === "string") {
+                var lj = j.toLowerCase();
+                if (lj.indexOf("center") !== -1) just = "center";
+                else if (lj.indexOf("right") !== -1) just = "right";
+            }
         } catch (eJ) {}
 
         return {
@@ -244,8 +260,7 @@
             justification: just,
             isBox: isBox,
             boxWidth: boxWidth,
-            boxPos: boxPos,
-            lines: lines
+            boxPos: boxPos
         };
     }
 
@@ -253,6 +268,7 @@
         var mLayer = null;
         var mProp = null;
         var pipeRight = 0;
+        var calib = (typeof AETextCalibration !== "undefined") ? AETextCalibration : (globalObj.AETextCalibration || null);
 
         if (comp && comp.layers && typeof comp.layers.addText === "function") {
             try {
@@ -265,7 +281,10 @@
                     var doc = mProp.value;
                     if (doc) {
                         doc.fontSize = props.fontSize;
-                        if (props.font) doc.font = props.font;
+                        if (props.font) {
+                            doc.font = props.font;
+                            try { doc.fontFamily = props.font; } catch (eFF) {}
+                        }
                         doc.tracking = props.tracking;
                         try { doc.boxText = false; } catch (eB) {}
                         mProp.setValue(doc);
@@ -300,6 +319,11 @@
 
         function measurePrefixAdvance(prefix) {
             if (!prefix) return 0;
+            if (calib && typeof calib.measureLineWidth === "function") {
+                try {
+                    return calib.measureLineWidth(prefix, props.fontSize, props.font, props.tracking);
+                } catch (eCal) {}
+            }
             if (mLayer && mProp && pipeRight > 0) {
                 try {
                     var rPipe = measureRect(prefix + "|");
@@ -321,6 +345,56 @@
             measurePrefixAdvance: measurePrefixAdvance,
             cleanup: cleanup
         };
+    }
+
+    function computeVisualLines(props, measurer) {
+        var fullText = props.fullText;
+        if (!props.isBox || props.boxWidth <= 0) {
+            return fullText.split(/\r\n|\r|\n/);
+        }
+
+        // 1. Check simulator / global AETextCalibration engine
+        var calib = (typeof AETextCalibration !== "undefined") ? AETextCalibration : (globalObj.AETextCalibration || null);
+        if (calib && typeof calib.wrapParagraph === "function") {
+            try {
+                var wrapped = calib.wrapParagraph(fullText, props.boxWidth, props.fontSize, props.font, {}, props.tracking);
+                if (wrapped && wrapped.length > 0) {
+                    var wLines = [];
+                    for (var wi = 0; wi < wrapped.length; wi++) {
+                        wLines.push(wrapped[wi].text);
+                    }
+                    return wLines;
+                }
+            } catch (eCW) {}
+        }
+
+        // 2. Fallback word-wrap using measurer
+        var rawParas = fullText.split(/\r\n|\r|\n/);
+        var resultLines = [];
+        for (var pi = 0; pi < rawParas.length; pi++) {
+            var para = rawParas[pi];
+            var words = para.match(/\S+|\s+/g) || [];
+            if (words.length === 0) {
+                resultLines.push("");
+                continue;
+            }
+            var curLine = "";
+            for (var wi = 0; wi < words.length; wi++) {
+                var token = words[wi];
+                var testLine = curLine + token;
+                var testW = measurer ? measurer.measurePrefixAdvance(testLine.replace(/\s+$/, "")) : 0;
+                if (testW > props.boxWidth && curLine.replace(/\s+$/, "").length > 0) {
+                    resultLines.push(curLine.replace(/\s+$/, ""));
+                    curLine = token.replace(/^\s+/, "");
+                } else {
+                    curLine = testLine;
+                }
+            }
+            if (curLine.length > 0) {
+                resultLines.push(curLine.replace(/\s+$/, ""));
+            }
+        }
+        return resultLines.length > 0 ? resultLines : rawParas;
     }
 
     // -------------------------------------------------------------------------
@@ -430,12 +504,18 @@
     function replaceEmojisInLayer(comp, origLayer, options) {
         if (!comp || !origLayer) return null;
         var props = getTextBoxProperties(origLayer);
-        if (!props || !props.lines) return null;
+        if (!props) return null;
 
         var measurer = createMeasureHelper(comp, props);
+        var lines = computeVisualLines(props, measurer);
+        if (!lines || lines.length === 0) {
+            measurer.cleanup();
+            return null;
+        }
+
         var firstBaselineY = 0;
         if (props.isBox) {
-            var rFirst = measurer.measureRect(props.lines[0] || "A");
+            var rFirst = measurer.measureRect(lines[0] || "A");
             var ascender = Math.abs(rFirst.top) || (props.fontSize * 0.78);
             firstBaselineY = props.boxPos[1] + ascender;
         }
@@ -444,8 +524,8 @@
         var origAP = (origLayer.transform && origLayer.transform.anchorPoint) ? origLayer.transform.anchorPoint.value : [0, 0, 0];
 
         var matchedEmojis = [];
-        for (var vl = 0; vl < props.lines.length; vl++) {
-            var lineStr = props.lines[vl];
+        for (var vl = 0; vl < lines.length; vl++) {
+            var lineStr = lines[vl];
             if (!lineStr || lineStr.length === 0) continue;
 
             var lineBaselineY = firstBaselineY + (vl * lineStep);
@@ -453,11 +533,21 @@
 
             var lineLeftX = 0;
             if (props.isBox && props.boxWidth > 0) {
-                if (props.justification === "center") lineLeftX = (props.boxWidth - lineW) / 2;
-                else if (props.justification === "right") lineLeftX = props.boxWidth - lineW;
+                if (props.justification === "center") {
+                    lineLeftX = props.boxPos[0] + (props.boxWidth - lineW) / 2;
+                } else if (props.justification === "right") {
+                    lineLeftX = props.boxPos[0] + props.boxWidth - lineW;
+                } else {
+                    lineLeftX = props.boxPos[0];
+                }
             } else {
-                if (props.justification === "center") lineLeftX = -lineW / 2;
-                else if (props.justification === "right") lineLeftX = -lineW;
+                if (props.justification === "center") {
+                    lineLeftX = -lineW / 2;
+                } else if (props.justification === "right") {
+                    lineLeftX = -lineW;
+                } else {
+                    lineLeftX = 0;
+                }
             }
 
             var lineMatches = findEmojisInString(lineStr);
