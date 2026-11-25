@@ -1668,6 +1668,19 @@ win.onResizing = win.onResize = function () {
 };
 ```
 
+### 27.4 Tabbed Panel Architecture for Vertical Space Conservation
+
+When tools bundle multiple feature domains (e.g. Width constraints, algorithmic wrap methods, micro-typography semantic unit rules, and position/anchor alignment rigs), stacking all parameter panels vertically produces a giant window of 650px–750px in height. In standard 1080p desktop layouts or docked workspace sidebars, this causes severe vertical overflow, pushing primary action buttons off the screen.
+
+**The Multi-Tab Architectural Standard:**
+1. **Fixed Header & Status Banner**: Place layer detection and status inspection at the top of the window outside the tabbed container so target feedback remains constantly visible.
+2. **Divided Feature Domains via `tabbedpanel`**:
+   - **Tab 1 ("Wrap & Width")**: Primary geometric constraints (`maxWidth`, `desiredWidth`), method selector, and language syllabification.
+   - **Tab 2 ("Typography")**: Micro-typographic rules (widow/orphan binding, non-breaking space insertion, unit and honorific grouping).
+   - **Tab 3 ("Anchor & Align")**: Visual position matching and dynamic justification anchor point alignment.
+3. **Fixed Action Footer**: Place secondary utility buttons (`Restore Original`, `Create Demo`) and the primary action trigger (`Wrap Paragraph`) pinned at the very bottom of the window, outside the tabs.
+4. **Vertical Space Savings**: Reduces total panel height by more than **50%** (from ~700px down to ~340px), guaranteeing complete visibility on small laptop displays and narrow After Effects docking panels without requiring scrollbars.
+
 ---
 
 ## 28. Dynamic Paragraph Alignment Detection in After Effects Expressions (TextStyle.justification vs. Universal Geometric Ratio)

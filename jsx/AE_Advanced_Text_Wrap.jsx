@@ -62,7 +62,7 @@
     "use strict";
 
     var SCRIPT_TITLE   = "AE Advanced Text Wrap";
-    var SCRIPT_VERSION = "v1.4.2";
+    var SCRIPT_VERSION = "v1.5.0";
     var GITHUB_URL     = "https://github.com/work2survive/AE-advanced-text-wrap";
     var README_URL     = "https://github.com/work2survive/AE-advanced-text-wrap/blob/main/README.md";
 
@@ -1817,25 +1817,26 @@
 
         if (win instanceof Window) {
             win.text = SCRIPT_TITLE + " " + SCRIPT_VERSION;
-            win.preferredSize = [320, 560];
-            win.minimumSize = [240, 420];
-            win.maximumSize = [600, 1200];
+            win.preferredSize = [280, 360];
+            win.minimumSize = [220, 280];
+            win.maximumSize = [600, 900];
         } else {
-            win.preferredSize = [280, -1];
-            win.minimumSize = [220, -1];
+            win.preferredSize = [260, -1];
+            win.minimumSize = [200, -1];
         }
 
         win.orientation = "column";
         win.alignChildren = ["fill", "top"];
-        win.spacing = 6;
-        win.margins = 8;
+        win.spacing = 5;
+        win.margins = [6, 6, 6, 6];
 
         // --- Header Panel ---
         var pnlHeader = win.add("panel", undefined, SCRIPT_TITLE + " " + SCRIPT_VERSION);
         pnlHeader.orientation = "column";
         pnlHeader.alignChildren = ["fill", "top"];
         pnlHeader.spacing = 2;
-        pnlHeader.margins = [8, 5, 8, 5];
+        pnlHeader.margins = [6, 4, 6, 4];
+        pnlHeader.alignment = ["fill", "top"];
 
         var lblSub = pnlHeader.add("statictext", undefined, "Balanced paragraph typography & hyphenation");
         lblSub.alignment = ["fill", "center"];
@@ -1848,68 +1849,90 @@
         pnlTarget.orientation = "row";
         pnlTarget.alignChildren = ["fill", "center"];
         pnlTarget.spacing = 6;
-        pnlTarget.margins = [8, 6, 8, 6];
+        pnlTarget.margins = [6, 4, 6, 4];
+        pnlTarget.alignment = ["fill", "top"];
 
         var lblTargetStatus = pnlTarget.add("statictext", undefined, "Scanning for text layer...", { truncate: "middle" });
         lblTargetStatus.alignment = ["fill", "center"];
-        lblTargetStatus.preferredSize = [160, 20];
-        lblTargetStatus.maximumSize = [280, 20];
+        lblTargetStatus.preferredSize = [150, 20];
         lblTargetStatus.minimumSize = [60, 20];
 
         var btnRefresh = pnlTarget.add("button", undefined, "Refresh");
         btnRefresh.preferredSize = [55, 22];
 
+        // =====================================================================
+        // TABBED NAVIGATION PANEL (Saves ~50% vertical space)
+        // =====================================================================
+        var tpanel = win.add("tabbedpanel");
+        tpanel.alignChildren = ["fill", "top"];
+        tpanel.alignment = ["fill", "fill"];
+        tpanel.spacing = 4;
+        tpanel.margins = 0;
+
+        // ---------------------------------------------------------------------
+        // TAB 1: Wrap & Width
+        // ---------------------------------------------------------------------
+        var tabWrap = tpanel.add("tab", undefined, "Wrap & Width");
+        tabWrap.orientation = "column";
+        tabWrap.alignChildren = ["fill", "top"];
+        tabWrap.spacing = 5;
+        tabWrap.margins = [6, 6, 6, 6];
+
         // --- Width Constraints Panel ---
-        var pnlWidth = win.add("panel", undefined, "Width Constraints (px)");
+        var pnlWidth = tabWrap.add("panel", undefined, "Width Constraints (px)");
         pnlWidth.orientation = "column";
         pnlWidth.alignChildren = ["fill", "top"];
-        pnlWidth.spacing = 5;
-        pnlWidth.margins = [8, 6, 8, 6];
+        pnlWidth.spacing = 4;
+        pnlWidth.margins = [6, 5, 6, 5];
+        pnlWidth.alignment = ["fill", "top"];
 
         // 1. Max Text Width Constraint (Ceiling)
         var grpMaxWidthRow = pnlWidth.add("group");
         grpMaxWidthRow.orientation = "row";
         grpMaxWidthRow.alignChildren = ["fill", "center"];
         grpMaxWidthRow.spacing = 6;
+        grpMaxWidthRow.alignment = ["fill", "top"];
 
         var lblMaxWidth = grpMaxWidthRow.add("statictext", undefined, "Max Width:");
-        lblMaxWidth.preferredSize = [80, -1];
+        lblMaxWidth.preferredSize = [65, -1];
+        lblMaxWidth.minimumSize = [50, -1];
         lblMaxWidth.helpTip = "Max Width (Ceiling): Absolute physical boundary in pixels.";
 
         var sldMaxWidth = grpMaxWidthRow.add("slider", undefined, 600, 100, 1920);
         sldMaxWidth.alignment = ["fill", "center"];
 
         var txtMaxWidth = grpMaxWidthRow.add("edittext", undefined, "600");
-        txtMaxWidth.preferredSize = [44, 22];
+        txtMaxWidth.preferredSize = [42, 20];
 
         var lblPx1 = grpMaxWidthRow.add("statictext", undefined, "px");
-        lblPx1.preferredSize = [18, -1];
+        lblPx1.preferredSize = [16, -1];
 
         // 2. Desired Approx Width (Target - Always strictly smaller than Max Width)
         var grpDesiredWidthRow = pnlWidth.add("group");
         grpDesiredWidthRow.orientation = "row";
         grpDesiredWidthRow.alignChildren = ["fill", "center"];
         grpDesiredWidthRow.spacing = 6;
+        grpDesiredWidthRow.alignment = ["fill", "top"];
 
         var lblDesiredWidth = grpDesiredWidthRow.add("statictext", undefined, "Desired:");
-        lblDesiredWidth.preferredSize = [80, -1];
+        lblDesiredWidth.preferredSize = [65, -1];
+        lblDesiredWidth.minimumSize = [50, -1];
         lblDesiredWidth.helpTip = "Desired Approx Width: Target visual width (always < Max Width).";
 
         var sldDesiredWidth = grpDesiredWidthRow.add("slider", undefined, 500, 60, 1900);
         sldDesiredWidth.alignment = ["fill", "center"];
 
         var txtDesiredWidth = grpDesiredWidthRow.add("edittext", undefined, "500");
-        txtDesiredWidth.preferredSize = [44, 22];
+        txtDesiredWidth.preferredSize = [42, 20];
 
         var lblPx2 = grpDesiredWidthRow.add("statictext", undefined, "px");
-        lblPx2.preferredSize = [18, -1];
+        lblPx2.preferredSize = [16, -1];
 
         // Two-way synchronization enforcing: desired approx width is ALWAYS strictly smaller than max width
         function syncWidthConstraints(source) {
             var maxV = Math.round(sldMaxWidth.value);
             var desV = Math.round(sldDesiredWidth.value);
 
-            // Desired width must always be smaller than max width (buffer of at least 20px)
             if (desV >= maxV) {
                 desV = Math.max(50, maxV - 20);
                 sldDesiredWidth.value = desV;
@@ -1964,18 +1987,21 @@
         };
 
         // --- Wrap Method & Language Panel ---
-        var pnlMethod = win.add("panel", undefined, "Wrap Method & Language");
+        var pnlMethod = tabWrap.add("panel", undefined, "Method & Formatting");
         pnlMethod.orientation = "column";
         pnlMethod.alignChildren = ["fill", "top"];
-        pnlMethod.spacing = 5;
-        pnlMethod.margins = [8, 6, 8, 6];
+        pnlMethod.spacing = 4;
+        pnlMethod.margins = [6, 5, 6, 5];
+        pnlMethod.alignment = ["fill", "top"];
 
         var grpMethodRow = pnlMethod.add("group");
         grpMethodRow.orientation = "row";
         grpMethodRow.alignChildren = ["left", "center"];
         grpMethodRow.spacing = 6;
+        grpMethodRow.alignment = ["fill", "top"];
         var lblM = grpMethodRow.add("statictext", undefined, "Method:");
         lblM.preferredSize = [65, -1];
+        lblM.minimumSize = [50, -1];
 
         var ddMethod = grpMethodRow.add("dropdownlist", undefined, [
             "1. Balanced (Knuth-Plass)",
@@ -1986,14 +2012,17 @@
         ]);
         ddMethod.selection = 0;
         ddMethod.alignment = ["fill", "center"];
-        ddMethod.preferredSize = [150, 22];
+        ddMethod.preferredSize = [140, 22];
+        ddMethod.minimumSize = [100, 22];
 
         var grpLangRow = pnlMethod.add("group");
         grpLangRow.orientation = "row";
         grpLangRow.alignChildren = ["left", "center"];
         grpLangRow.spacing = 6;
+        grpLangRow.alignment = ["fill", "top"];
         var lblL = grpLangRow.add("statictext", undefined, "Language:");
         lblL.preferredSize = [65, -1];
+        lblL.minimumSize = [50, -1];
 
         var ddLanguage = grpLangRow.add("dropdownlist", undefined, [
             "English (US/UK)",
@@ -2005,7 +2034,8 @@
         ]);
         ddLanguage.selection = 0;
         ddLanguage.alignment = ["fill", "center"];
-        ddLanguage.preferredSize = [150, 22];
+        ddLanguage.preferredSize = [140, 22];
+        ddLanguage.minimumSize = [100, 22];
 
         var chkHyphen = pnlMethod.add("checkbox", undefined, "Enable Hyphenation (-)");
         chkHyphen.value = true;
@@ -2015,12 +2045,21 @@
         chkRemoveBreaks.value = true;
         chkRemoveBreaks.helpTip = "Strips existing manual carriage returns (\\r, \\n) before wrapping into a clean paragraph.";
 
-        // --- Micro-Typographic Options Panel ---
-        var pnlMicro = win.add("panel", undefined, "Micro-Typography & Semantic Units");
+        // ---------------------------------------------------------------------
+        // TAB 2: Typography
+        // ---------------------------------------------------------------------
+        var tabTypo = tpanel.add("tab", undefined, "Typography");
+        tabTypo.orientation = "column";
+        tabTypo.alignChildren = ["fill", "top"];
+        tabTypo.spacing = 5;
+        tabTypo.margins = [6, 6, 6, 6];
+
+        var pnlMicro = tabTypo.add("panel", undefined, "Micro-Typography & Semantic Units");
         pnlMicro.orientation = "column";
         pnlMicro.alignChildren = ["fill", "top"];
-        pnlMicro.spacing = 4;
-        pnlMicro.margins = [8, 6, 8, 6];
+        pnlMicro.spacing = 6;
+        pnlMicro.margins = [8, 8, 8, 8];
+        pnlMicro.alignment = ["fill", "top"];
 
         var chkWidows = pnlMicro.add("checkbox", undefined, "Prevent Widows & Orphans");
         chkWidows.value = true;
@@ -2038,12 +2077,21 @@
         chkHonorifics.value = true;
         chkHonorifics.helpTip = "Binds titles and abbreviations (e.g. Dr. Smith, Mr. Jones).";
 
-        // --- Position & Anchor Alignment Panel ---
-        var pnlAlignment = win.add("panel", undefined, "Position & Anchor Alignment");
+        // ---------------------------------------------------------------------
+        // TAB 3: Anchor & Align
+        // ---------------------------------------------------------------------
+        var tabAlign = tpanel.add("tab", undefined, "Anchor & Align");
+        tabAlign.orientation = "column";
+        tabAlign.alignChildren = ["fill", "top"];
+        tabAlign.spacing = 5;
+        tabAlign.margins = [6, 6, 6, 6];
+
+        var pnlAlignment = tabAlign.add("panel", undefined, "Position & Anchor Alignment");
         pnlAlignment.orientation = "column";
         pnlAlignment.alignChildren = ["fill", "top"];
-        pnlAlignment.spacing = 4;
-        pnlAlignment.margins = [8, 6, 8, 6];
+        pnlAlignment.spacing = 5;
+        pnlAlignment.margins = [6, 5, 6, 5];
+        pnlAlignment.alignment = ["fill", "top"];
 
         // 1. Visually Match Original Text Position (Default: ON)
         var chkMatchPos = pnlAlignment.add("checkbox", undefined, "Visually Match Original Position");
@@ -2055,8 +2103,10 @@
         grpMatchRef.alignChildren = ["left", "center"];
         grpMatchRef.spacing = 4;
         grpMatchRef.margins = [14, 0, 0, 0];
+        grpMatchRef.alignment = ["fill", "top"];
         var lblMatchRef = grpMatchRef.add("statictext", undefined, "Ref Mode:");
         lblMatchRef.preferredSize = [65, -1];
+        lblMatchRef.minimumSize = [50, -1];
         lblMatchRef.helpTip = "Reference origin used when repositioning the wrapped paragraph.";
 
         var ddMatchRef = grpMatchRef.add("dropdownlist", undefined, [
@@ -2065,7 +2115,8 @@
             "Top Edge (First Line Fixed)"
         ]);
         ddMatchRef.selection = 0;
-        ddMatchRef.preferredSize = [150, 22];
+        ddMatchRef.preferredSize = [140, 22];
+        ddMatchRef.minimumSize = [100, 22];
         ddMatchRef.alignment = ["fill", "center"];
 
         chkMatchPos.onClick = function () {
@@ -2082,6 +2133,7 @@
         grpAlignMode.alignChildren = ["left", "top"];
         grpAlignMode.spacing = 3;
         grpAlignMode.margins = [14, 0, 0, 0];
+        grpAlignMode.alignment = ["fill", "top"];
 
         var rbAlignOnce = grpAlignMode.add("radiobutton", undefined, "Apply Once (Baked Position)");
         var rbAlignExpr = grpAlignMode.add("radiobutton", undefined, "Live Expression (Dynamic)");
@@ -2094,8 +2146,10 @@
         grpAlignVert.alignChildren = ["left", "center"];
         grpAlignVert.spacing = 4;
         grpAlignVert.margins = [14, 0, 0, 0];
+        grpAlignVert.alignment = ["fill", "top"];
         var lblVertAlign = grpAlignVert.add("statictext", undefined, "Vertical:");
         lblVertAlign.preferredSize = [65, -1];
+        lblVertAlign.minimumSize = [50, -1];
         lblVertAlign.helpTip = "Vertical anchor point placement.";
 
         var ddVertAlign = grpAlignVert.add("dropdownlist", undefined, [
@@ -2104,7 +2158,8 @@
             "Bottom"
         ]);
         ddVertAlign.selection = 0;
-        ddVertAlign.preferredSize = [150, 22];
+        ddVertAlign.preferredSize = [140, 22];
+        ddVertAlign.minimumSize = [100, 22];
         ddVertAlign.alignment = ["fill", "center"];
 
         chkAutoAlign.onClick = function () {
@@ -2114,23 +2169,29 @@
             ddVertAlign.enabled = en;
         };
 
+        // Set initial tab selection
+        tpanel.selection = tabWrap;
+
         // --- Secondary Action Buttons ---
         var grpSubBtns = win.add("group");
         grpSubBtns.orientation = "row";
         grpSubBtns.alignChildren = ["fill", "center"];
+        grpSubBtns.alignment = ["fill", "top"];
         grpSubBtns.spacing = 6;
 
         var btnRestore = grpSubBtns.add("button", undefined, "↺ Restore Original");
         var btnDemo    = grpSubBtns.add("button", undefined, "📝 Create Demo");
         btnRestore.preferredSize = [-1, 26];
         btnDemo.preferredSize    = [-1, 26];
+        btnRestore.alignment = ["fill", "center"];
+        btnDemo.alignment    = ["fill", "center"];
         btnRestore.helpTip = "Restores the original unwrapped text, box dimensions, position, and removes script-generated expressions.";
         btnDemo.helpTip = "Creates a sample paragraph in the active composition for instant testing.";
 
         // --- Primary Action Button ---
         var btnExecute = win.add("button", undefined, "✨ Wrap Paragraph");
         btnExecute.alignment = ["fill", "center"];
-        btnExecute.preferredSize = [-1, 34];
+        btnExecute.preferredSize = [-1, 32];
         btnExecute.helpTip = "Analyzes, hyphenates, and wraps the selected text layer with optical micro-typography.";
 
         // ---------------------------------------------------------------------
