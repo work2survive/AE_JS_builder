@@ -1753,13 +1753,44 @@
                         const pathProp = p.property('ADBE Vector Shape') || p.property('Path') || p.path;
                         const shp = pathProp ? (pathProp.getValueAtTime ? pathProp.getValueAtTime(t) : pathProp.value) : null;
                         if (shp && shp.vertices && shp.vertices.length > 0) {
-                            shp.vertices.forEach(v => {
+                            const verts = shp.vertices;
+                            const inT = shp.inTangents || [];
+                            const outT = shp.outTangents || [];
+                            const n = verts.length;
+                            const segCount = (shp.closed && n > 1) ? n : Math.max(0, n - 1);
+
+                            verts.forEach(v => {
                                 const vx = curX + v[0] * curScaleX;
                                 const vy = curY + v[1] * curScaleY;
                                 minX = Math.min(minX, vx); maxX = Math.max(maxX, vx);
                                 minY = Math.min(minY, vy); maxY = Math.max(maxY, vy);
                                 found = true;
                             });
+
+                            for (let s = 0; s < segCount; s++) {
+                                const v0 = verts[s];
+                                const v1 = verts[(s + 1) % n];
+                                const o0 = outT[s] || [0, 0];
+                                const i1 = inT[(s + 1) % n] || [0, 0];
+                                if (o0[0] !== 0 || o0[1] !== 0 || i1[0] !== 0 || i1[1] !== 0) {
+                                    const p0x = v0[0], p0y = v0[1];
+                                    const p1x = v0[0] + o0[0], p1y = v0[1] + o0[1];
+                                    const p2x = v1[0] + i1[0], p2y = v1[1] + i1[1];
+                                    const p3x = v1[0], p3y = v1[1];
+                                    for (let step = 1; step < 16; step++) {
+                                        const u = step / 16;
+                                        const mu = 1 - u;
+                                        const b0 = mu * mu * mu;
+                                        const b1 = 3 * mu * mu * u;
+                                        const b2 = 3 * mu * u * u;
+                                        const b3 = u * u * u;
+                                        const bx = curX + (b0 * p0x + b1 * p1x + b2 * p2x + b3 * p3x) * curScaleX;
+                                        const by = curY + (b0 * p0y + b1 * p1y + b2 * p2y + b3 * p3y) * curScaleY;
+                                        minX = Math.min(minX, bx); maxX = Math.max(maxX, bx);
+                                        minY = Math.min(minY, by); maxY = Math.max(maxY, by);
+                                    }
+                                }
+                            }
                         }
                     } else if (p instanceof PropertyGroup) {
                         scanGroup(p, [curX, curY], [curScaleX, curScaleY]);

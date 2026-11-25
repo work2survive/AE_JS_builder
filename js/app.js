@@ -14,7 +14,7 @@
         return '1.2.36';
     }
 
-    const APP_VERSION = '1.2.39';
+    const APP_VERSION = '1.2.40';
     global.EMULATOR_VERSION = APP_VERSION;
     global.AE_TEXT_GUIDE_URL = 'https://github.com/work2survive/AE_JS_builder/blob/main/AE_VS_JS_TEXT_RENDERING_DIFFERENCES.md';
     global.AE_ANCHOR_POINT_GUIDE_URL = 'https://github.com/work2survive/AE-Align-AnchorPoint/blob/main/README.md';
@@ -1730,6 +1730,274 @@
     global.createDummyTextLayer = createDummyTextLayer;
 
     // -------------------------------------------------------------
+    // Dummy Bezier Polygon Shape Creator
+    // Creates a random AE ShapeLayer with an 8-vertex closed baked Bezier path
+    // combining linear corners, smooth symmetric curves, cusps, and half-curves,
+    // with random fill & stroke, centered in the viewport with a randomized
+    // visible anchor point (red cross child).
+    // -------------------------------------------------------------
+    function hslToRgb01(h, s, l) {
+        const hue2rgb = (p, q, t) => {
+            if (t < 0) t += 1;
+            if (t > 1) t -= 1;
+            if (t < 1 / 6) return p + (q - p) * 6 * t;
+            if (t < 1 / 2) return q;
+            if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6;
+            return p;
+        };
+        if (s === 0) {
+            const v = Math.round(l * 1000) / 1000;
+            return [v, v, v];
+        }
+        const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+        const p = 2 * l - q;
+        return [
+            Math.round(hue2rgb(p, q, h + 1 / 3) * 1000) / 1000,
+            Math.round(hue2rgb(p, q, h) * 1000) / 1000,
+            Math.round(hue2rgb(p, q, h - 1 / 3) * 1000) / 1000
+        ];
+    }
+
+    function createDummyPolygonLayer() {
+        if (typeof app === 'undefined' || !app.project) {
+            appendConsole('Cannot create dummy polygon layer: AE project not initialized.', true);
+            return null;
+        }
+
+        const comp = app.project.activeItem || (app.project.items && app.project.items.length > 0 ? app.project.items[0] : null);
+        if (!comp) {
+            appendConsole('Cannot create dummy polygon layer: No active composition found.', true);
+            return null;
+        }
+
+        const VERTEX_COUNT = 8;
+        const is3D = Math.random() < 0.33;
+        const posZ = is3D ? Math.round((Math.random() * 200) - 100) : 0;
+
+        // 1. Generate 8 random vertices radially ordered around [0, 0]
+        const baseAngle = Math.random() * Math.PI * 2;
+        const baseRadius = 150 + Math.random() * 90; // 150px..240px
+        const stretchX = 0.78 + Math.random() * 0.55;
+        const stretchY = 0.78 + Math.random() * 0.55;
+        const vertices = [];
+
+        for (let i = 0; i < VERTEX_COUNT; i++) {
+            const sectorAngle = baseAngle + (i * Math.PI * 2) / VERTEX_COUNT;
+            const angleJitter = (Math.random() - 0.5) * (Math.PI / 7.5);
+            const theta = sectorAngle + angleJitter;
+            const r = baseRadius * (0.48 + Math.random() * 0.78);
+            const vx = Math.round(Math.cos(theta) * r * stretchX * 100) / 100;
+            const vy = Math.round(Math.sin(theta) * r * stretchY * 100) / 100;
+            vertices.push([vx, vy]);
+        }
+
+        // 2. Assign a shuffled mix of baked Bezier vertex types across the 8 vertices:
+        //    - 'corner'   : sharp polygonal corner ([0,0] tangents)
+        //    - 'smooth'   : continuous collinear Bezier handles
+        //    - 'cusp'     : broken / pinched or flared asymmetric Bezier corner
+        //    - 'half-in'  : curved incoming handle, linear outgoing segment
+        //    - 'half-out' : linear incoming segment, curved outgoing handle
+        const bezierTypes = ['corner', 'corner', 'smooth', 'smooth', 'cusp', 'cusp', 'half-in', 'half-out'];
+        for (let i = bezierTypes.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            const tmp = bezierTypes[i];
+            bezierTypes[i] = bezierTypes[j];
+            bezierTypes[j] = tmp;
+        }
+
+        const round2 = (n) => Math.round(n * 100) / 100;
+        const inTangents = [];
+        const outTangents = [];
+
+        for (let i = 0; i < VERTEX_COUNT; i++) {
+            const prev = vertices[(i - 1 + VERTEX_COUNT) % VERTEX_COUNT];
+            const curr = vertices[i];
+            const next = vertices[(i + 1) % VERTEX_COUNT];
+
+            const dPrev = Math.hypot(curr[0] - prev[0], curr[1] - prev[1]) || 1;
+            const dNext = Math.hypot(next[0] - curr[0], next[1] - curr[1]) || 1;
+
+            // Unit chord direction from prev -> next
+            const chordX = next[0] - prev[0];
+            const chordY = next[1] - prev[1];
+            const chordLen = Math.hypot(chordX, chordY) || 1;
+            const tx = chordX / chordLen;
+            const ty = chordY / chordLen;
+
+            // Outward radial normal from origin through current vertex
+            const radLen = Math.hypot(curr[0], curr[1]) || 1;
+            const nx = curr[0] / radLen;
+            const ny = curr[1] / radLen;
+
+            const bType = bezierTypes[i];
+            if (bType === 'corner') {
+                inTangents.push([0, 0]);
+                outTangents.push([0, 0]);
+            } else if (bType === 'smooth') {
+                const kIn = 0.28 + Math.random() * 0.18;
+                const kOut = 0.28 + Math.random() * 0.18;
+                inTangents.push([round2(-tx * dPrev * kIn), round2(-ty * dPrev * kIn)]);
+                outTangents.push([round2(tx * dNext * kOut), round2(ty * dNext * kOut)]);
+            } else if (bType === 'cusp') {
+                const sign = Math.random() < 0.5 ? 1 : -1; // Flare outward (+1) or pinch inward (-1)
+                const kIn = 0.30 + Math.random() * 0.20;
+                const kOut = 0.30 + Math.random() * 0.20;
+                let ix = -0.45 * tx + sign * 0.89 * nx;
+                let iy = -0.45 * ty + sign * 0.89 * ny;
+                const iLen = Math.hypot(ix, iy) || 1;
+                ix /= iLen; iy /= iLen;
+
+                let ox = 0.45 * tx + sign * 0.89 * nx;
+                let oy = 0.45 * ty + sign * 0.89 * ny;
+                const oLen = Math.hypot(ox, oy) || 1;
+                ox /= oLen; oy /= oLen;
+
+                inTangents.push([round2(ix * dPrev * kIn), round2(iy * dPrev * kIn)]);
+                outTangents.push([round2(ox * dNext * kOut), round2(oy * dNext * kOut)]);
+            } else if (bType === 'half-in') {
+                const kIn = 0.32 + Math.random() * 0.20;
+                const bulge = (Math.random() < 0.5 ? 0.35 : -0.35);
+                let ix = -tx + bulge * nx;
+                let iy = -ty + bulge * ny;
+                const iLen = Math.hypot(ix, iy) || 1;
+                inTangents.push([round2((ix / iLen) * dPrev * kIn), round2((iy / iLen) * dPrev * kIn)]);
+                outTangents.push([0, 0]);
+            } else {
+                // 'half-out'
+                const kOut = 0.32 + Math.random() * 0.20;
+                const bulge = (Math.random() < 0.5 ? 0.35 : -0.35);
+                let ox = tx + bulge * nx;
+                let oy = ty + bulge * ny;
+                const oLen = Math.hypot(ox, oy) || 1;
+                inTangents.push([0, 0]);
+                outTangents.push([round2((ox / oLen) * dNext * kOut), round2((oy / oLen) * dNext * kOut)]);
+            }
+        }
+
+        // 3. Create AE ShapeLayer and bake Shape path into Contents -> Group -> Path
+        const layer = comp.layers.addShape();
+        const randHex = Math.floor(Math.random() * 0xffffff).toString(16).padStart(6, '0');
+        layer.name = 'dummy polygon ' + randHex;
+        layer._isDummyPolygon = true;
+
+        const polyGroup = layer.property('Contents').addProperty('ADBE Vector Group');
+        polyGroup.name = 'Polygon 1';
+        const polyContents = polyGroup.property('Contents');
+
+        const pathGroup = polyContents.addProperty('ADBE Vector Shape - Group');
+        pathGroup.name = 'Path 1';
+        const bakedShape = (typeof Shape === 'function') ? new Shape() : { vertices: [], inTangents: [], outTangents: [], closed: true };
+        bakedShape.vertices = vertices;
+        bakedShape.inTangents = inTangents;
+        bakedShape.outTangents = outTangents;
+        bakedShape.closed = true;
+        pathGroup.property('Path').setValue(bakedShape);
+
+        // 4. Random Stroke & Random Fill
+        const isBrightBg = isViewportBackgroundBright(comp);
+        const fillHue = Math.random();
+        const strokeHue = (fillHue + 0.25 + Math.random() * 0.5) % 1.0;
+        const fillColor = hslToRgb01(fillHue, 0.65 + Math.random() * 0.30, isBrightBg ? (0.35 + Math.random() * 0.28) : (0.45 + Math.random() * 0.28));
+        const strokeColor = hslToRgb01(strokeHue, 0.75 + Math.random() * 0.25, isBrightBg ? (0.20 + Math.random() * 0.25) : (0.65 + Math.random() * 0.25));
+        const fillOpacity = Math.round(65 + Math.random() * 35);
+        const strokeWidth = Math.round(2 + Math.random() * 12);
+        const strokeOpacity = Math.round(85 + Math.random() * 15);
+        const lineJoin = 1 + Math.floor(Math.random() * 3); // 1: Miter, 2: Round, 3: Bevel
+
+        const strokeProp = polyContents.addProperty('ADBE Vector Graphic - Stroke');
+        strokeProp.name = 'Stroke 1';
+        strokeProp.property('Color').setValue(strokeColor);
+        strokeProp.property('Stroke Width').setValue(strokeWidth);
+        strokeProp.property('Opacity').setValue(strokeOpacity);
+        strokeProp.property('Line Cap').setValue(2);
+        strokeProp.property('Line Join').setValue(lineJoin);
+
+        const fillProp = polyContents.addProperty('ADBE Vector Graphic - Fill');
+        fillProp.name = 'Fill 1';
+        fillProp.property('Color').setValue(fillColor);
+        fillProp.property('Opacity').setValue(fillOpacity);
+
+        // 5. Randomize anchor point inside the polygon's bounding box, then center visually in the viewport
+        const rect = (typeof layer.sourceRectAtTime === 'function') ? layer.sourceRectAtTime(0, false) : null;
+        const boxLeft = (rect && typeof rect.left === 'number') ? rect.left : -baseRadius;
+        const boxTop = (rect && typeof rect.top === 'number') ? rect.top : -baseRadius;
+        const boxWidth = (rect && typeof rect.width === 'number' && rect.width > 0) ? rect.width : baseRadius * 2;
+        const boxHeight = (rect && typeof rect.height === 'number' && rect.height > 0) ? rect.height : baseRadius * 2;
+
+        const randAnchorX = Math.round(boxLeft + Math.random() * boxWidth);
+        const randAnchorY = Math.round(boxTop + Math.random() * boxHeight);
+        layer.transform.anchorPoint.setValue([randAnchorX, randAnchorY, 0]);
+        layer.threeDLayer = is3D;
+
+        const boxCenterX = boxLeft + boxWidth / 2;
+        const boxCenterY = boxTop + boxHeight / 2;
+        const compCenterX = comp.width / 2;
+        const compCenterY = comp.height / 2;
+        const posX = Math.round(compCenterX + randAnchorX - boxCenterX);
+        const posY = Math.round(compCenterY + randAnchorY - boxCenterY);
+        layer.transform.position.setValue([posX, posY, posZ]);
+
+        // 6. Create visible red cross child at [0, 0] marking the randomized anchor point (same as dummy text)
+        const crossLayer = comp.layers.addShape();
+        crossLayer.name = 'Anchor Cross';
+        crossLayer.parent = layer;
+        crossLayer.threeDLayer = is3D;
+        crossLayer.transform.anchorPoint.setValue([0, 0, 0]);
+        crossLayer.transform.position.setValue([0, 0, 0]);
+
+        const crossGroup = crossLayer.property('Contents').addProperty('ADBE Vector Group');
+        crossGroup.name = 'Cross';
+        const groupContents = crossGroup.property('Contents');
+
+        const barH = groupContents.addProperty('ADBE Vector Shape - Rect');
+        barH.name = 'Cross Bar H';
+        barH.property('Size').setValue([16, 2]);
+        barH.property('Position').setValue([0, 0]);
+
+        const barV = groupContents.addProperty('ADBE Vector Shape - Rect');
+        barV.name = 'Cross Bar V';
+        barV.property('Size').setValue([2, 16]);
+        barV.property('Position').setValue([0, 0]);
+
+        const crossFill = groupContents.addProperty('ADBE Vector Graphic - Fill');
+        crossFill.property('Color').setValue([1, 0, 0]);
+
+        // 7. Select the polygon layer and refresh UI
+        const allLayers = comp.layers._layers || comp.layers;
+        if (allLayers && Array.isArray(allLayers)) {
+            allLayers.forEach(l => {
+                l.selected = (l === layer);
+            });
+        }
+        crossLayer.selected = false;
+        layer.selected = true;
+        selectedLayer = layer;
+
+        renderTimeline();
+        if (renderer && typeof renderer.render === 'function') {
+            renderer.render(comp.time || 0);
+        }
+
+        setTimeout(() => {
+            const row = document.querySelector(`.ae-layer-row[data-layer-id="${layer._id}"]`) ||
+                        document.querySelector(`.ae-layer-row[data-layer-id="${layer.id}"]`) ||
+                        document.querySelector('.ae-layer-row:nth-child(2)') ||
+                        document.querySelector('.ae-layer-row:first-child');
+            if (row) {
+                document.querySelectorAll('.ae-layer-main-bar').forEach(el => el.classList.remove('selected'));
+                const bar = row.querySelector('.ae-layer-main-bar');
+                if (bar) bar.classList.add('selected');
+                row.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }
+        }, 50);
+
+        window.dispatchEvent(new CustomEvent('ae-layer-selection-changed', { detail: { layer: layer } }));
+        appendConsole(`Created dummy 8-vertex baked Bezier polygon (${is3D ? `3D, Z: ${posZ}px` : '2D'}) layer "${layer.name}" (types: ${bezierTypes.join(', ')}, stroke ${strokeWidth}px, fill ${fillOpacity}%) with randomized anchor point [${randAnchorX}, ${randAnchorY}] centered in viewport with red cross child.`);
+        return layer;
+    }
+    global.createDummyPolygonLayer = createDummyPolygonLayer;
+
+    // -------------------------------------------------------------
     // Composition Clear Helper (Runs on new script or build)
     // -------------------------------------------------------------
     function clearCompLayers() {
@@ -2713,6 +2981,14 @@
                 btnGlobalShy.classList.toggle('active', globalShyActive);
                 renderTimeline();
                 appendConsole(globalShyActive ? 'Shy Mode ON: Showing only .JSX UI-related properties and active controls.' : 'Shy Mode OFF: Showing all comp layers and properties.');
+            };
+        }
+
+        // Dummy Bezier Polygon Shape Creator Button (Left of Dummy Text button in timeline header)
+        const btnCreateDummyShape = document.getElementById('btn-create-dummy-shape');
+        if (btnCreateDummyShape) {
+            btnCreateDummyShape.onclick = () => {
+                createDummyPolygonLayer();
             };
         }
 
