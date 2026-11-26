@@ -276,8 +276,8 @@
     var GEOMETRY_KEYS   = ["square", "rounded", "cloud", "explosion"];
     var GEOMETRY_LABELS = ["Square", "Rounded Corners", "Cloud Shape (Thoughts)", "Explosion / Shout"];
 
-    var TAIL_KEYS       = ["none", "line", "triangle", "lightning", "clouds"];
-    var TAIL_LABELS     = ["None", "Line", "Triangle Sharp", "Lightning Shaped", "Thinking Clouds"];
+    var TAIL_KEYS       = ["none", "line", "triangle", "curved_triangle", "lightning", "clouds"];
+    var TAIL_LABELS     = ["None", "Line", "Triangle Sharp", "Curved Triangle", "Lightning Shaped", "Thinking Clouds"];
 
     var STROKE_KEYS     = ["none", "solid", "variable", "dotted"];
     var STROKE_LABELS   = ["None", "Solid (Thickness)", "Variable Thickness (Min & Max)", "Dotted (Whisper)"];
@@ -577,7 +577,7 @@
             spikeCount: Math.round(clampNum(raw.spikeCount, 6, 40, def.spikeCount)),
             spikeDepth: Math.round(clampNum(rawSpikeD, 15, 220, def.spikeDepth)),
             spikeWidthRand: Math.round(clampNum(raw.spikeWidthRand, 0, 100, 0)),
-            tailStyle: (raw.tailStyle === "none" || raw.tailStyle === "line" || raw.tailStyle === "triangle" || raw.tailStyle === "lightning" || raw.tailStyle === "clouds") ? raw.tailStyle : def.tailStyle,
+            tailStyle: (raw.tailStyle === "none" || raw.tailStyle === "line" || raw.tailStyle === "triangle" || raw.tailStyle === "curved_triangle" || raw.tailStyle === "lightning" || raw.tailStyle === "clouds") ? raw.tailStyle : def.tailStyle,
             tailPosition: tPos,
             tailStartWidth: tWidth,
             tailStart: computedStart,
@@ -585,6 +585,7 @@
             tailOffset: clampNum(raw.tailOffset, -360, 360, def.tailOffset),
             tailLength: clampNum(raw.tailLength, 15, 450, def.tailLength),
             tailAngle: clampNum(raw.tailAngle, -75, 75, def.tailAngle),
+            tailCurve: Math.round(clampNum(raw.tailCurve, -100, 100, 45)),
             fillEnabled: (raw.fillEnabled !== undefined) ? Boolean(raw.fillEnabled) : true,
             fillColor: (typeof raw.fillColor === "string" && raw.fillColor.length >= 4) ? raw.fillColor.toUpperCase() : def.fillColor,
             fillOpacity: clampNum(raw.fillOpacity, 0, 100, def.fillOpacity),
@@ -1926,7 +1927,7 @@
         }
         var uMid = (uA + span * 0.5) % 1;
 
-        if (tailStyle === "triangle" || tailStyle === "lightning") {
+        if (tailStyle === "triangle" || tailStyle === "curved_triangle" || tailStyle === "lightning") {
             if (span < 0.001) {
                 span = 0.001;
                 uA = ((uMid - span * 0.5) % 1 + 1) % 1;
@@ -2001,7 +2002,7 @@
                 });
             }
 
-        } else if (tailStyle === "triangle" || tailStyle === "lightning") {
+        } else if (tailStyle === "triangle" || tailStyle === "curved_triangle" || tailStyle === "lightning") {
             // Splice open perimeter chain clockwise from uB around to uA
             var chain = extractSubpathBetweenU(segs, uB, uA);
             if (!chain || chain.length === 0) {
@@ -2032,6 +2033,66 @@
                     verts.push(pTip);
                     inT.push([0, 0]);
                     outT.push([0, 0]);
+
+                } else if (tailStyle === "curved_triangle") {
+                    // Curved Triangle (comic swooping horn): non-self-intersecting cubic Bézier spine + tapering half-width
+                    var cMid = [(b1[0] + b2[0]) * 0.5, (b1[1] + b2[1]) * 0.5];
+                    var cvx = pTip[0] - cMid[0];
+                    var cvy = pTip[1] - cMid[1];
+                    var cLen = Math.sqrt(cvx * cvx + cvy * cvy) || 1;
+                    var ux = cvx / cLen;
+                    var uy = cvy / cLen;
+                    var perpX = -uy;
+                    var perpY = ux;
+
+                    // Clockwise base chord from b1 -> b2 gives outward base normal N = [Ty, -Tx]
+                    var tbx = b2[0] - b1[0];
+                    var tby = b2[1] - b1[1];
+                    var tbLen = Math.sqrt(tbx * tbx + tby * tby) || 1;
+                    var baseHalfW = Math.max(1.0, tbLen * 0.5);
+                    var bnx = tby / tbLen;
+                    var bny = -tbx / tbLen;
+
+                    // Natural bow exits along outward normal N and sweeps smoothly into pTip
+                    var dotNP = bnx * perpX + bny * perpY;
+                    var bowSign = (Math.abs(dotNP) > 0.05) ? (dotNP >= 0 ? 1 : -1) : 1;
+                    var bxDir = perpX * bowSign;
+                    var byDir = perpY * bowSign;
+
+                    var curveFrac = clampNum(cfg.tailCurve !== undefined ? cfg.tailCurve : 45, -100, 100, 45) / 100.0;
+                    var bowDist = cLen * 0.44 * curveFrac;
+
+                    var sc1 = [cMid[0] + cvx * 0.30 + bxDir * (bowDist * 0.95), cMid[1] + cvy * 0.30 + byDir * (bowDist * 0.95)];
+                    var sc2 = [cMid[0] + cvx * 0.68 + bxDir * (bowDist * 0.72), cMid[1] + cvy * 0.68 + byDir * (bowDist * 0.72)];
+
+                    // Spine tangents rotated -90 deg point toward b1 (side 1), +90 deg toward b2 (side 2)
+                    var d1x = sc2[0] - cMid[0];
+                    var d1y = sc2[1] - cMid[1];
+                    var d1Len = Math.sqrt(d1x * d1x + d1y * d1y) || 1;
+                    var n1x = d1y / d1Len;
+                    var n1y = -d1x / d1Len;
+
+                    var d2x = pTip[0] - sc1[0];
+                    var d2y = pTip[1] - sc1[1];
+                    var d2Len = Math.sqrt(d2x * d2x + d2y * d2y) || 1;
+                    var n2x = d2y / d2Len;
+                    var n2y = -d2x / d2Len;
+
+                    var cw1 = baseHalfW * 0.58;
+                    var cw2 = baseHalfW * 0.22;
+
+                    var c1Side1 = [sc1[0] + n1x * cw1, sc1[1] + n1y * cw1];
+                    var c1Side2 = [sc1[0] - n1x * cw1, sc1[1] - n1y * cw1];
+                    var c2Side1 = [sc2[0] + n2x * cw2, sc2[1] + n2y * cw2];
+                    var c2Side2 = [sc2[0] - n2x * cw2, sc2[1] - n2y * cw2];
+
+                    // Attach outgoing handle on b1, add pTip with in/out handles, and attach incoming handle on b2 (verts[0])
+                    outT[verts.length - 1] = [c1Side1[0] - b1[0], c1Side1[1] - b1[1]];
+                    verts.push(pTip);
+                    inT.push([c2Side1[0] - pTip[0], c2Side1[1] - pTip[1]]);
+                    outT.push([c2Side2[0] - pTip[0], c2Side2[1] - pTip[1]]);
+                    inT[0] = [c1Side2[0] - b2[0], c1Side2[1] - b2[1]];
+
                 } else {
                     // Non-self-intersecting ribbon lightning bolt from B1 -> zig-zag -> pTip -> B2
                     var midBase = [(b1[0] + b2[0]) * 0.5, (b1[1] + b2[1]) * 0.5];
@@ -2083,9 +2144,11 @@
                 minY = Math.min(minY, p0[1]); maxY = Math.max(maxY, p0[1]);
                 if (sd.closed || i < nV - 1) {
                     var j = (i + 1) % nV;
-                    var pMidSample = evalCubicPt(p0, sd.outTangents[i], sd.inTangents[j], sd.vertices[j], 0.5);
-                    minX = Math.min(minX, pMidSample[0]); maxX = Math.max(maxX, pMidSample[0]);
-                    minY = Math.min(minY, pMidSample[1]); maxY = Math.max(maxY, pMidSample[1]);
+                    for (var ks = 1; ks <= 3; ks++) {
+                        var pSample = evalCubicPt(p0, sd.outTangents[i], sd.inTangents[j], sd.vertices[j], ks * 0.25);
+                        minX = Math.min(minX, pSample[0]); maxX = Math.max(maxX, pSample[0]);
+                        minY = Math.min(minY, pSample[1]); maxY = Math.max(maxY, pSample[1]);
+                    }
                 }
             }
         }
@@ -2163,7 +2226,7 @@
             var scProp = strokeProp.property("Color") || strokeProp.property("ADBE Vector Stroke Color");
             if (scProp) scProp.setValue([sRgb[0], sRgb[1], sRgb[2], 1]);
 
-            var useRoundJoin = (cfg.geometry === "rounded" || cfg.geometry === "cloud" || effStrokeStyle === "dotted" || cfg.animStyle === "sparse_dots");
+            var useRoundJoin = (cfg.geometry === "rounded" || cfg.geometry === "cloud" || cfg.tailStyle === "curved_triangle" || effStrokeStyle === "dotted" || cfg.animStyle === "sparse_dots");
             try {
                 var lcProp = strokeProp.property("Line Cap") || strokeProp.property("ADBE Vector Stroke Line Cap");
                 if (lcProp) lcProp.setValue(2); // Round Cap
@@ -2717,7 +2780,7 @@
             var tailStyle = cfg.tailStyle || "none";
             var hasTailLead = (tailStyle === "line" || tailStyle === "clouds");
             var bodyTargetPt = [0, (textBounds.height / 2) + (cfg.padY || 26)];
-            if (tailStyle === "triangle" || tailStyle === "lightning") {
+            if (tailStyle === "triangle" || tailStyle === "curved_triangle" || tailStyle === "lightning") {
                 bodyTargetPt = geoResult.pTip;
             } else if (hasTailLead) {
                 bodyTargetPt = geoResult.pMid;
@@ -3792,14 +3855,16 @@
         var ctrlTailWidth  = createSliderRow(pnlTrim, "Tail Start Width:", 2.5, 0.1, 4.0, "",  refreshPreviewCanvas, 1, true);
         var ctrlTailOffset = createSliderRow(pnlTrim, "Offset:",            0, -180, 180, "°", refreshPreviewCanvas, 0, false);
 
-        var pnlTailTarget = tabTail.add("panel", undefined, "Tail Target Length & Slant");
+        var pnlTailTarget = tabTail.add("panel", undefined, "Tail Target Length, Slant & Curve");
         pnlTailTarget.orientation = "column";
         pnlTailTarget.alignChildren = ["fill", "top"];
         pnlTailTarget.spacing = 5;
         pnlTailTarget.margins = [8, 10, 8, 8];
 
-        var ctrlTailLength = createSliderRow(pnlTailTarget, "Tail Length:", 85,  15, 350, "px", refreshPreviewCanvas);
-        var ctrlTailAngle  = createSliderRow(pnlTailTarget, "Tip Slant:",   12, -70,  70, "°",  refreshPreviewCanvas);
+        var ctrlTailLength = createSliderRow(pnlTailTarget, "Tail Length:", 85,   15, 350, "px", refreshPreviewCanvas);
+        var ctrlTailAngle  = createSliderRow(pnlTailTarget, "Tip Slant:",   12,  -70,  70, "°",  refreshPreviewCanvas);
+        var ctrlTailCurve  = createSliderRow(pnlTailTarget, "Tail Curve:",  45, -100, 100, "%",  refreshPreviewCanvas);
+        ctrlTailCurve.group.helpTip = "Controls the swooping bend of the Curved Triangle tail (-100% to +100%).";
 
         function snapPerimeterAt(centerPct) {
             var p = Math.round((((centerPct % 100) + 100) % 100) * 10) / 10;
@@ -3827,6 +3892,7 @@
             var hasTail = (key !== "none");
             pnlTrim.enabled = hasTail;
             pnlTailTarget.enabled = hasTail;
+            ctrlTailCurve.group.enabled = (key === "curved_triangle");
             refreshPreviewCanvas();
         }
         ddTailStyle.onChange = syncTailControlsVisibility;
@@ -4058,6 +4124,7 @@
                 tailOffset: ctrlTailOffset.getValue(),
                 tailLength: ctrlTailLength.getValue(),
                 tailAngle: ctrlTailAngle.getValue(),
+                tailCurve: ctrlTailCurve.getValue(),
                 fillEnabled: Boolean(chkFillEnabled.value),
                 fillColor: cpFillColor.value || "#FFFFFF",
                 fillOpacity: ctrlFillOpacity.getValue(),
@@ -4109,6 +4176,7 @@
             ctrlTailOffset.setValue(c.tailOffset, false);
             ctrlTailLength.setValue(c.tailLength, false);
             ctrlTailAngle.setValue(c.tailAngle, false);
+            ctrlTailCurve.setValue(c.tailCurve, false);
 
             chkFillEnabled.value = Boolean(c.fillEnabled);
             cpFillColor.setColor(c.fillColor, false);
@@ -4265,14 +4333,33 @@
                         }
                         var mEv = evaluatePerimeterAtU(segs, u1 + sp * 0.5);
                         var outA = Math.atan2(mEv.point[1], mEv.point[0]) + (cfg.tailAngle * Math.PI / 180);
-                        var tx = (cx + mEv.point[0] + 15 * Math.cos(outA)).toFixed(1);
-                        var ty = (cy + mEv.point[1] + 15 * Math.sin(outA)).toFixed(1);
-                        var mx = (cx + mEv.point[0]).toFixed(1);
-                        var my = (cy + mEv.point[1]).toFixed(1);
+                        var txNum = cx + mEv.point[0] + 16 * Math.cos(outA);
+                        var tyNum = cy + mEv.point[1] + 16 * Math.sin(outA);
+                        var mxNum = cx + mEv.point[0];
+                        var myNum = cy + mEv.point[1];
+                        var tx = txNum.toFixed(1);
+                        var ty = tyNum.toFixed(1);
+                        var mx = mxNum.toFixed(1);
+                        var my = myNum.toFixed(1);
+
+                        var pointerLineSvg = '<line x1="' + mx + '" y1="' + my + '" x2="' + tx + '" y2="' + ty + '" stroke="#fbbf24" stroke-width="2" stroke-linecap="round"/>';
+                        if (cfg.tailStyle === "curved_triangle") {
+                            var pdx = txNum - mxNum;
+                            var pdy = tyNum - myNum;
+                            var pLen = Math.sqrt(pdx * pdx + pdy * pdy) || 1;
+                            var ppx = -pdy / pLen;
+                            var ppy = pdx / pLen;
+                            var pDot = mEv.normal[0] * ppx + mEv.normal[1] * ppy;
+                            var pSign = (Math.abs(pDot) > 0.05) ? (pDot >= 0 ? 1 : -1) : 1;
+                            var pBow = (cfg.tailCurve / 100.0) * 8.5 * pSign;
+                            var qx = ((mxNum + txNum) * 0.5 + ppx * pBow).toFixed(1);
+                            var qy = ((myNum + tyNum) * 0.5 + ppy * pBow).toFixed(1);
+                            pointerLineSvg = '<path d="M ' + mx + ' ' + my + ' Q ' + qx + ' ' + qy + ' ' + tx + ' ' + ty + '" fill="none" stroke="#fbbf24" stroke-width="2" stroke-linecap="round"/>';
+                        }
 
                         hiSvg =
                             '<polyline points="' + arcPts.join(" ") + '" fill="none" stroke="#22d3ee" stroke-width="3.5" stroke-linecap="round"/>' +
-                            '<line x1="' + mx + '" y1="' + my + '" x2="' + tx + '" y2="' + ty + '" stroke="#fbbf24" stroke-width="2" stroke-linecap="round"/>' +
+                            pointerLineSvg +
                             '<circle cx="' + tx + '" cy="' + ty + '" r="2.8" fill="#fbbf24"/>';
                     }
 
