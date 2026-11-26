@@ -276,8 +276,8 @@
     // -------------------------------------------------------------------------
     // 2. Preset System (Built-in Defaults + Store, Rename, Delete, Open, Download)
     // -------------------------------------------------------------------------
-    var GEOMETRY_KEYS   = ["square", "rounded", "cloud", "explosion"];
-    var GEOMETRY_LABELS = ["Square", "Rounded Corners", "Cloud Shape (Thoughts)", "Explosion / Shout"];
+    var GEOMETRY_KEYS   = ["square", "rounded", "cloud", "explosion", "dyamond"];
+    var GEOMETRY_LABELS = ["Square", "Rounded Corners", "Cloud Shape (Thoughts)", "Explosion / Shout", "Dyamond"];
 
     var TAIL_KEYS       = ["none", "line", "triangle", "curved_triangle", "lightning", "clouds"];
     var TAIL_LABELS     = ["None", "Line", "Triangle Sharp", "Curved Triangle", "Lightning Shaped", "Thinking Clouds"];
@@ -307,6 +307,9 @@
                 spikeCount: 18,
                 spikeDepth: 85,
                 spikeWidthRand: 0,
+                dyamondWaves: 14,
+                dyamondDepth: 10,
+                dyamondWidthRand: 65,
                 tailStyle: "triangle",
                 tailPosition: 56,
                 tailStartWidth: 2.5,
@@ -344,6 +347,9 @@
                 spikeCount: 18,
                 spikeDepth: 85,
                 spikeWidthRand: 0,
+                dyamondWaves: 14,
+                dyamondDepth: 10,
+                dyamondWidthRand: 65,
                 tailStyle: "triangle",
                 tailPosition: 49,
                 tailStartWidth: 2.4,
@@ -381,6 +387,9 @@
                 spikeCount: 18,
                 spikeDepth: 85,
                 spikeWidthRand: 0,
+                dyamondWaves: 14,
+                dyamondDepth: 10,
+                dyamondWidthRand: 65,
                 tailStyle: "clouds",
                 tailPosition: 57,
                 tailStartWidth: 2.0,
@@ -418,6 +427,9 @@
                 spikeCount: 18,
                 spikeDepth: 90,
                 spikeWidthRand: 0,
+                dyamondWaves: 14,
+                dyamondDepth: 10,
+                dyamondWidthRand: 65,
                 tailStyle: "lightning",
                 tailPosition: 56,
                 tailStartWidth: 3.2,
@@ -444,6 +456,46 @@
                 outTime: 0.4,
                 makePrecomp: true
             },
+            "Dyamond Wobble": {
+                geometry: "dyamond",
+                padX: 38,
+                padY: 28,
+                cornerRadius: 28,
+                cloudPuffs: 12,
+                cloudDepth: 42,
+                cloudWidthRand: 0,
+                spikeCount: 18,
+                spikeDepth: 85,
+                spikeWidthRand: 0,
+                dyamondWaves: 14,
+                dyamondDepth: 10,
+                dyamondWidthRand: 65,
+                tailStyle: "triangle",
+                tailPosition: 43,
+                tailStartWidth: 2.5,
+                tailStart: 41.75,
+                tailEnd: 44.25,
+                tailOffset: 0,
+                tailLength: 85,
+                tailAngle: -18,
+                fillEnabled: true,
+                fillColor: "#FFFFFF",
+                fillOpacity: 100,
+                strokeStyle: "solid",
+                strokeColor: "#111111",
+                strokeWidth: 5,
+                strokeMinWidth: 2,
+                strokeMaxWidth: 9,
+                dotGap: 12,
+                animStyle: "none",
+                startDelay: 0,
+                inTime: 0.6,
+                readTime: 2.0,
+                linkReadTime: true,
+                secPer25: 1.2,
+                outTime: 0.5,
+                makePrecomp: true
+            },
             "Whisper Dotted": {
                 geometry: "rounded",
                 padX: 36,
@@ -455,6 +507,9 @@
                 spikeCount: 18,
                 spikeDepth: 85,
                 spikeWidthRand: 0,
+                dyamondWaves: 14,
+                dyamondDepth: 10,
+                dyamondWidthRand: 65,
                 tailStyle: "line",
                 tailPosition: 55,
                 tailStartWidth: 1.5,
@@ -492,6 +547,9 @@
                 spikeCount: 18,
                 spikeDepth: 85,
                 spikeWidthRand: 0,
+                dyamondWaves: 14,
+                dyamondDepth: 10,
+                dyamondWidthRand: 65,
                 tailStyle: "lightning",
                 tailPosition: 54,
                 tailStartWidth: 2.8,
@@ -570,8 +628,15 @@
             aStyle = raw.animStyle;
         }
 
+        var gKey = def.geometry;
+        if (raw.geometry === "square" || raw.geometry === "rounded" || raw.geometry === "cloud" || raw.geometry === "explosion" || raw.geometry === "dyamond") {
+            gKey = raw.geometry;
+        } else if (raw.geometry === "diamond") {
+            gKey = "dyamond";
+        }
+
         return {
-            geometry: (raw.geometry === "square" || raw.geometry === "rounded" || raw.geometry === "cloud" || raw.geometry === "explosion") ? raw.geometry : def.geometry,
+            geometry: gKey,
             padX: clampNum(raw.padX, 0, 200, def.padX),
             padY: clampNum(raw.padY, 0, 200, def.padY),
             cornerRadius: clampNum(raw.cornerRadius, 0, 200, def.cornerRadius),
@@ -581,6 +646,9 @@
             spikeCount: Math.round(clampNum(raw.spikeCount, 6, 40, def.spikeCount)),
             spikeDepth: Math.round(clampNum(rawSpikeD, 15, 220, def.spikeDepth)),
             spikeWidthRand: Math.round(clampNum(raw.spikeWidthRand, 0, 100, 0)),
+            dyamondWaves: Math.round(clampNum(raw.dyamondWaves, 4, 36, 14)),
+            dyamondDepth: Math.round(clampNum(raw.dyamondDepth, 2, 50, 10)),
+            dyamondWidthRand: Math.round(clampNum(raw.dyamondWidthRand !== undefined ? raw.dyamondWidthRand : 65, 0, 100, 65)),
             tailStyle: (raw.tailStyle === "none" || raw.tailStyle === "line" || raw.tailStyle === "triangle" || raw.tailStyle === "curved_triangle" || raw.tailStyle === "lightning" || raw.tailStyle === "clouds") ? raw.tailStyle : def.tailStyle,
             tailPosition: tPos,
             tailStartWidth: tWidth,
@@ -1756,7 +1824,7 @@
 
     /**
      * Builds the closed clockwise perimeter segments starting at Top-Center (0, -b)
-     * for any of the 4 Balloon Geometries: square, rounded, cloud, explosion.
+     * for any of the 5 Balloon Geometries: square, rounded, cloud, explosion, dyamond.
      */
     function buildBalloonPerimeterSegments(textW, textH, cfg) {
         var padX = cfg.padX;
@@ -1797,6 +1865,123 @@
             }
             pushLine([-a + r, -b], [0, -b]);
 
+            return annotateArcLengths(segs);
+        }
+
+        if (geom === "dyamond") {
+            var waves = Math.max(4, Math.min(36, Math.round(cfg.dyamondWaves || 14)));
+            var wDepthPct = clampNum(cfg.dyamondDepth, 2, 50, 10);
+            var wRandPct  = clampNum(cfg.dyamondWidthRand !== undefined ? cfg.dyamondWidthRand : 65, 0, 100, 65);
+            var numPts = waves * 2; // Alternating outward crests (+1) and inward troughs (-1)
+
+            // Cushion half-dimensions slightly so inward wave troughs never encroach on text bounds
+            var approxPerim = 2.0 * (w + h);
+            var approxHalfWave = approxPerim / numPts;
+            var inwardAllowance = approxHalfWave * (wDepthPct / 100.0) * 0.75;
+            var dA = Math.max(a, textW / 2 + 6 + inwardAllowance);
+            var dB = Math.max(b, textH / 2 + 6 + inwardAllowance);
+            var dR = Math.max(6, Math.min(cfg.cornerRadius !== undefined ? cfg.cornerRadius : 28, dA * 0.75, dB * 0.75));
+            var KD = 0.5522847498307936;
+
+            var rectSegs = [];
+            function pushDLine(p0, p1) {
+                if (dist2D(p0, p1) > 0.05) {
+                    rectSegs.push({ p0: p0, out0: [0, 0], in1: [0, 0], p1: p1 });
+                }
+            }
+            pushDLine([0, -dB], [dA - dR, -dB]);
+            if (dR > 0.05) rectSegs.push({ p0: [dA - dR, -dB], out0: [dR * KD, 0], in1: [0, -dR * KD], p1: [dA, -dB + dR] });
+            pushDLine([dA, -dB + dR], [dA, dB - dR]);
+            if (dR > 0.05) rectSegs.push({ p0: [dA, dB - dR], out0: [0, dR * KD], in1: [dR * KD, 0], p1: [dA - dR, dB] });
+            pushDLine([dA - dR, dB], [-dA + dR, dB]);
+            if (dR > 0.05) rectSegs.push({ p0: [-dA + dR, dB], out0: [-dR * KD, 0], in1: [0, dR * KD], p1: [-dA, dB - dR] });
+            pushDLine([-dA, dB - dR], [-dA, -dB + dR]);
+            if (dR > 0.05) rectSegs.push({ p0: [-dA, -dB + dR], out0: [0, -dR * KD], in1: [-dR * KD, 0], p1: [-dA + dR, -dB] });
+            pushDLine([-dA + dR, -dB], [0, -dB]);
+            annotateArcLengths(rectSegs);
+
+            var uWaves = computePerimeterIntervals(rectSegs, numPts, wRandPct, 31.7);
+            var evals = [];
+            var wi;
+            for (wi = 0; wi < numPts; wi++) {
+                evals.push(evaluatePerimeterAtU(rectSegs, uWaves[wi]));
+            }
+
+            var maxInward = Math.min(dA, dB) * 0.24;
+            var rFrac = wRandPct / 100.0;
+            var wavePts = [];
+            for (wi = 0; wi < numPts; wi++) {
+                var prevEv = evals[(wi - 1 + numPts) % numPts];
+                var curEv  = evals[wi];
+                var nextEv = evals[(wi + 1) % numPts];
+                var localSpan = 0.5 * (dist2D(prevEv.point, curEv.point) + dist2D(curEv.point, nextEv.point));
+
+                var ampMod = 1.0;
+                if (rFrac > 1e-4) {
+                    var aSeed = Math.sin((wi + 1) * 41.317 + waves * 19.73 + 7.13) * 43758.5453;
+                    var aSigned = (aSeed - Math.floor(aSeed)) * 2.0 - 1.0;
+                    ampMod = Math.max(0.20, 1.0 + 0.65 * rFrac * aSigned);
+                }
+
+                var sign = (wi % 2 === 0) ? 1.0 : -1.0;
+                var mag  = localSpan * (wDepthPct / 100.0) * ampMod;
+
+                // Preserve full rounded-rectangle shoulder corners (prevent inward corner collapse)
+                var inCornerX = Math.abs(curEv.point[0]) > (dA - dR * 1.15);
+                var inCornerY = Math.abs(curEv.point[1]) > (dB - dR * 1.15);
+                if (inCornerX && inCornerY) {
+                    if (sign < 0) {
+                        mag *= 0.15;
+                    } else {
+                        mag *= 0.45;
+                    }
+                } else if (sign < 0 && mag > maxInward) {
+                    mag = maxInward;
+                }
+
+                var disp = sign * mag;
+                wavePts.push([
+                    curEv.point[0] + curEv.normal[0] * disp,
+                    curEv.point[1] + curEv.normal[1] * disp
+                ]);
+            }
+
+            // Smooth G1 centripetal Catmull-Rom tangents (zero cusps, zero loops)
+            var inHandles  = [];
+            var outHandles = [];
+            var tension = 0.36;
+            for (wi = 0; wi < numPts; wi++) {
+                var pPrev = wavePts[(wi - 1 + numPts) % numPts];
+                var pCur  = wavePts[wi];
+                var pNext = wavePts[(wi + 1) % numPts];
+
+                var dx1 = pCur[0] - pPrev[0];
+                var dy1 = pCur[1] - pPrev[1];
+                var d1  = Math.sqrt(dx1 * dx1 + dy1 * dy1) || 1;
+
+                var dx2 = pNext[0] - pCur[0];
+                var dy2 = pNext[1] - pCur[1];
+                var d2  = Math.sqrt(dx2 * dx2 + dy2 * dy2) || 1;
+
+                var tx = (dx1 / d1) * d2 + (dx2 / d2) * d1;
+                var ty = (dy1 / d1) * d2 + (dy2 / d2) * d1;
+                var tMag = Math.sqrt(tx * tx + ty * ty) || 1;
+                tx /= tMag;
+                ty /= tMag;
+
+                inHandles.push([-tx * d1 * tension, -ty * d1 * tension]);
+                outHandles.push([tx * d2 * tension,  ty * d2 * tension]);
+            }
+
+            for (wi = 0; wi < numPts; wi++) {
+                var nxt = (wi + 1) % numPts;
+                segs.push({
+                    p0: wavePts[wi],
+                    out0: outHandles[wi],
+                    in1: inHandles[nxt],
+                    p1: wavePts[nxt]
+                });
+            }
             return annotateArcLengths(segs);
         }
 
@@ -2704,7 +2889,7 @@
         var capR = 16;
         if (cfg.geometry === "square") {
             capR = 2;
-        } else if (cfg.geometry === "rounded") {
+        } else if (cfg.geometry === "rounded" || cfg.geometry === "dyamond") {
             capR = Math.min(bodyHalfW * 0.9, Math.max(4, cfg.cornerRadius || 0));
         } else {
             capR = Math.min(bodyHalfW * 0.65, 22);
@@ -3972,18 +4157,23 @@
         ddGeometry.alignment = ["fill", "center"];
         ddGeometry.selection = 1;
 
-        var ctrlCornerRadius   = createSliderRow(pnlGeom, "Corner Radius:",   28,  0, 150, "px", refreshPreviewCanvas);
-        var ctrlCloudPuffs     = createSliderRow(pnlGeom, "Cloud Puffs:",     12,  6,  30, "",   refreshPreviewCanvas);
-        var ctrlCloudDepth     = createSliderRow(pnlGeom, "Puff Depth:",      42, 10, 120, "%",  refreshPreviewCanvas);
-        var ctrlCloudWidthRand = createSliderRow(pnlGeom, "Puff Width Rand:",  0,  0, 100, "%",  refreshPreviewCanvas);
-        var ctrlSpikeCount     = createSliderRow(pnlGeom, "Burst Spikes:",    18,  6,  40, "",   refreshPreviewCanvas);
-        var ctrlSpikeDepth     = createSliderRow(pnlGeom, "Spike Depth:",     85, 15, 220, "%",  refreshPreviewCanvas);
-        var ctrlSpikeWidthRand = createSliderRow(pnlGeom, "Spike Width Rand:", 0,  0, 100, "%",  refreshPreviewCanvas);
+        var ctrlCornerRadius     = createSliderRow(pnlGeom, "Corner Radius:",   28,  0, 150, "px", refreshPreviewCanvas);
+        var ctrlCloudPuffs       = createSliderRow(pnlGeom, "Cloud Puffs:",     12,  6,  30, "",   refreshPreviewCanvas);
+        var ctrlCloudDepth       = createSliderRow(pnlGeom, "Puff Depth:",      42, 10, 120, "%",  refreshPreviewCanvas);
+        var ctrlCloudWidthRand   = createSliderRow(pnlGeom, "Puff Width Rand:",  0,  0, 100, "%",  refreshPreviewCanvas);
+        var ctrlSpikeCount       = createSliderRow(pnlGeom, "Burst Spikes:",    18,  6,  40, "",   refreshPreviewCanvas);
+        var ctrlSpikeDepth       = createSliderRow(pnlGeom, "Spike Depth:",     85, 15, 220, "%",  refreshPreviewCanvas);
+        var ctrlSpikeWidthRand   = createSliderRow(pnlGeom, "Spike Width Rand:", 0,  0, 100, "%",  refreshPreviewCanvas);
+        var ctrlDyamondWaves     = createSliderRow(pnlGeom, "Dyamond Waves:",   14,  4,  36, "",   refreshPreviewCanvas);
+        var ctrlDyamondDepth     = createSliderRow(pnlGeom, "Wave Depth:",      10,  2,  50, "%",  refreshPreviewCanvas);
+        var ctrlDyamondWidthRand = createSliderRow(pnlGeom, "Wave Width Rand:", 65,  0, 100, "%",  refreshPreviewCanvas);
 
-        ctrlCloudDepth.group.helpTip     = "Puff depth relative (%) to each individual puff's width.";
-        ctrlCloudWidthRand.group.helpTip = "0% = constant arc-length puff width; >0% = randomizes puff widths while keeping exact puff count.";
-        ctrlSpikeDepth.group.helpTip     = "Spike height relative (%) to each individual spike's base width.";
-        ctrlSpikeWidthRand.group.helpTip = "0% = constant arc-length spike width; >0% = randomizes spike widths while keeping exact spike count.";
+        ctrlCloudDepth.group.helpTip       = "Puff depth relative (%) to each individual puff's width.";
+        ctrlCloudWidthRand.group.helpTip   = "0% = constant arc-length puff width; >0% = randomizes puff widths while keeping exact puff count.";
+        ctrlSpikeDepth.group.helpTip       = "Spike height relative (%) to each individual spike's base width.";
+        ctrlSpikeWidthRand.group.helpTip   = "0% = constant arc-length spike width; >0% = randomizes spike widths while keeping exact spike count.";
+        ctrlDyamondDepth.group.helpTip     = "Organic wave amplitude relative (%) to each wave's local perimeter span.";
+        ctrlDyamondWidthRand.group.helpTip = "0% = uniform smooth waves; >0% = organic hand-drawn irregular wave widths & heights.";
 
         var pnlPadding = tabBalloon.add("panel", undefined, "Exterior Padding & Centering");
         pnlPadding.orientation = "column";
@@ -4000,13 +4190,16 @@
         function syncBalloonShapeVisibility() {
             var idx = ddGeometry.selection ? ddGeometry.selection.index : 1;
             var key = GEOMETRY_KEYS[idx] || "rounded";
-            ctrlCornerRadius.group.enabled   = (key === "rounded");
-            ctrlCloudPuffs.group.enabled     = (key === "cloud");
-            ctrlCloudDepth.group.enabled     = (key === "cloud");
-            ctrlCloudWidthRand.group.enabled = (key === "cloud");
-            ctrlSpikeCount.group.enabled     = (key === "explosion");
-            ctrlSpikeDepth.group.enabled     = (key === "explosion");
-            ctrlSpikeWidthRand.group.enabled = (key === "explosion");
+            ctrlCornerRadius.group.enabled     = (key === "rounded" || key === "dyamond");
+            ctrlCloudPuffs.group.enabled       = (key === "cloud");
+            ctrlCloudDepth.group.enabled       = (key === "cloud");
+            ctrlCloudWidthRand.group.enabled   = (key === "cloud");
+            ctrlSpikeCount.group.enabled       = (key === "explosion");
+            ctrlSpikeDepth.group.enabled       = (key === "explosion");
+            ctrlSpikeWidthRand.group.enabled   = (key === "explosion");
+            ctrlDyamondWaves.group.enabled     = (key === "dyamond");
+            ctrlDyamondDepth.group.enabled     = (key === "dyamond");
+            ctrlDyamondWidthRand.group.enabled = (key === "dyamond");
             refreshPreviewCanvas();
         }
         ddGeometry.onChange = syncBalloonShapeVisibility;
@@ -4333,6 +4526,9 @@
                 spikeCount: Math.round(ctrlSpikeCount.getValue()),
                 spikeDepth: ctrlSpikeDepth.getValue(),
                 spikeWidthRand: ctrlSpikeWidthRand.getValue(),
+                dyamondWaves: Math.round(ctrlDyamondWaves.getValue()),
+                dyamondDepth: ctrlDyamondDepth.getValue(),
+                dyamondWidthRand: ctrlDyamondWidthRand.getValue(),
                 tailStyle: TAIL_KEYS[tIdx] || "triangle",
                 tailPosition: tPos,
                 tailStartWidth: tWidth,
@@ -4387,6 +4583,9 @@
             ctrlSpikeCount.setValue(c.spikeCount, false);
             ctrlSpikeDepth.setValue(c.spikeDepth, false);
             ctrlSpikeWidthRand.setValue(c.spikeWidthRand, false);
+            ctrlDyamondWaves.setValue(c.dyamondWaves, false);
+            ctrlDyamondDepth.setValue(c.dyamondDepth, false);
+            ctrlDyamondWidthRand.setValue(c.dyamondWidthRand, false);
 
             ctrlTailPos.setValue(c.tailPosition, false);
             ctrlTailWidth.setValue(c.tailStartWidth, false);
@@ -4447,7 +4646,10 @@
                     cloudWidthRand: cfg.cloudWidthRand,
                     spikeCount: Math.min(18, cfg.spikeCount),
                     spikeDepth: Math.min(95, cfg.spikeDepth),
-                    spikeWidthRand: cfg.spikeWidthRand
+                    spikeWidthRand: cfg.spikeWidthRand,
+                    dyamondWaves: cfg.dyamondWaves,
+                    dyamondDepth: cfg.dyamondDepth,
+                    dyamondWidthRand: cfg.dyamondWidthRand
                 });
 
                 var cx = w * 0.5;
@@ -4523,7 +4725,10 @@
                         cloudWidthRand: cfg.cloudWidthRand,
                         spikeCount: Math.min(18, cfg.spikeCount),
                         spikeDepth: Math.min(95, cfg.spikeDepth),
-                        spikeWidthRand: cfg.spikeWidthRand
+                        spikeWidthRand: cfg.spikeWidthRand,
+                        dyamondWaves: cfg.dyamondWaves,
+                        dyamondDepth: cfg.dyamondDepth,
+                        dyamondWidthRand: cfg.dyamondWidthRand
                     });
 
                     var cx = 68, cy = 36;
