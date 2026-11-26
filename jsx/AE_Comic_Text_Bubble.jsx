@@ -1,72 +1,34 @@
 // Co-authored & architected with Google DeepMind Antigravity.
 // =============================================================================
-// ADOBE AFTER EFFECTS EXTENDSCRIPT & SCRIPTUI PANEL: AE COMIC TEXT BUBBLE v1.0.0
+// ADOBE AFTER EFFECTS EXTENDSCRIPT & SCRIPTUI PANEL: AE COMIC TEXT BUBBLE v2.0.0
 // =============================================================================
 //
 // PURPOSE:
-//   A complete, interactive Comic & Speech Balloon Generator for Adobe After Effects.
-//   Transforms any text layer into an authentic, expression-rigged comic speech
-//   balloon with procedural body shapes, interactive drag-and-drop tail targeting,
-//   advanced typographic text wrapping, full color customization, and snappy comic
-//   entrance & exit transition animations.
+//   Ground-up parametric Comic Balloon generator for Adobe After Effects.
+//   Transforms any existing Point Text or Paragraph (Box) Text layer into a
+//   stylized comic speech, thought, whisper, or shout balloon.
 //
-// COMBINES ARCHITECTURES FROM:
-//   1. AE-advanced-text-wrap:
-//      - Knuth-Plass dynamic programming balanced paragraph composer.
-//      - 5 wrap methods (Balanced, Greedy, Optical Pyramid, Reverse Pyramid, Compact Block).
-//      - Micro-typographic rules (NBSP for dangling short words, orphan/widow prevention,
-//        number & unit binding, honorific binding, manual break stripping).
-//      - Multi-lingual algorithmic syllable hyphenation (EN, ES, FR, DE, IT, Universal).
-//      - Non-destructive state preservation & zero-drift paragraph positioning.
-//   2. AE-replace-color-emojis & AE_Get_Emojis:
-//      - Comic emoji palette insertion bar (POW, SHOUT, ZAP, IDEA, LOVE, BOOM, etc.).
-//      - Full Unicode emoji and emoticon parsing (:D, :), ;), <3, etc.).
-//   3. AE-Text-Highlight:
-//      - Sub-pixel typography bounding box measurement via sourceRectAtTime().
-//      - Dynamic word highlight accent cards to emphasize comic punch words.
-//   4. AE-Align-AnchorPoint:
-//      - Zero-shift anchor point positioning mathematics:
-//        P_new = P_base + R(theta) * S * (A_target - A_base)
-//      - Tail-origin scaling so bubbles pop out naturally from the speaker's mouth.
-//
-// KEY CAPABILITIES:
-//   1. Text Wrapping with Style Presets:
-//      - Balanced Knuth-Plass, Greedy First-Fit, Optical Pyramid, Reverse Pyramid, Compact Block.
-//      - Interactive Max Width & Desired Approx Width sliders with dual-constraint locking.
-//   2. Balloon Body Style Presets:
-//      - Classic Speech Oval (Smooth Ellipse)
-//      - Modern Rounded Rectangle (Adjustable Corner Radii)
-//      - Action / Shout Burst (Spiky Jagged Explosion)
-//      - Thought Cloud (Scalloped Puffy Arcs)
-//      - Whisper Bubble (Dashed / Soft Outline)
-//      - Golden Age Caption Box (Clean Crisp Rectangle)
-//   3. Tail Style Presets:
-//      - Curved Hook / Horn (Classic Comic Inward Curve)
-//      - Straight Cone / Triangle (Direct Pointer)
-//      - Wide Speech Wedge
-//      - Thought Bubbles (Chain of 3 Diminishing Circles)
-//      - Lightning / Electric Bolt (Zigzag Broadcast / Scream)
-//      - Scream Spike (Exaggerated Action Barb)
-//      - None (Floating / Caption)
-//   4. 🎯 Drag & Drop Tail Target Placement:
-//      - In-Comp Null Layer: Creates a dedicated "🎯 Tail Target" null in AE that can be
-//        dragged directly in the comp viewer to point at any character's mouth!
-//      - In-Panel 2D Interactive Target Pad: Drag a target crosshair around the bubble miniature.
-//      - 3x3 Quick Direction Matrix (Top-L, Top-C, Top-R, Mid-L, Center, Mid-R, Bot-L, Bot-C, Bot-R).
-//      - Numeric Angle (-180° to +180°) and Distance (20px to 350px) sliders.
-//   5. Color Picker (Background & Stroke):
-//      - Background / Fill Color: Hex input + Clickable Color Swatch (Windows Color Picker & AE picker).
-//      - Stroke / Outline Color: Hex input + Clickable Color Swatch + Stroke Width (0-30px).
-//      - 6 Quick Comic Theme presets (Classic White, Action Yellow, Hero Cyan, Villain Purple, Danger Red, Dark Manga).
-//   6. Animation In & Out Presets:
-//      - In: Pop & Comic Bounce, Elastic Zoom, Whip & Slide, Flash Pop, Typewriter Reveal, Smooth Fade, None.
-//      - Out: Pop / Shrink Out, Fade & Float Out, Slide Out, Comic Puff / Dissolve, None.
-//      - Customizable In Duration, In Delay, Hold Duration, and Out Duration.
-//      - Animate from Tail Origin toggle (grows directly from speaker target).
-//   7. Non-Destructive State Storage & Revert:
-//      - Saves original text string, font size, styling, position, anchor point, scale, and rotation
-//        inside an "AE Comic Bubble State" effect on the text layer.
-//      - One-click "↩ Revert to Original Text Layer" restores the text layer to its pristine pre-bubble state.
+// CORE ARCHITECTURE & COMBINED ENGINES:
+//   1. AE Text Precomp (https://github.com/work2survive/AE-text-precomp):
+//      - Optional 1-click Zero-Shift Precomposition (Default: ON), named
+//        "comic balloon <HEX>" with symmetric non-clipping exterior canvas bounds.
+//   2. AE Align Anchor Point (https://github.com/work2survive/AE-Align-AnchorPoint):
+//      - Automatically centers both the Text Box and Balloon Anchor Points
+//        horizontally and vertically with scale/rotation-safe Zero-Shift compensation.
+//      - Links the Balloon as a direct child layer of the Text Layer.
+//   3. Full Ecosystem Interoperability:
+//      - 100% compatible with text layers styled or processed by:
+//        * AE-replace-color-emojis (https://github.com/work2survive/AE-replace-color-emojis)
+//        * AE-advanced-text-wrap   (https://github.com/work2survive/AE-advanced-text-wrap)
+//        * AE-Text-Highlight       (https://github.com/work2survive/AE-Text-Highlight)
+//   4. Preset Management System:
+//      - Store, Rename, Delete, Open (.json), and Download (.json) presets.
+//   5. Trim-Paths-Style Tail Perimeter Targeting:
+//      - Exact arc-length Start (%), End (%), and Offset (deg) controls with
+//        live visual perimeter preview + De Casteljau Bézier splicing.
+//   6. Non-Destructive Effect State Backup & Full Reversal:
+//      - Stores original text box, content, and transform properties in Effects.
+//      - Idempotent Build / Update & 1-click Remove Balloon (full reversal).
 //
 // REPOSITORY:
 //   https://github.com/work2survive/AE-comic-text-bubble
@@ -75,21 +37,23 @@
 //   https://work2survive.github.io/AE_JS_builder/?jsx=AE_Comic_Text_Bubble.jsx&autobuild=true
 // =============================================================================
 
-(function(thisObj) {
+(function (thisObj) {
     "use strict";
 
-    var SCRIPT_TITLE   = "AE Comic Text Bubble";
-    var SCRIPT_VERSION = "v1.0.0";
-    var GITHUB_URL     = "https://github.com/work2survive/AE-comic-text-bubble";
-    var README_URL     = "https://github.com/work2survive/AE-comic-text-bubble/blob/main/README.md";
-    var DEMO_URL       = "https://work2survive.github.io/AE_JS_builder/?jsx=AE_Comic_Text_Bubble.jsx&autobuild=true";
+    var SCRIPT_NAME    = "AE Comic Text Bubble";
+    var SCRIPT_VERSION = "v2.0.0";
+    var REPO_URL       = "https://github.com/work2survive/AE-comic-text-bubble";
+    var LIVE_DEMO_URL  = "https://work2survive.github.io/AE_JS_builder/?jsx=AE_Comic_Text_Bubble.jsx&autobuild=true";
 
-    var EFFECT_STATE_NAME = "AE Comic Bubble State";
-    var LAYER_BUBBLE_NAME = "🗯️ Comic Bubble";
-    var LAYER_TARGET_NAME = "🎯 Tail Target";
+    var BALLOON_LAYER_TAG  = "AE_COMIC_BALLOON_SHAPE";
+    var BALLOON_LAYER_NAME = "Comic Balloon";
+    var STATE_EFFECT_NAME  = "Comic Balloon State";
+    var PRESETS_STORAGE_KEY = "AE_COMIC_BALLOON_PRESETS_V2";
+    var PRESETS_FOLDER_NAME = "comic_balloon_presets";
+    var PRESETS_FILE_NAME   = "presets.json";
 
     // -------------------------------------------------------------------------
-    // 1. Safe Environment & Polyfills (ES3 Compatibility for AE CS6-CC 2026+)
+    // 1. Safe Environment, Polyfills & ES3 JSON Helpers
     // -------------------------------------------------------------------------
     var globalObj = (typeof $ !== "undefined" && typeof $.global !== "undefined")
         ? $.global
@@ -98,7 +62,7 @@
     if (typeof $ === "undefined") {
         globalObj.$ = {
             global: globalObj,
-            writeln: function(msg) {
+            writeln: function (msg) {
                 if (typeof console !== "undefined" && console.log) console.log(msg);
             }
         };
@@ -106,24 +70,146 @@
         $.global = globalObj;
     }
 
-    function trimString(str) {
-        if (!str) return "";
-        return String(str).replace(/^[\s\uFEFF\xA0]+|[\s\uFEFF\xA0]+$/g, "");
+    var ShapeClass = (typeof Shape !== "undefined")
+        ? Shape
+        : (globalObj.Shape || ((typeof window !== "undefined") ? window.Shape : null) || function () {
+            this.vertices = [];
+            this.inTangents = [];
+            this.outTangents = [];
+            this.closed = true;
+        });
+
+    function trimStr(s) {
+        if (s === null || s === undefined) return "";
+        return String(s).replace(/^\s+|\s+$/g, "");
     }
 
-    function stripExistingLineBreaks(str) {
-        if (!str) return "";
-        return String(str).replace(/[ \t]*[\r\n\u2028\u2029]+[ \t]*/g, " ");
+    function clampNum(v, lo, hi, fallback) {
+        var n = parseFloat(v);
+        if (isNaN(n)) return (fallback !== undefined ? fallback : lo);
+        if (n < lo) return lo;
+        if (n > hi) return hi;
+        return n;
+    }
+
+    function escapeJsonStr(str) {
+        return String(str)
+            .replace(/\\/g, "\\\\")
+            .replace(/"/g, '\\"')
+            .replace(/\r/g, "\\r")
+            .replace(/\n/g, "\\n")
+            .replace(/\t/g, "\\t");
+    }
+
+    function es3Stringify(val, indent, depth) {
+        var d = depth || 0;
+        var pad = "";
+        var innerPad = "";
+        var i;
+        if (indent) {
+            for (i = 0; i < d; i++) pad += indent;
+            for (i = 0; i <= d; i++) innerPad += indent;
+        }
+        if (val === null || val === undefined) return "null";
+        var t = typeof val;
+        if (t === "boolean") return val ? "true" : "false";
+        if (t === "number") return isFinite(val) ? String(val) : "null";
+        if (t === "string") return '"' + escapeJsonStr(val) + '"';
+        if (val instanceof Array || Object.prototype.toString.call(val) === "[object Array]") {
+            if (val.length === 0) return "[]";
+            var aParts = [];
+            for (i = 0; i < val.length; i++) {
+                aParts.push(es3Stringify(val[i], indent, d + 1));
+            }
+            if (indent) {
+                return "[\n" + innerPad + aParts.join(",\n" + innerPad) + "\n" + pad + "]";
+            }
+            return "[" + aParts.join(",") + "]";
+        }
+        if (t === "object") {
+            var oParts = [];
+            for (var k in val) {
+                if (val.hasOwnProperty(k) && typeof val[k] !== "function" && val[k] !== undefined) {
+                    var sep = indent ? ": " : ":";
+                    oParts.push('"' + escapeJsonStr(k) + '"' + sep + es3Stringify(val[k], indent, d + 1));
+                }
+            }
+            if (oParts.length === 0) return "{}";
+            if (indent) {
+                return "{\n" + innerPad + oParts.join(",\n" + innerPad) + "\n" + pad + "}";
+            }
+            return "{" + oParts.join(",") + "}";
+        }
+        return "null";
+    }
+
+    var JSONSafe = {
+        stringify: function (obj, pretty) {
+            if (typeof JSON !== "undefined" && JSON && typeof JSON.stringify === "function") {
+                try { return JSON.stringify(obj, null, pretty ? 2 : 0); } catch (e) {}
+            }
+            return es3Stringify(obj, pretty ? "  " : "", 0);
+        },
+        parse: function (str) {
+            if (!str || typeof str !== "string") return null;
+            if (typeof JSON !== "undefined" && JSON && typeof JSON.parse === "function") {
+                return JSON.parse(str);
+            }
+            return eval("(" + str + ")");
+        }
+    };
+
+    function cloneObject(obj) {
+        return JSONSafe.parse(JSONSafe.stringify(obj, false));
+    }
+
+    function generateHexId(len) {
+        var chars = "0123456789ABCDEF";
+        var n = len || 4;
+        var out = "";
+        for (var i = 0; i < n; i++) {
+            out += chars.charAt(Math.floor(Math.random() * 16));
+        }
+        return out;
+    }
+
+    function generateUniquePrecompName(existingHex) {
+        var hex = existingHex || generateHexId(4);
+        var candidate = "comic balloon " + hex;
+        if (existingHex) return candidate;
+        try {
+            if (typeof app !== "undefined" && app.project && app.project.items) {
+                var guard = 0;
+                while (guard < 20) {
+                    var conflict = false;
+                    var count = app.project.items.length;
+                    for (var i = 1; i <= count; i++) {
+                        var it = app.project.items[i] || app.project.items[i - 1];
+                        if (it && it.name === candidate) {
+                            conflict = true;
+                            break;
+                        }
+                    }
+                    if (!conflict) break;
+                    hex = generateHexId(4);
+                    candidate = "comic balloon " + hex;
+                    guard++;
+                }
+            }
+        } catch (e) {}
+        return candidate;
     }
 
     function hexToRgb(hex) {
-        if (!hex) return [1, 1, 1];
-        hex = String(hex).replace("#", "");
-        if (hex.length === 3) {
-            hex = hex.charAt(0) + hex.charAt(0) + hex.charAt(1) + hex.charAt(1) + hex.charAt(2) + hex.charAt(2);
+        if (!hex) return [1.0, 1.0, 1.0];
+        var clean = String(hex).replace("#", "");
+        if (clean.length === 3) {
+            clean = clean.charAt(0) + clean.charAt(0) +
+                    clean.charAt(1) + clean.charAt(1) +
+                    clean.charAt(2) + clean.charAt(2);
         }
-        var num = parseInt(hex, 16);
-        if (isNaN(num)) return [1, 1, 1];
+        var num = parseInt(clean, 16);
+        if (isNaN(num)) return [1.0, 1.0, 1.0];
         return [
             ((num >> 16) & 255) / 255,
             ((num >> 8) & 255) / 255,
@@ -133,2736 +219,3198 @@
 
     function rgbToHex(rgb) {
         if (!rgb || rgb.length < 3) return "#FFFFFF";
-        var r = Math.max(0, Math.min(255, Math.round(rgb[0] * 255))).toString(16);
-        var g = Math.max(0, Math.min(255, Math.round(rgb[1] * 255))).toString(16);
-        var b = Math.max(0, Math.min(255, Math.round(rgb[2] * 255))).toString(16);
-        if (r.length < 2) r = "0" + r;
-        if (g.length < 2) g = "0" + g;
-        if (b.length < 2) b = "0" + b;
-        return ("#" + r + g + b).toUpperCase();
+        var r = Math.max(0, Math.min(255, Math.round(rgb[0] * 255)));
+        var g = Math.max(0, Math.min(255, Math.round(rgb[1] * 255)));
+        var b = Math.max(0, Math.min(255, Math.round(rgb[2] * 255)));
+        var rh = r.toString(16); if (rh.length < 2) rh = "0" + rh;
+        var gh = g.toString(16); if (gh.length < 2) gh = "0" + gh;
+        var bh = b.toString(16); if (bh.length < 2) bh = "0" + bh;
+        return ("#" + rh + gh + bh).toUpperCase();
+    }
+
+    function openExternalUrl(url) {
+        try {
+            if (typeof window !== "undefined" && typeof window.open === "function") {
+                window.open(url, "_blank");
+                return;
+            }
+            if (typeof system !== "undefined" && system.callSystem) {
+                if ($.os && $.os.indexOf("Windows") !== -1) {
+                    system.callSystem('cmd.exe /c start "" "' + url + '"');
+                } else {
+                    system.callSystem('open "' + url + '"');
+                }
+            }
+        } catch (e) {}
     }
 
     // -------------------------------------------------------------------------
-    // 2. Composition & Text Layer Utilities
+    // 2. Preset System (Built-in Defaults + Store, Rename, Delete, Open, Download)
     // -------------------------------------------------------------------------
-    function getActiveComposition() {
-        var activeApp = (typeof app !== "undefined") ? app : globalObj.app;
-        if (activeApp && activeApp.project && activeApp.project.activeItem) {
-            var itm = activeApp.project.activeItem;
-            if (typeof CompItem !== "undefined" && itm instanceof CompItem) return itm;
-            if (itm.typeName === "Composition" || itm.layers) return itm;
+    var GEOMETRY_KEYS   = ["square", "rounded", "cloud", "explosion"];
+    var GEOMETRY_LABELS = ["Square", "Rounded Corners", "Cloud Shape (Thoughts)", "Explosion / Shout"];
+
+    var TAIL_KEYS       = ["none", "line", "triangle", "lightning", "clouds"];
+    var TAIL_LABELS     = ["None", "Line", "Triangle Sharp", "Lightning Shaped", "Thinking Clouds"];
+
+    var STROKE_KEYS     = ["none", "solid", "variable", "dotted"];
+    var STROKE_LABELS   = ["None", "Solid (Thickness)", "Variable Thickness (Min & Max)", "Dotted (Whisper)"];
+
+    function getDefaultPresets() {
+        return {
+            "Classic Speech": {
+                geometry: "rounded",
+                padX: 36,
+                padY: 26,
+                cornerRadius: 28,
+                cloudPuffs: 12,
+                cloudDepth: 18,
+                spikeCount: 18,
+                spikeDepth: 28,
+                tailStyle: "triangle",
+                tailStart: 52,
+                tailEnd: 60,
+                tailOffset: 0,
+                tailLength: 85,
+                tailAngle: 12,
+                fillEnabled: true,
+                fillColor: "#FFFFFF",
+                fillOpacity: 100,
+                strokeStyle: "solid",
+                strokeColor: "#111111",
+                strokeWidth: 5,
+                strokeMinWidth: 2,
+                strokeMaxWidth: 9,
+                dotGap: 12,
+                makePrecomp: true
+            },
+            "Comic Ink Box": {
+                geometry: "square",
+                padX: 34,
+                padY: 24,
+                cornerRadius: 0,
+                cloudPuffs: 12,
+                cloudDepth: 18,
+                spikeCount: 18,
+                spikeDepth: 28,
+                tailStyle: "triangle",
+                tailStart: 45,
+                tailEnd: 53,
+                tailOffset: 0,
+                tailLength: 80,
+                tailAngle: -10,
+                fillEnabled: true,
+                fillColor: "#FFFDF5",
+                fillOpacity: 100,
+                strokeStyle: "variable",
+                strokeColor: "#0F172A",
+                strokeWidth: 6,
+                strokeMinWidth: 2,
+                strokeMaxWidth: 9,
+                dotGap: 12,
+                makePrecomp: true
+            },
+            "Thought Cloud": {
+                geometry: "cloud",
+                padX: 40,
+                padY: 30,
+                cornerRadius: 28,
+                cloudPuffs: 12,
+                cloudDepth: 18,
+                spikeCount: 18,
+                spikeDepth: 28,
+                tailStyle: "clouds",
+                tailStart: 54,
+                tailEnd: 60,
+                tailOffset: 0,
+                tailLength: 95,
+                tailAngle: 15,
+                fillEnabled: true,
+                fillColor: "#FFFFFF",
+                fillOpacity: 100,
+                strokeStyle: "solid",
+                strokeColor: "#1E293B",
+                strokeWidth: 4,
+                strokeMinWidth: 2,
+                strokeMaxWidth: 8,
+                dotGap: 12,
+                makePrecomp: true
+            },
+            "Explosion Shout!": {
+                geometry: "explosion",
+                padX: 42,
+                padY: 32,
+                cornerRadius: 0,
+                cloudPuffs: 12,
+                cloudDepth: 18,
+                spikeCount: 18,
+                spikeDepth: 30,
+                tailStyle: "lightning",
+                tailStart: 52,
+                tailEnd: 60,
+                tailOffset: 0,
+                tailLength: 100,
+                tailAngle: 10,
+                fillEnabled: true,
+                fillColor: "#FFE600",
+                fillOpacity: 100,
+                strokeStyle: "solid",
+                strokeColor: "#111111",
+                strokeWidth: 6,
+                strokeMinWidth: 2,
+                strokeMaxWidth: 10,
+                dotGap: 12,
+                makePrecomp: true
+            },
+            "Whisper Dotted": {
+                geometry: "rounded",
+                padX: 36,
+                padY: 26,
+                cornerRadius: 36,
+                cloudPuffs: 12,
+                cloudDepth: 18,
+                spikeCount: 18,
+                spikeDepth: 28,
+                tailStyle: "line",
+                tailStart: 52,
+                tailEnd: 58,
+                tailOffset: 0,
+                tailLength: 75,
+                tailAngle: 15,
+                fillEnabled: true,
+                fillColor: "#F8FAFC",
+                fillOpacity: 100,
+                strokeStyle: "dotted",
+                strokeColor: "#334155",
+                strokeWidth: 4,
+                strokeMinWidth: 2,
+                strokeMaxWidth: 8,
+                dotGap: 12,
+                makePrecomp: true
+            },
+            "Electric Radio": {
+                geometry: "rounded",
+                padX: 34,
+                padY: 24,
+                cornerRadius: 12,
+                cloudPuffs: 12,
+                cloudDepth: 18,
+                spikeCount: 18,
+                spikeDepth: 28,
+                tailStyle: "lightning",
+                tailStart: 50,
+                tailEnd: 58,
+                tailOffset: 0,
+                tailLength: 95,
+                tailAngle: -15,
+                fillEnabled: true,
+                fillColor: "#E0F7FA",
+                fillOpacity: 100,
+                strokeStyle: "variable",
+                strokeColor: "#0A2540",
+                strokeWidth: 5,
+                strokeMinWidth: 2,
+                strokeMaxWidth: 8,
+                dotGap: 12,
+                makePrecomp: true
+            }
+        };
+    }
+
+    function normalizePresetData(raw) {
+        var def = getDefaultPresets()["Classic Speech"];
+        if (!raw || typeof raw !== "object") return cloneObject(def);
+        return {
+            geometry: (raw.geometry === "square" || raw.geometry === "rounded" || raw.geometry === "cloud" || raw.geometry === "explosion") ? raw.geometry : def.geometry,
+            padX: clampNum(raw.padX, 0, 200, def.padX),
+            padY: clampNum(raw.padY, 0, 200, def.padY),
+            cornerRadius: clampNum(raw.cornerRadius, 0, 200, def.cornerRadius),
+            cloudPuffs: Math.round(clampNum(raw.cloudPuffs, 6, 30, def.cloudPuffs)),
+            cloudDepth: clampNum(raw.cloudDepth, 4, 60, def.cloudDepth),
+            spikeCount: Math.round(clampNum(raw.spikeCount, 6, 40, def.spikeCount)),
+            spikeDepth: clampNum(raw.spikeDepth, 6, 100, def.spikeDepth),
+            tailStyle: (raw.tailStyle === "none" || raw.tailStyle === "line" || raw.tailStyle === "triangle" || raw.tailStyle === "lightning" || raw.tailStyle === "clouds") ? raw.tailStyle : def.tailStyle,
+            tailStart: clampNum(raw.tailStart, 0, 100, def.tailStart),
+            tailEnd: clampNum(raw.tailEnd, 0, 100, def.tailEnd),
+            tailOffset: clampNum(raw.tailOffset, -360, 360, def.tailOffset),
+            tailLength: clampNum(raw.tailLength, 15, 450, def.tailLength),
+            tailAngle: clampNum(raw.tailAngle, -75, 75, def.tailAngle),
+            fillEnabled: (raw.fillEnabled !== undefined) ? Boolean(raw.fillEnabled) : true,
+            fillColor: (typeof raw.fillColor === "string" && raw.fillColor.length >= 4) ? raw.fillColor.toUpperCase() : def.fillColor,
+            fillOpacity: clampNum(raw.fillOpacity, 0, 100, def.fillOpacity),
+            strokeStyle: (raw.strokeStyle === "none" || raw.strokeStyle === "solid" || raw.strokeStyle === "variable" || raw.strokeStyle === "dotted") ? raw.strokeStyle : def.strokeStyle,
+            strokeColor: (typeof raw.strokeColor === "string" && raw.strokeColor.length >= 4) ? raw.strokeColor.toUpperCase() : def.strokeColor,
+            strokeWidth: clampNum(raw.strokeWidth, 0.5, 60, def.strokeWidth),
+            strokeMinWidth: clampNum(raw.strokeMinWidth, 0.5, 60, def.strokeMinWidth),
+            strokeMaxWidth: clampNum(raw.strokeMaxWidth, 0.5, 60, def.strokeMaxWidth),
+            dotGap: clampNum(raw.dotGap, 2, 80, def.dotGap),
+            makePrecomp: (raw.makePrecomp !== undefined) ? Boolean(raw.makePrecomp) : true
+        };
+    }
+
+    var PRESETS = getDefaultPresets();
+
+    function getPresetsFileObj() {
+        try {
+            if (typeof Folder === "undefined" || typeof File === "undefined") return null;
+            var baseFolder = null;
+            try {
+                if (typeof $.fileName === "string" && $.fileName.length > 0) {
+                    var sf = new File($.fileName);
+                    if (sf.parent && sf.parent.exists) baseFolder = sf.parent;
+                }
+            } catch (e1) {}
+            if (!baseFolder && Folder.userData) {
+                baseFolder = Folder.userData;
+            }
+            if (!baseFolder) return null;
+            var pFolder = new Folder(baseFolder.fsName + "/" + PRESETS_FOLDER_NAME);
+            if (!pFolder.exists) {
+                try { pFolder.create(); } catch (eCr) {}
+            }
+            if (pFolder.exists) {
+                return new File(pFolder.fsName + "/" + PRESETS_FILE_NAME);
+            }
+        } catch (e) {}
+        return null;
+    }
+
+    function loadStoredPresets() {
+        var loadedMap = null;
+
+        // 1. Browser localStorage (AE_JS_builder live demo)
+        try {
+            if (typeof window !== "undefined" && window.localStorage) {
+                var lsRaw = window.localStorage.getItem(PRESETS_STORAGE_KEY);
+                if (lsRaw) {
+                    var lsParsed = JSONSafe.parse(lsRaw);
+                    if (lsParsed && typeof lsParsed === "object") {
+                        loadedMap = lsParsed.presets || lsParsed;
+                    }
+                }
+            }
+        } catch (eLS) {}
+
+        // 2. Native AE app.settings
+        if (!loadedMap) {
+            try {
+                if (typeof app !== "undefined" && app.settings && app.settings.haveSetting("AE_Comic_Balloon", PRESETS_STORAGE_KEY)) {
+                    var setRaw = app.settings.getSetting("AE_Comic_Balloon", PRESETS_STORAGE_KEY);
+                    if (setRaw) {
+                        var setParsed = JSONSafe.parse(setRaw);
+                        if (setParsed && typeof setParsed === "object") {
+                            loadedMap = setParsed.presets || setParsed;
+                        }
+                    }
+                }
+            } catch (eSet) {}
         }
-        if (activeApp && activeApp.project && activeApp.project.items) {
-            for (var i = 1; i <= activeApp.project.items.length; i++) {
-                var it = activeApp.project.items[i];
-                if (it && (it.typeName === "Composition" || it.layers)) {
+
+        // 3. External JSON file on disk
+        if (!loadedMap) {
+            try {
+                var pf = getPresetsFileObj();
+                if (pf && pf.exists) {
+                    pf.encoding = "UTF-8";
+                    if (pf.open("r")) {
+                        var fTxt = pf.read();
+                        pf.close();
+                        var fParsed = JSONSafe.parse(fTxt);
+                        if (fParsed && typeof fParsed === "object") {
+                            loadedMap = fParsed.presets || fParsed;
+                        }
+                    }
+                }
+            } catch (eFile) {}
+        }
+
+        if (loadedMap && typeof loadedMap === "object") {
+            var nextMap = {};
+            var count = 0;
+            for (var k in loadedMap) {
+                if (loadedMap.hasOwnProperty(k) && loadedMap[k] && typeof loadedMap[k] === "object") {
+                    nextMap[k] = normalizePresetData(loadedMap[k]);
+                    count++;
+                }
+            }
+            if (count > 0) {
+                PRESETS = nextMap;
+            }
+        }
+    }
+
+    function persistPresets() {
+        var payloadObj = {
+            name: "AE Comic Text Bubble Presets",
+            version: "2.0",
+            presets: PRESETS
+        };
+        var jsonStr = JSONSafe.stringify(payloadObj, true);
+
+        try {
+            if (typeof window !== "undefined" && window.localStorage) {
+                window.localStorage.setItem(PRESETS_STORAGE_KEY, jsonStr);
+            }
+        } catch (eLS) {}
+
+        try {
+            if (typeof app !== "undefined" && app.settings && typeof app.settings.saveSetting === "function") {
+                app.settings.saveSetting("AE_Comic_Balloon", PRESETS_STORAGE_KEY, jsonStr);
+            }
+        } catch (eSet) {}
+
+        try {
+            var pf = getPresetsFileObj();
+            if (pf) {
+                pf.encoding = "UTF-8";
+                if (pf.open("w")) {
+                    pf.write(jsonStr);
+                    pf.close();
+                }
+            }
+        } catch (eFile) {}
+    }
+
+    loadStoredPresets();
+
+    // -------------------------------------------------------------------------
+    // 3. Composition, Text Layer & Ecosystem Sibling Helpers
+    // -------------------------------------------------------------------------
+    function getActiveComp() {
+        if (typeof app === "undefined" || !app.project) return null;
+        var active = app.project.activeItem;
+        if (active && (active instanceof CompItem || active.layers)) {
+            return active;
+        }
+        if (app.project.items) {
+            var len = app.project.items.length;
+            for (var i = 1; i <= len; i++) {
+                var it = app.project.items[i] || app.project.items[i - 1];
+                if (it && (it instanceof CompItem || it.layers)) {
                     if (it.selectedLayers && it.selectedLayers.length > 0) return it;
                 }
             }
-            for (var j = 1; j <= activeApp.project.items.length; j++) {
-                var it2 = activeApp.project.items[j];
-                if (it2 && (it2.typeName === "Composition" || it2.layers)) return it2;
+            for (var j = 1; j <= len; j++) {
+                var it2 = app.project.items[j] || app.project.items[j - 1];
+                if (it2 && (it2 instanceof CompItem || it2.layers)) return it2;
             }
         }
         return null;
     }
 
+    function getCompLayerCount(comp) {
+        if (!comp || !comp.layers) return 0;
+        return (typeof comp.numLayers === "number") ? comp.numLayers : (comp.layers.length || 0);
+    }
+
+    function getCompLayerAt(comp, oneBasedIdx) {
+        if (!comp || !comp.layers) return null;
+        if (typeof comp.layer === "function") {
+            try {
+                var l = comp.layer(oneBasedIdx);
+                if (l) return l;
+            } catch (e) {}
+        }
+        return comp.layers[oneBasedIdx] || comp.layers[oneBasedIdx - 1] || null;
+    }
+
     function isTextLayer(layer) {
         if (!layer) return false;
-        if (typeof TextLayer !== "undefined" && layer instanceof TextLayer) return true;
-        if (layer.matchName === "ADBE Text Layer") return true;
         try {
-            return Boolean(layer.property("ADBE Text Properties") || layer.property("Source Text"));
+            if (typeof TextLayer !== "undefined" && layer instanceof TextLayer) return true;
+            if (layer.matchName === "ADBE Text Layer") return true;
+            return Boolean(
+                layer.property("ADBE Text Properties") ||
+                layer.property("Text") ||
+                layer.property("Source Text")
+            );
         } catch (e) {
             return false;
         }
     }
 
-    function getSelectedTextLayer(comp) {
-        if (!comp || !comp.selectedLayers || comp.selectedLayers.length === 0) return null;
-        for (var i = 0; i < comp.selectedLayers.length; i++) {
-            var l = comp.selectedLayers[i];
-            if (isTextLayer(l)) return l;
-            if (l && l.parent && isTextLayer(l.parent)) return l.parent;
+    function isComicBalloonShapeLayer(layer) {
+        if (!layer) return false;
+        try {
+            if (layer.comment && String(layer.comment).indexOf(BALLOON_LAYER_TAG) !== -1) return true;
+            if (layer.name === BALLOON_LAYER_NAME) return true;
+        } catch (e) {}
+        return false;
+    }
+
+    function isComicBalloonPrecompLayer(layer) {
+        if (!layer) return false;
+        try {
+            if (readLayerStateEffect(layer)) {
+                if (layer.source && layer.source.layers) return true;
+            }
+            if (layer.source && layer.source.layers && /^comic balloon [0-9A-Fa-f]{4,8}$/.test(layer.name || "")) {
+                return true;
+            }
+        } catch (e) {}
+        return false;
+    }
+
+    function findChildBalloonForText(comp, textLayer) {
+        var count = getCompLayerCount(comp);
+        for (var i = 1; i <= count; i++) {
+            var lyr = getCompLayerAt(comp, i);
+            if (lyr && isComicBalloonShapeLayer(lyr) && lyr.parent === textLayer) {
+                return lyr;
+            }
         }
         return null;
     }
 
-    function getTextLayerString(layer) {
-        if (!layer) return "";
-        try {
-            var textProp = layer.property("ADBE Text Properties") || layer.property("Text");
-            var docProp = textProp ? (textProp.property("ADBE Text Document") || layer.property("Source Text")) : layer.property("Source Text");
-            if (docProp && docProp.value) {
-                var doc = docProp.value;
-                if (doc && doc.text !== undefined) return String(doc.text);
-            }
-            if (layer.sourceText && layer.sourceText.value !== undefined) {
-                var v = layer.sourceText.value;
-                if (v && typeof v === "object" && v.text !== undefined) return String(v.text);
-                return String(v || "");
-            }
-            if (typeof layer.text === "string") return layer.text;
-        } catch (e) {}
-        return "";
-    }
-
-    function ensureCompAndSampleLayer() {
-        var comp = getActiveComposition();
-        var activeApp = (typeof app !== "undefined") ? app : globalObj.app;
-        if (!comp) {
-            if (activeApp && activeApp.project) {
-                comp = activeApp.project.items.addComp("Comic Bubble Demo", 1920, 1080, 1.0, 5.0, 30);
+    /**
+     * Finds sibling helper child layers parented to textLayer from ecosystem tools:
+     *   - AE-replace-color-emojis (comment "AE_COLOR_EMOJI_CHILD" or " - Color Emojis")
+     *   - AE-Text-Highlight       (comment "AE_TEXT_HIGHLIGHT" or " - Highlights")
+     *   - Any other non-balloon child layer parented to textLayer
+     */
+    function collectSiblingChildren(comp, textLayer) {
+        var above = [];
+        var below = [];
+        var all = [];
+        if (!comp || !textLayer) return { all: all, above: above, below: below };
+        var count = getCompLayerCount(comp);
+        for (var i = 1; i <= count; i++) {
+            var lyr = getCompLayerAt(comp, i);
+            if (!lyr || lyr === textLayer || isComicBalloonShapeLayer(lyr)) continue;
+            if (lyr.parent === textLayer) {
+                all.push(lyr);
+                if (lyr.index < textLayer.index) {
+                    above.push(lyr);
+                } else {
+                    below.push(lyr);
+                }
             }
         }
+        return { all: all, above: above, below: below };
+    }
+
+    /**
+     * Resolves the active user target in `comp`:
+     *   - { mode: "precomp", comp, precompLayer, precompItem, innerTextLayer, balloonLayer }
+     *   - { mode: "text",    comp, textLayer, balloonLayer }
+     */
+    function resolveTargetContext(allowFallbackFirstLayer) {
+        var comp = getActiveComp();
         if (!comp) return null;
 
-        var textLayer = getSelectedTextLayer(comp);
-        if (!textLayer) {
-            // Find any text layer in comp
-            if (comp.layers && comp.layers.length > 0) {
-                for (var i = 1; i <= comp.layers.length; i++) {
-                    var l = comp.layers[i];
-                    if (isTextLayer(l)) {
-                        textLayer = l;
-                        break;
+        // If user is currently inside a "comic balloon <HEX>" precomp itself, check if they selected inner layers
+        var sel = comp.selectedLayers || [];
+        var i, lyr;
+
+        for (i = 0; i < sel.length; i++) {
+            lyr = sel[i];
+            if (isComicBalloonPrecompLayer(lyr)) {
+                var pItem = lyr.source;
+                var innerText = null;
+                var innerBalloon = null;
+                var pCount = getCompLayerCount(pItem);
+                for (var k = 1; k <= pCount; k++) {
+                    var il = getCompLayerAt(pItem, k);
+                    if (!innerText && isTextLayer(il)) innerText = il;
+                    if (!innerBalloon && isComicBalloonShapeLayer(il)) innerBalloon = il;
+                }
+                if (innerText) {
+                    return {
+                        mode: "precomp",
+                        comp: comp,
+                        precompLayer: lyr,
+                        precompItem: pItem,
+                        textLayer: innerText,
+                        balloonLayer: innerBalloon
+                    };
+                }
+            }
+            if (isComicBalloonShapeLayer(lyr) && lyr.parent && isTextLayer(lyr.parent)) {
+                return {
+                    mode: "text",
+                    comp: comp,
+                    textLayer: lyr.parent,
+                    balloonLayer: lyr
+                };
+            }
+            if (isTextLayer(lyr)) {
+                return {
+                    mode: "text",
+                    comp: comp,
+                    textLayer: lyr,
+                    balloonLayer: findChildBalloonForText(comp, lyr)
+                };
+            }
+            // If user selected a Highlight or Color Emoji child layer, resolve to its parent text layer
+            if (lyr && lyr.parent && isTextLayer(lyr.parent)) {
+                return {
+                    mode: "text",
+                    comp: comp,
+                    textLayer: lyr.parent,
+                    balloonLayer: findChildBalloonForText(comp, lyr.parent)
+                };
+            }
+        }
+
+        if (allowFallbackFirstLayer) {
+            var total = getCompLayerCount(comp);
+            for (i = 1; i <= total; i++) {
+                lyr = getCompLayerAt(comp, i);
+                if (isComicBalloonPrecompLayer(lyr)) {
+                    var pItem2 = lyr.source;
+                    var innerText2 = null;
+                    var innerBalloon2 = null;
+                    var pCount2 = getCompLayerCount(pItem2);
+                    for (var k2 = 1; k2 <= pCount2; k2++) {
+                        var il2 = getCompLayerAt(pItem2, k2);
+                        if (!innerText2 && isTextLayer(il2)) innerText2 = il2;
+                        if (!innerBalloon2 && isComicBalloonShapeLayer(il2)) innerBalloon2 = il2;
+                    }
+                    if (innerText2) {
+                        return {
+                            mode: "precomp",
+                            comp: comp,
+                            precompLayer: lyr,
+                            precompItem: pItem2,
+                            textLayer: innerText2,
+                            balloonLayer: innerBalloon2
+                        };
                     }
                 }
+                if (isTextLayer(lyr)) {
+                    return {
+                        mode: "text",
+                        comp: comp,
+                        textLayer: lyr,
+                        balloonLayer: findChildBalloonForText(comp, lyr)
+                    };
+                }
             }
         }
 
-        // If still no text layer, create a sample punchy comic text layer
-        if (!textLayer && comp.layers && typeof comp.layers.addText === "function") {
-            textLayer = comp.layers.addText("POW! 💥 That was incredible!\nWhat do we do next?");
-            textLayer.name = "Comic Dialogue Text";
-            if (textLayer.transform && textLayer.transform.position) {
-                textLayer.transform.position.setValue([comp.width / 2, comp.height / 2 - 40, 0]);
+        return { mode: "none", comp: comp };
+    }
+
+    /**
+     * Used in Live Demo / empty stage (&autobuild=true) when comp has zero layers:
+     * Creates a clean sample comic text layer so Build works out of the box.
+     */
+    function ensureTargetOrSampleText() {
+        var ctx = resolveTargetContext(true);
+        if (!ctx) {
+            if (typeof app !== "undefined" && app.project && app.project.items && typeof app.project.items.addComp === "function") {
+                var newC = app.project.items.addComp("Main Comp", 1280, 720, 1, 10, 30);
+                app.project.activeItem = newC;
+                ctx = { mode: "none", comp: newC };
+            } else {
+                return null;
             }
+        }
+        if (ctx.mode !== "none") return ctx;
+
+        var comp = ctx.comp;
+        if (getCompLayerCount(comp) === 0 && comp.layers && typeof comp.layers.addText === "function") {
+            var sampleStr = "POW! Comic Balloon\nReady for Action!";
+            var tLayer = comp.layers.addText(sampleStr);
+            tLayer.name = "Dialogue Text";
             try {
-                var docProp = textLayer.property("Source Text");
-                if (docProp && docProp.value) {
-                    var doc = docProp.value;
-                    doc.fontSize = 44;
-                    doc.applyFill = true;
-                    doc.fillColor = [0.08, 0.08, 0.12];
-                    doc.justification = (typeof ParagraphJustification !== "undefined" && ParagraphJustification.CENTER_JUSTIFY)
-                        ? ParagraphJustification.CENTER_JUSTIFY : 7414;
-                    docProp.setValue(doc);
+                var srcProp = tLayer.property("Source Text");
+                if (srcProp) {
+                    var doc = srcProp.value;
+                    if (doc && typeof doc === "object") {
+                        doc.text = sampleStr;
+                        doc.fontSize = 44;
+                        doc.leading = 54;
+                        doc.fillColor = [0.07, 0.09, 0.14];
+                        doc.applyFill = true;
+                        if (typeof ParagraphJustification !== "undefined") {
+                            doc.justification = ParagraphJustification.CENTER_JUSTIFY;
+                        }
+                        srcProp.setValue(doc);
+                    }
                 }
-            } catch (eDoc) {}
+                tLayer.property("Transform").property("Position").setValue([comp.width / 2, comp.height * 0.44]);
+                tLayer.selected = true;
+            } catch (eSample) {}
+            return {
+                mode: "text",
+                comp: comp,
+                textLayer: tLayer,
+                balloonLayer: null
+            };
         }
 
-        return { comp: comp, textLayer: textLayer };
+        return ctx;
     }
 
     // -------------------------------------------------------------------------
-    // 3. Multi-Lingual Syllabification & Hyphenation (from AE-advanced-text-wrap)
+    // 4. Original Text Box, Content & Transform Backup in Effect Layer Controls
     // -------------------------------------------------------------------------
-    var HYPHEN_PATTERNS = {
-        english: {
-            vowels: /[aeiouy]/i,
-            prefixes: ["un", "dis", "trans", "inter", "anti", "super", "multi", "over", "under", "pre", "mis", "sub", "non"],
-            suffixes: ["tion", "sion", "ment", "ness", "able", "ible", "less", "ful", "ing", "ous", "ance", "ence", "ize", "ism", "ist", "ity"]
-        },
-        spanish: {
-            vowels: /[aeiouáéíóúü]/i,
-            strongVowels: /[aeoáéó]/i,
-            weakVowels: /[iuíúü]/i,
-            digraphs: ["ch", "ll", "rr"],
-            prefixes: ["des", "trans", "inter", "sobre", "anti", "sub", "ante", "contra"],
-            suffixes: ["ción", "sión", "miento", "mente", "able", "ible", "idad", "ismo", "ista", "oso", "osa", "ura"]
-        },
-        french: {
-            vowels: /[aeiouyàâéèêëîïôùûüÿœæ]/i,
-            prefixes: ["dé", "dés", "trans", "inter", "sous", "sur", "anti", "multi"],
-            suffixes: ["tion", "sion", "ment", "able", "ible", "ité", "isme", "iste", "eur", "euse", "ence", "ance"]
-        },
-        german: {
-            vowels: /[aeiouyäöü]/i,
-            prefixes: ["ver", "zer", "ent", "ge", "be", "über", "unter", "durch", "hinter"],
-            suffixes: ["ung", "heit", "keit", "schaft", "lich", "isch", "ig", "bar", "sam", "tum"]
-        },
-        italian: {
-            vowels: /[aeiouàèéìíîòóùú]/i,
-            prefixes: ["dis", "tras", "inter", "sotto", "sopra", "anti"],
-            suffixes: ["zione", "sione", "mento", "mente", "abile", "ibile", "ità", "ismo", "ista", "oso", "osa"]
-        },
-        universal: {
-            vowels: /[aeiouyàâéèêëîïôùûüÿäöaeoáéíóú]/i,
-            prefixes: ["un", "in", "de", "dis", "con", "pro"],
-            suffixes: ["tion", "ment", "ing", "ed", "al", "ic"]
-        }
-    };
-
-    function hyphenateWord(word, lang, minWordLen, minPrefix, minSuffix) {
-        if (!word) return [word];
-        if (minWordLen === undefined) minWordLen = 6;
-        if (minPrefix === undefined) minPrefix = 3;
-        if (minSuffix === undefined) minSuffix = 3;
-
-        if (word.length < minWordLen) return [word];
-        if (/^[A-Z0-9_\-]+$/.test(word)) return [word];
-        if (/[\uD800-\uDFFF]/.test(word)) return [word];
-
-        var config = HYPHEN_PATTERNS[lang] || HYPHEN_PATTERNS.english;
-        var vowels = config.vowels;
-        var wLower = word.toLowerCase();
-
-        if (config.prefixes) {
-            for (var p = 0; p < config.prefixes.length; p++) {
-                var pfx = config.prefixes[p];
-                if (wLower.indexOf(pfx) === 0 && pfx.length >= minPrefix && (word.length - pfx.length) >= minSuffix) {
-                    var rest = word.slice(pfx.length);
-                    var restChunks = hyphenateWord(rest, lang, minWordLen, minPrefix, minSuffix);
-                    return [word.slice(0, pfx.length)].concat(restChunks);
-                }
+    function getTextDocumentSafe(textLayer) {
+        if (!textLayer) return null;
+        try {
+            var srcProp = textLayer.property("Source Text");
+            if (!srcProp) {
+                var tp = textLayer.property("ADBE Text Properties") || textLayer.property("Text");
+                if (tp) srcProp = tp.property("ADBE Text Document") || tp.property("Source Text");
             }
-        }
-
-        if (config.suffixes) {
-            for (var s = 0; s < config.suffixes.length; s++) {
-                var sfx = config.suffixes[s];
-                var sfxPos = word.length - sfx.length;
-                if (sfxPos >= minPrefix && sfx.length >= minSuffix && wLower.lastIndexOf(sfx) === sfxPos) {
-                    var base = word.slice(0, sfxPos);
-                    var baseChunks = hyphenateWord(base, lang, minWordLen, minPrefix, minSuffix);
-                    return baseChunks.concat([word.slice(sfxPos)]);
-                }
-            }
-        }
-
-        var doubleMatch = word.match(/([bcdfghjklmnpqrstvwxz])\1/i);
-        if (doubleMatch && doubleMatch.index !== undefined) {
-            var splitPos = doubleMatch.index + 1;
-            if (splitPos >= minPrefix && (word.length - splitPos) >= minSuffix) {
-                return [word.slice(0, splitPos), word.slice(splitPos)];
-            }
-        }
-
-        for (var i = minPrefix; i <= word.length - minSuffix; i++) {
-            var c1 = word.charAt(i - 1);
-            var c2 = word.charAt(i);
-            var prevIsVowel = vowels.test(c1);
-            var curIsVowel = vowels.test(c2);
-
-            if (i > 1 && vowels.test(word.charAt(i - 2)) && !prevIsVowel && curIsVowel) {
-                var cut = i - 1;
-                if (cut >= minPrefix && (word.length - cut) >= minSuffix) {
-                    return [word.slice(0, cut), word.slice(cut)];
-                }
-            }
-            if (i > 1 && i < word.length - 1) {
-                var vBefore = vowels.test(word.charAt(i - 2));
-                var vAfter = vowels.test(word.charAt(i + 1));
-                if (vBefore && !prevIsVowel && !curIsVowel && vAfter) {
-                    return [word.slice(0, i), word.slice(i)];
-                }
-            }
-        }
-
-        return [word];
+            if (srcProp) return srcProp.value;
+        } catch (e) {}
+        return null;
     }
 
-    // -------------------------------------------------------------------------
-    // 4. Micro-Typography Grammar & Semantic Unit Binding (from AE-advanced-text-wrap)
-    // -------------------------------------------------------------------------
-    var SHORT_WORDS_DICT = {
-        english: ["a", "an", "the", "in", "on", "at", "to", "for", "with", "by", "of", "from", "as", "is", "it", "into", "like", "through", "after", "over", "between", "out", "about", "but", "and", "or", "nor", "so", "yet", "if", "than", "this", "that"],
-        spanish: ["el", "la", "los", "las", "un", "una", "unos", "unas", "de", "del", "al", "en", "con", "por", "para", "sin", "tras", "y", "e", "o", "u", "ni", "que", "a", "sobre", "entre", "hacia", "hasta", "desde", "se", "su", "sus"],
-        french: ["le", "la", "les", "un", "une", "des", "du", "de", "au", "aux", "en", "à", "dans", "par", "pour", "sur", "avec", "sans", "sous", "et", "ou", "mais", "donc", "car", "ni", "que", "ce", "sa", "ses"],
-        german: ["der", "die", "das", "den", "dem", "des", "ein", "eine", "einer", "einem", "einen", "eines", "in", "im", "an", "am", "auf", "aus", "bei", "beim", "mit", "nach", "von", "vom", "zu", "zum", "zur", "und", "oder", "aber", "wie", "als", "um", "für"],
-        italian: ["il", "lo", "la", "i", "gli", "le", "un", "uno", "una", "di", "del", "dello", "della", "dei", "degli", "delle", "a", "al", "allo", "alla", "ai", "agli", "alle", "da", "dal", "in", "nel", "con", "su", "sul", "per", "tra", "fra", "e", "o", "ma", "che"],
-        universal: ["a", "an", "the", "in", "on", "at", "to", "of", "de", "en", "et", "y", "und", "el", "la"]
-    };
-
-    var NBSP = "\u00A0";
-
-    function applySemanticBindings(text, lang, opts) {
-        if (!text) return "";
-        var str = text;
-        var dict = SHORT_WORDS_DICT[lang] || SHORT_WORDS_DICT.english;
-
-        if (opts.bindNumbers) {
-            str = str.replace(/(\b\d+(?:[.,]\d+)?)\s+([a-zA-Z%$€£¥°]+)\b/g, "$1" + NBSP + "$2");
-            str = str.replace(/(^|[\s(])([\$€£¥₹])\s*(\d+)/g, "$1$2" + NBSP + "$3");
-        }
-        if (opts.bindHonorifics) {
-            str = str.replace(/\b(Dr\.|Mr\.|Mrs\.|Ms\.|Prof\.|Sr\.|Sra\.|St\.|e\.g\.|i\.e\.|etc\.)\s+([A-Za-z0-9])/g, "$1" + NBSP + "$2");
-        }
-        if (opts.avoidDanglingShort) {
-            for (var i = 0; i < dict.length; i++) {
-                var w = dict[i];
-                var reg = new RegExp("(^|[\\s(\"«¿¡])(" + w + ")\\s+", "gi");
-                str = str.replace(reg, "$1$2" + NBSP);
+    function getLayerBounds(layer, compTime) {
+        if (!layer) return { left: -120, top: -40, width: 240, height: 80 };
+        var t = (compTime !== undefined) ? compTime : 0;
+        try {
+            if (typeof layer.sourceRectAtTime === "function") {
+                var sr = layer.sourceRectAtTime(t, false);
+                if (sr && (sr.width > 0 || sr.height > 0)) {
+                    return { left: sr.left, top: sr.top, width: sr.width, height: sr.height };
+                }
             }
+        } catch (eSR) {}
+
+        var doc = getTextDocumentSafe(layer);
+        if (doc && doc.boxText && doc.boxTextSize) {
+            var bp = doc.boxTextPos || [0, 0];
+            return { left: bp[0], top: bp[1], width: doc.boxTextSize[0], height: doc.boxTextSize[1] };
         }
-        if (opts.preventWidows) {
-            var paras = str.split(/\r\n|\r|\n/);
-            for (var p = 0; p < paras.length; p++) {
-                var pStr = paras[p];
-                paras[p] = pStr.replace(/(\S+)\s+(\S+)$/, "$1" + NBSP + "$2");
-            }
-            str = paras.join("\r");
-        }
-        return str;
+        return { left: -120, top: -40, width: 240, height: 80 };
     }
 
-    // -------------------------------------------------------------------------
-    // 5. Typography Measurement Engine
-    // -------------------------------------------------------------------------
-    function createTextMeasurer(comp, textLayer) {
-        var fontSize = 44;
-        var font = "";
+    function capturePristineTextState(textLayer) {
+        var tr = textLayer.property("Transform");
+        var posProp = tr.property("Position");
+        var apProp  = tr.property("Anchor Point");
+        var scProp  = tr.property("Scale");
+        var rotProp = tr.property("Rotation") || tr.property("Z Rotation");
+        var opProp  = tr.property("Opacity");
+        var oriProp = tr.property("Orientation");
+
+        var doc = getTextDocumentSafe(textLayer);
+        var textStr = "";
+        var isBox = false;
+        var boxSize = null;
+        var boxPos = null;
+        var fontSize = 36;
+        var leading = 43.2;
+        var fontName = "";
         var tracking = 0;
-        try {
-            var docProp = textLayer ? (textLayer.property("ADBE Text Properties") || textLayer.property("Text")) : null;
-            var docVal = docProp ? (docProp.property("ADBE Text Document") || textLayer.property("Source Text")) : null;
-            if (docVal && docVal.value) {
-                fontSize = docVal.value.fontSize || 44;
-                font = docVal.value.font || "";
-                tracking = docVal.value.tracking || 0;
-            }
-        } catch (eT) {}
+        var justification = null;
+        var fillColor = null;
+        var applyFill = true;
+        var applyStroke = false;
+        var strokeColor = null;
+        var strokeWidth = 0;
 
-        var measLayer = null;
-        var measDocProp = null;
-        var measDoc = null;
-
-        try {
-            if (comp && comp.layers && typeof comp.layers.addText === "function") {
-                measLayer = comp.layers.addText("");
-                measLayer.enabled = true;
-                if (measLayer.transform && measLayer.transform.position) {
-                    measLayer.transform.position.setValue([-9999, -9999, 0]);
-                }
-                measDocProp = measLayer.property("Source Text");
-                measDoc = measDocProp ? measDocProp.value : null;
-                if (measDoc) {
-                    measDoc.fontSize = fontSize;
-                    if (font) { try { measDoc.font = font; } catch (eF) {} }
-                    measDoc.tracking = tracking;
-                    measDoc.applyStroke = false;
-                    measDoc.applyFill = true;
-                    try { measDocProp.setValue(measDoc); } catch (eDS) {}
-                }
+        if (doc && typeof doc === "object") {
+            textStr = (doc.text !== undefined) ? String(doc.text) : "";
+            isBox = Boolean(doc.boxText);
+            if (isBox && doc.boxTextSize) {
+                boxSize = [doc.boxTextSize[0], doc.boxTextSize[1]];
+                if (doc.boxTextPos) boxPos = [doc.boxTextPos[0], doc.boxTextPos[1]];
             }
-        } catch (eM) {}
-
-        function rawMeasure(str) {
-            if (!str || str.length === 0) return 0;
-            if (measLayer && measDocProp) {
-                if (measDoc) {
-                    measDoc.text = str;
-                    measDocProp.setValue(measDoc);
-                } else {
-                    measDocProp.setValue(str);
-                }
-                try {
-                    var r = measLayer.sourceRectAtTime(comp.time || 0, false);
-                    if (r && typeof r.width === "number") return r.width;
-                } catch (eSR) {}
-            }
-            if (typeof AETextCalibration !== "undefined" && typeof AETextCalibration.measureLineWidth === "function") {
-                return AETextCalibration.measureLineWidth(str, fontSize, font, tracking);
-            }
-            return str.length * (fontSize * 0.52);
+            if (typeof doc.fontSize === "number") fontSize = doc.fontSize;
+            if (typeof doc.leading === "number") leading = doc.leading;
+            if (doc.font) fontName = String(doc.font);
+            if (typeof doc.tracking === "number") tracking = doc.tracking;
+            if (doc.justification !== undefined) justification = doc.justification;
+            if (doc.applyFill !== undefined) applyFill = Boolean(doc.applyFill);
+            if (doc.applyFill && doc.fillColor) fillColor = [doc.fillColor[0], doc.fillColor[1], doc.fillColor[2]];
+            if (doc.applyStroke !== undefined) applyStroke = Boolean(doc.applyStroke);
+            if (doc.applyStroke && doc.strokeColor) strokeColor = [doc.strokeColor[0], doc.strokeColor[1], doc.strokeColor[2]];
+            if (typeof doc.strokeWidth === "number") strokeWidth = doc.strokeWidth;
+        } else if (typeof doc === "string") {
+            textStr = doc;
         }
 
-        var pipeW = rawMeasure("|");
-        function measureAdvance(str) {
-            if (!str || str.length === 0) return 0;
-            var w = rawMeasure(str + "|") - pipeW;
-            return Math.max(0, w);
+        var pVal = posProp ? posProp.value : [0, 0];
+        var aVal = apProp ? apProp.value : [0, 0];
+        var sVal = scProp ? scProp.value : [100, 100];
+        var rVal = rotProp ? (rotProp.value || 0) : 0;
+        var oVal = opProp ? (opProp.value !== undefined ? opProp.value : 100) : 100;
+        var oriVal = (oriProp && oriProp.value) ? [oriProp.value[0], oriProp.value[1], oriProp.value[2]] : [0, 0, 0];
+
+        var apExpr = "";
+        var posExpr = "";
+        try { if (apProp && apProp.expression) apExpr = apProp.expression; } catch (e1) {}
+        try { if (posProp && posProp.expression) posExpr = posProp.expression; } catch (e2) {}
+
+        return {
+            layerName: textLayer.name,
+            text: textStr,
+            isBox: isBox,
+            boxSize: boxSize,
+            boxPos: boxPos,
+            fontSize: fontSize,
+            leading: leading,
+            font: fontName,
+            tracking: tracking,
+            justification: justification,
+            applyFill: applyFill,
+            fillColor: fillColor,
+            applyStroke: applyStroke,
+            strokeColor: strokeColor,
+            strokeWidth: strokeWidth,
+            position: [pVal[0] || 0, pVal[1] || 0, (pVal.length > 2 ? pVal[2] : 0)],
+            anchorPoint: [aVal[0] || 0, aVal[1] || 0, (aVal.length > 2 ? aVal[2] : 0)],
+            scale: [sVal[0] !== undefined ? sVal[0] : 100, sVal[1] !== undefined ? sVal[1] : 100, (sVal.length > 2 ? sVal[2] : 100)],
+            rotation: rVal,
+            orientation: oriVal,
+            opacity: oVal,
+            threeDLayer: Boolean(textLayer.threeDLayer),
+            parentName: (textLayer.parent && textLayer.parent.name) ? textLayer.parent.name : "",
+            anchorExpr: apExpr,
+            posExpr: posExpr,
+            siblingShift: [0, 0]
+        };
+    }
+
+    function ensureEffectCtrl(fxParade, matchName, ctrlName, val) {
+        if (!fxParade) return null;
+        try {
+            var eff = fxParade.property(ctrlName);
+            if (!eff) eff = fxParade.addProperty(matchName);
+            if (eff) {
+                eff.name = ctrlName;
+                var p = eff.property(1);
+                if (p && val !== undefined) p.setValue(val);
+            }
+            return eff;
+        } catch (e) {
+            return null;
+        }
+    }
+
+    function writeLayerStateEffect(layer, stateEnvelope) {
+        if (!layer || !stateEnvelope) return;
+        try {
+            var fxParade = layer.property("ADBE Effect Parade") || layer.property("Effects");
+            if (!fxParade) return;
+
+            var mainEff = ensureEffectCtrl(fxParade, "ADBE Slider Control", STATE_EFFECT_NAME, 1);
+            if (mainEff) {
+                var sp = mainEff.property("ADBE Slider Control-0001") || mainEff.property(1);
+                if (sp) {
+                    var encoded = encodeURIComponent(JSONSafe.stringify(stateEnvelope, false));
+                    sp.expression = "/* ComicBalloonStateV2:" + encoded + " */\nvalue;";
+                }
+            }
+
+            // Also populate visible inspector Effect Controls for Original Transform & Text Box
+            var orig = stateEnvelope.orig;
+            if (orig) {
+                ensureEffectCtrl(fxParade, "ADBE Point Control", "CB Orig Position", [orig.position[0], orig.position[1]]);
+                ensureEffectCtrl(fxParade, "ADBE Point Control", "CB Orig Anchor", [orig.anchorPoint[0], orig.anchorPoint[1]]);
+                ensureEffectCtrl(fxParade, "ADBE Point Control", "CB Orig Scale", [orig.scale[0], orig.scale[1]]);
+                ensureEffectCtrl(fxParade, "ADBE Slider Control", "CB Orig Rotation", orig.rotation || 0);
+                if (orig.isBox && orig.boxSize) {
+                    ensureEffectCtrl(fxParade, "ADBE Point Control", "CB Orig Box Size", [orig.boxSize[0], orig.boxSize[1]]);
+                }
+            }
+        } catch (e) {}
+    }
+
+    function readLayerStateEffect(layer) {
+        if (!layer) return null;
+        try {
+            var fxParade = layer.property("ADBE Effect Parade") || layer.property("Effects");
+            if (!fxParade) return null;
+            var eff = fxParade.property(STATE_EFFECT_NAME);
+            if (!eff) return null;
+            var sp = eff.property("ADBE Slider Control-0001") || eff.property(1);
+            if (sp && sp.expression) {
+                var m = sp.expression.match(/\/\* ComicBalloonStateV2:(.*?) \*\//);
+                if (m && m[1]) {
+                    return JSONSafe.parse(decodeURIComponent(m[1]));
+                }
+            }
+        } catch (e) {}
+        return null;
+    }
+
+    function removeStateEffectsFromLayer(layer) {
+        if (!layer) return;
+        try {
+            var fxParade = layer.property("ADBE Effect Parade") || layer.property("Effects");
+            if (!fxParade) return;
+            var names = [
+                STATE_EFFECT_NAME,
+                "CB Orig Position",
+                "CB Orig Anchor",
+                "CB Orig Scale",
+                "CB Orig Rotation",
+                "CB Orig Box Size"
+            ];
+            for (var i = 0; i < names.length; i++) {
+                var eff = fxParade.property(names[i]);
+                if (eff && typeof eff.remove === "function") {
+                    try { eff.remove(); } catch (eR) {}
+                }
+            }
+        } catch (e) {}
+    }
+
+    function restoreTextLayerFromOrigState(comp, textLayer, orig) {
+        if (!textLayer || !orig) return;
+
+        // 1. Restore Text Box & Content
+        try {
+            var srcProp = textLayer.property("Source Text");
+            if (srcProp) {
+                var doc = srcProp.value;
+                if (doc && typeof doc === "object") {
+                    if (orig.isBox && orig.boxSize) {
+                        try {
+                            doc.boxText = true;
+                            doc.boxTextSize = [orig.boxSize[0], orig.boxSize[1]];
+                            if (orig.boxPos) doc.boxTextPos = [orig.boxPos[0], orig.boxPos[1]];
+                        } catch (eBox) {}
+                    }
+                    doc.text = orig.text;
+                    if (orig.fontSize) doc.fontSize = orig.fontSize;
+                    if (orig.leading) doc.leading = orig.leading;
+                    if (orig.font) {
+                        try { doc.font = orig.font; } catch (eF) {}
+                    }
+                    if (typeof orig.tracking === "number") doc.tracking = orig.tracking;
+                    if (orig.justification !== null && orig.justification !== undefined) {
+                        try { doc.justification = orig.justification; } catch (eJ) {}
+                    }
+                    if (orig.fillColor) {
+                        try {
+                            doc.applyFill = orig.applyFill;
+                            doc.fillColor = orig.fillColor;
+                        } catch (eFC) {}
+                    }
+                    srcProp.setValue(doc);
+                } else {
+                    srcProp.setValue(orig.text);
+                }
+            }
+        } catch (eTxt) {}
+
+        // 2. Restore Sibling Child Offsets (Emojis / Highlights) BEFORE restoring parent anchor
+        if (orig.siblingShift && (Math.abs(orig.siblingShift[0]) > 1e-5 || Math.abs(orig.siblingShift[1]) > 1e-5)) {
+            var sibs = collectSiblingChildren(comp, textLayer).all;
+            for (var si = 0; si < sibs.length; si++) {
+                try {
+                    var cPosProp = sibs[si].property("Transform").property("Position");
+                    var cp = cPosProp.value;
+                    if (cp.length > 2) {
+                        cPosProp.setValue([cp[0] + orig.siblingShift[0], cp[1] + orig.siblingShift[1], cp[2]]);
+                    } else {
+                        cPosProp.setValue([cp[0] + orig.siblingShift[0], cp[1] + orig.siblingShift[1]]);
+                    }
+                } catch (eSib) {}
+            }
+        }
+
+        // 3. Restore Layer Name, 3D Flag, Parent & Transform
+        try { if (orig.layerName) textLayer.name = orig.layerName; } catch (eN) {}
+        try { textLayer.threeDLayer = Boolean(orig.threeDLayer); } catch (e3D) {}
+
+        if (comp && orig.parentName) {
+            var pCount = getCompLayerCount(comp);
+            for (var pi = 1; pi <= pCount; pi++) {
+                var cand = getCompLayerAt(comp, pi);
+                if (cand && cand !== textLayer && cand.name === orig.parentName) {
+                    try { textLayer.parent = cand; } catch (ePar) {}
+                    break;
+                }
+            }
+        } else {
+            try { textLayer.parent = null; } catch (ePar0) {}
+        }
+
+        try {
+            var tr = textLayer.property("Transform");
+            var apProp  = tr.property("Anchor Point");
+            var posProp = tr.property("Position");
+            var scProp  = tr.property("Scale");
+            var rotProp = tr.property("Rotation") || tr.property("Z Rotation");
+            var opProp  = tr.property("Opacity");
+            var oriProp = tr.property("Orientation");
+
+            if (apProp) {
+                try { apProp.expression = orig.anchorExpr || ""; } catch (eAE) {}
+                apProp.setValue(orig.threeDLayer ? orig.anchorPoint : [orig.anchorPoint[0], orig.anchorPoint[1]]);
+            }
+            if (posProp) {
+                try { posProp.expression = orig.posExpr || ""; } catch (ePE) {}
+                posProp.setValue(orig.threeDLayer ? orig.position : [orig.position[0], orig.position[1]]);
+            }
+            if (scProp) {
+                scProp.setValue(orig.threeDLayer ? orig.scale : [orig.scale[0], orig.scale[1]]);
+            }
+            if (rotProp) rotProp.setValue(orig.rotation || 0);
+            if (oriProp && orig.threeDLayer && orig.orientation) oriProp.setValue(orig.orientation);
+            if (opProp && orig.opacity !== undefined) opProp.setValue(orig.opacity);
+        } catch (eTr) {}
+
+        removeStateEffectsFromLayer(textLayer);
+    }
+
+    // -------------------------------------------------------------------------
+    // 5. Zero-Shift Center Anchor Point Alignment (AE-Align-AnchorPoint)
+    // -------------------------------------------------------------------------
+    /**
+     * Places the text layer's Anchor Point at its exact horizontal & vertical
+     * visual center [sr.left + sr.width/2, sr.top + sr.height/2] WITHOUT shifting
+     * the text or any parented emoji/highlight layers on screen.
+     */
+    function centerTextAnchorZeroShift(comp, textLayer, origRecord) {
+        var curTime = comp ? comp.time : 0;
+        var bounds = getLayerBounds(textLayer, curTime);
+        var centerAx = bounds.left + bounds.width / 2;
+        var centerAy = bounds.top + bounds.height / 2;
+
+        var tr = textLayer.property("Transform");
+        var apProp  = tr.property("Anchor Point");
+        var posProp = tr.property("Position");
+        var scProp  = tr.property("Scale");
+        var rotProp = tr.property("Rotation") || tr.property("Z Rotation");
+
+        // Clear any dynamic anchor expressions from prior tools so centered bake is clean
+        try { if (apProp.expression) apProp.expression = ""; } catch (e1) {}
+        try { if (posProp.expression) posProp.expression = ""; } catch (e2) {}
+
+        var curA = apProp.value;
+        var curP = posProp.value;
+        var curS = scProp ? scProp.value : [100, 100];
+        var curR = rotProp ? (rotProp.value || 0) : 0;
+
+        var deltaAx = centerAx - (curA[0] || 0);
+        var deltaAy = centerAy - (curA[1] || 0);
+
+        if (Math.abs(deltaAx) > 1e-5 || Math.abs(deltaAy) > 1e-5) {
+            var sx = (curS[0] !== undefined ? curS[0] : 100) / 100;
+            var sy = (curS[1] !== undefined ? curS[1] : 100) / 100;
+            var sdx = deltaAx * sx;
+            var sdy = deltaAy * sy;
+            var rad = curR * (Math.PI / 180);
+            var pDeltaX = sdx * Math.cos(rad) - sdy * Math.sin(rad);
+            var pDeltaY = sdx * Math.sin(rad) + sdy * Math.cos(rad);
+
+            var is3D = Boolean(textLayer.threeDLayer);
+            if (is3D) {
+                apProp.setValue([centerAx, centerAy, curA.length > 2 ? curA[2] : 0]);
+                posProp.setValue([curP[0] + pDeltaX, curP[1] + pDeltaY, curP.length > 2 ? curP[2] : 0]);
+            } else {
+                apProp.setValue([centerAx, centerAy]);
+                posProp.setValue([curP[0] + pDeltaX, curP[1] + pDeltaY]);
+            }
+
+            // Compensate sibling child layers (AE-replace-color-emojis / AE-Text-Highlight)
+            var sibs = collectSiblingChildren(comp, textLayer).all;
+            for (var i = 0; i < sibs.length; i++) {
+                try {
+                    var cPosProp = sibs[i].property("Transform").property("Position");
+                    var cp = cPosProp.value;
+                    if (cp.length > 2) {
+                        cPosProp.setValue([cp[0] - deltaAx, cp[1] - deltaAy, cp[2]]);
+                    } else {
+                        cPosProp.setValue([cp[0] - deltaAx, cp[1] - deltaAy]);
+                    }
+                } catch (eSib) {}
+            }
+
+            if (origRecord) {
+                origRecord.siblingShift = [
+                    (origRecord.siblingShift ? origRecord.siblingShift[0] : 0) + deltaAx,
+                    (origRecord.siblingShift ? origRecord.siblingShift[1] : 0) + deltaAy
+                ];
+            }
         }
 
         return {
-            measureAdvance: measureAdvance,
-            fontSize: fontSize,
-            hyphenWidth: measureAdvance("-"),
-            cleanup: function() {
-                if (measLayer) {
-                    try { measLayer.remove(); } catch (eR) {}
-                    measLayer = null;
+            bounds: bounds,
+            centerAx: centerAx,
+            centerAy: centerAy
+        };
+    }
+
+    // -------------------------------------------------------------------------
+    // 6. Parametric Balloon Geometry & Trim-Paths Tail Splicing Engine
+    // -------------------------------------------------------------------------
+    function lerp2D(a, b, t) {
+        return [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t];
+    }
+
+    function dist2D(a, b) {
+        var dx = b[0] - a[0];
+        var dy = b[1] - a[1];
+        return Math.sqrt(dx * dx + dy * dy);
+    }
+
+    function evalCubicPt(p0, out0, in1, p1, t) {
+        var isStraight = (Math.abs(out0[0]) < 1e-5 && Math.abs(out0[1]) < 1e-5 &&
+                          Math.abs(in1[0]) < 1e-5 && Math.abs(in1[1]) < 1e-5);
+        if (isStraight) return lerp2D(p0, p1, t);
+        var c1 = [p0[0] + out0[0], p0[1] + out0[1]];
+        var c2 = [p1[0] + in1[0], p1[1] + in1[1]];
+        var mt = 1 - t;
+        var mt2 = mt * mt;
+        var t2 = t * t;
+        return [
+            mt2 * mt * p0[0] + 3 * mt2 * t * c1[0] + 3 * mt * t2 * c2[0] + t2 * t * p1[0],
+            mt2 * mt * p0[1] + 3 * mt2 * t * c1[1] + 3 * mt * t2 * c2[1] + t2 * t * p1[1]
+        ];
+    }
+
+    function splitCubicSegment(seg, t) {
+        if (t <= 0) {
+            return {
+                left:  { p0: seg.p0, out0: [0, 0], in1: [0, 0], p1: seg.p0 },
+                right: { p0: seg.p0, out0: seg.out0, in1: seg.in1, p1: seg.p1 }
+            };
+        }
+        if (t >= 1) {
+            return {
+                left:  { p0: seg.p0, out0: seg.out0, in1: seg.in1, p1: seg.p1 },
+                right: { p0: seg.p1, out0: [0, 0], in1: [0, 0], p1: seg.p1 }
+            };
+        }
+
+        var isStraight = (Math.abs(seg.out0[0]) < 1e-5 && Math.abs(seg.out0[1]) < 1e-5 &&
+                          Math.abs(seg.in1[0]) < 1e-5 && Math.abs(seg.in1[1]) < 1e-5);
+        if (isStraight) {
+            var mid = lerp2D(seg.p0, seg.p1, t);
+            return {
+                left:  { p0: seg.p0, out0: [0, 0], in1: [0, 0], p1: mid },
+                right: { p0: mid,    out0: [0, 0], in1: [0, 0], p1: seg.p1 }
+            };
+        }
+
+        var p0 = seg.p0;
+        var c1 = [p0[0] + seg.out0[0], p0[1] + seg.out0[1]];
+        var c2 = [seg.p1[0] + seg.in1[0], seg.p1[1] + seg.in1[1]];
+        var p3 = seg.p1;
+
+        var q0 = lerp2D(p0, c1, t);
+        var q1 = lerp2D(c1, c2, t);
+        var q2 = lerp2D(c2, p3, t);
+        var r0 = lerp2D(q0, q1, t);
+        var r1 = lerp2D(q1, q2, t);
+        var s  = lerp2D(r0, r1, t);
+
+        return {
+            left: {
+                p0: p0,
+                out0: [q0[0] - p0[0], q0[1] - p0[1]],
+                in1: [r0[0] - s[0], r0[1] - s[1]],
+                p1: s
+            },
+            right: {
+                p0: s,
+                out0: [r1[0] - s[0], r1[1] - s[1]],
+                in1: [q2[0] - p3[0], q2[1] - p3[1]],
+                p1: p3
+            }
+        };
+    }
+
+    function annotateArcLengths(rawSegs) {
+        var total = 0;
+        var i, s;
+        var SAMPLES = 16;
+        for (i = 0; i < rawSegs.length; i++) {
+            var seg = rawSegs[i];
+            var cum = [0];
+            var prev = seg.p0;
+            var segLen = 0;
+            for (s = 1; s <= SAMPLES; s++) {
+                var pt = evalCubicPt(seg.p0, seg.out0, seg.in1, seg.p1, s / SAMPLES);
+                segLen += dist2D(prev, pt);
+                cum.push(segLen);
+                prev = pt;
+            }
+            seg.samples = cum;
+            seg.arcLen = Math.max(1e-4, segLen);
+            total += seg.arcLen;
+        }
+        var acc = 0;
+        for (i = 0; i < rawSegs.length; i++) {
+            rawSegs[i].u0 = acc / total;
+            acc += rawSegs[i].arcLen;
+            rawSegs[i].u1 = (i === rawSegs.length - 1) ? 1.0 : (acc / total);
+        }
+        return rawSegs;
+    }
+
+    function arcFractionToBezierT(seg, frac) {
+        if (frac <= 0) return 0;
+        if (frac >= 1) return 1;
+        var targetD = frac * seg.arcLen;
+        var cum = seg.samples;
+        var n = cum.length - 1;
+        for (var i = 0; i < n; i++) {
+            if (targetD <= cum[i + 1] || i === n - 1) {
+                var span = cum[i + 1] - cum[i];
+                var sub = (span > 1e-6) ? ((targetD - cum[i]) / span) : 0;
+                return (i + sub) / n;
+            }
+        }
+        return frac;
+    }
+
+    function evaluatePerimeterAtU(segs, uRaw) {
+        var u = ((uRaw % 1) + 1) % 1;
+        for (var i = 0; i < segs.length; i++) {
+            var seg = segs[i];
+            if (u <= seg.u1 || i === segs.length - 1) {
+                var span = Math.max(1e-6, seg.u1 - seg.u0);
+                var frac = Math.max(0, Math.min(1, (u - seg.u0) / span));
+                var t = arcFractionToBezierT(seg, frac);
+                var pt = evalCubicPt(seg.p0, seg.out0, seg.in1, seg.p1, t);
+                var dt = 0.01;
+                var pA = evalCubicPt(seg.p0, seg.out0, seg.in1, seg.p1, Math.max(0, t - dt));
+                var pB = evalCubicPt(seg.p0, seg.out0, seg.in1, seg.p1, Math.min(1, t + dt));
+                var tx = pB[0] - pA[0];
+                var ty = pB[1] - pA[1];
+                var tLen = Math.sqrt(tx * tx + ty * ty) || 1;
+                // Clockwise in screen coords (+X right, +Y down): outward normal is [ty, -tx]
+                var nx = ty / tLen;
+                var ny = -tx / tLen;
+                return { point: pt, normal: [nx, ny], segIndex: i, t: t };
+            }
+        }
+        return { point: segs[0].p0, normal: [0, -1], segIndex: 0, t: 0 };
+    }
+
+    /**
+     * Extracts an exact cubic Bézier chain along [uStart -> uEnd] clockwise around [0, 1).
+     */
+    function extractSubpathBetweenU(segs, uStartRaw, uEndRaw) {
+        var uStart = ((uStartRaw % 1) + 1) % 1;
+        var uEnd   = ((uEndRaw % 1) + 1) % 1;
+
+        function extractLinearRange(a, b) {
+            var out = [];
+            if (b <= a + 1e-6) return out;
+            for (var i = 0; i < segs.length; i++) {
+                var seg = segs[i];
+                if (seg.u1 <= a + 1e-7 || seg.u0 >= b - 1e-7) continue;
+                var span = Math.max(1e-6, seg.u1 - seg.u0);
+                var f0 = Math.max(0, Math.min(1, (a - seg.u0) / span));
+                var f1 = Math.max(0, Math.min(1, (b - seg.u0) / span));
+                if (f1 <= f0 + 1e-6) continue;
+                var t0 = arcFractionToBezierT(seg, f0);
+                var t1 = arcFractionToBezierT(seg, f1);
+                if (t0 <= 1e-5 && t1 >= 1 - 1e-5) {
+                    out.push({ p0: seg.p0, out0: seg.out0, in1: seg.in1, p1: seg.p1 });
+                } else {
+                    var firstSplit = splitCubicSegment(seg, t0);
+                    var remT = (1 - t0 > 1e-6) ? ((t1 - t0) / (1 - t0)) : 1;
+                    var secondSplit = splitCubicSegment(firstSplit.right, Math.max(0, Math.min(1, remT)));
+                    out.push(secondSplit.left);
                 }
+            }
+            return out;
+        }
+
+        if (uStart < uEnd) {
+            return extractLinearRange(uStart, uEnd);
+        }
+        var part1 = extractLinearRange(uStart, 1.0);
+        var part2 = extractLinearRange(0.0, uEnd);
+        return part1.concat(part2);
+    }
+
+    function superellipsePoint(theta, a, b, n) {
+        var ct = Math.cos(theta);
+        var st = Math.sin(theta);
+        var sc = (ct < 0) ? -1 : 1;
+        var ss = (st < 0) ? -1 : 1;
+        var exp = 2.0 / n;
+        return [
+            a * sc * Math.pow(Math.abs(ct), exp),
+            b * ss * Math.pow(Math.abs(st), exp)
+        ];
+    }
+
+    /**
+     * Builds the closed clockwise perimeter segments starting at Top-Center (0, -b)
+     * for any of the 4 Balloon Geometries: square, rounded, cloud, explosion.
+     */
+    function buildBalloonPerimeterSegments(textW, textH, cfg) {
+        var padX = cfg.padX;
+        var padY = cfg.padY;
+        var w = Math.max(24, textW + padX * 2);
+        var h = Math.max(24, textH + padY * 2);
+        var a = w / 2;
+        var b = h / 2;
+        var geom = cfg.geometry || "rounded";
+        var segs = [];
+
+        if (geom === "square" || geom === "rounded") {
+            var r = (geom === "square") ? 0 : Math.max(0, Math.min(cfg.cornerRadius || 0, a, b));
+            var K = 0.5522847498307936;
+
+            function pushLine(p0, p1) {
+                if (dist2D(p0, p1) > 0.05) {
+                    segs.push({ p0: p0, out0: [0, 0], in1: [0, 0], p1: p1 });
+                }
+            }
+
+            // Clockwise from Top-Center (0, -b)
+            pushLine([0, -b], [a - r, -b]);
+            if (r > 0.05) {
+                segs.push({ p0: [a - r, -b], out0: [r * K, 0], in1: [0, -r * K], p1: [a, -b + r] });
+            }
+            pushLine([a, -b + r], [a, b - r]);
+            if (r > 0.05) {
+                segs.push({ p0: [a, b - r], out0: [0, r * K], in1: [r * K, 0], p1: [a - r, b] });
+            }
+            pushLine([a - r, b], [-a + r, b]);
+            if (r > 0.05) {
+                segs.push({ p0: [-a + r, b], out0: [-r * K, 0], in1: [0, r * K], p1: [-a, b - r] });
+            }
+            pushLine([-a, b - r], [-a, -b + r]);
+            if (r > 0.05) {
+                segs.push({ p0: [-a, -b + r], out0: [0, -r * K], in1: [-r * K, 0], p1: [-a + r, -b] });
+            }
+            pushLine([-a + r, -b], [0, -b]);
+
+            return annotateArcLengths(segs);
+        }
+
+        // Safe superellipse inner cushion so text corners never touch cloud cusps or explosion valleys
+        var halfTW = textW / 2 + 4;
+        var halfTH = textH / 2 + 4;
+        var nExp = 2.8;
+        var A = a * 1.06;
+        var B = b * 1.06;
+        var diagCheck = Math.pow(Math.pow(halfTW / A, nExp) + Math.pow(halfTH / B, nExp), 1.0 / nExp);
+        if (diagCheck > 0.96) {
+            var scaleUp = diagCheck / 0.96;
+            A *= scaleUp;
+            B *= scaleUp;
+        }
+
+        if (geom === "cloud") {
+            var puffs = Math.max(6, Math.min(30, Math.round(cfg.cloudPuffs || 12)));
+            var depth = Math.max(4, cfg.cloudDepth || 18);
+            var cusps = [];
+            var ci;
+            for (ci = 0; ci < puffs; ci++) {
+                var ang = -Math.PI / 2 + (2 * Math.PI * ci) / puffs;
+                cusps.push(superellipsePoint(ang, A, B, nExp));
+            }
+            for (ci = 0; ci < puffs; ci++) {
+                var c0 = cusps[ci];
+                var c1 = cusps[(ci + 1) % puffs];
+                var ex = c1[0] - c0[0];
+                var ey = c1[1] - c0[1];
+                var elen = Math.sqrt(ex * ex + ey * ey) || 1;
+                var nx = ey / elen;
+                var ny = -ex / elen;
+                var midAng = -Math.PI / 2 + (2 * Math.PI * (ci + 0.5)) / puffs;
+                var lobeD = depth * (1.0 + 0.12 * Math.cos(2 * midAng));
+                segs.push({
+                    p0: c0,
+                    out0: [ex * 0.18 + nx * lobeD * 1.33, ey * 0.18 + ny * lobeD * 1.33],
+                    in1: [-ex * 0.18 + nx * lobeD * 1.33, -ey * 0.18 + ny * lobeD * 1.33],
+                    p1: c1
+                });
+            }
+            return annotateArcLengths(segs);
+        }
+
+        // Explosion / Shout
+        var spikes = Math.max(6, Math.min(40, Math.round(cfg.spikeCount || 18)));
+        var sDepth = Math.max(6, cfg.spikeDepth || 28);
+        var totalVerts = spikes * 2;
+        var pts = [];
+        var si;
+        for (si = 0; si < totalVerts; si++) {
+            var sAng = -Math.PI / 2 + (2 * Math.PI * si) / totalVerts;
+            var basePt = superellipsePoint(sAng, A, B, nExp);
+            if (si % 2 === 0) {
+                pts.push(basePt);
+            } else {
+                var rLen = Math.sqrt(basePt[0] * basePt[0] + basePt[1] * basePt[1]) || 1;
+                var rx = basePt[0] / rLen;
+                var ry = basePt[1] / rLen;
+                var mult = ((((si - 1) / 2) % 2) === 0) ? 1.12 : 0.84;
+                pts.push([basePt[0] + rx * sDepth * mult, basePt[1] + ry * sDepth * mult]);
+            }
+        }
+        for (si = 0; si < totalVerts; si++) {
+            segs.push({
+                p0: pts[si],
+                out0: [0, 0],
+                in1: [0, 0],
+                p1: pts[(si + 1) % totalVerts]
+            });
+        }
+        return annotateArcLengths(segs);
+    }
+
+    function segmentsToClosedShapeData(segs) {
+        var verts = [];
+        var inT = [];
+        var outT = [];
+        var n = segs.length;
+        for (var i = 0; i < n; i++) {
+            var prev = segs[(i - 1 + n) % n];
+            var cur  = segs[i];
+            verts.push(cur.p0);
+            inT.push(prev.in1);
+            outT.push(cur.out0);
+        }
+        return { vertices: verts, inTangents: inT, outTangents: outT, closed: true };
+    }
+
+    function circleShapeData(cx, cy, r) {
+        var k = r * 0.5522847498307936;
+        return {
+            vertices: [
+                [cx, cy - r],
+                [cx + r, cy],
+                [cx, cy + r],
+                [cx - r, cy]
+            ],
+            inTangents: [
+                [-k, 0],
+                [0, -k],
+                [k, 0],
+                [0, k]
+            ],
+            outTangents: [
+                [k, 0],
+                [0, k],
+                [-k, 0],
+                [0, -k]
+            ],
+            closed: true
+        };
+    }
+
+    /**
+     * Generates complete Balloon + Tail Shape specifications and exact outer bounds.
+     */
+    function computeBalloonAndTail(textW, textH, cfg) {
+        var segs = buildBalloonPerimeterSegments(textW, textH, cfg);
+        var tailStyle = cfg.tailStyle || "none";
+
+        var offFrac = (cfg.tailOffset || 0) / 360.0;
+        var uA = (((cfg.tailStart / 100.0) + offFrac) % 1 + 1) % 1;
+        var uB = (((cfg.tailEnd / 100.0) + offFrac) % 1 + 1) % 1;
+        var span = ((uB - uA) % 1 + 1) % 1;
+
+        // Always take the minor perimeter arc so the tail base never swallows the balloon
+        if (span > 0.5) {
+            var tmp = uA; uA = uB; uB = tmp;
+            span = 1.0 - span;
+        }
+        var uMid = (uA + span * 0.5) % 1;
+
+        if (tailStyle === "triangle" || tailStyle === "lightning") {
+            if (span < 0.025) {
+                span = 0.05;
+                uA = ((uMid - span * 0.5) % 1 + 1) % 1;
+                uB = (uMid + span * 0.5) % 1;
+            } else if (span > 0.35) {
+                span = 0.35;
+                uA = ((uMid - span * 0.5) % 1 + 1) % 1;
+                uB = (uMid + span * 0.5) % 1;
+            }
+        }
+
+        var midEval = evaluatePerimeterAtU(segs, uMid);
+        var pMid = midEval.point;
+        var nOut = midEval.normal;
+
+        // Blend outward perimeter normal with radial vector from center for smooth comic direction
+        var rLen = Math.sqrt(pMid[0] * pMid[0] + pMid[1] * pMid[1]) || 1;
+        var rx = pMid[0] / rLen;
+        var ry = pMid[1] / rLen;
+        var dirX = nOut[0] * 0.45 + rx * 0.55;
+        var dirY = nOut[1] * 0.45 + ry * 0.55;
+        var dirMag = Math.sqrt(dirX * dirX + dirY * dirY) || 1;
+        var baseOutAng = Math.atan2(dirY / dirMag, dirX / dirMag);
+        var tipAng = baseOutAng + ((cfg.tailAngle || 0) * Math.PI / 180.0);
+
+        var tailLen = Math.max(15, cfg.tailLength || 85);
+        var pTip = [
+            pMid[0] + tailLen * Math.cos(tipAng),
+            pMid[1] + tailLen * Math.sin(tipAng)
+        ];
+
+        var bodyShape = null;
+        var extraShapes = []; // { name, shapeData, filled, stroked, isLine }
+
+        if (tailStyle === "none") {
+            bodyShape = segmentsToClosedShapeData(segs);
+
+        } else if (tailStyle === "line") {
+            bodyShape = segmentsToClosedShapeData(segs);
+            extraShapes.push({
+                name: "Tail Line",
+                shapeData: {
+                    vertices: [pMid, pTip],
+                    inTangents: [[0, 0], [0, 0]],
+                    outTangents: [[0, 0], [0, 0]],
+                    closed: false
+                },
+                filled: false,
+                stroked: true,
+                isLine: true
+            });
+
+        } else if (tailStyle === "clouds") {
+            bodyShape = segmentsToClosedShapeData(segs);
+            var rBase = Math.max(9, Math.min(22, tailLen * 0.17));
+            var puffsSpec = [
+                { frac: 0.34, r: rBase },
+                { frac: 0.68, r: rBase * 0.65 },
+                { frac: 0.96, r: rBase * 0.40 }
+            ];
+            for (var pi = 0; pi < puffsSpec.length; pi++) {
+                var pf = puffsSpec[pi];
+                var cx = pMid[0] + (pTip[0] - pMid[0]) * pf.frac;
+                var cy = pMid[1] + (pTip[1] - pMid[1]) * pf.frac;
+                extraShapes.push({
+                    name: "Thought Cloud " + (pi + 1),
+                    shapeData: circleShapeData(cx, cy, pf.r),
+                    filled: true,
+                    stroked: true,
+                    isLine: false,
+                    strokeScale: (pi === 0 ? 0.9 : (pi === 1 ? 0.8 : 0.7))
+                });
+            }
+
+        } else if (tailStyle === "triangle" || tailStyle === "lightning") {
+            // Splice open perimeter chain clockwise from uB around to uA
+            var chain = extractSubpathBetweenU(segs, uB, uA);
+            if (!chain || chain.length === 0) {
+                bodyShape = segmentsToClosedShapeData(segs);
+            } else {
+                var b2 = chain[0].p0;
+                var b1 = chain[chain.length - 1].p1;
+
+                var verts = [];
+                var inT = [];
+                var outT = [];
+
+                verts.push(b2);
+                inT.push([0, 0]);
+                outT.push(chain[0].out0);
+
+                for (var m = 1; m < chain.length; m++) {
+                    verts.push(chain[m].p0);
+                    inT.push(chain[m - 1].in1);
+                    outT.push(chain[m].out0);
+                }
+
+                verts.push(b1);
+                inT.push(chain[chain.length - 1].in1);
+                outT.push([0, 0]);
+
+                if (tailStyle === "triangle") {
+                    verts.push(pTip);
+                    inT.push([0, 0]);
+                    outT.push([0, 0]);
+                } else {
+                    // Non-self-intersecting ribbon lightning bolt from B1 -> zig-zag -> pTip -> B2
+                    var midBase = [(b1[0] + b2[0]) * 0.5, (b1[1] + b2[1]) * 0.5];
+                    var vx = pTip[0] - midBase[0];
+                    var vy = pTip[1] - midBase[1];
+                    var bx = b1[0] - b2[0];
+                    var by = b1[1] - b2[1];
+                    var bDist = Math.sqrt(bx * bx + by * by) || 1;
+                    var px = bx / bDist;
+                    var py = by / bDist;
+                    var w0 = Math.max(6, bDist * 0.5);
+                    var jog = Math.max(9, tailLen * 0.14);
+
+                    var h1 = w0 * 0.56;
+                    var h2 = w0 * 0.36;
+
+                    var l1 = [midBase[0] + vx * 0.48 + px * (jog + h1),        midBase[1] + vy * 0.48 + py * (jog + h1)];
+                    var l2 = [midBase[0] + vx * 0.41 + px * (-0.35 * jog + h2), midBase[1] + vy * 0.41 + py * (-0.35 * jog + h2)];
+                    var r2 = [midBase[0] + vx * 0.35 + px * (-0.35 * jog - h2), midBase[1] + vy * 0.35 + py * (-0.35 * jog - h2)];
+                    var r1 = [midBase[0] + vx * 0.42 + px * (jog - h1),        midBase[1] + vy * 0.42 + py * (jog - h1)];
+
+                    var boltPts = [l1, l2, pTip, r2, r1];
+                    for (var bi = 0; bi < boltPts.length; bi++) {
+                        verts.push(boltPts[bi]);
+                        inT.push([0, 0]);
+                        outT.push([0, 0]);
+                    }
+                }
+
+                bodyShape = {
+                    vertices: verts,
+                    inTangents: inT,
+                    outTangents: outT,
+                    closed: true
+                };
+            }
+        }
+
+        // Compute exact bounding box across body + tail + strokes so precomp never clips
+        var minX = -textW / 2, maxX = textW / 2;
+        var minY = -textH / 2, maxY = textH / 2;
+
+        function expandWithShape(sd) {
+            if (!sd || !sd.vertices) return;
+            var nV = sd.vertices.length;
+            for (var i = 0; i < nV; i++) {
+                var p0 = sd.vertices[i];
+                minX = Math.min(minX, p0[0]); maxX = Math.max(maxX, p0[0]);
+                minY = Math.min(minY, p0[1]); maxY = Math.max(maxY, p0[1]);
+                if (sd.closed || i < nV - 1) {
+                    var j = (i + 1) % nV;
+                    var pMidSample = evalCubicPt(p0, sd.outTangents[i], sd.inTangents[j], sd.vertices[j], 0.5);
+                    minX = Math.min(minX, pMidSample[0]); maxX = Math.max(maxX, pMidSample[0]);
+                    minY = Math.min(minY, pMidSample[1]); maxY = Math.max(maxY, pMidSample[1]);
+                }
+            }
+        }
+
+        expandWithShape(bodyShape);
+        for (var ei = 0; ei < extraShapes.length; ei++) {
+            expandWithShape(extraShapes[ei].shapeData);
+        }
+
+        var maxSW = 0;
+        if (cfg.strokeStyle === "solid" || cfg.strokeStyle === "dotted") {
+            maxSW = cfg.strokeWidth || 5;
+        } else if (cfg.strokeStyle === "variable") {
+            maxSW = Math.max(cfg.strokeMinWidth || 2, cfg.strokeMaxWidth || 9);
+        } else if (tailStyle === "line") {
+            maxSW = cfg.strokeWidth || 4;
+        }
+        var margin = maxSW + 14;
+
+        return {
+            bodyShape: bodyShape,
+            extraShapes: extraShapes,
+            pMid: pMid,
+            pTip: pTip,
+            uA: uA,
+            uB: uB,
+            uMid: uMid,
+            bounds: {
+                minX: minX - margin,
+                maxX: maxX + margin,
+                minY: minY - margin,
+                maxY: maxY + margin
             }
         };
     }
 
     // -------------------------------------------------------------------------
-    // 6. Text Wrapping Algorithms (Balanced Knuth-Plass, Greedy, Pyramids, Compact)
+    // 7. Shape Layer Vector Construction (Fill + Solid / Variable / Dotted Stroke)
     // -------------------------------------------------------------------------
-    function tokenizeParagraph(paraText, lang, useHyphen, minWordLen, measurer) {
-        var rawTokens = paraText.match(/\S+/g) || [];
-        var tokens = [];
-        for (var i = 0; i < rawTokens.length; i++) {
-            var raw = rawTokens[i];
-            var parts = raw.split(NBSP);
-            var isBound = parts.length > 1;
-            var syllables = (useHyphen && !isBound) ? hyphenateWord(raw, lang, minWordLen, 3, 3) : [raw];
-            tokens.push({
-                text: raw,
-                syllables: syllables,
-                isBound: isBound,
-                width: measurer.measureAdvance(raw)
-            });
-        }
-        return tokens;
-    }
+    function populateVectorGroup(rootContents, groupName, shapeData, cfg, opts) {
+        var grp = rootContents.addProperty("ADBE Vector Group");
+        grp.name = groupName;
+        var gContents = grp.property("Contents") || grp.property("ADBE Vectors Group");
 
-    function wrapBalanced(paraText, maxW, desiredW, lang, useHyphen, minWordLen, measurer, spaceW) {
-        if (!desiredW || desiredW >= maxW) desiredW = Math.max(50, maxW - 20);
-        var tokens = tokenizeParagraph(paraText, lang, useHyphen, minWordLen, measurer);
-        if (tokens.length === 0) return [""];
+        var pathGroup = gContents.addProperty("ADBE Vector Shape - Group");
+        var shapeObj = new ShapeClass();
+        shapeObj.vertices = shapeData.vertices;
+        shapeObj.inTangents = shapeData.inTangents;
+        shapeObj.outTangents = shapeData.outTangents;
+        shapeObj.closed = Boolean(shapeData.closed);
 
-        var n = tokens.length;
-        var cost = new Array(n + 1);
-        var nextBreak = new Array(n + 1);
-        var hyphenAt = new Array(n + 1);
+        var pathProp = pathGroup.property("Path") || pathGroup.property("ADBE Vector Shape");
+        pathProp.setValue(shapeObj);
 
-        cost[n] = 0;
-        nextBreak[n] = n;
-        hyphenAt[n] = false;
-
-        for (var i = n - 1; i >= 0; i--) {
-            cost[i] = Infinity;
-            nextBreak[i] = i + 1;
-            hyphenAt[i] = false;
-            var currentLineWidth = 0;
-
-            for (var j = i; j < n; j++) {
-                var tok = tokens[j];
-                if (j === i) {
-                    currentLineWidth = tok.width;
-                } else {
-                    currentLineWidth += spaceW + tok.width;
-                }
-
-                if (currentLineWidth > maxW) {
-                    if (useHyphen && tok.syllables && tok.syllables.length > 1) {
-                        var pfx = tok.syllables[0];
-                        var pfxW = measurer.measureAdvance(pfx + "-");
-                        var testHyphenW = (j === i) ? pfxW : (currentLineWidth - tok.width + spaceW + pfxW);
-                        if (testHyphenW <= maxW) {
-                            var slackH = Math.abs(desiredW - testHyphenW);
-                            var penaltyH = (slackH * slackH) + 8000 + cost[j];
-                            if (penaltyH < cost[i]) {
-                                cost[i] = penaltyH;
-                                nextBreak[i] = j;
-                                hyphenAt[i] = true;
-                            }
-                        }
-                    }
-                    break;
-                }
-
-                var lineCost = 0;
-                var deltaDesired = currentLineWidth - desiredW;
-                if (j === n - 1) {
-                    lineCost = (currentLineWidth < desiredW * 0.25 && n > 1) ? 50000 : 0;
-                } else {
-                    lineCost = (deltaDesired <= 0) ? (deltaDesired * deltaDesired) : (deltaDesired * deltaDesired * 1.6);
-                }
-
-                var totalCost = lineCost + cost[j + 1];
-                if (totalCost < cost[i]) {
-                    cost[i] = totalCost;
-                    nextBreak[i] = j + 1;
-                    hyphenAt[i] = false;
-                }
-            }
+        var wantFill = (opts && opts.filled !== undefined) ? opts.filled : cfg.fillEnabled;
+        if (wantFill && cfg.fillEnabled) {
+            var fillProp = gContents.addProperty("ADBE Vector Graphic - Fill");
+            var fRgb = hexToRgb(cfg.fillColor);
+            var cProp = fillProp.property("Color") || fillProp.property("ADBE Vector Fill Color");
+            if (cProp) cProp.setValue([fRgb[0], fRgb[1], fRgb[2], 1]);
+            var fOp = fillProp.property("Opacity") || fillProp.property("ADBE Vector Fill Opacity");
+            if (fOp) fOp.setValue(clampNum(cfg.fillOpacity, 0, 100, 100));
         }
 
-        var resultLines = [];
-        var curr = 0;
-        while (curr < n) {
-            var nxt = nextBreak[curr];
-            var isHyp = hyphenAt[curr];
-            var lineWords = [];
-            for (var k = curr; k < (isHyp ? nxt : nxt); k++) {
-                lineWords.push(tokens[k].text);
-            }
-            if (isHyp && nxt < n) {
-                var hypTok = tokens[nxt];
-                var syl1 = hypTok.syllables[0];
-                var rest = hypTok.text.slice(syl1.length);
-                lineWords.push(syl1 + "-");
-                tokens[nxt].text = rest;
-                tokens[nxt].width = measurer.measureAdvance(rest);
-                tokens[nxt].syllables = [rest];
-                curr = nxt;
-            } else {
-                curr = nxt;
-            }
-            resultLines.push(lineWords.join(" "));
+        var isLineOnly = Boolean(opts && opts.isLine);
+        var sScale = (opts && opts.strokeScale) ? opts.strokeScale : 1.0;
+        var effStrokeStyle = cfg.strokeStyle;
+        if (isLineOnly && effStrokeStyle === "none") {
+            effStrokeStyle = "solid"; // Line tail must have a visible stroke
         }
-        return resultLines;
-    }
 
-    function wrapGreedy(paraText, maxW, desiredW, lang, useHyphen, minWordLen, measurer, spaceW) {
-        if (!desiredW || desiredW >= maxW) desiredW = Math.max(50, maxW - 20);
-        var tokens = tokenizeParagraph(paraText, lang, useHyphen, minWordLen, measurer);
-        if (tokens.length === 0) return [""];
+        if (effStrokeStyle !== "none") {
+            var strokeProp = gContents.addProperty("ADBE Vector Graphic - Stroke");
+            var sRgb = hexToRgb(cfg.strokeColor);
+            var scProp = strokeProp.property("Color") || strokeProp.property("ADBE Vector Stroke Color");
+            if (scProp) scProp.setValue([sRgb[0], sRgb[1], sRgb[2], 1]);
 
-        var lines = [];
-        var curTokens = [];
-        var curWidth = 0;
-
-        for (var i = 0; i < tokens.length; i++) {
-            var tok = tokens[i];
-            var addW = (curTokens.length === 0) ? tok.width : (spaceW + tok.width);
-
-            if (curWidth + addW <= desiredW) {
-                curTokens.push(tok.text);
-                curWidth += addW;
-            } else if (curWidth + addW <= maxW) {
-                var distBefore = Math.abs(desiredW - curWidth);
-                var distAfter = Math.abs((curWidth + addW) - desiredW);
-                if (distAfter <= distBefore || curTokens.length === 0 || curWidth < desiredW * 0.45) {
-                    curTokens.push(tok.text);
-                    curWidth += addW;
-                } else {
-                    lines.push(curTokens.join(" "));
-                    curTokens = [tok.text];
-                    curWidth = tok.width;
-                }
-            } else {
-                var hyphenated = false;
-                if (useHyphen && tok.syllables && tok.syllables.length > 1) {
-                    var s1 = tok.syllables[0];
-                    var s1W = measurer.measureAdvance(s1 + "-");
-                    var sAddW = (curTokens.length === 0) ? s1W : (spaceW + s1W);
-                    if (curWidth + sAddW <= maxW) {
-                        curTokens.push(s1 + "-");
-                        lines.push(curTokens.join(" "));
-                        var remainder = tok.text.slice(s1.length);
-                        curTokens = [remainder];
-                        curWidth = measurer.measureAdvance(remainder);
-                        hyphenated = true;
-                    }
-                }
-                if (!hyphenated) {
-                    if (curTokens.length > 0) {
-                        lines.push(curTokens.join(" "));
-                        curTokens = [tok.text];
-                        curWidth = tok.width;
-                    } else {
-                        lines.push(tok.text);
-                        curTokens = [];
-                        curWidth = 0;
-                    }
-                }
-            }
-        }
-        if (curTokens.length > 0) lines.push(curTokens.join(" "));
-        return lines;
-    }
-
-    function wrapOpticalPyramid(paraText, maxW, desiredW, lang, useHyphen, minWordLen, measurer, spaceW) {
-        if (!desiredW || desiredW >= maxW) desiredW = Math.max(50, maxW - 20);
-        var words = paraText.match(/\S+/g) || [];
-        if (words.length === 0) return [""];
-        if (words.length <= 3) return [words.join(" ")];
-
-        var stepCount = Math.min(5, Math.max(2, Math.ceil(words.length / 4)));
-        var lines = [];
-        var wordIdx = 0;
-
-        for (var step = 1; step <= stepCount; step++) {
-            var stepFraction = step / stepCount;
-            var stepTarget = Math.max(desiredW * 0.40, desiredW * stepFraction);
-            var stepMax = Math.min(maxW, stepTarget);
-            var lineWords = [];
-            var lineW = 0;
-
-            while (wordIdx < words.length) {
-                var w = words[wordIdx];
-                var wW = measurer.measureAdvance(w);
-                var testW = (lineWords.length === 0) ? wW : (lineW + spaceW + wW);
-                if (testW <= stepMax || lineWords.length === 0) {
-                    lineWords.push(w);
-                    lineW = testW;
-                    wordIdx++;
-                } else {
-                    break;
-                }
-            }
-            if (lineWords.length > 0) lines.push(lineWords.join(" "));
-            if (wordIdx >= words.length) break;
-        }
-        if (wordIdx < words.length) {
-            var remaining = [];
-            while (wordIdx < words.length) remaining.push(words[wordIdx++]);
-            lines.push(remaining.join(" "));
-        }
-        return lines;
-    }
-
-    function wrapReversePyramid(paraText, maxW, desiredW, lang, useHyphen, minWordLen, measurer, spaceW) {
-        if (!desiredW || desiredW >= maxW) desiredW = Math.max(50, maxW - 20);
-        var words = paraText.match(/\S+/g) || [];
-        if (words.length === 0) return [""];
-        if (words.length <= 3) return [words.join(" ")];
-
-        var stepCount = Math.min(5, Math.max(2, Math.ceil(words.length / 4)));
-        var lines = [];
-        var wordIdx = 0;
-
-        for (var step = 0; step < stepCount; step++) {
-            var taperRatio = 1.0 - (step * (0.55 / stepCount));
-            var stepTarget = Math.max(desiredW * 0.35, desiredW * taperRatio);
-            var stepMax = Math.min(maxW, stepTarget);
-            var lineWords = [];
-            var lineW = 0;
-
-            while (wordIdx < words.length) {
-                var w = words[wordIdx];
-                var wW = measurer.measureAdvance(w);
-                var testW = (lineWords.length === 0) ? wW : (lineW + spaceW + wW);
-                if (testW <= stepMax || lineWords.length === 0) {
-                    lineWords.push(w);
-                    lineW = testW;
-                    wordIdx++;
-                } else {
-                    break;
-                }
-            }
-            if (lineWords.length > 0) lines.push(lineWords.join(" "));
-            if (wordIdx >= words.length) break;
-        }
-        if (wordIdx < words.length) {
-            var remaining2 = [];
-            while (wordIdx < words.length) remaining2.push(words[wordIdx++]);
-            lines.push(remaining2.join(" "));
-        }
-        return lines;
-    }
-
-    function composeWrappedText(rawText, opts, measurer) {
-        if (!rawText) return "";
-        var clean = opts.removeExistingBreaks ? stripExistingLineBreaks(rawText) : rawText;
-        clean = applySemanticBindings(clean, opts.language, opts);
-
-        var spaceW = measurer.measureAdvance(" ");
-        var maxW = opts.maxWidth || 450;
-        var desiredW = opts.desiredWidth || 380;
-        var lang = opts.language || "english";
-        var useHyphen = opts.useHyphen;
-
-        var paras = clean.split(/\r\n|\r|\n/);
-        var finalLines = [];
-
-        for (var p = 0; p < paras.length; p++) {
-            var pText = trimString(paras[p]);
-            if (!pText) {
-                finalLines.push("");
-                continue;
-            }
-            var pLines = [];
-            switch (opts.method) {
-                case "balanced":
-                    pLines = wrapBalanced(pText, maxW, desiredW, lang, useHyphen, 6, measurer, spaceW);
-                    break;
-                case "greedy":
-                case "compact":
-                    pLines = wrapGreedy(pText, maxW, desiredW, lang, useHyphen, 6, measurer, spaceW);
-                    break;
-                case "pyramid":
-                    pLines = wrapOpticalPyramid(pText, maxW, desiredW, lang, useHyphen, 6, measurer, spaceW);
-                    break;
-                case "reverse_pyramid":
-                    pLines = wrapReversePyramid(pText, maxW, desiredW, lang, useHyphen, 6, measurer, spaceW);
-                    break;
-                default:
-                    pLines = wrapBalanced(pText, maxW, desiredW, lang, useHyphen, 6, measurer, spaceW);
-                    break;
-            }
-            finalLines = finalLines.concat(pLines);
-        }
-        return finalLines.join("\r");
-    }
-
-    // -------------------------------------------------------------------------
-    // 7. Non-Destructive State Storage & Revert Engine
-    // -------------------------------------------------------------------------
-    function storeOriginalState(textLayer, origText) {
-        if (!textLayer) return;
-        try {
-            var existing = readOriginalState(textLayer);
-            if (existing && existing.text) return; // Guard pristine original
-
-            var transform = textLayer.property("Transform");
-            var posProp = transform ? transform.property("Position") : null;
-            var apProp = transform ? transform.property("Anchor Point") : null;
-            var scaleProp = transform ? transform.property("Scale") : null;
-            var rotProp = transform ? (transform.property("Rotation") || transform.property("Z Rotation")) : null;
-
-            var docProp = textLayer.property("Source Text");
-            var doc = (docProp && docProp.value) ? docProp.value : null;
-
-            var r = [0, 0, 100, 50];
+            var useRoundJoin = (cfg.geometry === "rounded" || cfg.geometry === "cloud" || effStrokeStyle === "dotted");
             try {
-                var sr = textLayer.sourceRectAtTime(0, false);
-                if (sr) r = [sr.left, sr.top, sr.width, sr.height];
-            } catch (eSR) {}
+                var lcProp = strokeProp.property("Line Cap") || strokeProp.property("ADBE Vector Stroke Line Cap");
+                if (lcProp) lcProp.setValue(2); // Round Cap
+                var ljProp = strokeProp.property("Line Join") || strokeProp.property("ADBE Vector Stroke Line Join");
+                if (ljProp) ljProp.setValue(useRoundJoin ? 2 : 1); // Round or Miter
+                var mlProp = strokeProp.property("Miter Limit") || strokeProp.property("ADBE Vector Stroke Miter Limit");
+                if (mlProp) mlProp.setValue(10);
+            } catch (eCap) {}
 
-            var payload = {
-                text: origText,
-                position: posProp ? posProp.value : null,
-                anchorPoint: apProp ? apProp.value : null,
-                scale: scaleProp ? scaleProp.value : [100, 100, 100],
-                rotation: rotProp ? rotProp.value : 0,
-                fontSize: doc ? doc.fontSize : 44,
-                font: doc ? doc.font : "",
-                fillColor: (doc && doc.fillColor) ? doc.fillColor : [0, 0, 0],
-                strokeColor: (doc && doc.strokeColor) ? doc.strokeColor : [0, 0, 0],
-                strokeWidth: doc ? doc.strokeWidth : 0,
-                justification: doc ? doc.justification : 7414,
-                bounds: r
-            };
+            var swProp = strokeProp.property("Stroke Width") || strokeProp.property("ADBE Vector Stroke Width");
 
-            var fxParade = textLayer.property("ADBE Effect Parade") || textLayer.property("Effects");
-            if (fxParade) {
-                var eff = fxParade.property(EFFECT_STATE_NAME);
-                if (!eff) {
-                    try { eff = fxParade.addProperty("ADBE Slider Control"); } catch (eAdd) {}
-                }
-                if (eff) {
-                    eff.name = EFFECT_STATE_NAME;
-                    var sliderProp = eff.property("ADBE Slider Control-0001") || eff.property(1);
-                    if (sliderProp) {
-                        var jsonStr = "";
-                        try {
-                            jsonStr = encodeURIComponent(JSON.stringify(payload));
-                        } catch (eJ) {
-                            jsonStr = encodeURIComponent(origText);
-                        }
-                        sliderProp.expression = "/* ComicBubbleState:" + jsonStr + " */\nvalue;";
-                    }
-                }
-            }
+            if (effStrokeStyle === "solid") {
+                if (swProp) swProp.setValue(Math.max(0.5, (cfg.strokeWidth || 5) * sScale));
 
-            if (textLayer.comment !== undefined && (!textLayer.comment || textLayer.comment.indexOf("ComicBubble:") === -1)) {
-                textLayer.comment = "ComicBubble:" + origText;
-            }
-        } catch (eStore) {}
-    }
+            } else if (effStrokeStyle === "variable") {
+                var minW = Math.min(cfg.strokeMinWidth || 2, cfg.strokeMaxWidth || 9) * sScale;
+                var maxW = Math.max(cfg.strokeMinWidth || 2, cfg.strokeMaxWidth || 9) * sScale;
+                if (maxW < 0.5) maxW = 0.5;
+                if (swProp) swProp.setValue(maxW);
 
-    function readOriginalState(textLayer) {
-        if (!textLayer) return null;
-        try {
-            var fxParade = textLayer.property("ADBE Effect Parade") || textLayer.property("Effects");
-            if (fxParade) {
-                var eff = fxParade.property(EFFECT_STATE_NAME);
-                if (eff) {
-                    var sliderProp = eff.property("ADBE Slider Control-0001") || eff.property(1);
-                    if (sliderProp && sliderProp.expression) {
-                        var match = sliderProp.expression.match(/\/\* ComicBubbleState:(.*?) \*\//);
-                        if (match && match[1]) {
-                            var decoded = decodeURIComponent(match[1]);
-                            try { return JSON.parse(decoded); } catch (eP) { return { text: decoded }; }
+                var ratioPct = Math.max(0, Math.min(100, (minW / maxW) * 100));
+                try {
+                    var taper = strokeProp.taper || strokeProp.property("ADBE Vector Taper") || strokeProp.property("Taper");
+                    if (taper) {
+                        var pSL = taper.startLength || taper.property("ADBE Vector Taper Start Length") || taper.property("Start Length");
+                        var pEL = taper.endLength   || taper.property("ADBE Vector Taper End Length")   || taper.property("End Length");
+                        var pSW = taper.startWidth  || taper.property("ADBE Vector Taper Start Width")  || taper.property("Start Width");
+                        var pEW = taper.endWidth    || taper.property("ADBE Vector Taper End Width")    || taper.property("End Width");
+                        var pSE = taper.startEase   || taper.property("ADBE Vector Taper Start Ease")   || taper.property("Start Ease");
+                        var pEE = taper.endEase     || taper.property("ADBE Vector Taper End Ease")     || taper.property("End Ease");
+
+                        if (isLineOnly) {
+                            if (pSL) pSL.setValue(0);
+                            if (pEL) pEL.setValue(100);
+                            if (pSW) pSW.setValue(100);
+                            if (pEW) pEW.setValue(ratioPct);
+                        } else {
+                            if (pSL) pSL.setValue(50);
+                            if (pEL) pEL.setValue(50);
+                            if (pSW) pSW.setValue(ratioPct);
+                            if (pEW) pEW.setValue(ratioPct);
+                            if (pSE) pSE.setValue(25);
+                            if (pEE) pEE.setValue(25);
                         }
                     }
-                }
-            }
-            if (textLayer.comment && textLayer.comment.indexOf("ComicBubble:") === 0) {
-                return { text: textLayer.comment.slice("ComicBubble:".length) };
-            }
-        } catch (eRead) {}
-        return null;
-    }
+                } catch (eTaper) {}
 
-    function revertToOriginal(comp, textLayer) {
-        if (!comp || !textLayer) return false;
-        var state = readOriginalState(textLayer);
-        if (!state) return false;
-
-        var transform = textLayer.property("Transform");
-        var posProp = transform ? transform.property("Position") : null;
-        var apProp = transform ? transform.property("Anchor Point") : null;
-        var scaleProp = transform ? transform.property("Scale") : null;
-        var rotProp = transform ? (transform.property("Rotation") || transform.property("Z Rotation")) : null;
-
-        // Clean expressions
-        if (posProp) { try { posProp.expression = ""; posProp.expressionEnabled = false; } catch (e) {} }
-        if (apProp) { try { apProp.expression = ""; apProp.expressionEnabled = false; } catch (e) {} }
-        if (scaleProp) { try { scaleProp.expression = ""; scaleProp.expressionEnabled = false; } catch (e) {} }
-        if (rotProp) { try { rotProp.expression = ""; rotProp.expressionEnabled = false; } catch (e) {} }
-
-        // Restore values
-        if (state.anchorPoint && apProp) { try { apProp.setValue(state.anchorPoint); } catch (e) {} }
-        if (state.position && posProp) { try { posProp.setValue(state.position); } catch (e) {} }
-        if (state.scale && scaleProp) { try { scaleProp.setValue(state.scale); } catch (e) {} }
-        if (state.rotation !== undefined && rotProp) { try { rotProp.setValue(state.rotation); } catch (e) {} }
-
-        // Restore Source Text
-        var docProp = textLayer.property("Source Text");
-        if (docProp) {
-            try { docProp.expression = ""; docProp.expressionEnabled = false; } catch (eE) {}
-            if (state.text !== undefined) {
+            } else if (effStrokeStyle === "dotted") {
+                var dotW = Math.max(1, (cfg.strokeWidth || 4) * sScale);
+                if (swProp) swProp.setValue(dotW);
                 try {
-                    var doc = docProp.value;
-                    if (doc) {
-                        doc.text = state.text;
-                        if (state.fontSize) doc.fontSize = state.fontSize;
-                        if (state.font) try { doc.font = state.font; } catch (eF) {}
-                        if (state.fillColor) doc.fillColor = state.fillColor;
-                        if (state.strokeColor) doc.strokeColor = state.strokeColor;
-                        if (state.strokeWidth !== undefined) doc.strokeWidth = state.strokeWidth;
-                        if (state.justification !== undefined) doc.justification = state.justification;
-                        docProp.setValue(doc);
-                    } else {
-                        docProp.setValue(state.text);
-                    }
-                } catch (eST) {
-                    try { docProp.setValue(state.text); } catch (eST2) {}
-                }
-            }
-        }
-
-        // Delete generated Comic Bubble and Target Null layers
-        if (comp.layers) {
-            for (var i = comp.layers.length; i >= 1; i--) {
-                var l = comp.layers[i];
-                if (l && (l.name === LAYER_BUBBLE_NAME || l.name === LAYER_TARGET_NAME || l.name === "Highlight_Accent")) {
-                    try { l.remove(); } catch (eR) {}
-                }
-            }
-        }
-
-        // Remove Effect State
-        try {
-            var fxParade = textLayer.property("ADBE Effect Parade") || textLayer.property("Effects");
-            if (fxParade) {
-                var eff = fxParade.property(EFFECT_STATE_NAME);
-                if (eff) eff.remove();
-            }
-        } catch (eEff) {}
-
-        try { textLayer.comment = ""; } catch (eC) {}
-        return true;
-    }
-
-    // -------------------------------------------------------------------------
-    // 8. Procedural Comic Balloon & Tail Geometry Engine
-    // -------------------------------------------------------------------------
-    /**
-     * Generates a single closed Bézier path seamlessly uniting the balloon body
-     * and speech tail pointer.
-     */
-    function computeComicBubbleShape(w, h, bodyType, cornerRadius, burstSpikes, tailType, tailBaseW, tailAngleDeg, tailDist, tailCurvature) {
-        var a = Math.max(20, w / 2);
-        var b = Math.max(15, h / 2);
-        var meanR = (a + b) / 2;
-
-        var hasTail = (tailType && tailType !== "none" && tailType !== "thought_bubbles");
-        var rad = tailAngleDeg * (Math.PI / 180);
-        while (rad < 0) rad += 2 * Math.PI;
-        while (rad >= 2 * Math.PI) rad -= 2 * Math.PI;
-
-        // Constraint: Tail target must NOT be placed inside the bubble area!
-        // Calculate boundary distance along ray + safety clearance margin
-        var cosR = Math.cos(rad);
-        var sinR = Math.sin(rad);
-        var absCosR = Math.abs(cosR) || 0.0001;
-        var absSinR = Math.abs(sinR) || 0.0001;
-        var rBound;
-        if (bodyType === "oval") {
-            rBound = (a * b) / Math.sqrt((b * cosR) * (b * cosR) + (a * sinR) * (a * sinR));
-        } else if (bodyType === "squircle") {
-            rBound = 1 / Math.pow(Math.pow(absCosR / a, 3.2) + Math.pow(absSinR / b, 3.2), 1 / 3.2);
-        } else {
-            rBound = Math.min(a / absCosR, b / absSinR);
-        }
-        var minSafeDist = rBound + 18;
-        if (tailDist < minSafeDist) {
-            tailDist = minSafeDist;
-        }
-
-        var tipX = tailDist * cosR;
-        var tipY = tailDist * sinR;
-
-        var vertices = [];
-        var inTangents = [];
-        var outTangents = [];
-
-        // Helper: Superellipse point calculation for squircle
-        function getSquirclePoint(t, sa, sb, n) {
-            var cosT = Math.cos(t), sinT = Math.sin(t);
-            var signCos = (cosT < 0) ? -1 : 1;
-            var signSin = (sinT < 0) ? -1 : 1;
-            return [
-                sa * signCos * Math.pow(Math.abs(cosT), 2 / n),
-                sb * signSin * Math.pow(Math.abs(sinT), 2 / n)
-            ];
-        }
-
-        // ---------------------------------------------------------------------
-        // CASE 1: CLASSIC OVAL or CONVEX SQUIRCLE (Modern Graphic Novel)
-        // ---------------------------------------------------------------------
-        if (bodyType === "oval" || bodyType === "squircle") {
-            var isSquircle = (bodyType === "squircle");
-            var nExp = isSquircle ? 3.2 : 2.0;
-
-            if (!hasTail) {
-                var stepsNoTail = isSquircle ? 16 : 4;
-                if (!isSquircle) {
-                    var kappa = 0.55228475;
-                    var kx = a * kappa, ky = b * kappa;
-                    vertices = [[a, 0], [0, b], [-a, 0], [0, -b]];
-                    inTangents = [[0, -ky], [kx, 0], [0, ky], [-kx, 0]];
-                    outTangents = [[0, ky], [-kx, 0], [0, -ky], [kx, 0]];
-                    return { vertices: vertices, inTangents: inTangents, outTangents: outTangents, closed: true };
-                }
-                var dtheta = (2 * Math.PI) / stepsNoTail;
-                for (var si = 0; si < stepsNoTail; si++) {
-                    var th = si * dtheta;
-                    vertices.push(getSquirclePoint(th, a, b, nExp));
-                    var stx = -a * Math.sin(th) * (dtheta / 3);
-                    var sty = b * Math.cos(th) * (dtheta / 3);
-                    inTangents.push([-stx, -sty]);
-                    outTangents.push([stx, sty]);
-                }
-                return { vertices: vertices, inTangents: inTangents, outTangents: outTangents, closed: true };
-            }
-
-            var halfBaseAngle = Math.min(Math.PI * 0.35, Math.max(0.10, tailBaseW / (2 * meanR)));
-            var ang1 = rad - halfBaseAngle;
-            var ang2 = rad + halfBaseAngle;
-
-            var span = 2 * Math.PI - 2 * halfBaseAngle;
-            var steps = 14;
-            var dt = span / steps;
-
-            for (var i = 0; i <= steps; i++) {
-                var t = ang2 + i * dt;
-                if (isSquircle) {
-                    vertices.push(getSquirclePoint(t, a, b, nExp));
-                } else {
-                    vertices.push([a * Math.cos(t), b * Math.sin(t)]);
-                }
-                var tx = -a * Math.sin(t) * (dt / 3);
-                var ty = b * Math.cos(t) * (dt / 3);
-                inTangents.push([-tx, -ty]);
-                outTangents.push([tx, ty]);
-            }
-
-            var b1 = vertices[vertices.length - 1];
-            var b2 = vertices[0];
-
-            var v1x = tipX - b1[0], v1y = tipY - b1[1];
-            var len1 = Math.sqrt(v1x * v1x + v1y * v1y) || 1;
-            var n1x = -v1y / len1, n1y = v1x / len1;
-
-            var v2x = b2[0] - tipX, v2y = b2[1] - tipY;
-            var len2 = Math.sqrt(v2x * v2x + v2y * v2y) || 1;
-            var n2x = -v2y / len2, n2y = v2x / len2;
-
-            var curveAmount = (tailType === "straight_cone" || tailType === "side_wedge" || tailType === "wide_wedge") ? 0 : (tailCurvature * 0.40);
-
-            outTangents[outTangents.length - 1] = [v1x * 0.35 + n1x * len1 * curveAmount, v1y * 0.35 + n1y * len1 * curveAmount];
-            vertices.push([tipX, tipY]);
-            inTangents.push([-v1x * 0.25 + n1x * len1 * (curveAmount * 0.5), -v1y * 0.25 + n1y * len1 * (curveAmount * 0.5)]);
-            outTangents.push([v2x * 0.25 - n2x * len2 * (curveAmount * 0.5), v2y * 0.25 - n2y * len2 * (curveAmount * 0.5)]);
-            inTangents[0] = [-v2x * 0.35 - n2x * len2 * curveAmount, -v2y * 0.35 - n2y * len2 * curveAmount];
-
-            return { vertices: vertices, inTangents: inTangents, outTangents: outTangents, closed: true };
-        }
-
-        // ---------------------------------------------------------------------
-        // CASE 2: ACTION / SHOUT BURST (Spiky Explosion)
-        // ---------------------------------------------------------------------
-        if (bodyType === "shout") {
-            var pts = Math.max(8, Math.min(36, burstSpikes || 16));
-            var totalPts = pts * 2;
-            var rOut = Math.max(a, b) + 16;
-            var rIn = rOut * 0.62;
-
-            for (var p = 0; p < totalPts; p++) {
-                var pAng = (p * 2 * Math.PI) / totalPts;
-                var isSpike = (p % 2 === 0);
-                var radius = isSpike ? rOut : rIn;
-
-                var diffAng = Math.abs(pAng - rad);
-                if (diffAng > Math.PI) diffAng = 2 * Math.PI - diffAng;
-
-                if (hasTail && isSpike && diffAng < (Math.PI / pts)) {
-                    vertices.push([tipX, tipY]);
-                } else {
-                    vertices.push([radius * Math.cos(pAng), radius * Math.sin(pAng)]);
-                }
-                inTangents.push([0, 0]);
-                outTangents.push([0, 0]);
-            }
-            return { vertices: vertices, inTangents: inTangents, outTangents: outTangents, closed: true };
-        }
-
-        // ---------------------------------------------------------------------
-        // CASE 3: THOUGHT CLOUD (Scalloped Arcs)
-        // ---------------------------------------------------------------------
-        if (bodyType === "thought") {
-            var cloudPuffs = 12;
-            var cDt = (2 * Math.PI) / cloudPuffs;
-            for (var c = 0; c < cloudPuffs; c++) {
-                var cAng = c * cDt;
-                var cx = a * Math.cos(cAng);
-                var cy = b * Math.sin(cAng);
-                vertices.push([cx, cy]);
-                var pTanX = -a * Math.sin(cAng) * 0.28;
-                var pTanY = b * Math.cos(cAng) * 0.28;
-                inTangents.push([-pTanX, -pTanY]);
-                outTangents.push([pTanX, pTanY]);
-            }
-            return { vertices: vertices, inTangents: inTangents, outTangents: outTangents, closed: true };
-        }
-
-        // ---------------------------------------------------------------------
-        // CASE 4: ANGULAR TILTED POLYGON (Dynamic Manga Box - image_2)
-        // ---------------------------------------------------------------------
-        if (bodyType === "polygon") {
-            var v0 = [-a * 0.96, -b * 0.88];
-            var v1 = [a * 0.90, -b * 1.08];
-            var v2 = [a * 1.04, b * 0.92];
-            var v3 = [-a * 0.90, b * 1.08];
-
-            function addPolyPt(pt) {
-                vertices.push(pt);
-                inTangents.push([0, 0]);
-                outTangents.push([0, 0]);
-            }
-
-            addPolyPt(v0);
-            addPolyPt(v1);
-            addPolyPt(v2);
-
-            if (hasTail) {
-                if (tailType === "corner") {
-                    if (tipX <= 0) {
-                        var bxMid = (v2[0] + v3[0]) / 2;
-                        var byMid = (v2[1] + v3[1]) / 2;
-                        addPolyPt([bxMid, byMid]);
-                        addPolyPt([tipX, tipY]);
-                        addPolyPt([-a * 0.94, b * 0.4]);
-                    } else {
-                        addPolyPt([tipX, tipY]);
-                        addPolyPt(v3);
-                    }
-                } else if (tailType === "side_wedge") {
-                    addPolyPt(v3);
-                    if (tipX <= 0) {
-                        addPolyPt([-a * 0.92, b * 0.25]);
-                        addPolyPt([tipX, tipY]);
-                        addPolyPt([-a * 0.94, -b * 0.25]);
-                    } else {
-                        // right side wedge
-                        var lastI = vertices.length - 1;
-                        vertices.splice(lastI, 0, [a * 0.96, b * 0.25], [tipX, tipY], [a * 0.96, -b * 0.25]);
-                        inTangents.splice(lastI, 0, [0, 0], [0, 0], [0, 0]);
-                        outTangents.splice(lastI, 0, [0, 0], [0, 0], [0, 0]);
-                    }
-                } else {
-                    var bpx = Math.max(-a * 0.65, Math.min(a * 0.65, tipX));
-                    var halfWPoly = tailBaseW / 2;
-                    addPolyPt([bpx + halfWPoly, b]);
-                    addPolyPt([tipX, tipY]);
-                    addPolyPt([bpx - halfWPoly, b]);
-                    addPolyPt(v3);
-                }
-            } else {
-                addPolyPt(v3);
-            }
-
-            return { vertices: vertices, inTangents: inTangents, outTangents: outTangents, closed: true };
-        }
-
-        // ---------------------------------------------------------------------
-        // CASE 5: DOCKED FLAT-TOP BALLOON (Panel Border Bubble - image)
-        // ---------------------------------------------------------------------
-        if (bodyType === "docked") {
-            var rDock = Math.min(Math.min(a * 0.5, b * 0.5), cornerRadius || 28);
-            var KDock = 0.55228475;
-            var rKD = rDock * KDock;
-            var halfWD = tailBaseW / 2;
-
-            function addDockPt(pt, ti, to) {
-                vertices.push(pt);
-                inTangents.push(ti || [0, 0]);
-                outTangents.push(to || [0, 0]);
-            }
-
-            // Top-left sharp corner
-            addDockPt([-a, -b]);
-            // Top-right sharp corner
-            addDockPt([a, -b]);
-            // Right vertical edge down to bottom-right corner fillet
-            addDockPt([a, b - rDock]);
-            addDockPt([a - rDock, b], [0, rKD], [0, 0]);
-
-            if (hasTail) {
-                if (tailType === "corner") {
-                    if (tipX <= 0) {
-                        addDockPt([-a + rDock, b]);
-                        addDockPt([tipX, tipY]);
-                        addDockPt([-a, b - rDock]);
-                    } else {
-                        var lastIdx = vertices.length - 1;
-                        vertices[lastIdx] = [tipX, tipY];
-                        inTangents[lastIdx] = [0, 0];
-                        outTangents[lastIdx] = [0, 0];
-                        addDockPt([-a + rDock, b]);
-                        addDockPt([-a, b - rDock], [rKD, 0], [0, -rKD]);
-                    }
-                } else {
-                    var bxDock = Math.max(-a + rDock + halfWD + 8, Math.min(a - rDock - halfWD - 8, tipX));
-                    addDockPt([bxDock + halfWD, b]);
-                    addDockPt([tipX, tipY]);
-                    addDockPt([bxDock - halfWD, b]);
-                    addDockPt([-a + rDock, b]);
-                    addDockPt([-a, b - rDock], [rKD, 0], [0, -rKD]);
-                }
-            } else {
-                addDockPt([-a + rDock, b]);
-                addDockPt([-a, b - rDock], [rKD, 0], [0, -rKD]);
-            }
-
-            return { vertices: vertices, inTangents: inTangents, outTangents: outTangents, closed: true };
-        }
-
-        // ---------------------------------------------------------------------
-        // CASE 6: STEPPED TEXT-FITTED CONTOUR (Line Hugging - image_3)
-        // ---------------------------------------------------------------------
-        if (bodyType === "stepped") {
-            var rSt = Math.min(14, cornerRadius || 14);
-            var KSt = 0.55228475;
-            var rKS = rSt * KSt;
-            var w1 = a * 0.78, w2 = a * 1.02, w3 = a * 0.86;
-            var y12 = -b * 0.33, y23 = b * 0.33;
-            var halfWS = tailBaseW / 2;
-
-            function addStPt(pt, ti, to) {
-                vertices.push(pt);
-                inTangents.push(ti || [0, 0]);
-                outTangents.push(to || [0, 0]);
-            }
-
-            // Top edge
-            addStPt([-w1 + rSt, -b]);
-            addStPt([w1 - rSt, -b]);
-            // Top-right fillet
-            addStPt([w1, -b + rSt], [0, -rKS], [0, 0]);
-            // Tier 1 right edge down
-            addStPt([w1, y12 - rSt]);
-            // Step out to Tier 2
-            addStPt([w1 + rSt, y12], [-rKS, 0], [0, 0]);
-            addStPt([w2 - rSt, y12], [0, 0], [rKS, 0]);
-            addStPt([w2, y12 + rSt], [0, -rKS], [0, 0]);
-            // Tier 2 right edge down
-            addStPt([w2, y23 - rSt]);
-            // Step in to Tier 3
-            addStPt([w2 - rSt, y23], [0, 0], [-rKS, 0]);
-            addStPt([w3 + rSt, y23], [rKS, 0], [0, 0]);
-            addStPt([w3, y23 + rSt], [0, -rKS], [0, 0]);
-            // Tier 3 right edge down
-            addStPt([w3, b - rSt]);
-            // Bottom-right fillet
-            addStPt([w3 - rSt, b], [0, rKS], [0, 0]);
-
-            if (hasTail) {
-                var bxSt = Math.max(-w3 + rSt + halfWS + 6, Math.min(w3 - rSt - halfWS - 6, tipX));
-                addStPt([bxSt + halfWS, b]);
-                addStPt([tipX, tipY]);
-                addStPt([bxSt - halfWS, b]);
-            }
-
-            // Bottom-left fillet
-            addStPt([-w3 + rSt, b]);
-            addStPt([-w3, b - rSt], [rKS, 0], [0, -rKS]);
-            // Tier 3 left edge up
-            addStPt([-w3, y23 + rSt]);
-            // Step out to Tier 2
-            addStPt([-w3 - rSt, y23], [rKS, 0], [0, 0]);
-            addStPt([-w2 + rSt, y23], [0, 0], [-rKS, 0]);
-            addStPt([-w2, y23 - rSt], [0, rKS], [0, 0]);
-            // Tier 2 left edge up
-            addStPt([-w2, y12 + rSt]);
-            // Step in to Tier 1
-            addStPt([-w2 + rSt, y12], [0, 0], [rKS, 0]);
-            addStPt([-w1 - rSt, y12], [-rKS, 0], [0, 0]);
-            addStPt([-w1, y12 - rSt], [0, rKS], [0, 0]);
-            // Tier 1 left edge up
-            addStPt([-w1, -b + rSt]);
-            // Top-left fillet
-            addStPt([-w1 + rSt, -b], [0, -rKS], [0, 0]);
-
-            return { vertices: vertices, inTangents: inTangents, outTangents: outTangents, closed: true };
-        }
-
-        // ---------------------------------------------------------------------
-        // CASE 7: MODERN ROUNDED RECTANGLE / CAPTION BOX / WHISPER
-        // ---------------------------------------------------------------------
-        var r = (bodyType === "caption") ? 0 : Math.min(Math.min(a, b), cornerRadius || 28);
-        var K = 0.55228475;
-        var rK = r * K;
-        var halfW = tailBaseW / 2;
-
-        var rectPts = [
-            [-a, -b + r], [-a + r, -b],
-            [a - r, -b],  [a, -b + r],
-            [a, b - r],   [a - r, b],
-            [-a + r, b],  [-a, b - r]
-        ];
-        var rectIn = [
-            [0, -rK], [-rK, 0],
-            [0, 0],   [rK, 0],
-            [0, 0],   [0, rK],
-            [rK, 0],  [0, 0]
-        ];
-        var rectOut = [
-            [0, 0],   [rK, 0],
-            [rK, 0],  [0, 0],
-            [0, rK],  [0, 0],
-            [-rK, 0], [0, -rK]
-        ];
-
-        if (!hasTail) {
-            return { vertices: rectPts, inTangents: rectIn, outTangents: rectOut, closed: true };
-        }
-
-        // Integrated corner tail (image_5 & image_6)
-        if (tailType === "corner") {
-            for (var cvi = 0; cvi < rectPts.length; cvi++) {
-                if (tipX <= 0 && cvi === 6) { // Bottom-left corner
-                    vertices.push([-a + r, b]);
-                    inTangents.push([0, 0]); outTangents.push([0, 0]);
-                    vertices.push([tipX, tipY]);
-                    inTangents.push([0, 0]); outTangents.push([0, 0]);
-                    vertices.push([-a, b - r]);
-                    inTangents.push([0, 0]); outTangents.push([0, 0]);
-                    cvi++; // skip pt 7
-                    continue;
-                }
-                if (tipX > 0 && cvi === 4) { // Bottom-right corner
-                    vertices.push([a, b - r]);
-                    inTangents.push([0, 0]); outTangents.push([0, 0]);
-                    vertices.push([tipX, tipY]);
-                    inTangents.push([0, 0]); outTangents.push([0, 0]);
-                    vertices.push([a - r, b]);
-                    inTangents.push([0, 0]); outTangents.push([0, 0]);
-                    cvi++; // skip pt 5
-                    continue;
-                }
-                vertices.push(rectPts[cvi]);
-                inTangents.push(rectIn[cvi]);
-                outTangents.push(rectOut[cvi]);
-            }
-            return { vertices: vertices, inTangents: inTangents, outTangents: outTangents, closed: true };
-        }
-
-        // Side-pointing wedge (image_2)
-        if (tailType === "side_wedge") {
-            for (var swi = 0; swi < rectPts.length; swi++) {
-                vertices.push(rectPts[swi]);
-                inTangents.push(rectIn[swi]);
-                outTangents.push(rectOut[swi]);
-
-                if (tipX <= 0 && swi === 7) { // Left wall
-                    vertices.push([-a, -halfW]); inTangents.push([0, 0]); outTangents.push([0, 0]);
-                    vertices.push([tipX, tipY]); inTangents.push([0, 0]); outTangents.push([0, 0]);
-                    vertices.push([-a, halfW]);  inTangents.push([0, 0]); outTangents.push([0, 0]);
-                } else if (tipX > 0 && swi === 3) { // Right wall
-                    vertices.push([a, -halfW]);  inTangents.push([0, 0]); outTangents.push([0, 0]);
-                    vertices.push([tipX, tipY]); inTangents.push([0, 0]); outTangents.push([0, 0]);
-                    vertices.push([a, halfW]);   inTangents.push([0, 0]); outTangents.push([0, 0]);
-                }
-            }
-            return { vertices: vertices, inTangents: inTangents, outTangents: outTangents, closed: true };
-        }
-
-        var edgeIdx = 2; // Default bottom
-        if (rad >= Math.PI * 0.25 && rad < Math.PI * 0.75) edgeIdx = 2; // Bottom
-        else if (rad >= Math.PI * 0.75 && rad < Math.PI * 1.25) edgeIdx = 3; // Left
-        else if (rad >= Math.PI * 1.25 && rad < Math.PI * 1.75) edgeIdx = 0; // Top
-        else edgeIdx = 1; // Right
-
-        for (var vi = 0; vi < rectPts.length; vi++) {
-            vertices.push(rectPts[vi]);
-            inTangents.push(rectIn[vi]);
-            outTangents.push(rectOut[vi]);
-
-            if (edgeIdx === 2 && vi === 5) { // Bottom edge
-                var bx = Math.max(-a + r + halfW + 10, Math.min(a - r - halfW - 10, tipX));
-                vertices.push([bx + halfW, b]);
-                inTangents.push([0, 0]);
-                outTangents.push([(tipX - (bx + halfW)) * 0.3, (tipY - b) * 0.3]);
-
-                vertices.push([tipX, tipY]);
-                inTangents.push([0, 0]);
-                outTangents.push([0, 0]);
-
-                vertices.push([bx - halfW, b]);
-                inTangents.push([(tipX - (bx - halfW)) * 0.3, (tipY - b) * 0.3]);
-                outTangents.push([0, 0]);
-            } else if (edgeIdx === 0 && vi === 1) { // Top edge
-                var txPos = Math.max(-a + r + halfW + 10, Math.min(a - r - halfW - 10, tipX));
-                vertices.push([txPos - halfW, -b]);
-                inTangents.push([0, 0]);
-                outTangents.push([(tipX - (txPos - halfW)) * 0.3, (tipY - (-b)) * 0.3]);
-
-                vertices.push([tipX, tipY]);
-                inTangents.push([0, 0]);
-                outTangents.push([0, 0]);
-
-                vertices.push([txPos + halfW, -b]);
-                inTangents.push([(tipX - (txPos + halfW)) * 0.3, (tipY - (-b)) * 0.3]);
-                outTangents.push([0, 0]);
-            }
-        }
-
-        return { vertices: vertices, inTangents: inTangents, outTangents: outTangents, closed: true };
-    }
-
-    // -------------------------------------------------------------------------
-    // 8.5. Real-Time Animatable Path Expression Generator
-    // -------------------------------------------------------------------------
-    /**
-     * Generates an After Effects expression on the Path property that tracks
-     * the "🎯 Tail Target" null layer dynamically across time in real time!
-     * Animators can keyframe or drag the target null directly in the comp viewer.
-     */
-    function buildDynamicPathExpression(bodyType, tailType, cornerRadius, burstSpikes, tailBaseW, tailCurvature, padX, padY, textLayerName, targetLayerName, defaultW, defaultH) {
-        var lines = [];
-        lines.push("/* AE Comic Text Bubble - Real-time Animatable Tail Engine */");
-        lines.push("if (typeof createPath !== \"function\") {");
-        lines.push("    value;");
-        lines.push("} else {");
-        lines.push("    try {");
-        lines.push("        var targetLayer = thisComp.layer(\"" + targetLayerName + "\");");
-        lines.push("        var tipComp = targetLayer.toComp(targetLayer.anchorPoint);");
-        lines.push("        var tip = fromComp(tipComp);");
-        lines.push("        var tipX = tip[0];");
-        lines.push("        var tipY = tip[1];");
-        lines.push("        var tailDist = Math.sqrt(tipX * tipX + tipY * tipY);");
-        lines.push("        var rad = Math.atan2(tipY, tipX);");
-        lines.push("        if (rad < 0) rad += 2 * Math.PI;");
-        lines.push("        var tailAngleDeg = rad * (180 / Math.PI);");
-        lines.push("");
-        lines.push("        var bw = " + defaultW + ";");
-        lines.push("        var bh = " + defaultH + ";");
-        lines.push("        try {");
-        lines.push("            var tL = thisComp.layer(\"" + textLayerName + "\");");
-        lines.push("            var sr = tL.sourceRectAtTime(time, false);");
-        lines.push("            if (sr && sr.width > 0) {");
-        lines.push("                bw = sr.width + " + (padX * 2) + ";");
-        lines.push("                bh = sr.height + " + (padY * 2) + ";");
-        lines.push("            }");
-        lines.push("        } catch (eT) {}");
-        lines.push("");
-        lines.push("        var a = Math.max(20, bw / 2);");
-        lines.push("        var b = Math.max(15, bh / 2);");
-        lines.push("        var meanR = (a + b) / 2;");
-        lines.push("        var hasTail = (" + (tailType !== "none" && tailType !== "thought_bubbles") + ");");
-        lines.push("        var tailBaseW = " + tailBaseW + ";");
-        lines.push("        var tailCurvature = " + tailCurvature + ";");
-        lines.push("        var cornerRadius = " + cornerRadius + ";");
-        lines.push("        var burstSpikes = " + burstSpikes + ";");
-        lines.push("        var bodyType = \"" + bodyType + "\";");
-        lines.push("        var tailType = \"" + tailType + "\";");
-        lines.push("");
-        lines.push("        /* Constraint: Tail target must NOT be placed inside the bubble area! */");
-        lines.push("        var cosR = Math.cos(rad);");
-        lines.push("        var sinR = Math.sin(rad);");
-        lines.push("        var absCosR = Math.abs(cosR) || 0.0001;");
-        lines.push("        var absSinR = Math.abs(sinR) || 0.0001;");
-        lines.push("        var rBound;");
-        lines.push("        if (bodyType === \"oval\") {");
-        lines.push("            rBound = (a * b) / Math.sqrt((b * cosR) * (b * cosR) + (a * sinR) * (a * sinR));");
-        lines.push("        } else if (bodyType === \"squircle\") {");
-        lines.push("            rBound = 1 / Math.pow(Math.pow(absCosR / a, 3.2) + Math.pow(absSinR / b, 3.2), 1 / 3.2);");
-        lines.push("        } else {");
-        lines.push("            rBound = Math.min(a / absCosR, b / absSinR);");
-        lines.push("        }");
-        lines.push("        var minSafeDist = rBound + 18;");
-        lines.push("        if (tailDist < minSafeDist) {");
-        lines.push("            tailDist = minSafeDist;");
-        lines.push("            tipX = tailDist * cosR;");
-        lines.push("            tipY = tailDist * sinR;");
-        lines.push("        }");
-        lines.push("");
-        lines.push("        var vertices = [];");
-        lines.push("        var inTangents = [];");
-        lines.push("        var outTangents = [];");
-        lines.push("");
-        lines.push("        function getSquirclePoint(t, sa, sb, n) {");
-        lines.push("            var cosT = Math.cos(t), sinT = Math.sin(t);");
-        lines.push("            var signCos = (cosT < 0) ? -1 : 1;");
-        lines.push("            var signSin = (sinT < 0) ? -1 : 1;");
-        lines.push("            return [");
-        lines.push("                sa * signCos * Math.pow(Math.abs(cosT), 2 / n),");
-        lines.push("                sb * signSin * Math.pow(Math.abs(sinT), 2 / n)");
-        lines.push("            ];");
-        lines.push("        }");
-        lines.push("");
-        lines.push("        if (bodyType === \"oval\" || bodyType === \"squircle\") {");
-        lines.push("            var isSquircle = (bodyType === \"squircle\");");
-        lines.push("            var nExp = isSquircle ? 3.2 : 2.0;");
-        lines.push("            if (!hasTail) {");
-        lines.push("                var stepsNoTail = isSquircle ? 16 : 4;");
-        lines.push("                if (!isSquircle) {");
-        lines.push("                    var kappa = 0.55228475;");
-        lines.push("                    var kx = a * kappa, ky = b * kappa;");
-        lines.push("                    vertices = [[a, 0], [0, b], [-a, 0], [0, -b]];");
-        lines.push("                    inTangents = [[0, -ky], [kx, 0], [0, ky], [-kx, 0]];");
-        lines.push("                    outTangents = [[0, ky], [-kx, 0], [0, -ky], [kx, 0]];");
-        lines.push("                } else {");
-        lines.push("                    var dtheta = (2 * Math.PI) / stepsNoTail;");
-        lines.push("                    for (var si = 0; si < stepsNoTail; si++) {");
-        lines.push("                        var th = si * dtheta;");
-        lines.push("                        vertices.push(getSquirclePoint(th, a, b, nExp));");
-        lines.push("                        var stx = -a * Math.sin(th) * (dtheta / 3);");
-        lines.push("                        var sty = b * Math.cos(th) * (dtheta / 3);");
-        lines.push("                        inTangents.push([-stx, -sty]);");
-        lines.push("                        outTangents.push([stx, sty]);");
-        lines.push("                    }");
-        lines.push("                }");
-        lines.push("            } else {");
-        lines.push("                var halfBaseAngle = Math.min(Math.PI * 0.35, Math.max(0.10, tailBaseW / (2 * meanR)));");
-        lines.push("                var ang1 = rad - halfBaseAngle;");
-        lines.push("                var ang2 = rad + halfBaseAngle;");
-        lines.push("                var span = 2 * Math.PI - 2 * halfBaseAngle;");
-        lines.push("                var steps = 14;");
-        lines.push("                var dt = span / steps;");
-        lines.push("                for (var i = 0; i <= steps; i++) {");
-        lines.push("                    var t = ang2 + i * dt;");
-        lines.push("                    if (isSquircle) {");
-        lines.push("                        vertices.push(getSquirclePoint(t, a, b, nExp));");
-        lines.push("                    } else {");
-        lines.push("                        vertices.push([a * Math.cos(t), b * Math.sin(t)]);");
-        lines.push("                    }");
-        lines.push("                    var tx = -a * Math.sin(t) * (dt / 3);");
-        lines.push("                    var ty = b * Math.cos(t) * (dt / 3);");
-        lines.push("                    inTangents.push([-tx, -ty]);");
-        lines.push("                    outTangents.push([tx, ty]);");
-        lines.push("                }");
-        lines.push("                var b1 = vertices[vertices.length - 1];");
-        lines.push("                var b2 = vertices[0];");
-        lines.push("                var v1x = tipX - b1[0], v1y = tipY - b1[1];");
-        lines.push("                var len1 = Math.sqrt(v1x * v1x + v1y * v1y) || 1;");
-        lines.push("                var n1x = -v1y / len1, n1y = v1x / len1;");
-        lines.push("                var v2x = b2[0] - tipX, v2y = b2[1] - tipY;");
-        lines.push("                var len2 = Math.sqrt(v2x * v2x + v2y * v2y) || 1;");
-        lines.push("                var n2x = -v2y / len2, n2y = v2x / len2;");
-        lines.push("                var curveAmount = (tailType === \"straight_cone\" || tailType === \"side_wedge\" || tailType === \"wide_wedge\") ? 0 : (tailCurvature * 0.40);");
-        lines.push("                outTangents[outTangents.length - 1] = [v1x * 0.35 + n1x * len1 * curveAmount, v1y * 0.35 + n1y * len1 * curveAmount];");
-        lines.push("                vertices.push([tipX, tipY]);");
-        lines.push("                inTangents.push([-v1x * 0.25 + n1x * len1 * (curveAmount * 0.5), -v1y * 0.25 + n1y * len1 * (curveAmount * 0.5)]);");
-        lines.push("                outTangents.push([v2x * 0.25 - n2x * len2 * (curveAmount * 0.5), v2y * 0.25 - n2y * len2 * (curveAmount * 0.5)]);");
-        lines.push("                inTangents[0] = [-v2x * 0.35 - n2x * len2 * curveAmount, -v2y * 0.35 - n2y * len2 * curveAmount];");
-        lines.push("            }");
-        lines.push("        } else if (bodyType === \"shout\") {");
-        lines.push("            var pts = Math.max(8, Math.min(36, burstSpikes || 16));");
-        lines.push("            var totalPts = pts * 2;");
-        lines.push("            var rOut = Math.max(a, b) + 16;");
-        lines.push("            var rIn = rOut * 0.62;");
-        lines.push("            for (var p = 0; p < totalPts; p++) {");
-        lines.push("                var pAng = (p * 2 * Math.PI) / totalPts;");
-        lines.push("                var isSpike = (p % 2 === 0);");
-        lines.push("                var radius = isSpike ? rOut : rIn;");
-        lines.push("                var diffAng = Math.abs(pAng - rad);");
-        lines.push("                if (diffAng > Math.PI) diffAng = 2 * Math.PI - diffAng;");
-        lines.push("                if (hasTail && isSpike && diffAng < (Math.PI / pts)) {");
-        lines.push("                    vertices.push([tipX, tipY]);");
-        lines.push("                } else {");
-        lines.push("                    vertices.push([radius * Math.cos(pAng), radius * Math.sin(pAng)]);");
-        lines.push("                }");
-        lines.push("                inTangents.push([0, 0]);");
-        lines.push("                outTangents.push([0, 0]);");
-        lines.push("            }");
-        lines.push("        } else if (bodyType === \"thought\") {");
-        lines.push("            var cloudPuffs = 12;");
-        lines.push("            var cDt = (2 * Math.PI) / cloudPuffs;");
-        lines.push("            for (var c = 0; c < cloudPuffs; c++) {");
-        lines.push("                var cAng = c * cDt;");
-        lines.push("                var cx = a * Math.cos(cAng);");
-        lines.push("                var cy = b * Math.sin(cAng);");
-        lines.push("                vertices.push([cx, cy]);");
-        lines.push("                var pTanX = -a * Math.sin(cAng) * 0.28;");
-        lines.push("                var pTanY = b * Math.cos(cAng) * 0.28;");
-        lines.push("                inTangents.push([-pTanX, -pTanY]);");
-        lines.push("                outTangents.push([pTanX, pTanY]);");
-        lines.push("            }");
-        lines.push("        } else if (bodyType === \"polygon\") {");
-        lines.push("            var v0 = [-a * 0.96, -b * 0.88];");
-        lines.push("            var v1 = [a * 0.90, -b * 1.08];");
-        lines.push("            var v2 = [a * 1.04, b * 0.92];");
-        lines.push("            var v3 = [-a * 0.90, b * 1.08];");
-        lines.push("            function addPolyPt(pt) { vertices.push(pt); inTangents.push([0, 0]); outTangents.push([0, 0]); }");
-        lines.push("            addPolyPt(v0);");
-        lines.push("            addPolyPt(v1);");
-        lines.push("            addPolyPt(v2);");
-        lines.push("            if (hasTail) {");
-        lines.push("                if (tailType === \"corner\") {");
-        lines.push("                    if (tipX <= 0) {");
-        lines.push("                        var bxMid = (v2[0] + v3[0]) / 2;");
-        lines.push("                        var byMid = (v2[1] + v3[1]) / 2;");
-        lines.push("                        addPolyPt([bxMid, byMid]);");
-        lines.push("                        addPolyPt([tipX, tipY]);");
-        lines.push("                        addPolyPt([-a * 0.94, b * 0.4]);");
-        lines.push("                    } else {");
-        lines.push("                        addPolyPt([tipX, tipY]);");
-        lines.push("                        addPolyPt(v3);");
-        lines.push("                    }");
-        lines.push("                } else if (tailType === \"side_wedge\") {");
-        lines.push("                    addPolyPt(v3);");
-        lines.push("                    if (tipX <= 0) {");
-        lines.push("                        addPolyPt([-a * 0.92, b * 0.25]);");
-        lines.push("                        addPolyPt([tipX, tipY]);");
-        lines.push("                        addPolyPt([-a * 0.94, -b * 0.25]);");
-        lines.push("                    } else {");
-        lines.push("                        var lastI = vertices.length - 1;");
-        lines.push("                        vertices.splice(lastI, 0, [a * 0.96, b * 0.25], [tipX, tipY], [a * 0.96, -b * 0.25]);");
-        lines.push("                        inTangents.splice(lastI, 0, [0, 0], [0, 0], [0, 0]);");
-        lines.push("                        outTangents.splice(lastI, 0, [0, 0], [0, 0], [0, 0]);");
-        lines.push("                    }");
-        lines.push("                } else {");
-        lines.push("                    var bpx = Math.max(-a * 0.65, Math.min(a * 0.65, tipX));");
-        lines.push("                    var halfWPoly = tailBaseW / 2;");
-        lines.push("                    addPolyPt([bpx + halfWPoly, b]);");
-        lines.push("                    addPolyPt([tipX, tipY]);");
-        lines.push("                    addPolyPt([bpx - halfWPoly, b]);");
-        lines.push("                    addPolyPt(v3);");
-        lines.push("                }");
-        lines.push("            } else {");
-        lines.push("                addPolyPt(v3);");
-        lines.push("            }");
-        lines.push("        } else if (bodyType === \"docked\") {");
-        lines.push("            var rDock = Math.min(Math.min(a * 0.5, b * 0.5), cornerRadius || 28);");
-        lines.push("            var KDock = 0.55228475;");
-        lines.push("            var rKD = rDock * KDock;");
-        lines.push("            var halfWD = tailBaseW / 2;");
-        lines.push("            function addDockPt(pt, ti, to) { vertices.push(pt); inTangents.push(ti || [0, 0]); outTangents.push(to || [0, 0]); }");
-        lines.push("            addDockPt([-a, -b]);");
-        lines.push("            addDockPt([a, -b]);");
-        lines.push("            addDockPt([a, b - rDock]);");
-        lines.push("            addDockPt([a - rDock, b], [0, rKD], [0, 0]);");
-        lines.push("            if (hasTail) {");
-        lines.push("                if (tailType === \"corner\") {");
-        lines.push("                    if (tipX <= 0) {");
-        lines.push("                        addDockPt([-a + rDock, b]);");
-        lines.push("                        addDockPt([tipX, tipY]);");
-        lines.push("                        addDockPt([-a, b - rDock]);");
-        lines.push("                    } else {");
-        lines.push("                        var lastIdx = vertices.length - 1;");
-        lines.push("                        vertices[lastIdx] = [tipX, tipY];");
-        lines.push("                        inTangents[lastIdx] = [0, 0];");
-        lines.push("                        outTangents[lastIdx] = [0, 0];");
-        lines.push("                        addDockPt([-a + rDock, b]);");
-        lines.push("                        addDockPt([-a, b - rDock], [rKD, 0], [0, -rKD]);");
-        lines.push("                    }");
-        lines.push("                } else {");
-        lines.push("                    var bxDock = Math.max(-a + rDock + halfWD + 8, Math.min(a - rDock - halfWD - 8, tipX));");
-        lines.push("                    addDockPt([bxDock + halfWD, b]);");
-        lines.push("                    addDockPt([tipX, tipY]);");
-        lines.push("                    addDockPt([bxDock - halfWD, b]);");
-        lines.push("                    addDockPt([-a + rDock, b]);");
-        lines.push("                    addDockPt([-a, b - rDock], [rKD, 0], [0, -rKD]);");
-        lines.push("                }");
-        lines.push("            } else {");
-        lines.push("                addDockPt([-a + rDock, b]);");
-        lines.push("                addDockPt([-a, b - rDock], [rKD, 0], [0, -rKD]);");
-        lines.push("            }");
-        lines.push("        } else if (bodyType === \"stepped\") {");
-        lines.push("            var rSt = Math.min(14, cornerRadius || 14);");
-        lines.push("            var KSt = 0.55228475;");
-        lines.push("            var rKS = rSt * KSt;");
-        lines.push("            var w1 = a * 0.78, w2 = a * 1.02, w3 = a * 0.86;");
-        lines.push("            var y12 = -b * 0.33, y23 = b * 0.33;");
-        lines.push("            var halfWS = tailBaseW / 2;");
-        lines.push("            function addStPt(pt, ti, to) { vertices.push(pt); inTangents.push(ti || [0, 0]); outTangents.push(to || [0, 0]); }");
-        lines.push("            addStPt([-w1 + rSt, -b]);");
-        lines.push("            addStPt([w1 - rSt, -b]);");
-        lines.push("            addStPt([w1, -b + rSt], [0, -rKS], [0, 0]);");
-        lines.push("            addStPt([w1, y12 - rSt]);");
-        lines.push("            addStPt([w1 + rSt, y12], [-rKS, 0], [0, 0]);");
-        lines.push("            addStPt([w2 - rSt, y12], [0, 0], [rKS, 0]);");
-        lines.push("            addStPt([w2, y12 + rSt], [0, -rKS], [0, 0]);");
-        lines.push("            addStPt([w2, y23 - rSt]);");
-        lines.push("            addStPt([w2 - rSt, y23], [0, 0], [-rKS, 0]);");
-        lines.push("            addStPt([w3 + rSt, y23], [rKS, 0], [0, 0]);");
-        lines.push("            addStPt([w3, y23 + rSt], [0, -rKS], [0, 0]);");
-        lines.push("            addStPt([w3, b - rSt]);");
-        lines.push("            addStPt([w3 - rSt, b], [0, rKS], [0, 0]);");
-        lines.push("            if (hasTail) {");
-        lines.push("                var bxSt = Math.max(-w3 + rSt + halfWS + 6, Math.min(w3 - rSt - halfWS - 6, tipX));");
-        lines.push("                addStPt([bxSt + halfWS, b]);");
-        lines.push("                addStPt([tipX, tipY]);");
-        lines.push("                addStPt([bxSt - halfWS, b]);");
-        lines.push("            }");
-        lines.push("            addStPt([-w3 + rSt, b]);");
-        lines.push("            addStPt([-w3, b - rSt], [rKS, 0], [0, -rKS]);");
-        lines.push("            addStPt([-w3, y23 + rSt]);");
-        lines.push("            addStPt([-w3 - rSt, y23], [rKS, 0], [0, 0]);");
-        lines.push("            addStPt([-w2 + rSt, y23], [0, 0], [-rKS, 0]);");
-        lines.push("            addStPt([-w2, y23 - rSt], [0, rKS], [0, 0]);");
-        lines.push("            addStPt([-w2, y12 + rSt]);");
-        lines.push("            addStPt([-w2 + rSt, y12], [0, 0], [rKS, 0]);");
-        lines.push("            addStPt([-w1 - rSt, y12], [-rKS, 0], [0, 0]);");
-        lines.push("            addStPt([-w1, y12 - rSt], [0, rKS], [0, 0]);");
-        lines.push("            addStPt([-w1, -b + rSt]);");
-        lines.push("            addStPt([-w1 + rSt, -b], [0, -rKS], [0, 0]);");
-        lines.push("        } else {");
-        lines.push("            var r = (bodyType === \"caption\") ? 0 : Math.min(Math.min(a, b), cornerRadius || 28);");
-        lines.push("            var K = 0.55228475;");
-        lines.push("            var rK = r * K;");
-        lines.push("            var halfW = tailBaseW / 2;");
-        lines.push("            var rectPts = [");
-        lines.push("                [-a, -b + r], [-a + r, -b],");
-        lines.push("                [a - r, -b],  [a, -b + r],");
-        lines.push("                [a, b - r],   [a - r, b],");
-        lines.push("                [-a + r, b],  [-a, b - r]");
-        lines.push("            ];");
-        lines.push("            var rectIn = [");
-        lines.push("                [0, -rK], [-rK, 0],");
-        lines.push("                [0, 0],   [rK, 0],");
-        lines.push("                [0, 0],   [0, rK],");
-        lines.push("                [rK, 0],  [0, 0]");
-        lines.push("            ];");
-        lines.push("            var rectOut = [");
-        lines.push("                [0, 0],   [rK, 0],");
-        lines.push("                [rK, 0],  [0, 0],");
-        lines.push("                [0, rK],  [0, 0],");
-        lines.push("                [-rK, 0], [0, -rK]");
-        lines.push("            ];");
-        lines.push("            if (!hasTail) {");
-        lines.push("                vertices = rectPts; inTangents = rectIn; outTangents = rectOut;");
-        lines.push("            } else if (tailType === \"corner\") {");
-        lines.push("                for (var cvi = 0; cvi < rectPts.length; cvi++) {");
-        lines.push("                    if (tipX <= 0 && cvi === 6) {");
-        lines.push("                        vertices.push([-a + r, b]); inTangents.push([0, 0]); outTangents.push([0, 0]);");
-        lines.push("                        vertices.push([tipX, tipY]); inTangents.push([0, 0]); outTangents.push([0, 0]);");
-        lines.push("                        vertices.push([-a, b - r]); inTangents.push([0, 0]); outTangents.push([0, 0]);");
-        lines.push("                        cvi++; continue;");
-        lines.push("                    }");
-        lines.push("                    if (tipX > 0 && cvi === 4) {");
-        lines.push("                        vertices.push([a, b - r]); inTangents.push([0, 0]); outTangents.push([0, 0]);");
-        lines.push("                        vertices.push([tipX, tipY]); inTangents.push([0, 0]); outTangents.push([0, 0]);");
-        lines.push("                        vertices.push([a - r, b]); inTangents.push([0, 0]); outTangents.push([0, 0]);");
-        lines.push("                        cvi++; continue;");
-        lines.push("                    }");
-        lines.push("                    vertices.push(rectPts[cvi]); inTangents.push(rectIn[cvi]); outTangents.push(rectOut[cvi]);");
-        lines.push("                }");
-        lines.push("            } else if (tailType === \"side_wedge\") {");
-        lines.push("                for (var swi = 0; swi < rectPts.length; swi++) {");
-        lines.push("                    vertices.push(rectPts[swi]); inTangents.push(rectIn[swi]); outTangents.push(rectOut[swi]);");
-        lines.push("                    if (tipX <= 0 && swi === 7) {");
-        lines.push("                        vertices.push([-a, -halfW]); inTangents.push([0, 0]); outTangents.push([0, 0]);");
-        lines.push("                        vertices.push([tipX, tipY]); inTangents.push([0, 0]); outTangents.push([0, 0]);");
-        lines.push("                        vertices.push([-a, halfW]);  inTangents.push([0, 0]); outTangents.push([0, 0]);");
-        lines.push("                    } else if (tipX > 0 && swi === 3) {");
-        lines.push("                        vertices.push([a, -halfW]);  inTangents.push([0, 0]); outTangents.push([0, 0]);");
-        lines.push("                        vertices.push([tipX, tipY]); inTangents.push([0, 0]); outTangents.push([0, 0]);");
-        lines.push("                        vertices.push([a, halfW]);   inTangents.push([0, 0]); outTangents.push([0, 0]);");
-        lines.push("                    }");
-        lines.push("                }");
-        lines.push("            } else {");
-        lines.push("                var edgeIdx = 2;");
-        lines.push("                if (rad >= Math.PI * 0.25 && rad < Math.PI * 0.75) edgeIdx = 2;");
-        lines.push("                else if (rad >= Math.PI * 0.75 && rad < Math.PI * 1.25) edgeIdx = 3;");
-        lines.push("                else if (rad >= Math.PI * 1.25 && rad < Math.PI * 1.75) edgeIdx = 0;");
-        lines.push("                else edgeIdx = 1;");
-        lines.push("                for (var vi = 0; vi < rectPts.length; vi++) {");
-        lines.push("                    vertices.push(rectPts[vi]); inTangents.push(rectIn[vi]); outTangents.push(rectOut[vi]);");
-        lines.push("                    if (edgeIdx === 2 && vi === 5) {");
-        lines.push("                        var bx = Math.max(-a + r + halfW + 10, Math.min(a - r - halfW - 10, tipX));");
-        lines.push("                        vertices.push([bx + halfW, b]); inTangents.push([0, 0]); outTangents.push([(tipX - (bx + halfW)) * 0.3, (tipY - b) * 0.3]);");
-        lines.push("                        vertices.push([tipX, tipY]); inTangents.push([0, 0]); outTangents.push([0, 0]);");
-        lines.push("                        vertices.push([bx - halfW, b]); inTangents.push([(tipX - (bx - halfW)) * 0.3, (tipY - b) * 0.3]); outTangents.push([0, 0]);");
-        lines.push("                    } else if (edgeIdx === 0 && vi === 1) {");
-        lines.push("                        var txPos = Math.max(-a + r + halfW + 10, Math.min(a - r - halfW - 10, tipX));");
-        lines.push("                        vertices.push([txPos - halfW, -b]); inTangents.push([0, 0]); outTangents.push([(tipX - (txPos - halfW)) * 0.3, (tipY - (-b)) * 0.3]);");
-        lines.push("                        vertices.push([tipX, tipY]); inTangents.push([0, 0]); outTangents.push([0, 0]);");
-        lines.push("                        vertices.push([txPos + halfW, -b]); inTangents.push([(tipX - (txPos + halfW)) * 0.3, (tipY - (-b)) * 0.3]); outTangents.push([0, 0]);");
-        lines.push("                    }");
-        lines.push("                }");
-        lines.push("            }");
-        lines.push("        }");
-        lines.push("");
-        lines.push("        createPath(vertices, inTangents, outTangents, true);");
-        lines.push("    } catch (err) {");
-        lines.push("        value;");
-        lines.push("    }");
-        lines.push("}");
-        return lines.join("\n");
-    }
-
-    // -------------------------------------------------------------------------
-    // 9. Main Comic Bubble Creation & Rigging Engine
-    // -------------------------------------------------------------------------
-    function buildComicBubble(comp, textLayer, params) {
-        if (!comp || !textLayer) return false;
-
-        var origText = getTextLayerString(textLayer);
-        if (!origText) origText = "POW! 💥 That was incredible!\nWhat do we do next?";
-
-        // 1. Non-destructively store original properties
-        storeOriginalState(textLayer, origText);
-
-        // 2. Perform Intelligent Typography Wrap
-        var measurer = createTextMeasurer(comp, textLayer);
-        var wrappedText = composeWrappedText(origText, {
-            maxWidth: params.maxWidth,
-            desiredWidth: params.desiredWidth,
-            method: params.wrapMethod,
-            language: params.language,
-            useHyphen: params.useHyphen,
-            removeExistingBreaks: params.removeBreaks,
-            preventWidows: params.preventWidows,
-            avoidDanglingShort: params.avoidDanglingShort,
-            bindNumbers: params.bindNumbers,
-            bindHonorifics: params.bindHonorifics
-        }, measurer);
-        measurer.cleanup();
-
-        // Update Source Text on Text Layer
-        var docProp = textLayer.property("Source Text");
-        if (docProp) {
-            try {
-                var doc = docProp.value;
-                if (doc) {
-                    doc.text = wrappedText;
-                    docProp.setValue(doc);
-                } else {
-                    docProp.setValue(wrappedText);
-                }
-            } catch (eDoc) {
-                try { docProp.setValue(wrappedText); } catch (eDoc2) {}
-            }
-        }
-
-        // 3. Measure dynamic wrapped text bounding box
-        var textBounds = { left: -150, top: -40, width: 300, height: 80 };
-        try {
-            var sr = textLayer.sourceRectAtTime(comp.time || 0, false);
-            if (sr && sr.width > 0) {
-                textBounds = { left: sr.left, top: sr.top, width: sr.width, height: sr.height };
-            }
-        } catch (eSR) {}
-
-        // Calculate Bubble Dimensions with Padding
-        var padX = params.padX || 36;
-        var padY = params.padY || 26;
-        var bubbleW = textBounds.width + (padX * 2);
-        var bubbleH = textBounds.height + (padY * 2);
-
-        // Visual Center of Text Layer in local coordinates
-        var textCenterLocalX = textBounds.left + (textBounds.width / 2);
-        var textCenterLocalY = textBounds.top + (textBounds.height / 2);
-
-        var textPos = [comp.width / 2, comp.height / 2, 0];
-        try {
-            if (textLayer.transform && textLayer.transform.position) {
-                textPos = textLayer.transform.position.value;
-            }
-        } catch (eP) {}
-
-        // Constraint: Tail target must NOT be placed inside the bubble area!
-        var halfBW = bubbleW / 2;
-        var halfBH = bubbleH / 2;
-        function getSafeTailDistance(angleDeg) {
-            var radAngle = angleDeg * (Math.PI / 180);
-            var cosA = Math.cos(radAngle);
-            var sinA = Math.sin(radAngle);
-            var aCos = Math.abs(cosA) || 0.0001;
-            var aSin = Math.abs(sinA) || 0.0001;
-            var rB;
-            if (params.bodyType === "oval") {
-                rB = (halfBW * halfBH) / Math.sqrt((halfBH * cosA) * (halfBH * cosA) + (halfBW * sinA) * (halfBW * sinA));
-            } else if (params.bodyType === "squircle") {
-                rB = 1 / Math.pow(Math.pow(aCos / halfBW, 3.2) + Math.pow(aSin / halfBH, 3.2), 1 / 3.2);
-            } else {
-                rB = Math.min(halfBW / aCos, halfBH / aSin);
-            }
-            return Math.round(rB + 18);
-        }
-
-        // Check if user already moved the in-comp 🎯 Tail Target null
-        if (comp.layers) {
-            for (var clChk = 1; clChk <= comp.layers.length; clChk++) {
-                var chkL = comp.layers[clChk];
-                if (chkL && chkL.name === LAYER_TARGET_NAME && chkL.transform && chkL.transform.position) {
-                    try {
-                        var ePos = chkL.transform.position.value;
-                        var bCenterX = textPos[0] + textCenterLocalX;
-                        var bCenterY = textPos[1] + textCenterLocalY;
-                        var dX = ePos[0] - bCenterX;
-                        var dY = ePos[1] - bCenterY;
-                        var computedDist = Math.sqrt(dX * dX + dY * dY);
-                        if (computedDist > 10) {
-                            var detectedAngle = Math.round(Math.atan2(dY, dX) * (180 / Math.PI));
-                            var minSafe = getSafeTailDistance(detectedAngle);
-                            params.tailDist = Math.max(minSafe, Math.round(computedDist));
-                            params.tailAngle = detectedAngle;
-                        }
-                    } catch (eTargCalc) {}
-                    break;
-                }
-            }
-        }
-
-        // Clean up previous comic bubble layers from composition
-        if (comp.layers) {
-            for (var cl = comp.layers.length; cl >= 1; cl--) {
-                var oldL = comp.layers[cl];
-                if (oldL && (oldL.name === LAYER_BUBBLE_NAME || oldL.name === LAYER_TARGET_NAME || oldL.name === "Highlight_Accent")) {
-                    try { oldL.remove(); } catch (eR) {}
-                }
-            }
-        }
-
-        // Enforce safe initial tail placement outside bubble perimeter
-        var minInitSafe = getSafeTailDistance(params.tailAngle);
-        if (params.tailDist < minInitSafe) {
-            params.tailDist = minInitSafe;
-        }
-
-        // 4. Create Dedicated In-Comp "🎯 Tail Target" Null Layer
-        var targetNull = null;
-        var tailRad = params.tailAngle * (Math.PI / 180);
-        var targetCompX = textPos[0] + textCenterLocalX + (params.tailDist * Math.cos(tailRad));
-        var targetCompY = textPos[1] + textCenterLocalY + (params.tailDist * Math.sin(tailRad));
-
-        try {
-            if (typeof comp.layers.addNull === "function") {
-                targetNull = comp.layers.addNull();
-            } else if (typeof comp.layers.addShape === "function") {
-                targetNull = comp.layers.addShape();
-            }
-            if (targetNull) {
-                targetNull.name = LAYER_TARGET_NAME;
-                targetNull.label = 13; // Cyan label in AE
-                if (targetNull.transform && targetNull.transform.position) {
-                    targetNull.transform.position.setValue([targetCompX, targetCompY, 0]);
-                }
-            }
-        } catch (eNull) {}
-
-        // 5. Create "🗯️ Comic Bubble" Vector Shape Layer
-        var bubbleLayer = null;
-        try {
-            bubbleLayer = comp.layers.addShape();
-            bubbleLayer.name = LAYER_BUBBLE_NAME;
-            bubbleLayer.label = 11; // Orange / Comic Yellow label
-            // Place bubble immediately underneath the text layer
-            try { bubbleLayer.moveAfter(textLayer); } catch (eMove) {}
-        } catch (eShape) {
-            return false;
-        }
-
-        // Position bubble exactly at text visual center
-        var bubbleCompPos = [textPos[0] + textCenterLocalX, textPos[1] + textCenterLocalY, 0];
-        if (bubbleLayer.transform && bubbleLayer.transform.position) {
-            bubbleLayer.transform.position.setValue(bubbleCompPos);
-            if (params.liveAnimTail !== false) {
-                try {
-                    bubbleLayer.transform.position.expression = 'try {\n' +
-                        '    var tL = thisComp.layer("' + textLayer.name.replace(/"/g, '\\"') + '");\n' +
-                        '    var sr = tL.sourceRectAtTime(time, false);\n' +
-                        '    tL.toComp([sr.left + (sr.width / 2), sr.top + (sr.height / 2)]);\n' +
-                        '} catch (e) { value; }';
-                    bubbleLayer.transform.position.expressionEnabled = true;
-                } catch (ePosExpr) {}
-            }
-        }
-
-        // 6. Generate Vector Shape Bézier Path
-        var shapeData = computeComicBubbleShape(
-            bubbleW,
-            bubbleH,
-            params.bodyType,
-            params.cornerRadius,
-            params.burstSpikes,
-            params.tailType,
-            params.tailBaseW,
-            params.tailAngle,
-            params.tailDist,
-            params.tailCurvature
-        );
-
-        var contents = bubbleLayer.property("ADBE Root Vectors Group") || bubbleLayer.property("Contents");
-        var grp = contents.addProperty("ADBE Vector Group");
-        grp.name = "Comic Bubble Outline";
-        var grpContents = grp.property("ADBE Vectors Group") || grp.property("Contents");
-
-        // Add Path
-        var pathPropItem = grpContents.addProperty("ADBE Vector Shape - Path") || grpContents.addProperty("ADBE Vector Shape - Group");
-        var pathProp = pathPropItem ? (pathPropItem.property("ADBE Vector Shape") || pathPropItem.property("Path") || pathPropItem.property(1)) : null;
-
-        var ShapeClass = (typeof Shape !== "undefined") ? Shape : (globalObj.Shape || null);
-        if (ShapeClass && pathProp) {
-            try {
-                var sObj = new ShapeClass();
-                sObj.vertices = shapeData.vertices;
-                sObj.inTangents = shapeData.inTangents;
-                sObj.outTangents = shapeData.outTangents;
-                sObj.closed = true;
-                pathProp.setValue(sObj);
-            } catch (eSetPath) {}
-
-            // Attach real-time animatable tail expression
-            if (params.liveAnimTail !== false) {
-                try {
-                    var exprCode = buildDynamicPathExpression(
-                        params.bodyType,
-                        params.tailType,
-                        params.cornerRadius,
-                        params.burstSpikes,
-                        params.tailBaseW,
-                        params.tailCurvature,
-                        padX,
-                        padY,
-                        textLayer.name.replace(/"/g, '\\"'),
-                        LAYER_TARGET_NAME.replace(/"/g, '\\"'),
-                        bubbleW,
-                        bubbleH
-                    );
-                    pathProp.expression = exprCode;
-                    pathProp.expressionEnabled = true;
-                } catch (ePathExpr) {}
-            }
-        }
-
-        // If Thought Bubbles, add 3 descending thought circles
-        if ((params.tailType === "thought_bubbles" || params.bodyType === "thought") && params.tailType !== "none") {
-            var thoughtPuffs = [
-                { frac: 0.35, r: 18 },
-                { frac: 0.65, r: 11 },
-                { frac: 0.90, r: 6 }
-            ];
-            for (var tp = 0; tp < thoughtPuffs.length; tp++) {
-                var pf = thoughtPuffs[tp];
-                var pfx = (params.tailDist * pf.frac) * Math.cos(tailRad);
-                var pfy = (params.tailDist * pf.frac) * Math.sin(tailRad);
-
-                var grpPuff = contents.addProperty("ADBE Vector Group");
-                grpPuff.name = "Thought Puff " + (tp + 1);
-                var puffContents = grpPuff.property("Contents");
-                var elProp = puffContents.addProperty("ADBE Vector Shape - Ellipse");
-                if (elProp) {
-                    if (elProp.property("Size")) elProp.property("Size").setValue([pf.r * 2, pf.r * 2]);
-                    if (elProp.property("Position")) {
-                        elProp.property("Position").setValue([pfx, pfy]);
-                        if (params.liveAnimTail !== false) {
-                            try {
-                                elProp.property("Position").expression = 'try {\n' +
-                                    '    var tL = thisComp.layer("' + LAYER_TARGET_NAME.replace(/"/g, '\\"') + '");\n' +
-                                    '    var tip = fromComp(tL.toComp(tL.anchorPoint));\n' +
-                                    '    [tip[0] * ' + pf.frac + ', tip[1] * ' + pf.frac + '];\n' +
-                                    '} catch (e) { value; }';
-                                elProp.property("Position").expressionEnabled = true;
-                            } catch (ePuffExpr) {}
-                        }
-                    }
-                }
-            }
-        }
-
-        // Add Fill
-        var fill = contents.addProperty("ADBE Vector Graphic - Fill");
-        var rgbFill = hexToRgb(params.bgColor);
-        if (fill.property("Color") || fill.property("ADBE Vector Fill Color")) {
-            (fill.property("Color") || fill.property("ADBE Vector Fill Color")).setValue(rgbFill);
-        }
-        if (fill.property("Opacity")) {
-            fill.property("Opacity").setValue(params.bgOpacity);
-        }
-
-        // Add Stroke
-        if (params.strokeWidth > 0) {
-            var stroke = contents.addProperty("ADBE Vector Graphic - Stroke");
-            var rgbStroke = hexToRgb(params.strokeColor);
-            if (stroke.property("Color") || stroke.property("ADBE Vector Stroke Color")) {
-                (stroke.property("Color") || stroke.property("ADBE Vector Stroke Color")).setValue(rgbStroke);
-            }
-            if (stroke.property("Stroke Width") || stroke.property("ADBE Vector Stroke Width")) {
-                (stroke.property("Stroke Width") || stroke.property("ADBE Vector Stroke Width")).setValue(params.strokeWidth);
-            }
-            if (stroke.property("Line Join")) stroke.property("Line Join").setValue(2); // Round join
-            if (stroke.property("Line Cap")) stroke.property("Line Cap").setValue(2);  // Round cap
-            if (params.bodyType === "whisper" || params.isWhisperDashed) {
-                // Dashed stroke for whisper
-                try {
-                    var dashes = stroke.property("Dashes") || stroke.property("ADBE Vector Stroke Dashes");
-                    if (dashes && dashes.addProperty) {
+                    var dashes = strokeProp.dashes || strokeProp.property("ADBE Vector Stroke Dashes") || strokeProp.property("Dashes");
+                    if (dashes && typeof dashes.addProperty === "function") {
                         var d1 = dashes.addProperty("ADBE Vector Stroke Dash 1");
-                        if (d1) d1.setValue(10);
+                        if (d1) d1.setValue(Math.max(0.5, dotW * 0.25)); // With Round Cap, short dash renders crisp round whisper dots
                         var g1 = dashes.addProperty("ADBE Vector Stroke Gap 1");
-                        if (g1) g1.setValue(8);
+                        if (g1) g1.setValue(Math.max(dotW * 1.6, (cfg.dotGap || 12) * sScale));
                     }
                 } catch (eDash) {}
             }
         }
 
-        // 7. Optional Text Highlight Accent (from AE-Text-Highlight)
-        if (params.enableHighlight && params.highlightWords) {
-            try {
-                var grpHi = contents.addProperty("ADBE Vector Group");
-                grpHi.name = "Highlight Accent";
-                var hiContents = grpHi.property("Contents");
-                var hiRect = hiContents.addProperty("ADBE Vector Shape - Rect");
-                if (hiRect) {
-                    if (hiRect.property("Size")) hiRect.property("Size").setValue([textBounds.width * 0.5, 34]);
-                    if (hiRect.property("Position")) hiRect.property("Position").setValue([0, 10]);
-                    if (hiRect.property("Roundness")) hiRect.property("Roundness").setValue(8);
-                }
-                var hiFill = hiContents.addProperty("ADBE Vector Graphic - Fill");
-                if (hiFill && hiFill.property("Color")) {
-                    hiFill.property("Color").setValue(hexToRgb(params.highlightColor || "#FFE600"));
-                }
-                if (hiFill && hiFill.property("Opacity")) hiFill.property("Opacity").setValue(45);
-            } catch (eHi) {}
-        }
+        return grp;
+    }
 
-        // 8. Zero-Shift Anchor Point Alignment (from AE-Align-AnchorPoint)
-        if (params.animateFromTail) {
-            // Place anchor point at tail tip/origin so bubble grows outward from speaker
-            var tailLocalTip = [params.tailDist * Math.cos(tailRad), params.tailDist * Math.sin(tailRad), 0];
-            if (bubbleLayer.transform && bubbleLayer.transform.anchorPoint && bubbleLayer.transform.position) {
-                var curPos = bubbleLayer.transform.position.value;
-                bubbleLayer.transform.anchorPoint.setValue(tailLocalTip);
-                bubbleLayer.transform.position.setValue([curPos[0] + tailLocalTip[0], curPos[1] + tailLocalTip[1], 0]);
+    function createOrRebuildBalloonLayer(comp, textLayer, existingBalloon, geoResult, cfg) {
+        var balloonLayer = existingBalloon;
+        if (!balloonLayer) {
+            balloonLayer = comp.layers.addShape();
+        }
+        balloonLayer.name = BALLOON_LAYER_NAME;
+        try { balloonLayer.comment = BALLOON_LAYER_TAG; } catch (eC) {}
+        try { balloonLayer.label = 11; } catch (eL) {}
+
+        var is3D = Boolean(textLayer.threeDLayer);
+        try { balloonLayer.threeDLayer = is3D; } catch (e3D) {}
+
+        // Link Balloon as child of Text Layer, centered horizontally & vertically at [0, 0]
+        balloonLayer.parent = textLayer;
+        var tr = balloonLayer.property("Transform");
+        tr.property("Anchor Point").setValue(is3D ? [0, 0, 0] : [0, 0]);
+        tr.property("Position").setValue(is3D ? [0, 0, 0] : [0, 0]);
+        tr.property("Scale").setValue(is3D ? [100, 100, 100] : [100, 100]);
+        var rotP = tr.property("Rotation") || tr.property("Z Rotation");
+        if (rotP) rotP.setValue(0);
+
+        // Place Balloon directly behind text layer & behind any AE-Text-Highlight child layer
+        var sibs = collectSiblingChildren(comp, textLayer);
+        var lowestBelow = textLayer;
+        for (var bi = 0; bi < sibs.below.length; bi++) {
+            if (sibs.below[bi].index > lowestBelow.index) {
+                lowestBelow = sibs.below[bi];
+            }
+        }
+        try { balloonLayer.moveAfter(lowestBelow); } catch (eMv) {}
+
+        // Clear previous vector contents
+        var rootContents = balloonLayer.property("Contents") || balloonLayer.property("ADBE Root Vectors Group");
+        if (rootContents) {
+            var numP = (typeof rootContents.numProperties === "number")
+                ? rootContents.numProperties
+                : (rootContents.properties ? rootContents.properties.length : 0);
+            for (var p = numP; p >= 1; p--) {
+                var oldProp = rootContents.property(p);
+                if (oldProp && typeof oldProp.remove === "function") {
+                    try { oldProp.remove(); } catch (eRem) {}
+                }
+            }
+
+            // Add Main Balloon Body (with spliced tail if triangle/lightning)
+            populateVectorGroup(rootContents, "Balloon Body", geoResult.bodyShape, cfg, {
+                filled: true,
+                stroked: true,
+                isLine: false
+            });
+
+            // Add Extra Tail Shapes (Line or Thinking Clouds)
+            for (var ei = 0; ei < geoResult.extraShapes.length; ei++) {
+                var ex = geoResult.extraShapes[ei];
+                populateVectorGroup(rootContents, ex.name, ex.shapeData, cfg, ex);
             }
         }
 
-        // 9. Dynamic Animation In / Out Expression Engine
-        var inDur = params.inDuration || 0.35;
-        var inDelay = params.inDelay || 0.0;
-        var holdDur = params.holdDuration || 2.5;
-        var outDur = params.outDuration || 0.30;
-        var inPreset = params.animInPreset || "bounce";
-        var outPreset = params.animOutPreset || "shrink";
+        return balloonLayer;
+    }
 
-        // Procedural Scale & Opacity Expressions for Bubble Layer
-        var SCALE_EXPR = [
-            "// AE Comic Text Bubble - Dynamic In/Out Scale Engine",
-            "var t = time - " + inDelay + ";",
-            "var tIn = " + inDur + ";",
-            "var tHold = " + holdDur + ";",
-            "var tOut = " + outDur + ";",
-            "var inPreset = '" + inPreset + "';",
-            "var outPreset = '" + outPreset + "';",
-            "",
-            "if (t < 0) {",
-            "    [0, 0];",
-            "} else if (t < tIn) {",
-            "    var p = t / tIn;",
-            "    if (inPreset === 'bounce') {",
-            "        // Comic Elastic Overshoot (0% -> 118% -> 96% -> 100%)",
-            "        var s = (p === 0) ? 0 : (p === 1 ? 1 : Math.sin(p * Math.PI * 2.5) * Math.pow(1 - p, 2) * 0.4 + p);",
-            "        [s * 100, s * 100];",
-            "    } else if (inPreset === 'zoom') {",
-            "        // Explosive Zoom",
-            "        var z = Math.min(1.25, Math.pow(p, 0.45));",
-            "        [z * 100, z * 100];",
-            "    } else if (inPreset === 'fade' || inPreset === 'none') {",
-            "        [100, 100];",
-            "    } else {",
-            "        var p2 = Math.min(1, p * 1.15);",
-            "        [p2 * 100, p2 * 100];",
-            "    }",
-            "} else if (t < tIn + tHold) {",
-            "    [100, 100];",
-            "} else if (t < tIn + tHold + tOut) {",
-            "    var pOut = (t - (tIn + tHold)) / tOut;",
-            "    if (outPreset === 'shrink') {",
-            "        // Anticipation bump then quick shrink",
-            "        var bump = (pOut < 0.25) ? (1 + pOut * 0.3) : Math.max(0, 1.08 - Math.pow((pOut - 0.25) / 0.75, 2) * 1.08);",
-            "        [bump * 100, bump * 100];",
-            "    } else if (outPreset === 'puff') {",
-            "        var puffS = 1.0 + pOut * 0.25;",
-            "        [puffS * 100, puffS * 100];",
-            "    } else if (outPreset === 'none') {",
-            "        [100, 100];",
-            "    } else {",
-            "        var sOut = Math.max(0, 1 - pOut);",
-            "        [sOut * 100, sOut * 100];",
-            "    }",
-            "} else {",
-            "    (outPreset === 'none') ? [100, 100] : [0, 0];",
-            "}"
-        ].join("\n");
-
-        var OPACITY_EXPR = [
-            "// AE Comic Text Bubble - Dynamic In/Out Opacity Engine",
-            "var t = time - " + inDelay + ";",
-            "var tIn = " + inDur + ";",
-            "var tHold = " + holdDur + ";",
-            "var tOut = " + outDur + ";",
-            "var outPreset = '" + outPreset + "';",
-            "",
-            "if (t < 0) {",
-            "    0;",
-            "} else if (t < tIn) {",
-            "    Math.min(100, (t / tIn) * 100);",
-            "} else if (t < tIn + tHold) {",
-            "    100;",
-            "} else if (t < tIn + tHold + tOut) {",
-            "    var pOut = (t - (tIn + tHold)) / tOut;",
-            "    (outPreset === 'none') ? 100 : Math.max(0, (1 - pOut) * 100);",
-            "} else {",
-            "    (outPreset === 'none') ? 100 : 0;",
-            "}"
-        ].join("\n");
-
-        if (bubbleLayer.transform && bubbleLayer.transform.scale) {
-            bubbleLayer.transform.scale.expression = SCALE_EXPR;
+    // -------------------------------------------------------------------------
+    // 8. Build / Update & Remove / Reverse Orchestrator (AE-text-precomp)
+    // -------------------------------------------------------------------------
+    function moveLayerBetweenComps(layer, fromComp, toComp, targetOneBasedIdx) {
+        if (typeof layer.copyToComp === "function") {
+            layer.copyToComp(toComp);
+            var copied = getCompLayerAt(toComp, 1);
+            if (copied && targetOneBasedIdx > 1) {
+                var refLyr = getCompLayerAt(toComp, Math.min(targetOneBasedIdx, getCompLayerCount(toComp)));
+                if (refLyr && refLyr !== copied) {
+                    try { copied.moveAfter(refLyr); } catch (eM) {}
+                }
+            }
+            return copied;
         }
-        if (bubbleLayer.transform && bubbleLayer.transform.opacity) {
-            bubbleLayer.transform.opacity.expression = OPACITY_EXPR;
+        // AE_JS_builder direct LayerCollection transfer (preserves all effects, animators & children)
+        if (fromComp && fromComp.layers && toComp && toComp.layers && typeof fromComp.layers.indexOf === "function") {
+            var pos = fromComp.layers.indexOf(layer);
+            if (pos !== -1) fromComp.layers.splice(pos, 1);
+            layer.containingComp = toComp;
+            var ins = Math.max(0, Math.min(toComp.layers.length, (targetOneBasedIdx || 1) - 1));
+            toComp.layers.splice(ins, 0, layer);
+            if (fromComp.layers._notify) fromComp.layers._notify();
+            if (toComp.layers._notify) toComp.layers._notify();
+            return layer;
+        }
+        return null;
+    }
+
+    function unpackPrecompToParentComp(parentComp, precompLayer, precompItem, keepBalloon) {
+        var preIndex = precompLayer.index;
+        var preTr = precompLayer.property("Transform");
+        var prePos = preTr.property("Position").value;
+        var preScale = preTr.property("Scale").value;
+        var preRotProp = preTr.property("Rotation") || preTr.property("Z Rotation");
+        var preRot = preRotProp ? (preRotProp.value || 0) : 0;
+        var preParent = precompLayer.parent;
+        var pre3D = Boolean(precompLayer.threeDLayer);
+
+        var innerText = null;
+        var layersToExtract = [];
+        var count = getCompLayerCount(precompItem);
+        var i;
+        for (i = 1; i <= count; i++) {
+            var il = getCompLayerAt(precompItem, i);
+            if (!il) continue;
+            if (!keepBalloon && isComicBalloonShapeLayer(il)) continue;
+            if (isTextLayer(il) && !innerText) innerText = il;
+            layersToExtract.push(il);
         }
 
-        // Also animate text layer opacity/scale synchronously
-        if (textLayer.transform && textLayer.transform.opacity) {
-            textLayer.transform.opacity.expression = OPACITY_EXPR;
+        // Record parent relationships inside precomp before moving
+        var relMap = [];
+        for (i = 0; i < layersToExtract.length; i++) {
+            var srcL = layersToExtract[i];
+            relMap.push({
+                wasParentedToText: (srcL.parent === innerText),
+                isText: (srcL === innerText),
+                localPos: srcL.property("Transform").property("Position").value,
+                localAP: srcL.property("Transform").property("Anchor Point").value,
+                localScale: srcL.property("Transform").property("Scale").value
+            });
+            try { srcL.parent = null; } catch (eU) {}
         }
 
+        var movedLayers = [];
+        for (i = 0; i < layersToExtract.length; i++) {
+            var mv = moveLayerBetweenComps(layersToExtract[i], precompItem, parentComp, preIndex + i);
+            movedLayers.push(mv);
+        }
+
+        var restoredText = null;
+        var restoredBalloon = null;
+        for (i = 0; i < movedLayers.length; i++) {
+            if (relMap[i].isText) restoredText = movedLayers[i];
+            if (movedLayers[i] && isComicBalloonShapeLayer(movedLayers[i])) restoredBalloon = movedLayers[i];
+        }
+
+        if (restoredText) {
+            try { restoredText.threeDLayer = pre3D; } catch (e3) {}
+            try { restoredText.parent = preParent || null; } catch (eP) {}
+            var rTr = restoredText.property("Transform");
+            rTr.property("Position").setValue(pre3D ? [prePos[0], prePos[1], prePos[2] || 0] : [prePos[0], prePos[1]]);
+            rTr.property("Scale").setValue(pre3D ? [preScale[0], preScale[1], preScale[2] || 100] : [preScale[0], preScale[1]]);
+            var rr = rTr.property("Rotation") || rTr.property("Z Rotation");
+            if (rr) rr.setValue(preRot);
+
+            for (i = 0; i < movedLayers.length; i++) {
+                var ml = movedLayers[i];
+                if (ml && ml !== restoredText && relMap[i].wasParentedToText) {
+                    try { ml.threeDLayer = pre3D; } catch (eC3) {}
+                    ml.parent = restoredText;
+                    ml.property("Transform").property("Anchor Point").setValue(relMap[i].localAP);
+                    ml.property("Transform").property("Position").setValue(relMap[i].localPos);
+                    ml.property("Transform").property("Scale").setValue(relMap[i].localScale);
+                }
+            }
+        }
+
+        try { precompLayer.remove(); } catch (eRL) {}
+        try {
+            if (typeof precompItem.remove === "function") {
+                precompItem.remove();
+            } else if (typeof app !== "undefined" && app.project && app.project.items && typeof app.project.items.indexOf === "function") {
+                var idx = app.project.items.indexOf(precompItem);
+                if (idx !== -1) app.project.items.splice(idx, 1);
+            }
+        } catch (eRI) {}
+
+        return { textLayer: restoredText, balloonLayer: restoredBalloon };
+    }
+
+    function executeBuildOrUpdate(cfg, preferredHex) {
+        var ctx = ensureTargetOrSampleText();
+        if (!ctx || ctx.mode === "none") {
+            throw new Error("Please select an existing Text Layer (or Comic Balloon) in an active composition.");
+        }
+
+        var comp = ctx.comp;
+
+        // Case 1: Existing Precomp Selected & Make Precomp is STILL ON -> Fast In-Place Update!
+        if (ctx.mode === "precomp" && cfg.makePrecomp) {
+            var pLayer = ctx.precompLayer;
+            var pItem  = ctx.precompItem;
+            var innerText = ctx.textLayer;
+
+            var existingEnv = readLayerStateEffect(pLayer) || readLayerStateEffect(innerText) || {};
+            var origRec = existingEnv.orig || capturePristineTextState(innerText);
+            var hexCode = existingEnv.precompHex || preferredHex || generateHexId(4);
+
+            var centered = centerTextAnchorZeroShift(pItem, innerText, origRec);
+            var geo = computeBalloonAndTail(centered.bounds.width, centered.bounds.height, cfg);
+
+            var halfW = Math.max(20, Math.ceil(Math.max(Math.abs(geo.bounds.minX), Math.abs(geo.bounds.maxX))));
+            var halfH = Math.max(20, Math.ceil(Math.max(Math.abs(geo.bounds.minY), Math.abs(geo.bounds.maxY))));
+            var newW = halfW * 2;
+            var newH = halfH * 2;
+
+            pItem.width = newW;
+            pItem.height = newH;
+
+            innerText.property("Transform").property("Position").setValue([newW / 2, newH / 2]);
+            innerText.property("Transform").property("Scale").setValue([100, 100]);
+            var iRot = innerText.property("Transform").property("Rotation") || innerText.property("Transform").property("Z Rotation");
+            if (iRot) iRot.setValue(0);
+
+            createOrRebuildBalloonLayer(pItem, innerText, ctx.balloonLayer, geo, cfg);
+
+            var pAnchorProp = pLayer.property("Transform").property("Anchor Point");
+            if (pLayer.threeDLayer) {
+                pAnchorProp.setValue([newW / 2, newH / 2, 0]);
+            } else {
+                pAnchorProp.setValue([newW / 2, newH / 2]);
+            }
+
+            var envUpdate = { version: 2, precompHex: hexCode, orig: origRec, config: cfg };
+            writeLayerStateEffect(innerText, envUpdate);
+            writeLayerStateEffect(pLayer, envUpdate);
+
+            if (pItem._notify) pItem._notify();
+            if (comp._notify) comp._notify();
+
+            return { precompName: pItem.name, precompHex: hexCode, isUpdate: true, mode: "precomp" };
+        }
+
+        // Case 2: Existing Precomp Selected, but user unchecked Make Precomp -> Unpack first!
+        var targetText = ctx.textLayer;
+        var targetBalloon = ctx.balloonLayer;
+        var priorEnv = null;
+
+        if (ctx.mode === "precomp" && !cfg.makePrecomp) {
+            priorEnv = readLayerStateEffect(ctx.precompLayer) || readLayerStateEffect(ctx.textLayer);
+            var unpacked = unpackPrecompToParentComp(comp, ctx.precompLayer, ctx.precompItem, true);
+            targetText = unpacked.textLayer;
+            targetBalloon = unpacked.balloonLayer;
+        } else {
+            priorEnv = readLayerStateEffect(targetText);
+        }
+
+        if (!targetText) {
+            throw new Error("Could not locate target text layer.");
+        }
+
+        var isUpdateRun = Boolean(priorEnv && priorEnv.orig);
+        var origState = isUpdateRun ? priorEnv.orig : capturePristineTextState(targetText);
+        var activeHex = (priorEnv && priorEnv.precompHex) ? priorEnv.precompHex : (preferredHex || generateHexId(4));
+
+        // Center Anchor Point of Text Layer (Zero-Shift)
+        var cInfo = centerTextAnchorZeroShift(comp, targetText, origState);
+
+        // Build Balloon + Tail Geometry & linked child Shape Layer
+        var geoData = computeBalloonAndTail(cInfo.bounds.width, cInfo.bounds.height, cfg);
+        targetBalloon = createOrRebuildBalloonLayer(comp, targetText, targetBalloon, geoData, cfg);
+
+        var env = { version: 2, precompHex: activeHex, orig: origState, config: cfg };
+        writeLayerStateEffect(targetText, env);
+
+        // If Make Precomp is OFF, keep in current comp with Balloon linked as child
+        if (!cfg.makePrecomp) {
+            try {
+                var cLen = getCompLayerCount(comp);
+                for (var s = 1; s <= cLen; s++) getCompLayerAt(comp, s).selected = false;
+                targetText.selected = true;
+            } catch (eSel) {}
+            if (comp._notify) comp._notify();
+            return { precompName: null, precompHex: activeHex, isUpdate: isUpdateRun, mode: "text" };
+        }
+
+        // Case 3: Precompose Text + Child Balloon (+ any Emoji / Highlight children) into "comic balloon <HEX>"
+        var preTr = targetText.property("Transform");
+        var outerPos   = preTr.property("Position").value;
+        var outerScale = preTr.property("Scale").value;
+        var outerRotP  = preTr.property("Rotation") || preTr.property("Z Rotation");
+        var outerRot   = outerRotP ? (outerRotP.value || 0) : 0;
+        var outerParent = targetText.parent;
+        var outer3D    = Boolean(targetText.threeDLayer);
+
+        var halfCW = Math.max(20, Math.ceil(Math.max(Math.abs(geoData.bounds.minX), Math.abs(geoData.bounds.maxX))));
+        var halfCH = Math.max(20, Math.ceil(Math.max(Math.abs(geoData.bounds.minY), Math.abs(geoData.bounds.maxY))));
+        var preW = halfCW * 2;
+        var preH = halfCH * 2;
+
+        var sibGroup = collectSiblingChildren(comp, targetText);
+        var indicesToPrecomp = [];
+        var si;
+        for (si = 0; si < sibGroup.above.length; si++) indicesToPrecomp.push(sibGroup.above[si].index);
+        indicesToPrecomp.push(targetText.index);
+        for (si = 0; si < sibGroup.below.length; si++) indicesToPrecomp.push(sibGroup.below[si].index);
+        indicesToPrecomp.push(targetBalloon.index);
+        indicesToPrecomp.sort(function (a, b) { return a - b; });
+
+        var precompName = generateUniquePrecompName(activeHex);
+        var actualHex = precompName.replace(/^comic balloon\s+/i, "");
+        env.precompHex = actualHex;
+
+        var insertSlot = indicesToPrecomp[0];
+        var precompItem = comp.layers.precompose(indicesToPrecomp, precompName, true);
+        precompItem.width = preW;
+        precompItem.height = preH;
+
+        // Inside precompItem: place centered textLayer at [preW/2, preH/2] with neutral local scale/rot
+        var innerTxt = null;
+        var innerCnt = getCompLayerCount(precompItem);
+        for (si = 1; si <= innerCnt; si++) {
+            var cand = getCompLayerAt(precompItem, si);
+            if (isTextLayer(cand)) { innerTxt = cand; break; }
+        }
+        if (innerTxt) {
+            try { innerTxt.threeDLayer = false; } catch (eI3) {}
+            var iTr = innerTxt.property("Transform");
+            iTr.property("Position").setValue([preW / 2, preH / 2]);
+            iTr.property("Scale").setValue([100, 100]);
+            var ir = iTr.property("Rotation") || iTr.property("Z Rotation");
+            if (ir) ir.setValue(0);
+            writeLayerStateEffect(innerTxt, env);
+        }
+        for (si = 1; si <= innerCnt; si++) {
+            var ch = getCompLayerAt(precompItem, si);
+            if (ch && ch !== innerTxt) {
+                try { ch.threeDLayer = false; } catch (eCh3) {}
+            }
+        }
+
+        // Configure precomp layer in parent comp with Zero-Shift visual lock
+        var precompLayer = getCompLayerAt(comp, insertSlot) || comp.layers.byName(precompName);
+        if (precompLayer) {
+            try { precompLayer.threeDLayer = outer3D; } catch (eP3) {}
+            try { if (precompLayer.canSetCollapseTransformation) precompLayer.collapseTransformation = true; } catch (eCT) {}
+            var pTr = precompLayer.property("Transform");
+            pTr.property("Anchor Point").setValue(outer3D ? [preW / 2, preH / 2, 0] : [preW / 2, preH / 2]);
+            pTr.property("Position").setValue(outer3D ? [outerPos[0], outerPos[1], outerPos[2] || 0] : [outerPos[0], outerPos[1]]);
+            pTr.property("Scale").setValue(outer3D ? [outerScale[0], outerScale[1], outerScale[2] || 100] : [outerScale[0], outerScale[1]]);
+            var pr = pTr.property("Rotation") || pTr.property("Z Rotation");
+            if (pr) pr.setValue(outerRot);
+            if (outerParent) {
+                try { precompLayer.parent = outerParent; } catch (ePP) {}
+            }
+            writeLayerStateEffect(precompLayer, env);
+
+            try {
+                var tot = getCompLayerCount(comp);
+                for (si = 1; si <= tot; si++) getCompLayerAt(comp, si).selected = false;
+                precompLayer.selected = true;
+            } catch (eSel2) {}
+        }
+
+        if (precompItem._notify) precompItem._notify();
+        if (comp._notify) comp._notify();
+
+        return { precompName: precompName, precompHex: actualHex, isUpdate: isUpdateRun, mode: "precomp" };
+    }
+
+    /**
+     * Reverses the entire Comic Balloon process:
+     *   - Unpacks precomposition if precomposed
+     *   - Removes the Balloon layer
+     *   - Restores original text box, content, and transform properties from Effects
+     */
+    function executeRemoveAndReverse() {
+        var ctx = resolveTargetContext(true);
+        if (!ctx || ctx.mode === "none") {
+            throw new Error("No Comic Balloon or Text Layer found to revert.");
+        }
+
+        var comp = ctx.comp;
+        var textLayer = null;
+        var env = null;
+
+        if (ctx.mode === "precomp") {
+            env = readLayerStateEffect(ctx.precompLayer) || readLayerStateEffect(ctx.textLayer);
+            var unpacked = unpackPrecompToParentComp(comp, ctx.precompLayer, ctx.precompItem, false);
+            textLayer = unpacked.textLayer;
+        } else {
+            textLayer = ctx.textLayer;
+            env = readLayerStateEffect(textLayer);
+            if (ctx.balloonLayer) {
+                try { ctx.balloonLayer.remove(); } catch (eRB) {}
+            }
+            // Remove any extra child balloon layers attached to textLayer
+            var extraB = findChildBalloonForText(comp, textLayer);
+            while (extraB) {
+                try { extraB.remove(); } catch (eEB) { break; }
+                extraB = findChildBalloonForText(comp, textLayer);
+            }
+        }
+
+        if (textLayer) {
+            if (env && env.orig) {
+                restoreTextLayerFromOrigState(comp, textLayer, env.orig);
+            } else {
+                removeStateEffectsFromLayer(textLayer);
+            }
+            try {
+                var tot = getCompLayerCount(comp);
+                for (var i = 1; i <= tot; i++) getCompLayerAt(comp, i).selected = false;
+                textLayer.selected = true;
+            } catch (eS) {}
+        }
+
+        if (comp._notify) comp._notify();
         return true;
     }
 
     // -------------------------------------------------------------------------
-    // 10. ScriptUI User Interface
+    // 9. Color Picker Helper (Native AE $.colorPicker + Web Simulator Picker)
+    // -------------------------------------------------------------------------
+    function createColorPickerRow(parent, labelStr, defaultHex, onColorChanged) {
+        var grp = parent.add("group");
+        grp.orientation = "row";
+        grp.alignChildren = ["left", "center"];
+        grp.spacing = 6;
+
+        var lbl = grp.add("statictext", undefined, labelStr);
+        lbl.preferredSize = [86, -1];
+
+        var btnSwatch = grp.add("button", undefined, "");
+        btnSwatch.preferredSize = [34, 22];
+        btnSwatch.helpTip = "Click to open color picker";
+
+        var txtHex = grp.add("edittext", undefined, defaultHex);
+        txtHex.preferredSize = [74, 22];
+        txtHex.characters = 7;
+
+        var picker = {
+            group: grp,
+            value: defaultHex,
+            setColor: null
+        };
+
+        btnSwatch.onDraw = function () {
+            try {
+                var g = this.graphics;
+                var rgb = hexToRgb(picker.value);
+                var brush = g.newBrush(g.BrushType.SOLID_COLOR, [rgb[0], rgb[1], rgb[2], 1.0]);
+                var pen = g.newPen(g.PenType.SOLID_COLOR, [0.55, 0.55, 0.55, 1.0], 1);
+                g.newPath();
+                g.rectPath(0, 0, this.size ? this.size[0] : 34, this.size ? this.size[1] : 22);
+                g.fillPath(brush);
+                g.strokePath(pen);
+            } catch (e) {}
+        };
+
+        function setColor(hexStr, fireCallback) {
+            if (!hexStr) return;
+            var clean = trimStr(hexStr).toUpperCase();
+            if (clean.charAt(0) !== "#") clean = "#" + clean;
+            if (!/^#[0-9A-F]{6}$/.test(clean)) return;
+
+            picker.value = clean;
+            txtHex.text = clean;
+
+            try { if (btnSwatch.notify) btnSwatch.notify("onDraw"); } catch (eN) {}
+            try {
+                // Trigger background color in AE_JS_builder
+                btnSwatch.graphics.newBrush(btnSwatch.graphics.BrushType.SOLID_COLOR, hexToRgb(clean));
+            } catch (eG) {}
+            if (btnSwatch.domElement) {
+                btnSwatch.domElement.style.backgroundColor = clean;
+                btnSwatch.domElement.style.border = "1px solid #888";
+            }
+            if (fireCallback && typeof onColorChanged === "function") {
+                onColorChanged(clean);
+            }
+        }
+        picker.setColor = setColor;
+
+        btnSwatch.onClick = function () {
+            var cur = picker.value || "#FFFFFF";
+            if (typeof window !== "undefined" && typeof window.openWindowsColorPicker === "function") {
+                window.openWindowsColorPicker(cur, function (picked) {
+                    setColor(picked, true);
+                });
+                return;
+            }
+            if (typeof $.colorPicker === "function") {
+                var res = $.colorPicker(parseInt(cur.replace("#", ""), 16));
+                if (res !== -1 && res !== undefined && res !== null) {
+                    var hs = Number(res).toString(16);
+                    while (hs.length < 6) hs = "0" + hs;
+                    setColor("#" + hs, true);
+                }
+            }
+        };
+
+        txtHex.onChange = function () {
+            var v = trimStr(txtHex.text).toUpperCase();
+            if (v.charAt(0) !== "#") v = "#" + v;
+            if (/^#[0-9A-F]{6}$/.test(v)) {
+                setColor(v, true);
+            } else {
+                txtHex.text = picker.value;
+            }
+        };
+
+        setColor(defaultHex, false);
+        return picker;
+    }
+
+    function createSliderRow(parent, labelStr, defVal, minVal, maxVal, unitStr, onValueChanged) {
+        var grp = parent.add("group");
+        grp.orientation = "row";
+        grp.alignment = ["fill", "top"];
+        grp.alignChildren = ["left", "center"];
+        grp.spacing = 6;
+
+        var lbl = grp.add("statictext", undefined, labelStr);
+        lbl.preferredSize = [95, -1];
+
+        var sld = grp.add("slider", undefined, defVal, minVal, maxVal);
+        sld.minvalue = minVal;
+        sld.maxvalue = maxVal;
+        sld.value = defVal;
+        sld.alignment = ["fill", "center"];
+
+        var txt = grp.add("edittext", undefined, String(defVal));
+        txt.preferredSize = [42, 20];
+
+        if (unitStr) {
+            var uLbl = grp.add("statictext", undefined, unitStr);
+            uLbl.preferredSize = [18, -1];
+        }
+
+        function setVal(v, notify) {
+            var clamped = clampNum(v, minVal, maxVal, defVal);
+            var rounded = (Math.abs(clamped - Math.round(clamped)) < 0.05) ? Math.round(clamped) : (Math.round(clamped * 10) / 10);
+            sld.value = rounded;
+            txt.text = String(rounded);
+            if (notify && typeof onValueChanged === "function") onValueChanged(rounded);
+        }
+
+        sld.onChanging = sld.onChange = function () {
+            var r = Math.round(sld.value);
+            txt.text = String(r);
+            if (typeof onValueChanged === "function") onValueChanged(r);
+        };
+
+        txt.onChange = function () {
+            setVal(txt.text, true);
+        };
+
+        return {
+            group: grp,
+            slider: sld,
+            edittext: txt,
+            getValue: function () { return clampNum(txt.text, minVal, maxVal, defVal); },
+            setValue: setVal
+        };
+    }
+
+    // -------------------------------------------------------------------------
+    // 10. Ground-Up ScriptUI Interface Construction
+    //     Layout Order:
+    //       1. Presets (Very Top: Dropdown + Store, Rename, Delete, Open, Download)
+    //       2. Tabs: [ Balloon ]  [ Tail ]  [ Appearance ]
+    //       3. Bottom: Precomp Option + [ Build / Update ] + [ Remove Balloon ]
     // -------------------------------------------------------------------------
     function buildUI(thisObj) {
-        var isDockable = (typeof Panel !== "undefined" && thisObj instanceof Panel);
-        var WinClass = (typeof Window !== "undefined") ? Window : (globalObj.Window || null);
-        var win = isDockable ? thisObj : (WinClass ? new WinClass("palette", SCRIPT_TITLE + " " + SCRIPT_VERSION, undefined, { resizeable: true }) : null);
-        if (!win) return null;
+        var win = (thisObj instanceof Panel)
+            ? thisObj
+            : new Window("palette", SCRIPT_NAME + " " + SCRIPT_VERSION, undefined, { resizeable: true });
 
         win.orientation = "column";
         win.alignChildren = ["fill", "top"];
-        win.spacing = 5;
-        win.margins = [6, 6, 6, 6];
+        win.spacing = 6;
+        win.margins = 8;
 
-        // --- Header Panel ---
-        var pnlHeader = win.add("panel", undefined, SCRIPT_TITLE + " " + SCRIPT_VERSION);
-        pnlHeader.orientation = "column";
-        pnlHeader.alignChildren = ["fill", "top"];
-        pnlHeader.spacing = 2;
-        pnlHeader.margins = [6, 4, 6, 4];
-
-        var lblSub = pnlHeader.add("statictext", undefined, "Parametric Comic Balloon Maker with Drag & Drop Tail & Text Wrap");
-        try {
-            lblSub.graphics.foregroundColor = win.graphics.newPen(win.graphics.PenType.SOLID_COLOR, [0.98, 0.75, 0.15, 1.0], 1);
-        } catch (eG) {}
-
-        // --- Target Text Layer Detection ---
-        var pnlDetect = win.add("panel", undefined, "Selected Text Layer");
-        pnlDetect.orientation = "row";
-        pnlDetect.alignChildren = ["fill", "center"];
-        pnlDetect.spacing = 6;
-        pnlDetect.margins = [6, 4, 6, 4];
-
-        var lblDetect = pnlDetect.add("statictext", undefined, "Scanning for text layer...", { truncate: "middle" });
-        lblDetect.preferredSize = [150, 20];
-
-        var btnScan = pnlDetect.add("button", undefined, "Refresh");
-        btnScan.preferredSize = [55, 20];
+        var pendingHex = generateHexId(4);
 
         // =====================================================================
-        // TABBED NAVIGATION PANEL
+        // TOP: PRESETS MANAGER + SELECTION / LIVE DEMO BAR
         // =====================================================================
-        var tpanel = win.add("tabbedpanel");
-        tpanel.alignChildren = ["fill", "top"];
-        tpanel.alignment = ["fill", "fill"];
-        tpanel.spacing = 4;
-        tpanel.margins = 0;
+        var pnlPresets = win.add("panel", undefined, "Presets");
+        pnlPresets.orientation = "column";
+        pnlPresets.alignChildren = ["fill", "top"];
+        pnlPresets.spacing = 5;
+        pnlPresets.margins = [8, 10, 8, 8];
+
+        var grpPresetSel = pnlPresets.add("group");
+        grpPresetSel.orientation = "row";
+        grpPresetSel.alignment = ["fill", "top"];
+        grpPresetSel.spacing = 6;
+
+        var lblPreset = grpPresetSel.add("statictext", undefined, "Preset:");
+        lblPreset.preferredSize = [42, -1];
+
+        var ddPreset = grpPresetSel.add("dropdownlist", undefined, []);
+        ddPreset.alignment = ["fill", "center"];
+
+        var grpPresetBtns = pnlPresets.add("group");
+        grpPresetBtns.orientation = "row";
+        grpPresetBtns.alignment = ["fill", "top"];
+        grpPresetBtns.spacing = 4;
+
+        var btnStorePreset    = grpPresetBtns.add("button", undefined, "Store");
+        var btnRenamePreset   = grpPresetBtns.add("button", undefined, "Rename");
+        var btnDeletePreset   = grpPresetBtns.add("button", undefined, "Delete");
+        var btnOpenPreset     = grpPresetBtns.add("button", undefined, "Open");
+        var btnDownloadPreset = grpPresetBtns.add("button", undefined, "Download");
+
+        btnStorePreset.alignment    = ["fill", "center"];
+        btnRenamePreset.alignment   = ["fill", "center"];
+        btnDeletePreset.alignment   = ["fill", "center"];
+        btnOpenPreset.alignment     = ["fill", "center"];
+        btnDownloadPreset.alignment = ["fill", "center"];
+
+        btnStorePreset.preferredSize    = [-1, 22];
+        btnRenamePreset.preferredSize   = [-1, 22];
+        btnDeletePreset.preferredSize   = [-1, 22];
+        btnOpenPreset.preferredSize     = [-1, 22];
+        btnDownloadPreset.preferredSize = [-1, 22];
+
+        btnStorePreset.helpTip    = "Save current settings as a new or existing preset";
+        btnRenamePreset.helpTip   = "Rename the selected preset";
+        btnDeletePreset.helpTip   = "Delete the selected preset";
+        btnOpenPreset.helpTip     = "Open / import preset(s) from a .json file";
+        btnDownloadPreset.helpTip = "Download / export the selected preset as a .json file";
+
+        // Active Target Layer Bar
+        var grpTargetBar = win.add("group");
+        grpTargetBar.orientation = "row";
+        grpTargetBar.alignment = ["fill", "top"];
+        grpTargetBar.spacing = 6;
+
+        var lblTargetLayer = grpTargetBar.add("statictext", undefined, "Target: Scanning active composition...");
+        lblTargetLayer.alignment = ["fill", "center"];
+
+        var btnRefresh = grpTargetBar.add("button", undefined, "Refresh");
+        btnRefresh.preferredSize = [56, 20];
+
+        var btnLiveDemo = grpTargetBar.add("button", undefined, "Live Demo");
+        btnLiveDemo.preferredSize = [68, 20];
+        btnLiveDemo.helpTip = LIVE_DEMO_URL;
+        btnLiveDemo.onClick = function () { openExternalUrl(LIVE_DEMO_URL); };
+
+        // =====================================================================
+        // MIDDLE: TABS (1. Balloon | 2. Tail | 3. Appearance)
+        // =====================================================================
+        var tabs = win.add("tabbedpanel");
+        tabs.alignment = ["fill", "fill"];
 
         // ---------------------------------------------------------------------
-        // TAB 1: 💬 TEXT & WRAP
+        // TAB 1: BALLOON (Geometry & Exterior Padding)
         // ---------------------------------------------------------------------
-        var tabText = tpanel.add("tab", undefined, "💬 Text & Wrap");
-        tabText.orientation = "column";
-        tabText.alignChildren = ["fill", "top"];
-        tabText.spacing = 6;
-        tabText.margins = 6;
+        var tabBalloon = tabs.add("tab", undefined, "Balloon");
+        tabBalloon.orientation = "column";
+        tabBalloon.alignChildren = ["fill", "top"];
+        tabBalloon.spacing = 6;
+        tabBalloon.margins = 8;
 
-        // Dialogue Edit Text
-        var grpTextPrompt = tabText.add("group");
-        grpTextPrompt.orientation = "row";
-        grpTextPrompt.add("statictext", undefined, "Dialogue / Speech:");
+        var pnlGeom = tabBalloon.add("panel", undefined, "Balloon Geometry");
+        pnlGeom.orientation = "column";
+        pnlGeom.alignChildren = ["fill", "top"];
+        pnlGeom.spacing = 6;
+        pnlGeom.margins = [8, 10, 8, 8];
 
-        var txtDialogue = tabText.add("edittext", undefined, "POW! 💥 That was incredible!\nWhat do we do next?", { multiline: true, wantReturn: true });
-        txtDialogue.preferredSize = [-1, 55];
+        var grpGeomRow = pnlGeom.add("group");
+        grpGeomRow.orientation = "row";
+        grpGeomRow.alignment = ["fill", "top"];
+        grpGeomRow.spacing = 6;
+        var lblGeom = grpGeomRow.add("statictext", undefined, "Shape:");
+        lblGeom.preferredSize = [95, -1];
+        var ddGeometry = grpGeomRow.add("dropdownlist", undefined, GEOMETRY_LABELS);
+        ddGeometry.alignment = ["fill", "center"];
+        ddGeometry.selection = 1;
 
-        // Comic Emoji Quick Insertion Bar
-        var grpEmojiBar = tabText.add("group");
-        grpEmojiBar.orientation = "row";
-        grpEmojiBar.alignChildren = ["left", "center"];
-        grpEmojiBar.spacing = 2;
+        var ctrlCornerRadius = createSliderRow(pnlGeom, "Corner Radius:", 28, 0, 150, "px", refreshPreviewCanvas);
+        var ctrlCloudPuffs   = createSliderRow(pnlGeom, "Cloud Puffs:", 12, 6, 26, "",   refreshPreviewCanvas);
+        var ctrlCloudDepth   = createSliderRow(pnlGeom, "Puff Depth:", 18, 4, 50, "px",  refreshPreviewCanvas);
+        var ctrlSpikeCount   = createSliderRow(pnlGeom, "Burst Spikes:", 18, 6, 36, "",  refreshPreviewCanvas);
+        var ctrlSpikeDepth   = createSliderRow(pnlGeom, "Spike Length:", 28, 6, 80, "px", refreshPreviewCanvas);
 
-        var comicEmojis = ["💥", "💬", "🗯️", "⚡", "💡", "❤️", "❓", "❗", "💣", "💤"];
-        for (var em = 0; em < comicEmojis.length; em++) {
-            (function(emojiChar) {
-                var btnEm = grpEmojiBar.add("button", undefined, emojiChar);
-                btnEm.preferredSize = [24, 20];
-                btnEm.helpTip = "Click to insert " + emojiChar + " into dialogue";
-                btnEm.onClick = function() {
-                    txtDialogue.text = (txtDialogue.text || "") + " " + emojiChar;
-                };
-            })(comicEmojis[em]);
+        var pnlPadding = tabBalloon.add("panel", undefined, "Exterior Padding & Centering");
+        pnlPadding.orientation = "column";
+        pnlPadding.alignChildren = ["fill", "top"];
+        pnlPadding.spacing = 6;
+        pnlPadding.margins = [8, 10, 8, 8];
+
+        var ctrlPadX = createSliderRow(pnlPadding, "Padding X:", 36, 0, 150, "px", refreshPreviewCanvas);
+        var ctrlPadY = createSliderRow(pnlPadding, "Padding Y:", 26, 0, 150, "px", refreshPreviewCanvas);
+
+        var lblAnchorNote = pnlPadding.add("statictext", undefined, "Anchor Points centered (H & V) with Balloon linked as child.");
+        lblAnchorNote.helpTip = "Compatible with AE-replace-color-emojis, AE-advanced-text-wrap, and AE-Text-Highlight.";
+
+        function syncBalloonShapeVisibility() {
+            var idx = ddGeometry.selection ? ddGeometry.selection.index : 1;
+            var key = GEOMETRY_KEYS[idx] || "rounded";
+            ctrlCornerRadius.group.enabled = (key === "rounded");
+            ctrlCloudPuffs.group.enabled   = (key === "cloud");
+            ctrlCloudDepth.group.enabled   = (key === "cloud");
+            ctrlSpikeCount.group.enabled   = (key === "explosion");
+            ctrlSpikeDepth.group.enabled   = (key === "explosion");
+            refreshPreviewCanvas();
+        }
+        ddGeometry.onChange = syncBalloonShapeVisibility;
+
+        // ---------------------------------------------------------------------
+        // TAB 2: TAIL (Style + Trim-Paths-Style Perimeter Dialog + Target)
+        // ---------------------------------------------------------------------
+        var tabTail = tabs.add("tab", undefined, "Tail");
+        tabTail.orientation = "column";
+        tabTail.alignChildren = ["fill", "top"];
+        tabTail.spacing = 6;
+        tabTail.margins = 8;
+
+        var pnlTailStyle = tabTail.add("panel", undefined, "Tail Style");
+        pnlTailStyle.orientation = "row";
+        pnlTailStyle.alignChildren = ["left", "center"];
+        pnlTailStyle.spacing = 6;
+        pnlTailStyle.margins = [8, 10, 8, 8];
+
+        var lblTailStyle = pnlTailStyle.add("statictext", undefined, "Tail Type:");
+        lblTailStyle.preferredSize = [95, -1];
+        var ddTailStyle = pnlTailStyle.add("dropdownlist", undefined, TAIL_LABELS);
+        ddTailStyle.alignment = ["fill", "center"];
+        ddTailStyle.selection = 2;
+
+        // Trim-Paths-Style Perimeter Placement Panel
+        var pnlTrim = tabTail.add("panel", undefined, "Perimeter Placement (Trim Paths Style)");
+        pnlTrim.orientation = "column";
+        pnlTrim.alignChildren = ["fill", "top"];
+        pnlTrim.spacing = 5;
+        pnlTrim.margins = [8, 10, 8, 8];
+
+        // Interactive Perimeter Visualizer (works in both native AE ScriptUI & AE_JS_builder DOM)
+        var grpPreviewWrap = pnlTrim.add("group");
+        grpPreviewWrap.orientation = "row";
+        grpPreviewWrap.alignment = ["fill", "top"];
+        grpPreviewWrap.alignChildren = ["center", "center"];
+        grpPreviewWrap.spacing = 8;
+
+        var previewWidget = grpPreviewWrap.add("button", undefined, "");
+        previewWidget.preferredSize = [136, 76];
+        previewWidget.helpTip = "0% = Top, 25% = Right, 50% = Bottom, 75% = Left (Click to jump Offset around perimeter)";
+
+        var grpQuickEdges = grpPreviewWrap.add("group");
+        grpQuickEdges.orientation = "column";
+        grpQuickEdges.spacing = 3;
+
+        var qRow1 = grpQuickEdges.add("group"); qRow1.spacing = 3;
+        var btnEdgeTop   = qRow1.add("button", undefined, "Top 0%");    btnEdgeTop.preferredSize   = [62, 20];
+        var btnEdgeRight = qRow1.add("button", undefined, "Right 25%"); btnEdgeRight.preferredSize = [62, 20];
+
+        var qRow2 = grpQuickEdges.add("group"); qRow2.spacing = 3;
+        var btnEdgeBot   = qRow2.add("button", undefined, "Bot 50%");   btnEdgeBot.preferredSize   = [62, 20];
+        var btnEdgeLeft  = qRow2.add("button", undefined, "Left 75%");  btnEdgeLeft.preferredSize  = [62, 20];
+
+        var qRow3 = grpQuickEdges.add("group"); qRow3.spacing = 3;
+        var btnEdgeBL    = qRow3.add("button", undefined, "Bot-L 56%"); btnEdgeBL.preferredSize    = [62, 20];
+        var btnEdgeBR    = qRow3.add("button", undefined, "Bot-R 44%"); btnEdgeBR.preferredSize    = [62, 20];
+
+        var ctrlTailStart  = createSliderRow(pnlTrim, "Start:",       52,   0, 100, "%", refreshPreviewCanvas);
+        var ctrlTailEnd    = createSliderRow(pnlTrim, "End:",         60,   0, 100, "%", refreshPreviewCanvas);
+        var ctrlTailOffset = createSliderRow(pnlTrim, "Offset:",       0, -180, 180, "°", refreshPreviewCanvas);
+
+        var pnlTailTarget = tabTail.add("panel", undefined, "Tail Target Length & Slant");
+        pnlTailTarget.orientation = "column";
+        pnlTailTarget.alignChildren = ["fill", "top"];
+        pnlTailTarget.spacing = 5;
+        pnlTailTarget.margins = [8, 10, 8, 8];
+
+        var ctrlTailLength = createSliderRow(pnlTailTarget, "Tail Length:", 85,  15, 350, "px", refreshPreviewCanvas);
+        var ctrlTailAngle  = createSliderRow(pnlTailTarget, "Tip Slant:",   12, -70,  70, "°",  refreshPreviewCanvas);
+
+        function snapPerimeterAt(centerPct) {
+            var curStart = ctrlTailStart.getValue();
+            var curEnd   = ctrlTailEnd.getValue();
+            var curSpan  = Math.abs(curEnd - curStart);
+            if (curSpan < 4 || curSpan > 40) curSpan = 8;
+            var half = curSpan / 2;
+            var s = ((centerPct - half) % 100 + 100) % 100;
+            var e = ((centerPct + half) % 100 + 100) % 100;
+            ctrlTailOffset.setValue(0, false);
+            ctrlTailStart.setValue(Math.round(s), false);
+            ctrlTailEnd.setValue(Math.round(e), true);
         }
 
-        // Text Wrap Presets
-        var grpWrapRow = tabText.add("group");
-        grpWrapRow.orientation = "row";
-        grpWrapRow.alignChildren = ["left", "center"];
-        grpWrapRow.add("statictext", undefined, "Wrap Style:");
+        btnEdgeTop.onClick   = function () { snapPerimeterAt(0); };
+        btnEdgeRight.onClick = function () { snapPerimeterAt(25); };
+        btnEdgeBot.onClick   = function () { snapPerimeterAt(50); };
+        btnEdgeLeft.onClick  = function () { snapPerimeterAt(75); };
+        btnEdgeBL.onClick    = function () { snapPerimeterAt(56); };
+        btnEdgeBR.onClick    = function () { snapPerimeterAt(44); };
 
-        var ddWrapMethod = grpWrapRow.add("dropdownlist", undefined, [
-            "Balanced Knuth-Plass (Harmonious)",
-            "Greedy First-Fit (Classic)",
-            "Optical Pyramid (Expanding)",
-            "Reverse Pyramid (Headline Taper)",
-            "Compact Block (High Density)"
-        ]);
-        ddWrapMethod.selection = 0;
-        ddWrapMethod.preferredSize = [170, 22];
-
-        // Width Sliders
-        var grpW1 = tabText.add("group");
-        grpW1.orientation = "row";
-        grpW1.alignChildren = ["fill", "center"];
-        grpW1.add("statictext", undefined, "Max W:");
-        var sldMaxW = grpW1.add("slider", undefined, 420, 150, 1200);
-        sldMaxW.alignment = ["fill", "center"];
-        var txtMaxW = grpW1.add("edittext", undefined, "420");
-        txtMaxW.preferredSize = [40, 20];
-        grpW1.add("statictext", undefined, "px");
-
-        var grpW2 = tabText.add("group");
-        grpW2.orientation = "row";
-        grpW2.alignChildren = ["fill", "center"];
-        grpW2.add("statictext", undefined, "Desired:");
-        var sldDesW = grpW2.add("slider", undefined, 360, 100, 1100);
-        sldDesW.alignment = ["fill", "center"];
-        var txtDesW = grpW2.add("edittext", undefined, "360");
-        txtDesW.preferredSize = [40, 20];
-        grpW2.add("statictext", undefined, "px");
-
-        sldMaxW.onChanging = function() {
-            var v = Math.round(sldMaxW.value);
-            txtMaxW.text = String(v);
-            if (sldDesW.value >= v) {
-                sldDesW.value = Math.max(50, v - 20);
-                txtDesW.text = String(Math.round(sldDesW.value));
-            }
-        };
-        sldDesW.onChanging = function() {
-            var v = Math.round(sldDesW.value);
-            if (v >= sldMaxW.value) v = Math.max(50, Math.round(sldMaxW.value) - 20);
-            sldDesW.value = v;
-            txtDesW.text = String(v);
+        previewWidget.onClick = function () {
+            // Cycle clockwise in 45° steps when clicked in native AE (or pointer handler in web demo)
+            var nextOff = ctrlTailOffset.getValue() + 45;
+            if (nextOff > 180) nextOff -= 360;
+            ctrlTailOffset.setValue(nextOff, true);
         };
 
-        // Micro-Typography & Grammar
-        var chkStripBreaks = tabText.add("checkbox", undefined, "Strip manual breaks (\\r, \\n) before wrap");
-        chkStripBreaks.value = true;
-        var chkWidows = tabText.add("checkbox", undefined, "Widow & orphan prevention (bind last words)");
-        chkWidows.value = true;
-        var chkNumbers = tabText.add("checkbox", undefined, "Bind numbers and following units (100 px, 50 %)");
-        chkNumbers.value = true;
+        function syncTailControlsVisibility() {
+            var idx = ddTailStyle.selection ? ddTailStyle.selection.index : 0;
+            var key = TAIL_KEYS[idx] || "none";
+            var hasTail = (key !== "none");
+            pnlTrim.enabled = hasTail;
+            pnlTailTarget.enabled = hasTail;
+            refreshPreviewCanvas();
+        }
+        ddTailStyle.onChange = syncTailControlsVisibility;
 
         // ---------------------------------------------------------------------
-        // TAB 2: 🗯️ BUBBLE & TAIL (With Drag & Drop Target)
+        // TAB 3: APPEARANCE (Fill, Stroke Style & Thickness, Colors)
         // ---------------------------------------------------------------------
-        var tabBubble = tpanel.add("tab", undefined, "🗯️ Bubble & Tail");
-        tabBubble.orientation = "column";
-        tabBubble.alignChildren = ["fill", "top"];
-        tabBubble.spacing = 6;
-        tabBubble.margins = 6;
+        var tabAppearance = tabs.add("tab", undefined, "Appearance");
+        tabAppearance.orientation = "column";
+        tabAppearance.alignChildren = ["fill", "top"];
+        tabAppearance.spacing = 6;
+        tabAppearance.margins = 8;
 
-        // Bubble Body Presets
-        var grpBodyRow = tabBubble.add("group");
-        grpBodyRow.orientation = "row";
-        grpBodyRow.add("statictext", undefined, "Bubble Shape:");
-        var ddBodyType = grpBodyRow.add("dropdownlist", undefined, [
-            "Classic Speech Oval (Ellipse)",
-            "Convex Squircle (Graphic Novel)",
-            "Modern Rounded Rectangle (Pill)",
-            "Angular Tilted Polygon (Dynamic Box)",
-            "Stepped Text-Fitted Contour",
-            "Docked Flat-Top Balloon (Panel Edge)",
-            "Action / Shout Burst (Explosion)",
-            "Thought Cloud (Scalloped Arcs)",
-            "Whisper Bubble (Dashed Outline)",
-            "Golden Age Caption Box (Sharp Rect)"
-        ]);
-        ddBodyType.selection = 0;
-        ddBodyType.preferredSize = [165, 22];
+        var pnlFill = tabAppearance.add("panel", undefined, "Fill");
+        pnlFill.orientation = "column";
+        pnlFill.alignChildren = ["fill", "top"];
+        pnlFill.spacing = 5;
+        pnlFill.margins = [8, 10, 8, 8];
 
-        // Tail Style Presets
-        var grpTailRow = tabBubble.add("group");
-        grpTailRow.orientation = "row";
-        grpTailRow.add("statictext", undefined, "Tail Style:");
-        var ddTailType = grpTailRow.add("dropdownlist", undefined, [
-            "Curved Hook / Horn (Classic Comic)",
-            "Straight Cone / Triangle (Direct)",
-            "Side-Pointing Wedge (Horizontal)",
-            "Corner Pointer / Tail (Integrated)",
-            "Wide Speech Wedge",
-            "Thought Bubbles (Chain of Circles)",
-            "Lightning / Electric Bolt (Broadcast)",
-            "Scream Spike (Action Barb)",
-            "None (Floating / Caption Box)"
-        ]);
-        ddTailType.selection = 0;
-        ddTailType.preferredSize = [165, 22];
+        var chkFillEnabled = pnlFill.add("checkbox", undefined, "Enable Balloon Fill");
+        chkFillEnabled.value = true;
+        var cpFillColor = createColorPickerRow(pnlFill, "Fill Color:", "#FFFFFF", refreshPreviewCanvas);
+        var ctrlFillOpacity = createSliderRow(pnlFill, "Fill Opacity:", 100, 0, 100, "%", refreshPreviewCanvas);
 
-        // Padding & Corner Radius
-        var grpPad = tabBubble.add("group");
-        grpPad.orientation = "row";
-        grpPad.alignChildren = ["fill", "center"];
-        grpPad.add("statictext", undefined, "Padding X/Y:");
-        var sldPadX = grpPad.add("slider", undefined, 36, 10, 100);
-        sldPadX.preferredSize = [60, -1];
-        var sldPadY = grpPad.add("slider", undefined, 26, 10, 80);
-        sldPadY.preferredSize = [60, -1];
-
-        // --- 🎯 2D DRAG & DROP TAIL TARGET CONTROLLER ---
-        var pnlTargetCtrl = tabBubble.add("panel", undefined, "🎯 Tail Placement Target");
-        pnlTargetCtrl.orientation = "column";
-        pnlTargetCtrl.alignChildren = ["fill", "top"];
-        pnlTargetCtrl.spacing = 4;
-        pnlTargetCtrl.margins = [6, 4, 6, 4];
-
-        var lblTargetHelp = pnlTargetCtrl.add("statictext", undefined, "Sets in-comp '🎯 Tail Target' null & interactive pointer angle");
-        lblTargetHelp.preferredSize = [-1, 14];
-
-        // 3x3 Matrix Buttons (Quick Placement Presets)
-        var grpMatrix = pnlTargetCtrl.add("group");
-        grpMatrix.orientation = "column";
-        grpMatrix.alignChildren = ["center", "top"];
-        grpMatrix.spacing = 2;
-
-        var mRow1 = grpMatrix.add("group"); mRow1.spacing = 2;
-        var btnTL = mRow1.add("button", undefined, "↖ Top-L"); btnTL.preferredSize = [65, 18];
-        var btnTC = mRow1.add("button", undefined, "↑ Top-C"); btnTC.preferredSize = [65, 18];
-        var btnTR = mRow1.add("button", undefined, "↗ Top-R"); btnTR.preferredSize = [65, 18];
-
-        var mRow2 = grpMatrix.add("group"); mRow2.spacing = 2;
-        var btnML = mRow2.add("button", undefined, "← Mid-L"); btnML.preferredSize = [65, 18];
-        var btnCC = mRow2.add("button", undefined, "🎯 Cent"); btnCC.preferredSize = [65, 18];
-        var btnMR = mRow2.add("button", undefined, "→ Mid-R"); btnMR.preferredSize = [65, 18];
-
-        var mRow3 = grpMatrix.add("group"); mRow3.spacing = 2;
-        var btnBL = mRow3.add("button", undefined, "↙ Bot-L"); btnBL.preferredSize = [65, 18];
-        var btnBC = mRow3.add("button", undefined, "↓ Bot-C"); btnBC.preferredSize = [65, 18];
-        var btnBR = mRow3.add("button", undefined, "↘ Bot-R"); btnBR.preferredSize = [65, 18];
-
-        // Angle & Distance Numeric Sliders
-        var grpAng = pnlTargetCtrl.add("group");
-        grpAng.orientation = "row";
-        grpAng.alignChildren = ["fill", "center"];
-        grpAng.add("statictext", undefined, "Angle:");
-        var sldAngle = grpAng.add("slider", undefined, 115, -180, 180);
-        sldAngle.alignment = ["fill", "center"];
-        var txtAngle = grpAng.add("edittext", undefined, "115");
-        txtAngle.preferredSize = [35, 20];
-        grpAng.add("statictext", undefined, "°");
-
-        var grpDist = pnlTargetCtrl.add("group");
-        grpDist.orientation = "row";
-        grpDist.alignChildren = ["fill", "center"];
-        grpDist.add("statictext", undefined, "Distance:");
-        var sldDist = grpDist.add("slider", undefined, 110, 60, 450);
-        sldDist.alignment = ["fill", "center"];
-        var txtDist = grpDist.add("edittext", undefined, "110");
-        txtDist.preferredSize = [35, 20];
-        grpDist.add("statictext", undefined, "px");
-
-        sldAngle.onChanging = function() { txtAngle.text = String(Math.round(sldAngle.value)); };
-        txtAngle.onChange = function() {
-            var val = parseFloat(txtAngle.text);
-            if (isNaN(val)) val = 0;
-            sldAngle.value = val;
-            txtAngle.text = String(Math.round(val));
+        chkFillEnabled.onClick = function () {
+            cpFillColor.group.enabled = chkFillEnabled.value;
+            ctrlFillOpacity.group.enabled = chkFillEnabled.value;
+            refreshPreviewCanvas();
         };
 
-        sldDist.onChanging = function() {
-            var val = Math.max(60, Math.round(sldDist.value));
-            txtDist.text = String(val);
-        };
-        txtDist.onChange = function() {
-            var val = parseFloat(txtDist.text);
-            if (isNaN(val) || val < 60) val = 60;
-            sldDist.value = val;
-            txtDist.text = String(Math.round(val));
-        };
+        var pnlStroke = tabAppearance.add("panel", undefined, "Lines / Stroke Style & Color");
+        pnlStroke.orientation = "column";
+        pnlStroke.alignChildren = ["fill", "top"];
+        pnlStroke.spacing = 5;
+        pnlStroke.margins = [8, 10, 8, 8];
 
-        // Matrix button click bindings
-        btnTL.onClick = function() { sldAngle.value = -135; txtAngle.text = "-135"; };
-        btnTC.onClick = function() { sldAngle.value = -90;  txtAngle.text = "-90";  };
-        btnTR.onClick = function() { sldAngle.value = -45;  txtAngle.text = "-45";  };
-        btnML.onClick = function() { sldAngle.value = 180;  txtAngle.text = "180";  };
-        btnCC.onClick = function() { sldAngle.value = 90;   txtAngle.text = "90";   sldDist.value = 110; txtDist.text = "110"; };
-        btnMR.onClick = function() { sldAngle.value = 0;    txtAngle.text = "0";    };
-        btnBL.onClick = function() { sldAngle.value = 115;  txtAngle.text = "115";  };
-        btnBC.onClick = function() { sldAngle.value = 90;   txtAngle.text = "90";   };
-        btnBR.onClick = function() { sldAngle.value = 45;   txtAngle.text = "45";   };
+        var grpStrokeStyle = pnlStroke.add("group");
+        grpStrokeStyle.orientation = "row";
+        grpStrokeStyle.alignment = ["fill", "top"];
+        grpStrokeStyle.spacing = 6;
+        var lblStrokeStyle = grpStrokeStyle.add("statictext", undefined, "Stroke Style:");
+        lblStrokeStyle.preferredSize = [86, -1];
+        var ddStrokeStyle = grpStrokeStyle.add("dropdownlist", undefined, STROKE_LABELS);
+        ddStrokeStyle.alignment = ["fill", "center"];
+        ddStrokeStyle.selection = 1;
 
-        var chkLiveAnimTail = pnlTargetCtrl.add("checkbox", undefined, "Animatable Tail (Live '🎯 Tail Target' Expression Tracking)");
-        chkLiveAnimTail.value = true;
-        chkLiveAnimTail.helpTip = "Enables real-time After Effects expressions on the vector Path so keyframing or dragging '🎯 Tail Target' animates the tail dynamically across time!";
+        var cpStrokeColor = createColorPickerRow(pnlStroke, "Stroke Color:", "#111111", refreshPreviewCanvas);
 
-        // ---------------------------------------------------------------------
-        // TAB 3: 🎨 COLORS & STYLING
-        // ---------------------------------------------------------------------
-        var tabStyle = tpanel.add("tab", undefined, "🎨 Colors & Style");
-        tabStyle.orientation = "column";
-        tabStyle.alignChildren = ["fill", "top"];
-        tabStyle.spacing = 8;
-        tabStyle.margins = 6;
+        var ctrlStrokeWidth    = createSliderRow(pnlStroke, "Thickness:",     5, 1, 40, "px", refreshPreviewCanvas);
+        var ctrlStrokeMinWidth = createSliderRow(pnlStroke, "Min Thickness:", 2, 1, 30, "px", refreshPreviewCanvas);
+        var ctrlStrokeMaxWidth = createSliderRow(pnlStroke, "Max Thickness:", 9, 1, 50, "px", refreshPreviewCanvas);
+        var ctrlDotGap         = createSliderRow(pnlStroke, "Dot Spacing:",  12, 3, 50, "px", refreshPreviewCanvas);
 
-        function createColorPickerRow(parent, labelText, defaultHex) {
-            var grp = parent.add("group");
-            grp.orientation = "row";
-            grp.alignChildren = ["left", "center"];
-            grp.spacing = 6;
+        function syncStrokeControlsVisibility() {
+            var idx = ddStrokeStyle.selection ? ddStrokeStyle.selection.index : 1;
+            var key = STROKE_KEYS[idx] || "solid";
+            var hasStroke = (key !== "none");
+            cpStrokeColor.group.enabled    = hasStroke;
+            ctrlStrokeWidth.group.enabled  = (key === "solid" || key === "dotted");
+            ctrlStrokeMinWidth.group.enabled = (key === "variable");
+            ctrlStrokeMaxWidth.group.enabled = (key === "variable");
+            ctrlDotGap.group.enabled       = (key === "dotted");
+            refreshPreviewCanvas();
+        }
+        ddStrokeStyle.onChange = syncStrokeControlsVisibility;
 
-            var lbl = grp.add("statictext", undefined, labelText);
-            lbl.preferredSize = [90, -1];
+        tabs.selection = tabBalloon;
 
-            var btnSwatch = grp.add("button", undefined, "");
-            btnSwatch.preferredSize = [36, 22];
+        // =====================================================================
+        // BOTTOM: MAKE PRECOMP + BUILD / UPDATE / REMOVE
+        // =====================================================================
+        var pnlFooter = win.add("panel", undefined, "Output & Actions");
+        pnlFooter.orientation = "column";
+        pnlFooter.alignChildren = ["fill", "top"];
+        pnlFooter.spacing = 6;
+        pnlFooter.margins = [8, 10, 8, 8];
 
-            var txtHex = grp.add("edittext", undefined, defaultHex);
-            txtHex.preferredSize = [65, 22];
+        var chkMakePrecomp = pnlFooter.add("checkbox", undefined, 'Make Precomp ("comic balloon ' + pendingHex + '")');
+        chkMakePrecomp.value = true;
+        chkMakePrecomp.helpTip = 'Precomposes the centered Text Layer + linked Balloon child into "comic balloon <HEX>" (Default: Yes).';
 
-            var state = { color: defaultHex };
+        var grpMainBtns = pnlFooter.add("group");
+        grpMainBtns.orientation = "row";
+        grpMainBtns.alignment = ["fill", "top"];
+        grpMainBtns.spacing = 6;
 
-            function updateSwatch(hex) {
-                state.color = hex;
-                txtHex.text = hex.toUpperCase();
-                if (btnSwatch.domElement) {
-                    btnSwatch.domElement.style.backgroundColor = hex;
-                    btnSwatch.domElement.style.border = "1px solid #666";
-                }
+        var btnBuildUpdate = grpMainBtns.add("button", undefined, "Build / Update Balloon");
+        btnBuildUpdate.alignment = ["fill", "center"];
+        btnBuildUpdate.preferredSize = [-1, 30];
+        btnBuildUpdate.helpTip = "Creates a Comic Balloon from the selected Text Layer, or updates an existing Comic Balloon.";
+
+        var btnRemove = grpMainBtns.add("button", undefined, "Remove Balloon");
+        btnRemove.preferredSize = [120, 30];
+        btnRemove.helpTip = "Removes the balloon/precomp and reverses the text box back to its exact original state.";
+
+        var lblStatus = win.add("statictext", undefined, "Ready. Select a Text Layer and click Build / Update Balloon.");
+        lblStatus.alignment = ["fill", "bottom"];
+
+        // =====================================================================
+        // UI <-> CONFIG READ / WRITE & LIVE TRIM-PERIMETER PREVIEW RENDERER
+        // =====================================================================
+        function collectUIConfig() {
+            var gIdx = ddGeometry.selection ? ddGeometry.selection.index : 1;
+            var tIdx = ddTailStyle.selection ? ddTailStyle.selection.index : 2;
+            var sIdx = ddStrokeStyle.selection ? ddStrokeStyle.selection.index : 1;
+
+            var minW = ctrlStrokeMinWidth.getValue();
+            var maxW = ctrlStrokeMaxWidth.getValue();
+            if (minW > maxW) {
+                var swap = minW; minW = maxW; maxW = swap;
             }
 
-            btnSwatch.onClick = function() {
-                var cur = state.color || "#FFFFFF";
-                if (typeof window !== "undefined" && typeof window.openWindowsColorPicker === "function") {
-                    window.openWindowsColorPicker(cur, function(selectedHex) {
-                        updateSwatch(selectedHex);
-                    });
-                    return;
-                }
-                var hexNum = parseInt(cur.replace("#", ""), 16);
-                var res = (typeof $.colorPicker === "function") ? $.colorPicker(hexNum) : -1;
-                if (res !== -1 && res !== undefined && res !== null) {
-                    var s = Number(res).toString(16);
-                    while (s.length < 6) s = "0" + s;
-                    updateSwatch("#" + s);
-                }
-            };
-
-            txtHex.onChange = function() {
-                var val = txtHex.text.replace(/^[\s#]+/, "");
-                if (/^[0-9A-Fa-f]{6}$/.test(val)) {
-                    updateSwatch("#" + val);
-                } else {
-                    txtHex.text = state.color;
-                }
-            };
-
-            updateSwatch(defaultHex);
             return {
-                getColor: function() { return state.color; },
-                setColor: updateSwatch
+                geometry: GEOMETRY_KEYS[gIdx] || "rounded",
+                padX: ctrlPadX.getValue(),
+                padY: ctrlPadY.getValue(),
+                cornerRadius: ctrlCornerRadius.getValue(),
+                cloudPuffs: Math.round(ctrlCloudPuffs.getValue()),
+                cloudDepth: ctrlCloudDepth.getValue(),
+                spikeCount: Math.round(ctrlSpikeCount.getValue()),
+                spikeDepth: ctrlSpikeDepth.getValue(),
+                tailStyle: TAIL_KEYS[tIdx] || "triangle",
+                tailStart: ctrlTailStart.getValue(),
+                tailEnd: ctrlTailEnd.getValue(),
+                tailOffset: ctrlTailOffset.getValue(),
+                tailLength: ctrlTailLength.getValue(),
+                tailAngle: ctrlTailAngle.getValue(),
+                fillEnabled: Boolean(chkFillEnabled.value),
+                fillColor: cpFillColor.value || "#FFFFFF",
+                fillOpacity: ctrlFillOpacity.getValue(),
+                strokeStyle: STROKE_KEYS[sIdx] || "solid",
+                strokeColor: cpStrokeColor.value || "#111111",
+                strokeWidth: ctrlStrokeWidth.getValue(),
+                strokeMinWidth: minW,
+                strokeMaxWidth: maxW,
+                dotGap: ctrlDotGap.getValue(),
+                makePrecomp: Boolean(chkMakePrecomp.value)
             };
         }
 
-        var cpBg = createColorPickerRow(tabStyle, "Bubble Fill:", "#FFFFFF");
-        var cpStroke = createColorPickerRow(tabStyle, "Stroke Color:", "#000000");
-
-        var grpStrokeW = tabStyle.add("group");
-        grpStrokeW.orientation = "row";
-        grpStrokeW.alignChildren = ["fill", "center"];
-        var lblSW = grpStrokeW.add("statictext", undefined, "Stroke Width:");
-        lblSW.preferredSize = [90, -1];
-        var sldStrokeW = grpStrokeW.add("slider", undefined, 5, 0, 30);
-        sldStrokeW.alignment = ["fill", "center"];
-        var txtStrokeW = grpStrokeW.add("edittext", undefined, "5");
-        txtStrokeW.preferredSize = [35, 20];
-        grpStrokeW.add("statictext", undefined, "px");
-        sldStrokeW.onChanging = function() { txtStrokeW.text = String(Math.round(sldStrokeW.value)); };
-
-        var chkWhisperDashes = tabStyle.add("checkbox", undefined, "Dashed Outline (Whisper / Soft Speech)");
-        chkWhisperDashes.value = false;
-
-        // Comic Punch Word Highlight
-        var pnlHighlight = tabStyle.add("panel", undefined, "Punch Word Highlight Accent");
-        pnlHighlight.orientation = "column";
-        pnlHighlight.alignChildren = ["fill", "top"];
-        pnlHighlight.spacing = 4;
-        pnlHighlight.margins = [6, 4, 6, 4];
-
-        var grpHiRow = pnlHighlight.add("group");
-        grpHiRow.orientation = "row";
-        grpHiRow.alignChildren = ["left", "center"];
-        var chkHighlight = grpHiRow.add("checkbox", undefined, "Highlight:");
-        chkHighlight.value = false;
-        var txtHighlightWords = grpHiRow.add("edittext", undefined, "POW, EVERYTHING, ARGUMENT");
-        txtHighlightWords.preferredSize = [140, 20];
-
-        var cpHighlight = createColorPickerRow(pnlHighlight, "Accent Color:", "#FFE600");
-
-        // Quick Comic Theme Palette Swatches
-        var pnlThemes = tabStyle.add("panel", undefined, "Quick Comic Theme Palettes");
-        pnlThemes.orientation = "row";
-        pnlThemes.alignChildren = ["center", "center"];
-        pnlThemes.spacing = 4;
-        pnlThemes.margins = [4, 4, 4, 4];
-
-        var btnThemeWhite  = pnlThemes.add("button", undefined, "Classic");
-        var btnThemeYellow = pnlThemes.add("button", undefined, "Action");
-        var btnThemeCyan   = pnlThemes.add("button", undefined, "Hero");
-        var btnThemeDark   = pnlThemes.add("button", undefined, "Manga");
-
-        btnThemeWhite.preferredSize = [50, 20];
-        btnThemeYellow.preferredSize = [50, 20];
-        btnThemeCyan.preferredSize = [50, 20];
-        btnThemeDark.preferredSize = [50, 20];
-
-        btnThemeWhite.onClick  = function() { cpBg.setColor("#FFFFFF"); cpStroke.setColor("#000000"); };
-        btnThemeYellow.onClick = function() { cpBg.setColor("#FFE600"); cpStroke.setColor("#111111"); };
-        btnThemeCyan.onClick   = function() { cpBg.setColor("#00E5FF"); cpStroke.setColor("#1A237E"); };
-        btnThemeDark.onClick   = function() { cpBg.setColor("#18181B"); cpStroke.setColor("#FFFFFF"); };
-
-        // ---------------------------------------------------------------------
-        // TAB 4: 🎬 ANIMATION & TRANSITIONS
-        // ---------------------------------------------------------------------
-        var tabAnim = tpanel.add("tab", undefined, "🎬 Animations");
-        tabAnim.orientation = "column";
-        tabAnim.alignChildren = ["fill", "top"];
-        tabAnim.spacing = 6;
-        tabAnim.margins = 6;
-
-        var grpAnimIn = tabAnim.add("group");
-        grpAnimIn.orientation = "row";
-        grpAnimIn.add("statictext", undefined, "Entrance (In):");
-        var ddAnimIn = grpAnimIn.add("dropdownlist", undefined, [
-            "Pop & Comic Bounce (Elastic 0->118%->100%)",
-            "Elastic Zoom In (High Energy)",
-            "Whip & Slide In (From Tail Direction)",
-            "Smooth Fade & Scale",
-            "None (Static Entry)"
-        ]);
-        ddAnimIn.selection = 0;
-        ddAnimIn.preferredSize = [165, 22];
-
-        var grpAnimOut = tabAnim.add("group");
-        grpAnimOut.orientation = "row";
-        grpAnimOut.add("statictext", undefined, "Exit (Out):");
-        var ddAnimOut = grpAnimOut.add("dropdownlist", undefined, [
-            "Pop / Shrink Out (Anticipation bump -> 0%)",
-            "Fade & Float Out",
-            "Comic Puff / Dissolve",
-            "None (Hold indefinitely)"
-        ]);
-        ddAnimOut.selection = 0;
-        ddAnimOut.preferredSize = [165, 22];
-
-        var grpDur1 = tabAnim.add("group");
-        grpDur1.orientation = "row";
-        grpDur1.alignChildren = ["fill", "center"];
-        grpDur1.add("statictext", undefined, "In Duration:");
-        var sldInDur = grpDur1.add("slider", undefined, 0.35, 0.1, 2.0);
-        sldInDur.alignment = ["fill", "center"];
-        var txtInDur = grpDur1.add("edittext", undefined, "0.35");
-        txtInDur.preferredSize = [35, 20];
-        grpDur1.add("statictext", undefined, "s");
-        sldInDur.onChanging = function() { txtInDur.text = sldInDur.value.toFixed(2); };
-
-        var grpHold = tabAnim.add("group");
-        grpHold.orientation = "row";
-        grpHold.alignChildren = ["fill", "center"];
-        grpHold.add("statictext", undefined, "Hold Duration:");
-        var sldHold = grpHold.add("slider", undefined, 2.5, 0.5, 10.0);
-        sldHold.alignment = ["fill", "center"];
-        var txtHold = grpHold.add("edittext", undefined, "2.5");
-        txtHold.preferredSize = [35, 20];
-        grpHold.add("statictext", undefined, "s");
-        sldHold.onChanging = function() { txtHold.text = sldHold.value.toFixed(1); };
-
-        var chkTailOrigin = tabAnim.add("checkbox", undefined, "Animate from Tail Origin (Pops from speaker)");
-        chkTailOrigin.value = true;
-
-        // =====================================================================
-        // BOTTOM ACTION BAR
-        // =====================================================================
-        var grpActions = win.add("group");
-        grpActions.orientation = "column";
-        grpActions.alignChildren = ["fill", "top"];
-        grpActions.spacing = 4;
-
-        var btnBuild = grpActions.add("button", undefined, "🗯️ Build / Rebuild Comic Bubble");
-        btnBuild.preferredSize = [-1, 30];
-
-        var btnRevert = grpActions.add("button", undefined, "↩ Revert to Original Text Layer");
-        btnRevert.preferredSize = [-1, 24];
-
-        var lblStatus = grpActions.add("statictext", undefined, "Ready.");
-        lblStatus.preferredSize = [-1, 14];
-
-        // --- Target Detection Handler ---
-        function updateDetection() {
-            var comp = getActiveComposition();
-            if (!comp) {
-                lblDetect.text = "No active composition found";
-                return;
+        function indexOfKey(arr, key, fallback) {
+            for (var i = 0; i < arr.length; i++) {
+                if (arr[i] === key) return i;
             }
-            var textLayer = getSelectedTextLayer(comp);
-            if (textLayer) {
-                lblDetect.text = "Layer: " + textLayer.name;
-                var str = getTextLayerString(textLayer);
-                if (str && txtDialogue.text !== str) {
-                    txtDialogue.text = str;
+            return fallback || 0;
+        }
+
+        function applyConfigToUI(rawCfg) {
+            var c = normalizePresetData(rawCfg);
+            ddGeometry.selection    = indexOfKey(GEOMETRY_KEYS, c.geometry, 1);
+            ddTailStyle.selection   = indexOfKey(TAIL_KEYS, c.tailStyle, 2);
+            ddStrokeStyle.selection = indexOfKey(STROKE_KEYS, c.strokeStyle, 1);
+
+            ctrlPadX.setValue(c.padX, false);
+            ctrlPadY.setValue(c.padY, false);
+            ctrlCornerRadius.setValue(c.cornerRadius, false);
+            ctrlCloudPuffs.setValue(c.cloudPuffs, false);
+            ctrlCloudDepth.setValue(c.cloudDepth, false);
+            ctrlSpikeCount.setValue(c.spikeCount, false);
+            ctrlSpikeDepth.setValue(c.spikeDepth, false);
+
+            ctrlTailStart.setValue(c.tailStart, false);
+            ctrlTailEnd.setValue(c.tailEnd, false);
+            ctrlTailOffset.setValue(c.tailOffset, false);
+            ctrlTailLength.setValue(c.tailLength, false);
+            ctrlTailAngle.setValue(c.tailAngle, false);
+
+            chkFillEnabled.value = Boolean(c.fillEnabled);
+            cpFillColor.setColor(c.fillColor, false);
+            ctrlFillOpacity.setValue(c.fillOpacity, false);
+            cpFillColor.group.enabled = chkFillEnabled.value;
+            ctrlFillOpacity.group.enabled = chkFillEnabled.value;
+
+            cpStrokeColor.setColor(c.strokeColor, false);
+            ctrlStrokeWidth.setValue(c.strokeWidth, false);
+            ctrlStrokeMinWidth.setValue(c.strokeMinWidth, false);
+            ctrlStrokeMaxWidth.setValue(c.strokeMaxWidth, false);
+            ctrlDotGap.setValue(c.dotGap, false);
+
+            chkMakePrecomp.value = Boolean(c.makePrecomp);
+
+            syncBalloonShapeVisibility();
+            syncTailControlsVisibility();
+            syncStrokeControlsVisibility();
+            refreshPreviewCanvas();
+        }
+
+        // Custom-drawn Trim-Paths Perimeter Preview (ScriptUI Graphics + Web DOM SVG)
+        previewWidget.onDraw = function () {
+            try {
+                var cfg = collectUIConfig();
+                var w = this.size ? this.size[0] : 136;
+                var h = this.size ? this.size[1] : 76;
+                var g = this.graphics;
+                var bgBrush = g.newBrush(g.BrushType.SOLID_COLOR, [0.14, 0.16, 0.20, 1]);
+                g.newPath();
+                g.rectPath(0, 0, w, h);
+                g.fillPath(bgBrush);
+
+                var previewSegs = buildBalloonPerimeterSegments(68, 28, {
+                    geometry: cfg.geometry,
+                    padX: 10,
+                    padY: 8,
+                    cornerRadius: Math.min(12, cfg.cornerRadius * 0.4),
+                    cloudPuffs: cfg.cloudPuffs,
+                    cloudDepth: 5,
+                    spikeCount: Math.min(14, cfg.spikeCount),
+                    spikeDepth: 7
+                });
+
+                var cx = w * 0.5;
+                var cy = h * 0.46;
+                var penDim = g.newPen(g.PenType.SOLID_COLOR, [0.55, 0.62, 0.72, 1], 1.5);
+                g.newPath();
+                for (var s = 0; s <= 48; s++) {
+                    var pt = evaluatePerimeterAtU(previewSegs, s / 48).point;
+                    if (s === 0) g.moveTo(cx + pt[0], cy + pt[1]);
+                    else g.lineTo(cx + pt[0], cy + pt[1]);
                 }
-            } else {
-                lblDetect.text = "Comp: " + comp.name + " (Auto-creates sample)";
+                g.strokePath(penDim);
+
+                if (cfg.tailStyle !== "none") {
+                    var off = (cfg.tailOffset || 0) / 360.0;
+                    var u1 = (((cfg.tailStart / 100.0) + off) % 1 + 1) % 1;
+                    var u2 = (((cfg.tailEnd / 100.0) + off) % 1 + 1) % 1;
+                    var sp = ((u2 - u1) % 1 + 1) % 1;
+                    if (sp > 0.5) { var t = u1; u1 = u2; u2 = t; sp = 1 - sp; }
+                    if (sp < 0.03) sp = 0.03;
+
+                    var penHi = g.newPen(g.PenType.SOLID_COLOR, [0.15, 0.82, 0.98, 1], 3);
+                    g.newPath();
+                    for (var k = 0; k <= 12; k++) {
+                        var pArc = evaluatePerimeterAtU(previewSegs, u1 + sp * (k / 12)).point;
+                        if (k === 0) g.moveTo(cx + pArc[0], cy + pArc[1]);
+                        else g.lineTo(cx + pArc[0], cy + pArc[1]);
+                    }
+                    g.strokePath(penHi);
+
+                    var mEv = evaluatePerimeterAtU(previewSegs, u1 + sp * 0.5);
+                    var outA = Math.atan2(mEv.normal[1], mEv.normal[0]) + (cfg.tailAngle * Math.PI / 180);
+                    var tipP = [cx + mEv.point[0] + 16 * Math.cos(outA), cy + mEv.point[1] + 16 * Math.sin(outA)];
+                    var penTip = g.newPen(g.PenType.SOLID_COLOR, [1.0, 0.72, 0.15, 1], 2);
+                    g.newPath();
+                    g.moveTo(cx + mEv.point[0], cy + mEv.point[1]);
+                    g.lineTo(tipP[0], tipP[1]);
+                    g.strokePath(penTip);
+                }
+            } catch (eDraw) {}
+        };
+
+        function refreshPreviewCanvas() {
+            if (!previewWidget) return;
+            try { if (previewWidget.notify) previewWidget.notify("onDraw"); } catch (eN) {}
+
+            // Rich interactive SVG preview inside AE_JS_builder Web Simulator
+            if (previewWidget.domElement) {
+                try {
+                    var cfg = collectUIConfig();
+                    var el = previewWidget.domElement;
+                    el.style.padding = "0";
+                    el.style.background = "#181c24";
+                    el.style.border = "1px solid #334155";
+                    el.style.borderRadius = "4px";
+                    el.style.overflow = "hidden";
+                    el.style.cursor = "crosshair";
+
+                    var segs = buildBalloonPerimeterSegments(68, 28, {
+                        geometry: cfg.geometry,
+                        padX: 10,
+                        padY: 8,
+                        cornerRadius: Math.min(12, cfg.cornerRadius * 0.4),
+                        cloudPuffs: cfg.cloudPuffs,
+                        cloudDepth: 5,
+                        spikeCount: Math.min(14, cfg.spikeCount),
+                        spikeDepth: 7
+                    });
+
+                    var cx = 68, cy = 36;
+                    var ptsAll = [];
+                    var s;
+                    for (s = 0; s <= 56; s++) {
+                        var p = evaluatePerimeterAtU(segs, s / 56).point;
+                        ptsAll.push((cx + p[0]).toFixed(1) + "," + (cy + p[1]).toFixed(1));
+                    }
+
+                    var hiSvg = "";
+                    if (cfg.tailStyle !== "none") {
+                        var off = (cfg.tailOffset || 0) / 360.0;
+                        var u1 = (((cfg.tailStart / 100.0) + off) % 1 + 1) % 1;
+                        var u2 = (((cfg.tailEnd / 100.0) + off) % 1 + 1) % 1;
+                        var sp = ((u2 - u1) % 1 + 1) % 1;
+                        if (sp > 0.5) { var tmp = u1; u1 = u2; u2 = tmp; sp = 1 - sp; }
+                        if (sp < 0.03) sp = 0.03;
+
+                        var arcPts = [];
+                        for (s = 0; s <= 14; s++) {
+                            var pa = evaluatePerimeterAtU(segs, u1 + sp * (s / 14)).point;
+                            arcPts.push((cx + pa[0]).toFixed(1) + "," + (cy + pa[1]).toFixed(1));
+                        }
+                        var mEv = evaluatePerimeterAtU(segs, u1 + sp * 0.5);
+                        var outA = Math.atan2(mEv.point[1], mEv.point[0]) + (cfg.tailAngle * Math.PI / 180);
+                        var tx = (cx + mEv.point[0] + 15 * Math.cos(outA)).toFixed(1);
+                        var ty = (cy + mEv.point[1] + 15 * Math.sin(outA)).toFixed(1);
+                        var mx = (cx + mEv.point[0]).toFixed(1);
+                        var my = (cy + mEv.point[1]).toFixed(1);
+
+                        hiSvg =
+                            '<polyline points="' + arcPts.join(" ") + '" fill="none" stroke="#22d3ee" stroke-width="3.5" stroke-linecap="round"/>' +
+                            '<line x1="' + mx + '" y1="' + my + '" x2="' + tx + '" y2="' + ty + '" stroke="#fbbf24" stroke-width="2" stroke-linecap="round"/>' +
+                            '<circle cx="' + tx + '" cy="' + ty + '" r="2.8" fill="#fbbf24"/>';
+                    }
+
+                    el.innerHTML =
+                        '<svg width="136" height="76" viewBox="0 0 136 76" style="display:block;pointer-events:none;">' +
+                        '<polygon points="' + ptsAll.join(" ") + '" fill="rgba(255,255,255,0.08)" stroke="#64748b" stroke-width="1.5"/>' +
+                        hiSvg +
+                        '</svg>';
+
+                    if (!el._trimDragBound) {
+                        el._trimDragBound = true;
+                        var updateFromMouse = function (ev) {
+                            var rect = el.getBoundingClientRect();
+                            var dx = (ev.clientX - rect.left) - 68;
+                            var dy = (ev.clientY - rect.top) - 36;
+                            var angDeg = Math.atan2(dy, dx) * (180 / Math.PI);
+                            // Top-Center (-90 deg) corresponds to 0% perimeter
+                            var pct = (((angDeg + 90) / 360) * 100 % 100 + 100) % 100;
+                            snapPerimeterAt(pct);
+                        };
+                        el.onclick = null;
+                        previewWidget.onClick = null;
+                        el.addEventListener("pointerdown", function (ev) {
+                            ev.preventDefault();
+                            updateFromMouse(ev);
+                            var onMove = function (me) { updateFromMouse(me); };
+                            var onUp = function () {
+                                document.removeEventListener("pointermove", onMove);
+                                document.removeEventListener("pointerup", onUp);
+                            };
+                            document.addEventListener("pointermove", onMove);
+                            document.addEventListener("pointerup", onUp);
+                        });
+                    }
+                } catch (eDom) {}
             }
         }
 
-        btnScan.onClick = updateDetection;
+        // =====================================================================
+        // PRESET CRUD & JSON IMPORT / DOWNLOAD WIRING
+        // =====================================================================
+        var suppressPresetOnChange = false;
 
-        // --- Revert Handler ---
-        btnRevert.onClick = function() {
-            var ctx = ensureCompAndSampleLayer();
-            if (!ctx || !ctx.textLayer) {
-                alert("Please select a text layer first.");
-                return;
+        function populatePresetDropdown(selectName) {
+            suppressPresetOnChange = true;
+            ddPreset.removeAll();
+            var names = [];
+            var targetIdx = 0;
+            var idx = 0;
+            for (var k in PRESETS) {
+                if (PRESETS.hasOwnProperty(k)) {
+                    ddPreset.add("item", k);
+                    if (selectName && k === selectName) targetIdx = idx;
+                    names.push(k);
+                    idx++;
+                }
             }
-            var success = revertToOriginal(ctx.comp, ctx.textLayer);
-            if (success) {
-                lblStatus.text = "Restored original text layer properties cleanly.";
-                updateDetection();
-            } else {
-                lblStatus.text = "No saved pre-bubble state found on layer.";
+            if (names.length > 0) {
+                ddPreset.selection = targetIdx;
+            }
+            suppressPresetOnChange = false;
+            return names;
+        }
+
+        function getSelectedPresetName() {
+            return ddPreset.selection ? ddPreset.selection.text : "";
+        }
+
+        ddPreset.onChange = function () {
+            if (suppressPresetOnChange) return;
+            var name = getSelectedPresetName();
+            if (name && PRESETS[name]) {
+                applyConfigToUI(PRESETS[name]);
+                lblStatus.text = 'Loaded preset: "' + name + '"';
             }
         };
 
-        // --- Main Build Button Handler ---
-        btnBuild.onClick = function() {
-            var ctx = ensureCompAndSampleLayer();
-            if (!ctx || !ctx.comp || !ctx.textLayer) {
-                alert("Please open a composition with a text layer.");
+        // 1. STORE PRESET
+        btnStorePreset.onClick = function () {
+            var curName = getSelectedPresetName() || "My Comic Preset";
+            var entered = (typeof prompt === "function") ? prompt("Store Preset Name:", curName) : curName;
+            if (entered === null || entered === undefined) return;
+            var cleanName = trimStr(entered);
+            if (!cleanName) return;
+
+            PRESETS[cleanName] = normalizePresetData(collectUIConfig());
+            persistPresets();
+            populatePresetDropdown(cleanName);
+            lblStatus.text = 'Stored preset: "' + cleanName + '"';
+        };
+
+        // 2. RENAME PRESET
+        btnRenamePreset.onClick = function () {
+            var oldName = getSelectedPresetName();
+            if (!oldName || !PRESETS[oldName]) return;
+            var entered = (typeof prompt === "function") ? prompt('Rename Preset "' + oldName + '" to:', oldName) : null;
+            if (entered === null || entered === undefined) return;
+            var newName = trimStr(entered);
+            if (!newName || newName === oldName) return;
+
+            var rebuilt = {};
+            for (var k in PRESETS) {
+                if (PRESETS.hasOwnProperty(k)) {
+                    if (k === oldName) rebuilt[newName] = PRESETS[oldName];
+                    else rebuilt[k] = PRESETS[k];
+                }
+            }
+            PRESETS = rebuilt;
+            persistPresets();
+            populatePresetDropdown(newName);
+            lblStatus.text = 'Renamed preset to: "' + newName + '"';
+        };
+
+        // 3. DELETE PRESET
+        btnDeletePreset.onClick = function () {
+            var curName = getSelectedPresetName();
+            if (!curName || !PRESETS[curName]) return;
+            if (typeof confirm === "function") {
+                if (!confirm('Delete preset "' + curName + '"?')) return;
+            }
+            delete PRESETS[curName];
+
+            var remaining = 0;
+            for (var k in PRESETS) { if (PRESETS.hasOwnProperty(k)) remaining++; }
+            if (remaining === 0) {
+                PRESETS = { "Classic Speech": getDefaultPresets()["Classic Speech"] };
+            }
+
+            persistPresets();
+            var names = populatePresetDropdown();
+            if (names.length > 0 && PRESETS[names[0]]) {
+                applyConfigToUI(PRESETS[names[0]]);
+            }
+            lblStatus.text = 'Deleted preset: "' + curName + '"';
+        };
+
+        function ingestImportedPresetJson(rawJsonText, fallbackFileName) {
+            var parsed = JSONSafe.parse(rawJsonText);
+            if (!parsed || typeof parsed !== "object") {
+                throw new Error("Invalid preset JSON content.");
+            }
+
+            var firstImported = "";
+            if (parsed.presets && typeof parsed.presets === "object") {
+                for (var pk in parsed.presets) {
+                    if (parsed.presets.hasOwnProperty(pk)) {
+                        PRESETS[pk] = normalizePresetData(parsed.presets[pk]);
+                        if (!firstImported) firstImported = pk;
+                    }
+                }
+            } else if (parsed.preset && typeof parsed.preset === "object") {
+                var singleName = trimStr(parsed.name) || fallbackFileName || "Imported Preset";
+                PRESETS[singleName] = normalizePresetData(parsed.preset);
+                firstImported = singleName;
+            } else if (parsed.geometry || parsed.tailStyle || parsed.strokeStyle) {
+                var directName = trimStr(parsed.name) || fallbackFileName || "Imported Preset";
+                PRESETS[directName] = normalizePresetData(parsed);
+                firstImported = directName;
+            } else {
+                for (var mk in parsed) {
+                    if (parsed.hasOwnProperty(mk) && parsed[mk] && typeof parsed[mk] === "object") {
+                        PRESETS[mk] = normalizePresetData(parsed[mk]);
+                        if (!firstImported) firstImported = mk;
+                    }
+                }
+            }
+
+            if (!firstImported) throw new Error("No valid preset entries found in JSON.");
+            persistPresets();
+            populatePresetDropdown(firstImported);
+            applyConfigToUI(PRESETS[firstImported]);
+            lblStatus.text = 'Opened preset: "' + firstImported + '"';
+        }
+
+        // 4. OPEN PRESET (.json)
+        btnOpenPreset.onClick = function () {
+            // Web Simulator (AE_JS_builder): HTML5 File Picker
+            if (typeof document !== "undefined" && typeof document.createElement === "function" && typeof FileReader !== "undefined") {
+                var fileIn = document.createElement("input");
+                fileIn.type = "file";
+                fileIn.accept = ".json,application/json";
+                fileIn.style.display = "none";
+                document.body.appendChild(fileIn);
+                fileIn.addEventListener("change", function () {
+                    var f = fileIn.files && fileIn.files[0];
+                    if (f) {
+                        var reader = new FileReader();
+                        reader.onload = function (ev) {
+                            try {
+                                var baseN = String(f.name || "Imported").replace(/\.json$/i, "");
+                                ingestImportedPresetJson(String(ev.target.result || ""), baseN);
+                            } catch (err) {
+                                lblStatus.text = "Error opening preset: " + err.message;
+                            }
+                        };
+                        reader.readAsText(f);
+                    }
+                    if (fileIn.parentNode) fileIn.parentNode.removeChild(fileIn);
+                });
+                fileIn.click();
                 return;
             }
 
-            var wrapMethods = ["balanced", "greedy", "pyramid", "reverse_pyramid", "compact"];
-            var bodyTypes = [
-                "oval",
-                "squircle",
-                "rounded_rect",
-                "polygon",
-                "stepped",
-                "docked",
-                "shout",
-                "thought",
-                "whisper",
-                "caption"
-            ];
-            var tailTypes = [
-                "curved_hook",
-                "straight_cone",
-                "side_wedge",
-                "corner",
-                "wide_wedge",
-                "thought_bubbles",
-                "lightning_bolt",
-                "scream_barb",
-                "none"
-            ];
-            var animInTypes = ["bounce", "zoom", "slide", "fade", "none"];
-            var animOutTypes = ["shrink", "fade", "puff", "none"];
+            // Native After Effects: File.openDialog
+            if (typeof File !== "undefined" && typeof File.openDialog === "function") {
+                var selFile = File.openDialog("Open Comic Balloon Preset (.json)", "*.json");
+                if (!selFile) return;
+                try {
+                    selFile.encoding = "UTF-8";
+                    if (selFile.open("r")) {
+                        var txt = selFile.read();
+                        selFile.close();
+                        var fBase = decodeURI(selFile.name || "Imported").replace(/\.json$/i, "");
+                        ingestImportedPresetJson(txt, fBase);
+                    }
+                } catch (eOpen) {
+                    lblStatus.text = "Error opening JSON: " + eOpen.message;
+                }
+            }
+        };
 
-            var params = {
-                maxWidth: parseInt(txtMaxW.text, 10) || 420,
-                desiredWidth: parseInt(txtDesW.text, 10) || 360,
-                wrapMethod: wrapMethods[ddWrapMethod.selection ? ddWrapMethod.selection.index : 0] || "balanced",
-                language: "english",
-                useHyphen: true,
-                removeBreaks: chkStripBreaks.value,
-                preventWidows: chkWidows.value,
-                avoidDanglingShort: true,
-                bindNumbers: chkNumbers.value,
-                bindHonorifics: true,
-
-                bodyType: bodyTypes[ddBodyType.selection ? ddBodyType.selection.index : 0] || "oval",
-                tailType: tailTypes[ddTailType.selection ? ddTailType.selection.index : 0] || "curved_hook",
-                cornerRadius: 28,
-                burstSpikes: 16,
-                padX: Math.round(sldPadX.value) || 36,
-                padY: Math.round(sldPadY.value) || 26,
-
-                tailBaseW: 38,
-                tailAngle: parseFloat(txtAngle.text) || 115,
-                tailDist: Math.max(60, parseFloat(txtDist.text) || 110),
-                tailCurvature: 0.35,
-
-                bgColor: cpBg.getColor(),
-                bgOpacity: 100,
-                strokeColor: cpStroke.getColor(),
-                strokeWidth: parseFloat(txtStrokeW.text) || 5,
-                isWhisperDashed: chkWhisperDashes.value,
-
-                enableHighlight: chkHighlight.value,
-                highlightWords: txtHighlightWords.text,
-                highlightColor: cpHighlight.getColor(),
-
-                animInPreset: animInTypes[ddAnimIn.selection ? ddAnimIn.selection.index : 0] || "bounce",
-                animOutPreset: animOutTypes[ddAnimOut.selection ? ddAnimOut.selection.index : 0] || "shrink",
-                inDuration: parseFloat(txtInDur.text) || 0.35,
-                inDelay: 0.0,
-                holdDuration: parseFloat(txtHold.text) || 2.5,
-                outDuration: 0.30,
-                animateFromTail: chkTailOrigin.value,
-                liveAnimTail: chkLiveAnimTail.value
+        // 5. DOWNLOAD PRESET (.json)
+        btnDownloadPreset.onClick = function () {
+            var curName = getSelectedPresetName() || "Comic_Balloon_Preset";
+            var curData = collectUIConfig();
+            var exportObj = {
+                name: curName,
+                generator: SCRIPT_NAME + " " + SCRIPT_VERSION,
+                preset: normalizePresetData(curData)
             };
+            var jsonOut = JSONSafe.stringify(exportObj, true);
+            var safeFile = curName.replace(/[^A-Za-z0-9_\-]+/g, "_") + ".json";
 
-            var appObj = (typeof app !== "undefined") ? app : globalObj.app;
-            if (appObj && appObj.beginUndoGroup) appObj.beginUndoGroup("AE Comic Text Bubble");
-            try {
-                var ok = buildComicBubble(ctx.comp, ctx.textLayer, params);
-                if (ok) {
-                    lblStatus.text = "Comic bubble built successfully!";
-                    updateDetection();
+            // Web Simulator (AE_JS_builder): Instant Browser File Download
+            if (typeof document !== "undefined" && typeof Blob !== "undefined" && typeof URL !== "undefined" && URL.createObjectURL) {
+                try {
+                    var blob = new Blob([jsonOut], { type: "application/json;charset=utf-8" });
+                    var url = URL.createObjectURL(blob);
+                    var a = document.createElement("a");
+                    a.href = url;
+                    a.download = safeFile;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+                    lblStatus.text = 'Downloaded preset JSON: "' + safeFile + '"';
+                    return;
+                } catch (eBlob) {}
+            }
+
+            // Native After Effects: File.saveDialog (fallback to Desktop)
+            if (typeof File !== "undefined") {
+                var outFile = null;
+                if (typeof File.saveDialog === "function") {
+                    outFile = File.saveDialog("Download / Save Comic Balloon Preset (.json)", "*.json");
+                }
+                if (!outFile && typeof Folder !== "undefined" && Folder.desktop) {
+                    outFile = new File(Folder.desktop.fsName + "/" + safeFile);
+                }
+                if (!outFile) return;
+                if (!/\.json$/i.test(outFile.fsName)) {
+                    outFile = new File(outFile.fsName + ".json");
+                }
+                try {
+                    outFile.encoding = "UTF-8";
+                    if (outFile.open("w")) {
+                        outFile.write(jsonOut);
+                        outFile.close();
+                        lblStatus.text = "Saved preset to: " + outFile.name;
+                    }
+                } catch (eSave) {
+                    lblStatus.text = "Error saving JSON: " + eSave.message;
+                }
+            }
+        };
+
+        // =====================================================================
+        // TARGET DETECTION & ACTION BUTTON HANDLERS
+        // =====================================================================
+        function syncTargetStatus(loadExistingConfig) {
+            var ctx = resolveTargetContext(false);
+            if (!ctx) {
+                lblTargetLayer.text = "Target: No active composition.";
+                return;
+            }
+            if (ctx.mode === "precomp") {
+                var envP = readLayerStateEffect(ctx.precompLayer) || readLayerStateEffect(ctx.textLayer);
+                var hexP = (envP && envP.precompHex) ? envP.precompHex : pendingHex;
+                pendingHex = hexP;
+                chkMakePrecomp.text = 'Make Precomp ("comic balloon ' + pendingHex + '")';
+                lblTargetLayer.text = 'Target: "' + ctx.precompLayer.name + '" (Active Balloon Precomp)';
+                btnBuildUpdate.text = "Update Comic Balloon";
+                if (loadExistingConfig && envP && envP.config) {
+                    applyConfigToUI(envP.config);
+                }
+            } else if (ctx.mode === "text") {
+                var envT = readLayerStateEffect(ctx.textLayer);
+                if (envT && envT.precompHex) pendingHex = envT.precompHex;
+                chkMakePrecomp.text = 'Make Precomp ("comic balloon ' + pendingHex + '")';
+                if (ctx.balloonLayer || envT) {
+                    lblTargetLayer.text = 'Target: "' + ctx.textLayer.name + '" (Balloon Linked)';
+                    btnBuildUpdate.text = "Update Comic Balloon";
+                    if (loadExistingConfig && envT && envT.config) {
+                        applyConfigToUI(envT.config);
+                    }
                 } else {
-                    lblStatus.text = "Failed to build comic bubble.";
+                    lblTargetLayer.text = 'Target: "' + ctx.textLayer.name + '" (Text Layer)';
+                    btnBuildUpdate.text = "Build / Update Balloon";
+                }
+            } else {
+                chkMakePrecomp.text = 'Make Precomp ("comic balloon ' + pendingHex + '")';
+                lblTargetLayer.text = "Target: Select a Text Layer in Comp.";
+                btnBuildUpdate.text = "Build / Update Balloon";
+            }
+        }
+
+        btnRefresh.onClick = function () {
+            syncTargetStatus(true);
+            lblStatus.text = "Refreshed active layer selection.";
+        };
+
+        btnBuildUpdate.onClick = function () {
+            var cfg = collectUIConfig();
+            var appRef = (typeof app !== "undefined") ? app : globalObj.app;
+            if (appRef && typeof appRef.beginUndoGroup === "function") {
+                appRef.beginUndoGroup(SCRIPT_NAME + ": Build / Update");
+            }
+            try {
+                var res = executeBuildOrUpdate(cfg, pendingHex);
+                pendingHex = generateHexId(4);
+                syncTargetStatus(false);
+                if (res.mode === "precomp") {
+                    lblStatus.text = (res.isUpdate ? "Updated: " : "Built: ") + '"' + res.precompName + '"';
+                } else {
+                    lblStatus.text = (res.isUpdate ? "Updated" : "Built") + " Comic Balloon (linked child of Text).";
                 }
             } catch (err) {
-                lblStatus.text = "Error: " + err.toString();
+                lblStatus.text = "Error: " + err.message;
             } finally {
-                if (appObj && appObj.endUndoGroup) appObj.endUndoGroup();
+                if (appRef && typeof appRef.endUndoGroup === "function") {
+                    appRef.endUndoGroup();
+                }
             }
         };
 
-        updateDetection();
+        btnRemove.onClick = function () {
+            var appRef = (typeof app !== "undefined") ? app : globalObj.app;
+            if (appRef && typeof appRef.beginUndoGroup === "function") {
+                appRef.beginUndoGroup(SCRIPT_NAME + ": Remove & Revert");
+            }
+            try {
+                executeRemoveAndReverse();
+                pendingHex = generateHexId(4);
+                syncTargetStatus(false);
+                lblStatus.text = "Removed balloon and restored original text layer.";
+            } catch (err) {
+                lblStatus.text = "Revert: " + err.message;
+            } finally {
+                if (appRef && typeof appRef.endUndoGroup === "function") {
+                    appRef.endUndoGroup();
+                }
+            }
+        };
 
-        if (win.layout) win.layout.layout(true);
-        win.onResizing = win.onResize = function() {
+        // Initialize Presets & UI State
+        var initNames = populatePresetDropdown("Classic Speech");
+        if (initNames.length > 0) {
+            var firstKey = PRESETS["Classic Speech"] ? "Classic Speech" : initNames[0];
+            applyConfigToUI(PRESETS[firstKey]);
+        }
+        syncTargetStatus(true);
+
+        win.onResizing = win.onResize = function () {
             if (this.layout) this.layout.resize();
         };
 
         if (win instanceof Window) {
             win.center();
             win.show();
+        } else if (win.layout) {
+            win.layout.layout(true);
         }
+        setTimeoutSafe(refreshPreviewCanvas);
 
         return win;
     }
 
-    // -------------------------------------------------------------------------
-    // 11. Execution Bootstrap
-    // -------------------------------------------------------------------------
+    function setTimeoutSafe(fn) {
+        if (typeof setTimeout === "function") {
+            setTimeout(fn, 30);
+        } else {
+            try { fn(); } catch (e) {}
+        }
+    }
+
     buildUI(thisObj);
 
 })(this);
