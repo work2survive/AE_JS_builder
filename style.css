@@ -1932,6 +1932,48 @@ body.body-viewport-panning {
     color: #64b5f6;
 }
 
+/* Random Stroke Toggle Button (ON / OFF switch next to Random Shape & Dummy Text) */
+.ae-random-stroke-btn {
+    width: 22px;
+    height: 22px;
+    max-height: 22px;
+    min-height: 22px;
+    background: #252525;
+    border: 1px solid var(--border-light);
+    color: var(--text-muted);
+    border-radius: 3px;
+    padding: 0;
+    margin: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-sizing: border-box;
+    flex-shrink: 0;
+    line-height: 1;
+    vertical-align: middle;
+    appearance: none;
+    -webkit-appearance: none;
+    transition: all 0.15s ease;
+}
+.ae-random-stroke-btn svg.ae-stroke-icon {
+    display: block;
+    width: 14px;
+    height: 14px;
+    margin: 0;
+}
+.ae-random-stroke-btn:hover {
+    color: #ffffff;
+    background: #383838;
+    border-color: #555555;
+}
+.ae-random-stroke-btn.active {
+    background: #1c3b66;
+    border-color: var(--ae-blue);
+    color: #64b5f6;
+    box-shadow: 0 0 0 1px rgba(44, 140, 255, 0.35);
+}
+
 /* Dummy Text Button (aligned after dummy shape button, same 22px size) */
 .ae-dummy-text-btn {
     width: 22px;

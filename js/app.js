@@ -14,7 +14,7 @@
         return '1.2.36';
     }
 
-    const APP_VERSION = '1.2.40';
+    const APP_VERSION = '1.2.41';
     global.EMULATOR_VERSION = APP_VERSION;
     global.AE_TEXT_GUIDE_URL = 'https://github.com/work2survive/AE_JS_builder/blob/main/AE_VS_JS_TEXT_RENDERING_DIFFERENCES.md';
     global.AE_ANCHOR_POINT_GUIDE_URL = 'https://github.com/work2survive/AE-Align-AnchorPoint/blob/main/README.md';
@@ -640,6 +640,81 @@
         `;
     }
 
+    function renderDashesGroup(dashesGroup) {
+        if (!dashesGroup || !dashesGroup.properties || dashesGroup.properties.length === 0) return '';
+        const rows = dashesGroup.properties.map(p => {
+            if (!p) return '';
+            const val = (p.value !== undefined) ? Math.round(Number(p.value) * 10) / 10 : 0;
+            return `
+                <div class="ae-prop-row ae-prop-animatable" style="padding-left: 14px;">
+                    ${render4WaySwitch(p)}
+                    <span class="ae-badge-type animatable" title="Animatable in AE timeline">[ANIM]</span>
+                    <span class="ae-prop-stopwatch">&#9201;</span>
+                    ${renderPropExprToggle(p)}
+                    <span class="ae-prop-name">${escapeHtml(p.name || 'Dash')}</span>
+                    <div class="ae-prop-val-container">
+                        <span class="ae-scrub-val" data-prop-id="${p.id}" data-val="${val}" data-unit="px">${val} px</span>
+                        ${renderPropExprBadge(p)}
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+        return `
+            <div class="ae-prop-group" style="padding-left: 8px;">
+                <div class="ae-prop-group-header">
+                    <span class="ae-twirl" data-action="toggle-group">&#9656;</span>
+                    <span class="ae-prop-group-title">Dashes</span>
+                    <span class="ae-badge-type animatable" style="margin-left:6px;" title="Stroke Dash / Dot Controls">[DASHES]</span>
+                </div>
+                <div class="ae-prop-items" style="display:none;">
+                    ${rows}
+                </div>
+            </div>
+        `;
+    }
+
+    function renderTrimGroup(trimGroup) {
+        if (!trimGroup) return '';
+        const startProp = trimGroup.start || (trimGroup.property && (trimGroup.property('Start') || trimGroup.property('ADBE Vector Trim Start')));
+        const endProp = trimGroup.end || (trimGroup.property && (trimGroup.property('End') || trimGroup.property('ADBE Vector Trim End')));
+        const offsetProp = trimGroup.offset || (trimGroup.property && (trimGroup.property('Offset') || trimGroup.property('ADBE Vector Trim Offset')));
+
+        const renderTrimRow = (p, label, unit, minAttr = '', maxAttr = '') => {
+            if (!p) return '';
+            const val = (p.value !== undefined) ? Math.round(Number(p.value) * 10) / 10 : 0;
+            const boundsAttrs = `${minAttr !== '' ? ` data-min="${minAttr}"` : ''}${maxAttr !== '' ? ` data-max="${maxAttr}"` : ''}`;
+            return `
+                <div class="ae-prop-row ae-prop-animatable" style="padding-left: 14px;">
+                    ${render4WaySwitch(p)}
+                    <span class="ae-badge-type animatable" title="Animatable in AE timeline">[ANIM]</span>
+                    <span class="ae-prop-stopwatch">&#9201;</span>
+                    ${renderPropExprToggle(p)}
+                    <span class="ae-prop-name">${escapeHtml(label)}</span>
+                    <div class="ae-prop-val-container">
+                        <span class="ae-scrub-val" data-prop-id="${p.id}" data-val="${val}" data-unit="${unit}"${boundsAttrs}>${val} ${unit}</span>
+                        ${renderPropExprBadge(p)}
+                    </div>
+                </div>
+            `;
+        };
+
+        return `
+            <div class="ae-prop-group" style="padding-left: 8px;">
+                <div class="ae-prop-group-header">
+                    <span class="ae-twirl open" data-action="toggle-group">&#9656;</span>
+                    <span class="ae-prop-group-title">${escapeHtml(trimGroup.name || 'Trim Paths 1')}</span>
+                    <span class="ae-badge-type animatable" style="margin-left:6px;" title="After Effects Trim Paths (Start, End, Offset)">[TRIM]</span>
+                </div>
+                <div class="ae-prop-items">
+                    ${renderTrimRow(startProp, 'Start', '%', 0, 100)}
+                    ${renderTrimRow(endProp, 'End', '%', 0, 100)}
+                    ${renderTrimRow(offsetProp, 'Offset', '°')}
+                </div>
+            </div>
+        `;
+    }
+
     function renderVectorContents(contentsGroup, layerIdx = 0) {
         if (!contentsGroup || !contentsGroup.properties) return '';
         let html = '';
@@ -749,10 +824,11 @@
                         ${renderPropExprToggle(item.strokeWidth)}
                         <span class="ae-prop-name">Stroke Width</span>
                         <div class="ae-prop-val-container">
-                            <span class="ae-scrub-val" data-prop-id="${item.strokeWidth.id}" data-val="${w}" data-unit="px">${w} px</span>
+                            <span class="ae-scrub-val" data-prop-id="${item.strokeWidth.id}" data-val="${w}" data-unit="px" data-min="0">${w} px</span>
                             ${renderPropExprBadge(item.strokeWidth)}
                         </div>
                     </div>
+                    ${item.dashes ? renderDashesGroup(item.dashes) : ''}
                     ${item.taper ? renderTaperGroup(item.taper, layerIdx) : ''}
                 `;
             } else if ((typeof VectorGraphicGradientStroke !== 'undefined' && item instanceof VectorGraphicGradientStroke) || item.matchName === 'ADBE Vector Graphic - G-Stroke') {
@@ -765,12 +841,15 @@
                         ${renderPropExprToggle(item.strokeWidth)}
                         <span class="ae-prop-name">Stroke Width</span>
                         <div class="ae-prop-val-container">
-                            <span class="ae-scrub-val" data-prop-id="${item.strokeWidth.id}" data-val="${w}" data-unit="px">${w} px</span>
+                            <span class="ae-scrub-val" data-prop-id="${item.strokeWidth.id}" data-val="${w}" data-unit="px" data-min="0">${w} px</span>
                             ${renderPropExprBadge(item.strokeWidth)}
                         </div>
                     </div>
+                    ${item.dashes ? renderDashesGroup(item.dashes) : ''}
                     ${item.taper ? renderTaperGroup(item.taper, layerIdx) : ''}
                 `;
+            } else if ((typeof VectorFilterTrim !== 'undefined' && item instanceof VectorFilterTrim) || item.matchName === 'ADBE Vector Filter - Trim') {
+                html += renderTrimGroup(item);
             }
         });
 
@@ -1217,8 +1296,14 @@
                 const onMove = (moveEvent) => {
                     const dx = moveEvent.clientX - startX;
                     const step = moveEvent.shiftKey ? 10 : (moveEvent.altKey ? 0.1 : 1);
-                    const newVal = Math.round((startVal + dx * step) * 10) / 10;
-                    const unit = el.dataset.unit || (el.textContent.includes('px') ? 'px' : (el.textContent.includes('%') ? '%' : ''));
+                    let newVal = Math.round((startVal + dx * step) * 10) / 10;
+                    if (el.dataset.min !== undefined && el.dataset.min !== '') {
+                        newVal = Math.max(Number(el.dataset.min), newVal);
+                    }
+                    if (el.dataset.max !== undefined && el.dataset.max !== '') {
+                        newVal = Math.min(Number(el.dataset.max), newVal);
+                    }
+                    const unit = el.dataset.unit || (el.textContent.includes('px') ? 'px' : (el.textContent.includes('%') ? '%' : (el.textContent.includes('°') ? '°' : '')));
                     el.textContent = unit ? `${newVal} ${unit}` : newVal;
 
                     if (activeProp) {
@@ -1893,24 +1978,32 @@
         bakedShape.closed = true;
         pathGroup.property('Path').setValue(bakedShape);
 
-        // 4. Random Stroke & Random Fill
+        // 4. Fill & Stroke (honors global Random Stroke toggle state)
         const isBrightBg = isViewportBackgroundBright(comp);
         const fillHue = Math.random();
-        const strokeHue = (fillHue + 0.25 + Math.random() * 0.5) % 1.0;
         const fillColor = hslToRgb01(fillHue, 0.65 + Math.random() * 0.30, isBrightBg ? (0.35 + Math.random() * 0.28) : (0.45 + Math.random() * 0.28));
-        const strokeColor = hslToRgb01(strokeHue, 0.75 + Math.random() * 0.25, isBrightBg ? (0.20 + Math.random() * 0.25) : (0.65 + Math.random() * 0.25));
         const fillOpacity = Math.round(65 + Math.random() * 35);
-        const strokeWidth = Math.round(2 + Math.random() * 12);
-        const strokeOpacity = Math.round(85 + Math.random() * 15);
-        const lineJoin = 1 + Math.floor(Math.random() * 3); // 1: Miter, 2: Round, 3: Bevel
 
-        const strokeProp = polyContents.addProperty('ADBE Vector Graphic - Stroke');
-        strokeProp.name = 'Stroke 1';
-        strokeProp.property('Color').setValue(strokeColor);
-        strokeProp.property('Stroke Width').setValue(strokeWidth);
-        strokeProp.property('Opacity').setValue(strokeOpacity);
-        strokeProp.property('Line Cap').setValue(2);
-        strokeProp.property('Line Join').setValue(lineJoin);
+        let strokeDesc = 'stroke: off';
+        if (randomStrokeActive) {
+            const rsInfo = applyRandomStrokeToShapeGroup(polyContents, comp);
+            strokeDesc = `random stroke ${rsInfo.width}px [${rsInfo.features.join(' + ') || 'solid'}]`;
+        } else if (!hasExplicitlyDisabledRandomStroke) {
+            const strokeHue = (fillHue + 0.25 + Math.random() * 0.5) % 1.0;
+            const strokeColor = hslToRgb01(strokeHue, 0.75 + Math.random() * 0.25, isBrightBg ? (0.20 + Math.random() * 0.25) : (0.65 + Math.random() * 0.25));
+            const strokeWidth = Math.round(2 + Math.random() * 12);
+            const strokeOpacity = Math.round(85 + Math.random() * 15);
+            const lineJoin = 1 + Math.floor(Math.random() * 3);
+
+            const strokeProp = polyContents.addProperty('ADBE Vector Graphic - Stroke');
+            strokeProp.name = 'Stroke 1';
+            strokeProp.property('Color').setValue(strokeColor);
+            strokeProp.property('Stroke Width').setValue(strokeWidth);
+            strokeProp.property('Opacity').setValue(strokeOpacity);
+            strokeProp.property('Line Cap').setValue(2);
+            strokeProp.property('Line Join').setValue(lineJoin);
+            strokeDesc = `stroke ${strokeWidth}px`;
+        }
 
         const fillProp = polyContents.addProperty('ADBE Vector Graphic - Fill');
         fillProp.name = 'Fill 1';
@@ -1992,10 +2085,312 @@
         }, 50);
 
         window.dispatchEvent(new CustomEvent('ae-layer-selection-changed', { detail: { layer: layer } }));
-        appendConsole(`Created dummy 8-vertex baked Bezier polygon (${is3D ? `3D, Z: ${posZ}px` : '2D'}) layer "${layer.name}" (types: ${bezierTypes.join(', ')}, stroke ${strokeWidth}px, fill ${fillOpacity}%) with randomized anchor point [${randAnchorX}, ${randAnchorY}] centered in viewport with red cross child.`);
+        appendConsole(`Created dummy 8-vertex baked Bezier polygon (${is3D ? `3D, Z: ${posZ}px` : '2D'}) layer "${layer.name}" (types: ${bezierTypes.join(', ')}, ${strokeDesc}, fill ${fillOpacity}%) with randomized anchor point [${randAnchorX}, ${randAnchorY}] centered in viewport with red cross child.`);
         return layer;
     }
     global.createDummyPolygonLayer = createDummyPolygonLayer;
+
+    // -------------------------------------------------------------
+    // Random Stroke Toggle (ON / OFF across all Shape Layers in active comp)
+    // - Random color & thickness
+    // - 50% chance randomly trimmed (Start, End, and Offset)
+    // - 50% chance random Taper
+    // - 50% chance randomly Dotted
+    // -------------------------------------------------------------
+    let randomStrokeActive = false;
+    let hasExplicitlyDisabledRandomStroke = false;
+
+    function collectShapeGeometryGroups(contentsGroup, outGroups = []) {
+        if (!contentsGroup || !contentsGroup.properties) return outGroups;
+        let hasDirectGeometry = false;
+        for (const p of contentsGroup.properties) {
+            if (!p) continue;
+            if (
+                (typeof VectorShapeRect !== 'undefined' && p instanceof VectorShapeRect) ||
+                (typeof VectorShapeEllipse !== 'undefined' && p instanceof VectorShapeEllipse) ||
+                (typeof VectorShapeStar !== 'undefined' && p instanceof VectorShapeStar) ||
+                (typeof VectorShapePath !== 'undefined' && p instanceof VectorShapePath) ||
+                p.matchName === 'ADBE Vector Shape - Rect' ||
+                p.matchName === 'ADBE Vector Shape - Ellipse' ||
+                p.matchName === 'ADBE Vector Shape - Star' ||
+                p.matchName === 'ADBE Vector Shape - Group'
+            ) {
+                hasDirectGeometry = true;
+            } else if ((typeof VectorGroup !== 'undefined' && p instanceof VectorGroup) || p.matchName === 'ADBE Vector Group') {
+                const sub = p.property('Contents');
+                if (sub) collectShapeGeometryGroups(sub, outGroups);
+            }
+        }
+        if (hasDirectGeometry) {
+            outGroups.push(contentsGroup);
+        }
+        return outGroups;
+    }
+
+    function removeStrokesAndRandomTrimsFromGroup(contentsGroup) {
+        if (!contentsGroup || !contentsGroup.properties) return 0;
+        let removedCount = 0;
+        for (let i = contentsGroup.properties.length - 1; i >= 0; i--) {
+            const p = contentsGroup.properties[i];
+            if (!p) continue;
+            if (
+                (typeof VectorGraphicStroke !== 'undefined' && p instanceof VectorGraphicStroke) ||
+                (typeof VectorGraphicGradientStroke !== 'undefined' && p instanceof VectorGraphicGradientStroke) ||
+                p.matchName === 'ADBE Vector Graphic - Stroke' ||
+                p.matchName === 'ADBE Vector Graphic - G-Stroke'
+            ) {
+                contentsGroup.properties.splice(i, 1);
+                removedCount++;
+            } else if (
+                ((typeof VectorFilterTrim !== 'undefined' && p instanceof VectorFilterTrim) || p.matchName === 'ADBE Vector Filter - Trim') &&
+                p._addedByRandomStroke
+            ) {
+                contentsGroup.properties.splice(i, 1);
+            } else if (
+                ((typeof VectorFilterTrim !== 'undefined' && p instanceof VectorFilterTrim) || p.matchName === 'ADBE Vector Filter - Trim') &&
+                p._prevTrimState
+            ) {
+                p.property('Start')?.setValue(p._prevTrimState.start);
+                p.property('End')?.setValue(p._prevTrimState.end);
+                p.property('Offset')?.setValue(p._prevTrimState.offset);
+                delete p._prevTrimState;
+            } else if ((typeof VectorGroup !== 'undefined' && p instanceof VectorGroup) || p.matchName === 'ADBE Vector Group') {
+                const sub = p.property('Contents');
+                if (sub) removedCount += removeStrokesAndRandomTrimsFromGroup(sub);
+            }
+        }
+        return removedCount;
+    }
+
+    function applyRandomStrokeToShapeGroup(contentsGroup, comp) {
+        if (!contentsGroup || !contentsGroup.properties) return { width: 0, features: [] };
+
+        // Clean any existing strokes / previous random trims on this immediate group first
+        for (let i = contentsGroup.properties.length - 1; i >= 0; i--) {
+            const p = contentsGroup.properties[i];
+            if (!p) continue;
+            if (
+                (typeof VectorGraphicStroke !== 'undefined' && p instanceof VectorGraphicStroke) ||
+                (typeof VectorGraphicGradientStroke !== 'undefined' && p instanceof VectorGraphicGradientStroke) ||
+                p.matchName === 'ADBE Vector Graphic - Stroke' ||
+                p.matchName === 'ADBE Vector Graphic - G-Stroke' ||
+                (((typeof VectorFilterTrim !== 'undefined' && p instanceof VectorFilterTrim) || p.matchName === 'ADBE Vector Filter - Trim') && p._addedByRandomStroke)
+            ) {
+                contentsGroup.properties.splice(i, 1);
+            }
+        }
+
+        const isBrightBg = isViewportBackgroundBright(comp);
+        const hue = Math.random();
+        const strokeColor = hslToRgb01(
+            hue,
+            0.78 + Math.random() * 0.22,
+            isBrightBg ? (0.20 + Math.random() * 0.28) : (0.56 + Math.random() * 0.30)
+        );
+        const strokeWidth = Math.round((2.5 + Math.random() * 14.5) * 10) / 10; // 2.5px .. 17px
+        const strokeOpacity = Math.round(88 + Math.random() * 12);
+        const lineJoin = 1 + Math.floor(Math.random() * 3);
+        let lineCap = 1 + Math.floor(Math.random() * 3);
+
+        const isTrimmed = Math.random() < 0.5;
+        const isTapered = Math.random() < 0.5;
+        const isDotted = Math.random() < 0.5;
+        if (isTapered || isDotted) {
+            lineCap = 2; // Round cap for smooth dots and tapered tips
+        }
+
+        const strokeProp = contentsGroup.addProperty('ADBE Vector Graphic - Stroke');
+        strokeProp.name = 'Random Stroke';
+        strokeProp._addedByRandomStroke = true;
+        strokeProp.property('Color').setValue(strokeColor);
+        strokeProp.property('Stroke Width').setValue(strokeWidth);
+        strokeProp.property('Opacity').setValue(strokeOpacity);
+        strokeProp.property('Line Cap').setValue(lineCap);
+        strokeProp.property('Line Join').setValue(lineJoin);
+
+        const features = [];
+
+        // 50% chance: Randomly Dotted
+        if (isDotted) {
+            const dashesGroup = strokeProp.dashes || strokeProp.property('Dashes');
+            if (dashesGroup) {
+                dashesGroup.properties = [];
+                const dotDash = Math.round((0.4 + Math.random() * 1.1) * 10) / 10;
+                const dotGap = Math.round((strokeWidth * (1.75 + Math.random() * 2.0)) * 10) / 10;
+                const dotOffset = Math.round(Math.random() * 40);
+
+                const dProp = dashesGroup.addProperty('ADBE Vector Stroke Dash 1');
+                dProp.name = 'Dash';
+                dProp.setValue(dotDash);
+
+                const gProp = dashesGroup.addProperty('ADBE Vector Stroke Gap 1');
+                gProp.name = 'Gap';
+                gProp.setValue(dotGap);
+
+                const oProp = dashesGroup.addProperty('ADBE Vector Stroke Offset');
+                oProp.name = 'Offset';
+                oProp.setValue(dotOffset);
+
+                features.push(`dotted (gap ${dotGap}px)`);
+            }
+        }
+
+        // 50% chance: Random Taper
+        if (isTapered) {
+            const taperProp = strokeProp.taper || strokeProp.property('Taper');
+            if (taperProp) {
+                const startLen = Math.round(25 + Math.random() * 65);
+                const endLen = Math.round(25 + Math.random() * 65);
+                const startW = Math.round(Math.random() * 25);
+                const endW = Math.round(Math.random() * 25);
+                const startEase = Math.round((Math.random() * 120) - 50);
+                const endEase = Math.round((Math.random() * 120) - 50);
+
+                taperProp.property('Start Length')?.setValue(startLen);
+                taperProp.property('End Length')?.setValue(endLen);
+                taperProp.property('Start Width')?.setValue(startW);
+                taperProp.property('End Width')?.setValue(endW);
+                taperProp.property('Start Ease')?.setValue(startEase);
+                taperProp.property('End Ease')?.setValue(endEase);
+
+                features.push(`taper (${startLen}%/${endLen}%)`);
+            }
+        }
+
+        // 50% chance: Randomly Trimmed with random Offset
+        if (isTrimmed) {
+            let trimProp = contentsGroup.property('ADBE Vector Filter - Trim') || contentsGroup.property('Trim Paths') || contentsGroup.property('Trim Paths 1');
+            if (trimProp && !trimProp._addedByRandomStroke && !trimProp._prevTrimState) {
+                trimProp._prevTrimState = {
+                    start: trimProp.property('Start')?.value ?? 0,
+                    end: trimProp.property('End')?.value ?? 100,
+                    offset: trimProp.property('Offset')?.value ?? 0
+                };
+            }
+            if (!trimProp) {
+                trimProp = contentsGroup.addProperty('ADBE Vector Filter - Trim');
+                trimProp.name = 'Trim Paths 1';
+                trimProp._addedByRandomStroke = true;
+            }
+            const trimStart = Math.round(Math.random() * 55);
+            const trimSpan = Math.round(22 + Math.random() * 60);
+            const trimEnd = Math.min(100, trimStart + trimSpan);
+            const trimOffset = Math.round((Math.random() * 720) - 360);
+
+            trimProp.property('Start')?.setValue(trimStart);
+            trimProp.property('End')?.setValue(trimEnd);
+            trimProp.property('Offset')?.setValue(trimOffset);
+
+            features.push(`trim ${trimStart}%..${trimEnd}% @ ${trimOffset}°`);
+        }
+
+        return { width: strokeWidth, features };
+    }
+
+    function applyRandomStrokesToComp(targetComp, silent = false) {
+        const comp = targetComp || app?.project?.activeItem || (app?.project?.items && app.project.items[0]);
+        if (!comp) return 0;
+
+        let affectedLayers = 0;
+        const summaryParts = [];
+        const visitedComps = new Set();
+
+        const walkComp = (c) => {
+            if (!c || visitedComps.has(c)) return;
+            visitedComps.add(c);
+            const layersList = Array.isArray(c.layers) ? c.layers : (c.layers?._layers || []);
+            for (const layer of layersList) {
+                if (!layer || layer.name === 'Anchor Cross') continue;
+                if (typeof ShapeLayer !== 'undefined' && layer instanceof ShapeLayer) {
+                    const rootContents = layer.property('Contents');
+                    const geoGroups = collectShapeGeometryGroups(rootContents, []);
+                    if (geoGroups.length > 0) {
+                        for (const grp of geoGroups) {
+                            const info = applyRandomStrokeToShapeGroup(grp, c);
+                            if (summaryParts.length < 4) {
+                                summaryParts.push(`${layer.name}: ${info.width}px [${info.features.join(', ') || 'solid'}]`);
+                            }
+                        }
+                        affectedLayers++;
+                    }
+                }
+                if (layer.source && (layer.source.layers || (typeof CompItem !== 'undefined' && layer.source instanceof CompItem))) {
+                    walkComp(layer.source);
+                }
+            }
+            if (c._onChanged) c._onChanged();
+        };
+
+        walkComp(comp);
+        renderTimeline();
+        if (renderer && typeof renderer.render === 'function') {
+            renderer.render(comp.time || 0);
+        }
+
+        if (!silent) {
+            if (affectedLayers > 0) {
+                appendConsole(`Random Stroke ON: Applied random strokes to ${affectedLayers} shape layer(s) — ${summaryParts.join(' | ')}`);
+            } else {
+                appendConsole('Random Stroke ON: Active (new Shape Layers will receive random color, thickness, 50% trim+offset, 50% taper & 50% dotted).');
+            }
+        }
+        return affectedLayers;
+    }
+
+    function removeRandomStrokesFromComp(targetComp, silent = false) {
+        const comp = targetComp || app?.project?.activeItem || (app?.project?.items && app.project.items[0]);
+        if (!comp) return 0;
+
+        let affectedLayers = 0;
+        const visitedComps = new Set();
+
+        const walkComp = (c) => {
+            if (!c || visitedComps.has(c)) return;
+            visitedComps.add(c);
+            const layersList = Array.isArray(c.layers) ? c.layers : (c.layers?._layers || []);
+            for (const layer of layersList) {
+                if (!layer || layer.name === 'Anchor Cross') continue;
+                if (typeof ShapeLayer !== 'undefined' && layer instanceof ShapeLayer) {
+                    const rootContents = layer.property('Contents');
+                    const removed = removeStrokesAndRandomTrimsFromGroup(rootContents);
+                    if (removed > 0) affectedLayers++;
+                }
+                if (layer.source && (layer.source.layers || (typeof CompItem !== 'undefined' && layer.source instanceof CompItem))) {
+                    walkComp(layer.source);
+                }
+            }
+            if (c._onChanged) c._onChanged();
+        };
+
+        walkComp(comp);
+        renderTimeline();
+        if (renderer && typeof renderer.render === 'function') {
+            renderer.render(comp.time || 0);
+        }
+
+        if (!silent) {
+            appendConsole(`Random Stroke OFF: Removed strokes from ${affectedLayers} shape layer(s).`);
+        }
+        return affectedLayers;
+    }
+
+    function toggleRandomStroke(forceState) {
+        randomStrokeActive = (typeof forceState === 'boolean') ? forceState : !randomStrokeActive;
+        const btn = document.getElementById('btn-random-stroke');
+        if (btn) {
+            btn.classList.toggle('active', randomStrokeActive);
+            btn.setAttribute('aria-pressed', String(randomStrokeActive));
+        }
+        if (randomStrokeActive) {
+            hasExplicitlyDisabledRandomStroke = false;
+            applyRandomStrokesToComp();
+        } else {
+            hasExplicitlyDisabledRandomStroke = true;
+            removeRandomStrokesFromComp();
+        }
+        return randomStrokeActive;
+    }
+    global.toggleRandomStroke = toggleRandomStroke;
 
     // -------------------------------------------------------------
     // Composition Clear Helper (Runs on new script or build)
@@ -2155,6 +2550,9 @@
                 (window.AEFolder || window.Folder)
             );
             appendConsole('Script executed successfully!');
+            if (randomStrokeActive) {
+                applyRandomStrokesToComp(null, true);
+            }
             renderTimeline();
             triggerAutoBuild();
         } catch (err) {
@@ -2984,11 +3382,19 @@
             };
         }
 
-        // Dummy Bezier Polygon Shape Creator Button (Left of Dummy Text button in timeline header)
+        // Dummy Bezier Polygon Shape Creator Button (Left of Random Stroke & Dummy Text)
         const btnCreateDummyShape = document.getElementById('btn-create-dummy-shape');
         if (btnCreateDummyShape) {
             btnCreateDummyShape.onclick = () => {
                 createDummyPolygonLayer();
+            };
+        }
+
+        // Random Stroke ON/OFF Toggle Button
+        const btnRandomStroke = document.getElementById('btn-random-stroke');
+        if (btnRandomStroke) {
+            btnRandomStroke.onclick = () => {
+                toggleRandomStroke();
             };
         }
 

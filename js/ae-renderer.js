@@ -790,6 +790,26 @@
                 return null;
             };
 
+            const extractTrimInfo = (prop) => {
+                if (!prop || prop.enabled === false) return null;
+                const getTrimVal = (pName, mName, idx, defVal) => {
+                    const sub = prop[pName] || (prop.property && (prop.property(pName) || prop.property(mName) || prop.property(idx)));
+                    if (sub) {
+                        const v = (sub.getValueAtTime && typeof sub.getValueAtTime === 'function') ? sub.getValueAtTime(time) : sub.value;
+                        if (v !== undefined && v !== null && !isNaN(v)) return Number(v);
+                    }
+                    return defVal;
+                };
+                const rawStart = Math.max(0, Math.min(100, getTrimVal('start', 'ADBE Vector Trim Start', 1, 0)));
+                const rawEnd = Math.max(0, Math.min(100, getTrimVal('end', 'ADBE Vector Trim End', 2, 100)));
+                const offset = getTrimVal('offset', 'ADBE Vector Trim Offset', 3, 0);
+                const trimType = Math.round(getTrimVal('trimMultipleShapes', 'ADBE Vector Trim Type', 4, 1));
+                const sMin = Math.min(rawStart, rawEnd);
+                const sMax = Math.max(rawStart, rawEnd);
+                const isTrimmed = !(sMin <= 0.001 && sMax >= 99.999);
+                return { start: sMin, end: sMax, offset, trimType, isTrimmed };
+            };
+
             const formatStrokeAttrs = (localStroke) => {
                 if (!localStroke || localStroke.width <= 0 || localStroke.opacity <= 0) {
                     return 'stroke="none"';
@@ -808,12 +828,14 @@
                 return `fill="${localFill.color}"`;
             };
 
-            const traverseGroup = (group, parentFill = null, parentStroke = null) => {
+            const traverseGroup = (group, parentFill = null, parentStroke = null, parentTrim = null) => {
                 let localFill = parentFill;
                 let localStroke = parentStroke;
+                let localTrim = parentTrim;
 
-                // Collect fills and strokes in this group first
+                // Collect fills, strokes, and trim filters in this group first
                 for (const prop of group.properties) {
+                    if (prop && prop.enabled === false) continue;
                     if ((typeof VectorGraphicGradientFill !== 'undefined' && prop instanceof VectorGraphicGradientFill) || prop.matchName === 'ADBE Vector Graphic - G-Fill') {
                         const gradUrl = buildGradientDef(prop);
                         localFill = { color: gradUrl, opacity: 1, isGradient: true };
@@ -839,16 +861,21 @@
                         localStroke = extractStrokeInfo(prop);
                     } else if (prop instanceof VectorGraphicStroke) {
                         localStroke = extractStrokeInfo(prop);
+                    } else if ((typeof VectorFilterTrim !== 'undefined' && prop instanceof VectorFilterTrim) || prop.matchName === 'ADBE Vector Filter - Trim') {
+                        localTrim = extractTrimInfo(prop);
                     }
                 }
 
+                const hasSpecialStroke = Boolean(localStroke && (localStroke.taper || (localTrim && localTrim.isTrimmed)));
+
                 // Check if this group has multiple VectorShapePath siblings (compound path)
-                const pathProps = group.properties.filter(p => p instanceof VectorShapePath);
-                const combinePathsAsCompound = (pathProps.length > 1 && !(localStroke && localStroke.taper));
+                const pathProps = group.properties.filter(p => p instanceof VectorShapePath && p.enabled !== false);
+                const combinePathsAsCompound = (pathProps.length > 1 && !hasSpecialStroke);
                 let compoundPathsRendered = false;
 
                 // Render shapes
                 for (const prop of group.properties) {
+                    if (prop && prop.enabled === false) continue;
                     if (prop instanceof VectorShapeRect) {
                         const size = prop.size.getValueAtTime(time) || [100, 100];
                         const pos = prop.position.getValueAtTime(time) || [0, 0];
@@ -858,15 +885,12 @@
                         const y = pos[1] - h / 2;
 
                         const fillAttr = formatFillAttr(localFill);
-                        if (localStroke && localStroke.taper) {
+                        if (hasSpecialStroke) {
                             if (localFill) {
                                 svgChildren += `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${round}" ry="${round}" ${fillAttr} stroke="none" />`;
                             }
                             const shapeData = this.rectToShapeData(pos, size, round);
-                            const taperedD = this.generateTaperedPathData(shapeData, localStroke);
-                            if (taperedD) {
-                                svgChildren += `<path d="${taperedD}" fill="${localStroke.color}" stroke="none" />`;
-                            }
+                            svgChildren += this.renderProcessedStrokeSVG(shapeData, localStroke, localTrim, formatStrokeAttrs);
                         } else {
                             const strokeAttr = formatStrokeAttrs(localStroke);
                             svgChildren += `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${round}" ry="${round}" ${fillAttr} ${strokeAttr} />`;
@@ -878,15 +902,12 @@
                         const ry = (size[1] || 100) / 2;
 
                         const fillAttr = formatFillAttr(localFill);
-                        if (localStroke && localStroke.taper) {
+                        if (hasSpecialStroke) {
                             if (localFill) {
                                 svgChildren += `<ellipse cx="${pos[0]}" cy="${pos[1]}" rx="${rx}" ry="${ry}" ${fillAttr} stroke="none" />`;
                             }
                             const shapeData = this.ellipseToShapeData(pos, size);
-                            const taperedD = this.generateTaperedPathData(shapeData, localStroke);
-                            if (taperedD) {
-                                svgChildren += `<path d="${taperedD}" fill="${localStroke.color}" stroke="none" />`;
-                            }
+                            svgChildren += this.renderProcessedStrokeSVG(shapeData, localStroke, localTrim, formatStrokeAttrs);
                         } else {
                             const strokeAttr = formatStrokeAttrs(localStroke);
                             svgChildren += `<ellipse cx="${pos[0]}" cy="${pos[1]}" rx="${rx}" ry="${ry}" ${fillAttr} ${strokeAttr} />`;
@@ -898,8 +919,8 @@
                         const rot = prop.rotation ? (prop.rotation.getValueAtTime(time) || 0) : 0;
                         const rOut = prop.outerRadius ? (prop.outerRadius.getValueAtTime(time) || 50) : 50;
                         const rIn = prop.innerRadius ? (prop.innerRadius.getValueAtTime(time) || 25) : 25;
-                        const rotRad = (rot - 90) * (Math.PI / 180);
 
+                        const rotRad = (rot - 90) * (Math.PI / 180);
                         let d = '';
                         if (starType === 2) {
                             for (let i = 0; i < pts; i++) {
@@ -922,15 +943,12 @@
                         }
 
                         const fillAttr = formatFillAttr(localFill);
-                        if (localStroke && localStroke.taper) {
+                        if (hasSpecialStroke) {
                             if (localFill) {
                                 svgChildren += `<path d="${d}" ${fillAttr} stroke="none" />`;
                             }
                             const shapeData = this.starToShapeData(starType, pts, pos, rot, rOut, rIn);
-                            const taperedD = this.generateTaperedPathData(shapeData, localStroke);
-                            if (taperedD) {
-                                svgChildren += `<path d="${taperedD}" fill="${localStroke.color}" stroke="none" />`;
-                            }
+                            svgChildren += this.renderProcessedStrokeSVG(shapeData, localStroke, localTrim, formatStrokeAttrs);
                         } else {
                             const strokeAttr = formatStrokeAttrs(localStroke);
                             svgChildren += `<path d="${d}" ${fillAttr} ${strokeAttr} />`;
@@ -954,18 +972,32 @@
                                 }
                             }
                         } else {
+                            // If multi-path compound fill exists alongside special stroke, render compound fill once with evenodd
+                            if (pathProps.length > 1 && localFill && !compoundPathsRendered) {
+                                compoundPathsRendered = true;
+                                const dParts = [];
+                                for (const pp of pathProps) {
+                                    const sd = pp.path.getValueAtTime(time);
+                                    if (sd && sd.vertices && sd.vertices.length > 0) {
+                                        const subD = this.generateSVGPathData(sd);
+                                        if (subD) dParts.push(subD);
+                                    }
+                                }
+                                if (dParts.length > 0) {
+                                    const fillAttr = formatFillAttr(localFill);
+                                    svgChildren += `<path d="${dParts.join(' ')}" fill-rule="evenodd" ${fillAttr} stroke="none" />`;
+                                }
+                            }
+
                             const shapeData = prop.path.getValueAtTime(time);
                             if (shapeData && shapeData.vertices && shapeData.vertices.length > 0) {
                                 const d = this.generateSVGPathData(shapeData);
                                 const fillAttr = formatFillAttr(localFill);
-                                if (localStroke && localStroke.taper) {
-                                    if (localFill) {
+                                if (hasSpecialStroke) {
+                                    if (localFill && pathProps.length <= 1) {
                                         svgChildren += `<path d="${d}" ${fillAttr} stroke="none" />`;
                                     }
-                                    const taperedD = this.generateTaperedPathData(shapeData, localStroke);
-                                    if (taperedD) {
-                                        svgChildren += `<path d="${taperedD}" fill="${localStroke.color}" stroke="none" />`;
-                                    }
+                                    svgChildren += this.renderProcessedStrokeSVG(shapeData, localStroke, localTrim, formatStrokeAttrs);
                                 } else {
                                     const strokeAttr = formatStrokeAttrs(localStroke);
                                     svgChildren += `<path d="${d}" ${fillAttr} ${strokeAttr} />`;
@@ -978,7 +1010,7 @@
                         if (subContents) {
                             const prevSvgChildren = svgChildren;
                             svgChildren = '';
-                            traverseGroup(subContents, localFill, localStroke);
+                            traverseGroup(subContents, localFill, localStroke, localTrim);
                             const grpInner = svgChildren;
                             svgChildren = prevSvgChildren;
 
@@ -1004,7 +1036,7 @@
                             }
                         }
                     } else if (prop instanceof PropertyGroup) {
-                        traverseGroup(prop, localFill, localStroke);
+                        traverseGroup(prop, localFill, localStroke, localTrim);
                     }
                 }
             };
@@ -1146,9 +1178,9 @@
             };
         }
 
-        generateTaperedPathData(shape, strokeInfo) {
-            const v = shape.vertices;
-            if (!v || v.length < 2) return '';
+        sampleShapeGeometry(shape) {
+            const v = shape && shape.vertices;
+            if (!v || v.length < 2) return null;
             const inT = shape.inTangents || [];
             const outT = shape.outTangents || [];
             const isClosed = Boolean(shape.closed);
@@ -1168,7 +1200,7 @@
                 const i1 = inT[nextIdx] || [0, 0];
 
                 const isCurved = (Math.abs(o0[0]) > 1e-4 || Math.abs(o0[1]) > 1e-4 || Math.abs(i1[0]) > 1e-4 || Math.abs(i1[1]) > 1e-4);
-                const steps = isCurved ? 24 : 10;
+                const steps = isCurved ? 28 : 10;
                 const startStep = (s === 0) ? 0 : 1;
 
                 const cp1 = [p0[0] + o0[0], p0[1] + o0[1]];
@@ -1216,10 +1248,135 @@
                 }
             }
 
-            if (totalLen < 1e-4 || samples.length < 2) return '';
+            if (totalLen < 1e-4 || samples.length < 2) return null;
+            return { samples, tangents, normals, distances, totalLen, isClosed };
+        }
 
+        interpolateSampleAtDist(poly, dist) {
+            const { samples, tangents, normals, distances, totalLen } = poly;
+            const d = Math.max(0, Math.min(totalLen, dist));
+            let lo = 0;
+            let hi = distances.length - 1;
+            while (lo < hi - 1) {
+                const mid = (lo + hi) >> 1;
+                if (distances[mid] <= d) lo = mid;
+                else hi = mid;
+            }
+            const d0 = distances[lo];
+            const d1 = distances[hi];
+            const span = d1 - d0;
+            const u = span > 1e-6 ? Math.max(0, Math.min(1, (d - d0) / span)) : 0;
+            const p0 = samples[lo], p1 = samples[hi];
+            const t0 = tangents[lo], t1 = tangents[hi];
+            let tx = t0[0] + u * (t1[0] - t0[0]);
+            let ty = t0[1] + u * (t1[1] - t0[1]);
+            const tLen = Math.hypot(tx, ty) || 1;
+            tx /= tLen;
+            ty /= tLen;
+            return {
+                pt: [p0[0] + u * (p1[0] - p0[0]), p0[1] + u * (p1[1] - p0[1])],
+                tangent: [tx, ty],
+                normal: [-ty, tx]
+            };
+        }
+
+        extractSubPolyline(poly, dStart, dEnd) {
+            const a = Math.max(0, Math.min(poly.totalLen, dStart));
+            const b = Math.max(0, Math.min(poly.totalLen, dEnd));
+            if (b - a < 1e-3) return null;
+
+            const sA = this.interpolateSampleAtDist(poly, a);
+            const sB = this.interpolateSampleAtDist(poly, b);
+
+            const samples = [sA.pt];
+            const tangents = [sA.tangent];
+            const normals = [sA.normal];
+            const distances = [0];
+
+            for (let i = 0; i < poly.distances.length; i++) {
+                const di = poly.distances[i];
+                if (di > a + 1e-4 && di < b - 1e-4) {
+                    samples.push(poly.samples[i]);
+                    tangents.push(poly.tangents[i]);
+                    normals.push(poly.normals[i]);
+                    distances.push(di - a);
+                }
+            }
+
+            samples.push(sB.pt);
+            tangents.push(sB.tangent);
+            normals.push(sB.normal);
+            distances.push(b - a);
+
+            return {
+                samples,
+                tangents,
+                normals,
+                distances,
+                totalLen: b - a,
+                isClosed: false
+            };
+        }
+
+        extractTrimmedPolylines(poly, trimInfo) {
+            if (!trimInfo || !trimInfo.isTrimmed) return [poly];
+            const sMin = Math.max(0, Math.min(100, trimInfo.start)) / 100;
+            const sMax = Math.max(0, Math.min(100, trimInfo.end)) / 100;
+            const span = sMax - sMin;
+            if (span <= 1e-5) return [];
+            if (span >= 1 - 1e-5) return [poly];
+
+            const L = poly.totalLen;
+            const offFrac = ((((trimInfo.offset || 0) / 360) % 1) + 1) % 1;
+            const u0 = sMin + offFrac;
+            const u1 = sMax + offFrac;
+
+            if (u1 <= 1 + 1e-6) {
+                const sub = this.extractSubPolyline(poly, u0 * L, Math.min(1, u1) * L);
+                return sub ? [sub] : [];
+            }
+            if (u0 >= 1 - 1e-6) {
+                const sub = this.extractSubPolyline(poly, Math.max(0, u0 - 1) * L, (u1 - 1) * L);
+                return sub ? [sub] : [];
+            }
+
+            // Wraps across 1.0 -> 0.0 seam
+            const part1 = this.extractSubPolyline(poly, u0 * L, L);
+            const part2 = this.extractSubPolyline(poly, 0, (u1 - 1) * L);
+            if (poly.isClosed && part1 && part2) {
+                // Stitch across vertex 0 into one seamless open polyline so tapers & dashes don't break at the seam
+                const stitchedSamples = part1.samples.slice();
+                const stitchedTangents = part1.tangents.slice();
+                const stitchedNormals = part1.normals.slice();
+                const stitchedDistances = part1.distances.slice();
+                const baseD = part1.totalLen;
+                for (let i = 1; i < part2.samples.length; i++) {
+                    stitchedSamples.push(part2.samples[i]);
+                    stitchedTangents.push(part2.tangents[i]);
+                    stitchedNormals.push(part2.normals[i]);
+                    stitchedDistances.push(baseD + part2.distances[i]);
+                }
+                return [{
+                    samples: stitchedSamples,
+                    tangents: stitchedTangents,
+                    normals: stitchedNormals,
+                    distances: stitchedDistances,
+                    totalLen: baseD + part2.totalLen,
+                    isClosed: false
+                }];
+            }
+
+            const out = [];
+            if (part1) out.push(part1);
+            if (part2) out.push(part2);
+            return out;
+        }
+
+        createTaperWidthFn(totalLen, strokeInfo) {
             const baseW = strokeInfo.width || 1;
-            const taper = strokeInfo.taper || {};
+            const taper = strokeInfo.taper;
+            if (!taper) return () => baseW;
+
             const u_s = taper.startLength || 0;
             const u_e = taper.endLength || 0;
             const startW = (taper.startWidth !== undefined ? taper.startWidth : 0) / 100 * baseW;
@@ -1239,14 +1396,11 @@
 
             const calcEase = (tVal, easeVal) => {
                 if (Math.abs(easeVal) < 1e-4) return tVal;
-                if (easeVal > 0) {
-                    return Math.pow(tVal, 1 + 2 * easeVal);
-                } else {
-                    return 1 - Math.pow(1 - tVal, 1 - 2 * easeVal);
-                }
+                if (easeVal > 0) return Math.pow(tVal, 1 + 2 * easeVal);
+                return 1 - Math.pow(1 - tVal, 1 - 2 * easeVal);
             };
 
-            const calcWidthAtDist = (d) => {
+            return (d) => {
                 let w = baseW;
                 if (lenStart > 1e-4 && d < lenStart) {
                     const u = Math.max(0, Math.min(1, d / lenStart));
@@ -1255,14 +1409,16 @@
                 if (lenEnd > 1e-4 && d > (totalLen - lenEnd)) {
                     const u = Math.max(0, Math.min(1, (totalLen - d) / lenEnd));
                     const wEnd = endW + (baseW - endW) * calcEase(u, ease_e);
-                    if (d < lenStart) {
-                        w = Math.min(w, wEnd);
-                    } else {
-                        w = wEnd;
-                    }
+                    w = (d < lenStart) ? Math.min(w, wEnd) : wEnd;
                 }
                 return Math.max(0, w);
             };
+        }
+
+        buildTaperedRibbonD(poly, strokeInfo, customWidthFn = null, distOffset = 0) {
+            if (!poly || poly.totalLen < 1e-4 || poly.samples.length < 2) return '';
+            const { samples, tangents, normals, distances, totalLen, isClosed } = poly;
+            const calcWidthAtDist = customWidthFn || this.createTaperWidthFn(totalLen, strokeInfo);
 
             const N = samples.length;
             const leftPts = [];
@@ -1271,7 +1427,7 @@
             for (let i = 0; i < N; i++) {
                 const pt = samples[i];
                 const norm = normals[i];
-                const d = distances[i];
+                const d = distances[i] + distOffset;
                 const hw = calcWidthAtDist(d) * 0.5;
                 leftPts.push([pt[0] + hw * norm[0], pt[1] + hw * norm[1]]);
                 rightPts.push([pt[0] - hw * norm[0], pt[1] - hw * norm[1]]);
@@ -1287,9 +1443,7 @@
                 const aOut = Math.atan2(outwardsDir[1], outwardsDir[0]);
                 let diffOut = (aOut - aFrom) % (2 * Math.PI);
                 if (diffOut < 0) diffOut += 2 * Math.PI;
-                if (diffOut > da) {
-                    da = da - 2 * Math.PI;
-                }
+                if (diffOut > da) da = da - 2 * Math.PI;
                 const capPts = [];
                 const capSteps = 6;
                 for (let s = 1; s <= capSteps; s++) {
@@ -1301,8 +1455,8 @@
 
             const capType = strokeInfo.cap || 'butt';
             const dParts = [];
-            const wStart = calcWidthAtDist(0);
-            const wEnd = calcWidthAtDist(totalLen);
+            const wStart = calcWidthAtDist(distOffset);
+            const wEnd = calcWidthAtDist(distOffset + totalLen);
 
             if (isClosed) {
                 dParts.push(`M ${Math.round(leftPts[0][0]*100)/100},${Math.round(leftPts[0][1]*100)/100}`);
@@ -1314,7 +1468,6 @@
                 }
                 dParts.push('Z');
             } else {
-                // Open path
                 // Start cap: from rightPts[0] to leftPts[0]
                 if (wStart <= 0.05) {
                     dParts.push(`M ${Math.round(samples[0][0]*100)/100},${Math.round(samples[0][1]*100)/100}`);
@@ -1333,7 +1486,6 @@
                     dParts.push(`L ${Math.round(p2[0]*100)/100},${Math.round(p2[1]*100)/100}`);
                     dParts.push(`L ${Math.round(leftPts[0][0]*100)/100},${Math.round(leftPts[0][1]*100)/100}`);
                 } else {
-                    // Butt
                     dParts.push(`M ${Math.round(rightPts[0][0]*100)/100},${Math.round(rightPts[0][1]*100)/100}`);
                     dParts.push(`L ${Math.round(leftPts[0][0]*100)/100},${Math.round(leftPts[0][1]*100)/100}`);
                 }
@@ -1356,12 +1508,11 @@
                     const hwEnd = wEnd * 0.5;
                     const p1 = [leftPts[N-1][0] + hwEnd * tangents[N-1][0], leftPts[N-1][1] + hwEnd * tangents[N-1][1]];
                     const p2 = [rightPts[N-1][0] + hwEnd * tangents[N-1][0], rightPts[N-1][1] + hwEnd * tangents[N-1][1]];
-                    dParts.push(`L ${Math.round(p1[0]*100)/100},${Math.round(p1[0]*100)/100}`);
+                    dParts.push(`L ${Math.round(p1[0]*100)/100},${Math.round(p1[1]*100)/100}`);
                     dParts.push(`L ${Math.round(p2[0]*100)/100},${Math.round(p2[1]*100)/100}`);
-                    dParts.push(`L ${Math.round(rightPts[N-1][0]*100)/100},${Math.round(rightPts[N-1][0]*100)/100}`);
+                    dParts.push(`L ${Math.round(rightPts[N-1][0]*100)/100},${Math.round(rightPts[N-1][1]*100)/100}`);
                 } else {
-                    // Butt
-                    dParts.push(`L ${Math.round(rightPts[N-1][0]*100)/100},${Math.round(rightPts[N-1][0]*100)/100}`);
+                    dParts.push(`L ${Math.round(rightPts[N-1][0]*100)/100},${Math.round(rightPts[N-1][1]*100)/100}`);
                 }
 
                 // Backward along right boundary
@@ -1373,6 +1524,99 @@
             }
 
             return dParts.join(' ');
+        }
+
+        generateTaperedPathData(shape, strokeInfo) {
+            const poly = this.sampleShapeGeometry(shape);
+            if (!poly) return '';
+            return this.buildTaperedRibbonD(poly, strokeInfo);
+        }
+
+        renderProcessedStrokeSVG(shape, strokeInfo, trimInfo, formatStrokeAttrs) {
+            if (!strokeInfo || strokeInfo.width <= 0 || strokeInfo.opacity <= 0) return '';
+            const basePoly = this.sampleShapeGeometry(shape);
+            if (!basePoly) return '';
+
+            const pieces = this.extractTrimmedPolylines(basePoly, trimInfo);
+            if (!pieces || pieces.length === 0) return '';
+
+            let svgOut = '';
+            for (const poly of pieces) {
+                if (!strokeInfo.taper) {
+                    // Trimmed stroke (solid or dotted/dashed)
+                    const pts = poly.samples;
+                    if (pts.length < 2) continue;
+                    const cmds = [`M ${Math.round(pts[0][0]*100)/100},${Math.round(pts[0][1]*100)/100}`];
+                    for (let i = 1; i < pts.length; i++) {
+                        cmds.push(`L ${Math.round(pts[i][0]*100)/100},${Math.round(pts[i][1]*100)/100}`);
+                    }
+                    if (poly.isClosed) cmds.push('Z');
+                    const strokeAttr = formatStrokeAttrs(strokeInfo);
+                    svgOut += `<path d="${cmds.join(' ')}" fill="none" ${strokeAttr} />`;
+                } else if (!strokeInfo.dash) {
+                    // Tapered stroke (trimmed or full, solid)
+                    const taperedD = this.buildTaperedRibbonD(poly, strokeInfo);
+                    if (taperedD) {
+                        svgOut += `<path d="${taperedD}" fill="${strokeInfo.color}" stroke="none" />`;
+                    }
+                } else {
+                    // Combined Tapered + Dotted/Dashed (trimmed or full!)
+                    let dashNums = String(strokeInfo.dash).trim().split(/[\s,]+/).map(Number).filter(n => !isNaN(n) && n >= 0);
+                    if (dashNums.length === 0) {
+                        const taperedD = this.buildTaperedRibbonD(poly, strokeInfo);
+                        if (taperedD) svgOut += `<path d="${taperedD}" fill="${strokeInfo.color}" stroke="none" />`;
+                        continue;
+                    }
+                    if (dashNums.length % 2 === 1) {
+                        dashNums = dashNums.concat(dashNums);
+                    }
+                    const patternLen = dashNums.reduce((acc, v) => acc + v, 0);
+                    if (patternLen <= 0.1) {
+                        const taperedD = this.buildTaperedRibbonD(poly, strokeInfo);
+                        if (taperedD) svgOut += `<path d="${taperedD}" fill="${strokeInfo.color}" stroke="none" />`;
+                        continue;
+                    }
+
+                    const widthFn = this.createTaperWidthFn(poly.totalLen, strokeInfo);
+                    const rawOff = ((strokeInfo.dashOffset || 0) % patternLen + patternLen) % patternLen;
+                    let cursor = -rawOff;
+                    let segGuard = 0;
+                    const maxSegs = 450;
+
+                    while (cursor < poly.totalLen && segGuard < maxSegs) {
+                        for (let pIdx = 0; pIdx < dashNums.length && cursor < poly.totalLen && segGuard < maxSegs; pIdx += 2) {
+                            const dLen = dashNums[pIdx];
+                            const gLen = dashNums[pIdx + 1] || 0;
+                            const segStart = Math.max(0, cursor);
+                            const segEnd = Math.min(poly.totalLen, cursor + dLen);
+                            if ((segEnd > 0 || (dLen === 0 && cursor >= 0)) && segStart <= poly.totalLen && segEnd >= segStart) {
+                                const visLen = segEnd - segStart;
+                                if (visLen <= 1.6 && strokeInfo.cap === 'round') {
+                                    const dMid = (segStart + segEnd) * 0.5;
+                                    const w = widthFn(dMid);
+                                    if (w > 0.15) {
+                                        const sample = this.interpolateSampleAtDist(poly, dMid);
+                                        const cx = Math.round(sample.pt[0] * 100) / 100;
+                                        const cy = Math.round(sample.pt[1] * 100) / 100;
+                                        const r = Math.round((w * 0.5) * 100) / 100;
+                                        svgOut += `<circle cx="${cx}" cy="${cy}" r="${r}" fill="${strokeInfo.color}" stroke="none" />`;
+                                    }
+                                    segGuard++;
+                                } else if (visLen > 0.2) {
+                                    const subDash = this.extractSubPolyline(poly, segStart, segEnd);
+                                    if (subDash) {
+                                        const d = this.buildTaperedRibbonD(subDash, strokeInfo, widthFn, segStart);
+                                        if (d) svgOut += `<path d="${d}" fill="${strokeInfo.color}" stroke="none" />`;
+                                    }
+                                    segGuard++;
+                                }
+                            }
+                            cursor += dLen + Math.max(0.5, gLen);
+                        }
+                    }
+                }
+            }
+            return svgOut;
         }
 
         // Render text content to SVG elements with accurate baseline ascent/descent,

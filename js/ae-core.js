@@ -827,14 +827,8 @@
                     break;
                 case 'ADBE Vector Filter - Trim':
                 case 'Trim Paths':
-                    prop = new PropertyGroup('Trim Paths 1', 'ADBE Vector Filter - Trim');
-                    prop.start = new Property('Start', 'ADBE Vector Trim Start', 0, 'number');
-                    prop.end = new Property('End', 'ADBE Vector Trim End', 100, 'number');
-                    prop.offset = new Property('Offset', 'ADBE Vector Trim Offset', 0, 'number');
-                    [prop.start, prop.end, prop.offset].forEach(tp => {
-                        tp.parentProperty = prop;
-                        prop.properties.push(tp);
-                    });
+                case 'Trim':
+                    prop = new VectorFilterTrim();
                     break;
                 case 'ADBE Checkbox Control':
                 case 'Checkbox Control':
@@ -1128,6 +1122,29 @@
                 p.parentProperty = this;
                 this.properties.push(p);
             });
+        }
+    }
+
+    class VectorFilterTrim extends PropertyGroup {
+        constructor() {
+            super('Trim Paths 1', 'ADBE Vector Filter - Trim');
+            this.start = new Property('Start', 'ADBE Vector Trim Start', 0, 'number');
+            this.end = new Property('End', 'ADBE Vector Trim End', 100, 'number');
+            this.offset = new Property('Offset', 'ADBE Vector Trim Offset', 0, 'number');
+            this.trimMultipleShapes = new Property('Trim Multiple Shapes', 'ADBE Vector Trim Type', 1, 'number'); // 1: Simultaneously, 2: Individually
+
+            [this.start, this.end, this.offset, this.trimMultipleShapes].forEach(p => {
+                p.parentProperty = this;
+                this.properties.push(p);
+            });
+        }
+
+        property(nameOrIndex) {
+            if (nameOrIndex === 'Start' || nameOrIndex === 'ADBE Vector Trim Start' || nameOrIndex === 1) return this.start;
+            if (nameOrIndex === 'End' || nameOrIndex === 'ADBE Vector Trim End' || nameOrIndex === 2) return this.end;
+            if (nameOrIndex === 'Offset' || nameOrIndex === 'ADBE Vector Trim Offset' || nameOrIndex === 3) return this.offset;
+            if (nameOrIndex === 'Trim Multiple Shapes' || nameOrIndex === 'ADBE Vector Trim Type' || nameOrIndex === 4) return this.trimMultipleShapes;
+            return super.property(nameOrIndex);
         }
     }
 
@@ -3449,6 +3466,7 @@
     global.VectorGraphicGradientFill = VectorGraphicGradientFill;
     global.VectorGraphicStroke = VectorGraphicStroke;
     global.VectorGraphicGradientStroke = VectorGraphicGradientStroke;
+    global.VectorFilterTrim = VectorFilterTrim;
     global.TextDocument = TextDocument;
     global.ParagraphJustification = ParagraphJustification;
     global.BoxVerticalAlignment = BoxVerticalAlignment;
