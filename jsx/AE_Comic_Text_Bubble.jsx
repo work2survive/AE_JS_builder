@@ -64,10 +64,12 @@
     var BLOAT_MASK_NAME          = "Comic Bloat Mask";
     var TIMING_EFFECT_NAMES = [
         "Bubble Start Delay (s)",
+        "Bubble Enable In",
         "Bubble In Time (s)",
         "Bubble Link Read Time",
         "Bubble Sec Per 25 Chars",
         "Bubble Read Time (s)",
+        "Bubble Enable Out",
         "Bubble Out Time (s)",
         "Bubble Status",
         "Bubble In Timing",
@@ -594,10 +596,12 @@
             dotGap: clampNum(raw.dotGap, 2, 80, def.dotGap),
             animStyle: aStyle,
             startDelay: Math.round(clampNum(raw.startDelay, 0, 30, def.startDelay) * 10) / 10,
+            enableIn: (raw.enableIn !== undefined) ? Boolean(raw.enableIn) : true,
             inTime: Math.round(clampNum(raw.inTime, 0.1, 10, def.inTime) * 10) / 10,
             readTime: Math.round(clampNum(raw.readTime, 0.2, 60, def.readTime) * 10) / 10,
             linkReadTime: (raw.linkReadTime !== undefined) ? Boolean(raw.linkReadTime) : true,
             secPer25: Math.round(clampNum(raw.secPer25, 0.2, 10, def.secPer25) * 10) / 10,
+            enableOut: (raw.enableOut !== undefined) ? Boolean(raw.enableOut) : true,
             outTime: Math.round(clampNum(raw.outTime, 0.1, 10, def.outTime) * 10) / 10,
             makePrecomp: (raw.makePrecomp !== undefined) ? Boolean(raw.makePrecomp) : true
         };
@@ -2401,7 +2405,9 @@
         if (!fxParade) return;
 
         var startDelay = clampNum(cfg.startDelay, 0, 30, 0);
+        var enableIn   = (cfg.enableIn !== undefined ? Boolean(cfg.enableIn) : true) ? 1 : 0;
         var inTime     = clampNum(cfg.inTime, 0.1, 10, 0.6);
+        var enableOut  = (cfg.enableOut !== undefined ? Boolean(cfg.enableOut) : true) ? 1 : 0;
         var outTime    = clampNum(cfg.outTime, 0.1, 10, 0.5);
         var secPer25   = clampNum(cfg.secPer25, 0.2, 10, 1.2);
         var linkRead   = cfg.linkReadTime ? 1 : 0;
@@ -2409,10 +2415,12 @@
         var bakedChars = Math.max(1, charCount || 1);
 
         var eDelay  = ensureEffectCtrl(fxParade, "ADBE Slider Control",   "Bubble Start Delay (s)", startDelay);
+        var eEnIn   = ensureEffectCtrl(fxParade, "ADBE Checkbox Control", "Bubble Enable In",       enableIn);
         var eIn     = ensureEffectCtrl(fxParade, "ADBE Slider Control",   "Bubble In Time (s)",     inTime);
         var eLink   = ensureEffectCtrl(fxParade, "ADBE Checkbox Control", "Bubble Link Read Time",  linkRead);
         var eSp25   = ensureEffectCtrl(fxParade, "ADBE Slider Control",   "Bubble Sec Per 25 Chars", secPer25);
         var eRead   = ensureEffectCtrl(fxParade, "ADBE Slider Control",   "Bubble Read Time (s)",   effRead);
+        var eEnOut  = ensureEffectCtrl(fxParade, "ADBE Checkbox Control", "Bubble Enable Out",      enableOut);
         var eOut    = ensureEffectCtrl(fxParade, "ADBE Slider Control",   "Bubble Out Time (s)",    outTime);
         var eStatus = ensureEffectCtrl(fxParade, "ADBE Slider Control",   "Bubble Status",          0);
         var eInPrg  = ensureEffectCtrl(fxParade, "ADBE Slider Control",   "Bubble In Timing",       0);
@@ -2428,15 +2436,19 @@
                 return 'var v = value;\ntry { v = comp("' + oc + '").layer("' + ol + '").effect("' + effName + '")(1).value; } catch (e) {}\nv;';
             }
             setEffectExpression(eDelay, mirrorOuter("Bubble Start Delay (s)"));
+            setEffectExpression(eEnIn,  mirrorOuter("Bubble Enable In"));
             setEffectExpression(eIn,    mirrorOuter("Bubble In Time (s)"));
             setEffectExpression(eLink,  mirrorOuter("Bubble Link Read Time"));
             setEffectExpression(eSp25,  mirrorOuter("Bubble Sec Per 25 Chars"));
+            setEffectExpression(eEnOut, mirrorOuter("Bubble Enable Out"));
             setEffectExpression(eOut,   mirrorOuter("Bubble Out Time (s)"));
         } else {
             setEffectExpression(eDelay, "");
+            setEffectExpression(eEnIn,  "");
             setEffectExpression(eIn,    "");
             setEffectExpression(eLink,  "");
             setEffectExpression(eSp25,  "");
+            setEffectExpression(eEnOut, "");
             setEffectExpression(eOut,   "");
         }
 
@@ -2475,10 +2487,12 @@
         setEffectExpression(eRead, readExpr);
 
         var commonHeader =
+            'var useIn = (Number(effect("Bubble Enable In")(1).value) > 0.5);\n' +
+            'var useOut = (Number(effect("Bubble Enable Out")(1).value) > 0.5);\n' +
             'var dly = Math.max(0, effect("Bubble Start Delay (s)")(1).value);\n' +
-            'var tIn = Math.max(0.01, effect("Bubble In Time (s)")(1).value);\n' +
+            'var tIn = useIn ? Math.max(0.01, effect("Bubble In Time (s)")(1).value) : 0.0;\n' +
             'var tRd = Math.max(0.01, effect("Bubble Read Time (s)")(1).value);\n' +
-            'var tOt = Math.max(0.01, effect("Bubble Out Time (s)")(1).value);\n' +
+            'var tOt = useOut ? Math.max(0.01, effect("Bubble Out Time (s)")(1).value) : 0.0;\n' +
             'var inPt = (thisLayer && thisLayer.inPoint !== undefined) ? thisLayer.inPoint : 0;\n' +
             'var t0 = inPt + dly;\n' +
             'var t1 = t0 + tIn;\n' +
@@ -2492,9 +2506,9 @@
             'var st = 0;\n' +
             'if (time < t0 - fd * 0.5) { st = 0; }\n' +
             'else if (Math.abs(time - t0) <= fd * 0.5) { st = 1; }\n' +
-            'else if (time < t1) { st = 2; }\n' +
+            'else if (useIn && time < t1) { st = 2; }\n' +
             'else if (time < t2) { st = 3; }\n' +
-            'else if (time < t3) { st = 4; }\n' +
+            'else if (useOut && time < t3) { st = 4; }\n' +
             'else { st = 5; }\n' +
             'st;';
         setEffectExpression(eStatus, statusExpr);
@@ -2502,8 +2516,8 @@
         setEffectExpression(eInPrg,
             commonHeader +
             'var p = 0;\n' +
-            'if (time <= t0) { p = 0; }\n' +
-            'else if (time >= t1) { p = 100; }\n' +
+            'if (time < t0) { p = 0; }\n' +
+            'else if (!useIn || time >= t1) { p = 100; }\n' +
             'else { p = ((time - t0) / tIn) * 100.0; }\n' +
             'p;'
         );
@@ -2520,7 +2534,7 @@
         setEffectExpression(eOtPrg,
             commonHeader +
             'var p = 0;\n' +
-            'if (time <= t2) { p = 0; }\n' +
+            'if (!useOut || time <= t2) { p = 0; }\n' +
             'else if (time >= t3) { p = 100; }\n' +
             'else { p = ((time - t2) / tOt) * 100.0; }\n' +
             'p;'
@@ -2528,11 +2542,12 @@
 
         setEffectExpression(eEnv,
             commonHeader +
-            'var env = 0;\n' +
-            'if (time <= t0 || time >= t3) { env = 0; }\n' +
-            'else if (time < t1) { env = ((time - t0) / tIn) * 100.0; }\n' +
-            'else if (time <= t2) { env = 100.0; }\n' +
-            'else { env = (1.0 - (time - t2) / tOt) * 100.0; }\n' +
+            'var env = 100.0;\n' +
+            'if (time < t0) { env = 0.0; }\n' +
+            'else if (useIn && time < t1) { env = ((time - t0) / tIn) * 100.0; }\n' +
+            'else if (time <= t2 || !useOut) { env = 100.0; }\n' +
+            'else if (time < t3) { env = (1.0 - (time - t2) / tOt) * 100.0; }\n' +
+            'else { env = 0.0; }\n' +
             'clamp(env, 0, 100);'
         );
     }
@@ -3465,6 +3480,104 @@
         };
     }
 
+    function createToggleSliderRow(parent, labelStr, defEnabled, defVal, minVal, maxVal, unitStr, onValueChanged, decimals, fixedDecimals) {
+        var dec = (typeof decimals === "number" && decimals > 0) ? decimals : 0;
+        var factor = (dec > 0) ? Math.pow(10, dec) : 1;
+        var stepVal = (dec > 0) ? (1 / factor) : 1;
+
+        function fmtNum(val) {
+            var r = Math.round(val * factor) / factor;
+            if (dec > 0 && fixedDecimals) return r.toFixed(dec);
+            return String(r);
+        }
+
+        var grp = parent.add("group");
+        grp.orientation = "row";
+        grp.alignment = ["fill", "top"];
+        grp.alignChildren = ["left", "center"];
+        grp.spacing = 6;
+
+        var chk = grp.add("checkbox", undefined, labelStr);
+        chk.preferredSize = [104, -1];
+        chk.value = Boolean(defEnabled);
+
+        var sld = grp.add("slider", undefined, defVal, minVal, maxVal);
+        sld.minvalue = minVal;
+        sld.maxvalue = maxVal;
+        sld.stepdelta = stepVal;
+        sld.value = defVal;
+        sld.alignment = ["fill", "center"];
+
+        var txt = grp.add("edittext", undefined, fmtNum(defVal));
+        txt.preferredSize = [46, 20];
+
+        var uLbl = null;
+        if (unitStr) {
+            uLbl = grp.add("statictext", undefined, unitStr);
+            uLbl.preferredSize = [18, -1];
+        }
+
+        function syncDomStep() {
+            if (sld.domElement && sld.domElement.step !== String(stepVal)) {
+                sld.domElement.step = String(stepVal);
+            }
+        }
+
+        function syncEnabledState() {
+            var en = Boolean(chk.value);
+            sld.enabled = en;
+            txt.enabled = en;
+            if (uLbl) uLbl.enabled = en;
+        }
+
+        function setVal(v, notify) {
+            syncDomStep();
+            var clamped = clampNum(v, minVal, maxVal, defVal);
+            var rounded = Math.round(clamped * factor) / factor;
+            sld.value = rounded;
+            txt.text = fmtNum(rounded);
+            if (notify && typeof onValueChanged === "function") onValueChanged(rounded);
+        }
+
+        chk.onClick = function () {
+            syncEnabledState();
+            if (typeof onValueChanged === "function") onValueChanged(sld.value);
+        };
+
+        sld.onChanging = sld.onChange = function () {
+            syncDomStep();
+            var clamped = clampNum(sld.value, minVal, maxVal, defVal);
+            var r = Math.round(clamped * factor) / factor;
+            txt.text = fmtNum(r);
+            if (typeof onValueChanged === "function") onValueChanged(r);
+        };
+
+        txt.onChange = function () {
+            setVal(txt.text, true);
+        };
+
+        syncEnabledState();
+
+        return {
+            group: grp,
+            checkbox: chk,
+            slider: sld,
+            edittext: txt,
+            syncDomStep: syncDomStep,
+            isEnabled: function () { return Boolean(chk.value); },
+            setEnabled: function (en, notify) {
+                chk.value = Boolean(en);
+                syncEnabledState();
+                if (notify && typeof onValueChanged === "function") onValueChanged(sld.value);
+            },
+            getValue: function () {
+                var c = clampNum(txt.text, minVal, maxVal, defVal);
+                return Math.round(c * factor) / factor;
+            },
+            setValue: setVal
+        };
+    }
+
     // -------------------------------------------------------------------------
     // 10. Ground-Up ScriptUI Interface Construction
     //     Layout Order:
@@ -3814,10 +3927,13 @@
         pnlTiming.spacing = 5;
         pnlTiming.margins = [8, 10, 8, 8];
 
-        var ctrlStartDelay = createSliderRow(pnlTiming, "Start Delay:",    0.0, 0.0, 10.0, "s", onTimingControlChanged, 1, true);
-        var ctrlInTime     = createSliderRow(pnlTiming, "Fade In Time:",   0.6, 0.1,  5.0, "s", onTimingControlChanged, 1, true);
-        var ctrlOutTime    = createSliderRow(pnlTiming, "Fade Out Time:",  0.5, 0.1,  5.0, "s", onTimingControlChanged, 1, true);
-        var ctrlReadTime   = createSliderRow(pnlTiming, "Read Time:",      2.0, 0.2, 20.0, "s", onTimingControlChanged, 1, true);
+        var ctrlStartDelay = createSliderRow(pnlTiming, "Start Delay:", 0.0, 0.0, 10.0, "s", onTimingControlChanged, 1, true);
+        var ctrlInTime     = createToggleSliderRow(pnlTiming, "Fade In:",  true, 0.6, 0.1, 5.0, "s", onTimingControlChanged, 1, true);
+        var ctrlOutTime    = createToggleSliderRow(pnlTiming, "Fade Out:", true, 0.5, 0.1, 5.0, "s", onTimingControlChanged, 1, true);
+        var ctrlReadTime   = createSliderRow(pnlTiming, "Read Time:",   2.0, 0.2, 20.0, "s", onTimingControlChanged, 1, true);
+
+        ctrlInTime.checkbox.helpTip  = "Activate or disable Fade In (uncheck to use Fade Out only).";
+        ctrlOutTime.checkbox.helpTip = "Activate or disable Fade Out (uncheck to use Fade In only).";
 
         var chkLinkReadTime = pnlTiming.add("checkbox", undefined, "Link Read Time to Text Length (25 chars)");
         chkLinkReadTime.value = true;
@@ -3827,7 +3943,7 @@
 
         var lblReadSummary = pnlTiming.add("statictext", undefined, "Status Effect: 0=waiting, 1=start, 2=in, 3=reading, 4=out, 5=end");
         lblReadSummary.alignment = ["fill", "top"];
-        lblReadSummary.helpTip = 'Creates "Bubble Status", "Bubble In Timing", "Bubble Reading Timing", and "Bubble Out Timing" Effects for custom expressions.';
+        lblReadSummary.helpTip = 'Creates "Bubble Status", "Bubble Enable In", "Bubble Enable Out", and In / Reading / Out timing Effects for custom expressions.';
 
         function syncInOutControlsVisibility() {
             var aIdx = ddAnimStyle.selection ? ddAnimStyle.selection.index : 0;
@@ -3842,6 +3958,12 @@
                 lblAnimDesc.text = "Static balloon (Timing & Status effects still generated).";
             }
 
+            var hasIn  = ctrlInTime.isEnabled();
+            var hasOut = ctrlOutTime.isEnabled();
+            var modeTag = (hasIn && hasOut)
+                ? "In+Out"
+                : (hasIn ? "In Only" : (hasOut ? "Out Only" : "In/Out Off"));
+
             var isLinked = Boolean(chkLinkReadTime.value);
             ctrlSecPer25.group.enabled = isLinked;
             ctrlReadTime.group.enabled = !isLinked;
@@ -3851,9 +3973,9 @@
                 var nChars = (cTarget && cTarget.textLayer) ? countReadableChars(cTarget.textLayer) : 33;
                 var autoRd = Math.max(0.2, Math.round(((nChars / 25.0) * ctrlSecPer25.getValue()) * 10) / 10);
                 ctrlReadTime.setValue(autoRd, false);
-                lblReadSummary.text = "Auto Read: " + autoRd.toFixed(1) + "s (" + nChars + " chars) | Status: 0..5 in Effects";
+                lblReadSummary.text = "[" + modeTag + "] Auto Read: " + autoRd.toFixed(1) + "s (" + nChars + " chars) | Status: 0..5";
             } else {
-                lblReadSummary.text = "Status Effect: 0=waiting, 1=start, 2=in, 3=reading, 4=out, 5=end";
+                lblReadSummary.text = "[" + modeTag + "] Status: 0=wait, 1=start, 2=in, 3=read, 4=out, 5=end";
             }
         }
 
@@ -3947,10 +4069,12 @@
                 dotGap: ctrlDotGap.getValue(),
                 animStyle: ANIM_KEYS[aIdx] || "none",
                 startDelay: ctrlStartDelay.getValue(),
+                enableIn: ctrlInTime.isEnabled(),
                 inTime: ctrlInTime.getValue(),
                 readTime: ctrlReadTime.getValue(),
                 linkReadTime: Boolean(chkLinkReadTime.value),
                 secPer25: ctrlSecPer25.getValue(),
+                enableOut: ctrlOutTime.isEnabled(),
                 outTime: ctrlOutTime.getValue(),
                 makePrecomp: Boolean(chkMakePrecomp.value)
             };
@@ -3999,10 +4123,12 @@
             ctrlDotGap.setValue(c.dotGap, false);
 
             ctrlStartDelay.setValue(c.startDelay, false);
+            ctrlInTime.setEnabled(c.enableIn, false);
             ctrlInTime.setValue(c.inTime, false);
             ctrlReadTime.setValue(c.readTime, false);
             chkLinkReadTime.value = Boolean(c.linkReadTime);
             ctrlSecPer25.setValue(c.secPer25, false);
+            ctrlOutTime.setEnabled(c.enableOut, false);
             ctrlOutTime.setValue(c.outTime, false);
 
             chkMakePrecomp.value = Boolean(c.makePrecomp);
