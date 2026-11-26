@@ -276,8 +276,8 @@
     // -------------------------------------------------------------------------
     // 2. Preset System (Built-in Defaults + Store, Rename, Delete, Open, Download)
     // -------------------------------------------------------------------------
-    var GEOMETRY_KEYS   = ["square", "rounded", "cloud", "explosion", "dyamond"];
-    var GEOMETRY_LABELS = ["Square", "Rounded Corners", "Cloud Shape (Thoughts)", "Explosion / Shout", "Dyamond"];
+    var GEOMETRY_KEYS   = ["square", "rounded", "cloud", "explosion", "wobbly", "bubble_lines"];
+    var GEOMETRY_LABELS = ["Square", "Rounded Corners", "Cloud Shape (Thoughts)", "Explosion / Shout", "Wobbly", "Bubble Lines"];
 
     var TAIL_KEYS       = ["none", "line", "triangle", "curved_triangle", "lightning", "clouds"];
     var TAIL_LABELS     = ["None", "Line", "Triangle Sharp", "Curved Triangle", "Lightning Shaped", "Thinking Clouds"];
@@ -307,9 +307,9 @@
                 spikeCount: 18,
                 spikeDepth: 85,
                 spikeWidthRand: 0,
-                dyamondWaves: 14,
-                dyamondDepth: 10,
-                dyamondWidthRand: 65,
+                wobblyWaves: 14,
+                wobblyDepth: 10,
+                wobblyWidthRand: 65,
                 tailStyle: "triangle",
                 tailPosition: 56,
                 tailStartWidth: 2.5,
@@ -347,9 +347,9 @@
                 spikeCount: 18,
                 spikeDepth: 85,
                 spikeWidthRand: 0,
-                dyamondWaves: 14,
-                dyamondDepth: 10,
-                dyamondWidthRand: 65,
+                wobblyWaves: 14,
+                wobblyDepth: 10,
+                wobblyWidthRand: 65,
                 tailStyle: "triangle",
                 tailPosition: 49,
                 tailStartWidth: 2.4,
@@ -387,9 +387,9 @@
                 spikeCount: 18,
                 spikeDepth: 85,
                 spikeWidthRand: 0,
-                dyamondWaves: 14,
-                dyamondDepth: 10,
-                dyamondWidthRand: 65,
+                wobblyWaves: 14,
+                wobblyDepth: 10,
+                wobblyWidthRand: 65,
                 tailStyle: "clouds",
                 tailPosition: 57,
                 tailStartWidth: 2.0,
@@ -427,9 +427,9 @@
                 spikeCount: 18,
                 spikeDepth: 90,
                 spikeWidthRand: 0,
-                dyamondWaves: 14,
-                dyamondDepth: 10,
-                dyamondWidthRand: 65,
+                wobblyWaves: 14,
+                wobblyDepth: 10,
+                wobblyWidthRand: 65,
                 tailStyle: "lightning",
                 tailPosition: 56,
                 tailStartWidth: 3.2,
@@ -456,8 +456,8 @@
                 outTime: 0.4,
                 makePrecomp: true
             },
-            "Dyamond Wobble": {
-                geometry: "dyamond",
+            "Wobbly": {
+                geometry: "wobbly",
                 padX: 38,
                 padY: 28,
                 cornerRadius: 28,
@@ -467,9 +467,9 @@
                 spikeCount: 18,
                 spikeDepth: 85,
                 spikeWidthRand: 0,
-                dyamondWaves: 14,
-                dyamondDepth: 10,
-                dyamondWidthRand: 65,
+                wobblyWaves: 14,
+                wobblyDepth: 10,
+                wobblyWidthRand: 65,
                 tailStyle: "triangle",
                 tailPosition: 43,
                 tailStartWidth: 2.5,
@@ -478,6 +478,46 @@
                 tailOffset: 0,
                 tailLength: 85,
                 tailAngle: -18,
+                fillEnabled: true,
+                fillColor: "#FFFFFF",
+                fillOpacity: 100,
+                strokeStyle: "solid",
+                strokeColor: "#111111",
+                strokeWidth: 5,
+                strokeMinWidth: 2,
+                strokeMaxWidth: 9,
+                dotGap: 12,
+                animStyle: "none",
+                startDelay: 0,
+                inTime: 0.6,
+                readTime: 2.0,
+                linkReadTime: true,
+                secPer25: 1.2,
+                outTime: 0.5,
+                makePrecomp: true
+            },
+            "Bubble Lines": {
+                geometry: "bubble_lines",
+                padX: 24,
+                padY: 16,
+                cornerRadius: 18,
+                cloudPuffs: 12,
+                cloudDepth: 42,
+                cloudWidthRand: 0,
+                spikeCount: 18,
+                spikeDepth: 85,
+                spikeWidthRand: 0,
+                wobblyWaves: 14,
+                wobblyDepth: 10,
+                wobblyWidthRand: 65,
+                tailStyle: "triangle",
+                tailPosition: 54,
+                tailStartWidth: 2.5,
+                tailStart: 52.75,
+                tailEnd: 55.25,
+                tailOffset: 0,
+                tailLength: 80,
+                tailAngle: 12,
                 fillEnabled: true,
                 fillColor: "#FFFFFF",
                 fillOpacity: 100,
@@ -507,9 +547,9 @@
                 spikeCount: 18,
                 spikeDepth: 85,
                 spikeWidthRand: 0,
-                dyamondWaves: 14,
-                dyamondDepth: 10,
-                dyamondWidthRand: 65,
+                wobblyWaves: 14,
+                wobblyDepth: 10,
+                wobblyWidthRand: 65,
                 tailStyle: "line",
                 tailPosition: 55,
                 tailStartWidth: 1.5,
@@ -547,9 +587,9 @@
                 spikeCount: 18,
                 spikeDepth: 85,
                 spikeWidthRand: 0,
-                dyamondWaves: 14,
-                dyamondDepth: 10,
-                dyamondWidthRand: 65,
+                wobblyWaves: 14,
+                wobblyDepth: 10,
+                wobblyWidthRand: 65,
                 tailStyle: "lightning",
                 tailPosition: 54,
                 tailStartWidth: 2.8,
@@ -629,11 +669,17 @@
         }
 
         var gKey = def.geometry;
-        if (raw.geometry === "square" || raw.geometry === "rounded" || raw.geometry === "cloud" || raw.geometry === "explosion" || raw.geometry === "dyamond") {
+        if (raw.geometry === "square" || raw.geometry === "rounded" || raw.geometry === "cloud" || raw.geometry === "explosion" || raw.geometry === "wobbly" || raw.geometry === "bubble_lines") {
             gKey = raw.geometry;
-        } else if (raw.geometry === "diamond") {
-            gKey = "dyamond";
+        } else if (raw.geometry === "dyamond" || raw.geometry === "diamond") {
+            gKey = "wobbly";
+        } else if (raw.geometry === "bubble lines") {
+            gKey = "bubble_lines";
         }
+
+        var rawWWaves = (raw.wobblyWaves !== undefined) ? raw.wobblyWaves : raw.dyamondWaves;
+        var rawWDepth = (raw.wobblyDepth !== undefined) ? raw.wobblyDepth : raw.dyamondDepth;
+        var rawWRand  = (raw.wobblyWidthRand !== undefined) ? raw.wobblyWidthRand : raw.dyamondWidthRand;
 
         return {
             geometry: gKey,
@@ -646,9 +692,9 @@
             spikeCount: Math.round(clampNum(raw.spikeCount, 6, 40, def.spikeCount)),
             spikeDepth: Math.round(clampNum(rawSpikeD, 15, 220, def.spikeDepth)),
             spikeWidthRand: Math.round(clampNum(raw.spikeWidthRand, 0, 100, 0)),
-            dyamondWaves: Math.round(clampNum(raw.dyamondWaves, 4, 36, 14)),
-            dyamondDepth: Math.round(clampNum(raw.dyamondDepth, 2, 50, 10)),
-            dyamondWidthRand: Math.round(clampNum(raw.dyamondWidthRand !== undefined ? raw.dyamondWidthRand : 65, 0, 100, 65)),
+            wobblyWaves: Math.round(clampNum(rawWWaves, 4, 36, 14)),
+            wobblyDepth: Math.round(clampNum(rawWDepth, 2, 50, 10)),
+            wobblyWidthRand: Math.round(clampNum(rawWRand !== undefined ? rawWRand : 65, 0, 100, 65)),
             tailStyle: (raw.tailStyle === "none" || raw.tailStyle === "line" || raw.tailStyle === "triangle" || raw.tailStyle === "curved_triangle" || raw.tailStyle === "lightning" || raw.tailStyle === "clouds") ? raw.tailStyle : def.tailStyle,
             tailPosition: tPos,
             tailStartWidth: tWidth,
@@ -1051,7 +1097,7 @@
 
         var comp = ctx.comp;
         if (getCompLayerCount(comp) === 0 && comp.layers && typeof comp.layers.addText === "function") {
-            var sampleStr = "POW! Comic Balloon\nReady for Action!";
+            var sampleStr = "POW! Comic Balloon\nReady for Action Right Now!\nLet's Go!";
             var tLayer = comp.layers.addText(sampleStr);
             tLayer.name = "Dialogue Text";
             try {
@@ -1823,10 +1869,389 @@
     }
 
     /**
-     * Builds the closed clockwise perimeter segments starting at Top-Center (0, -b)
-     * for any of the 5 Balloon Geometries: square, rounded, cloud, explosion, dyamond.
+     * Measures each visual line of `textLayer` (supporting both Point Text line breaks
+     * and Paragraph Box Text word-wrapping, plus Left / Center / Right justification),
+     * returning line intervals relative to `[0, 0]` (the centered text anchor point).
      */
-    function buildBalloonPerimeterSegments(textW, textH, cfg) {
+    function measureTextLineBoxes(comp, textLayer, bounds) {
+        var tw = (bounds && bounds.width > 0) ? bounds.width : 200;
+        var th = (bounds && bounds.height > 0) ? bounds.height : 60;
+        var doc = getTextDocumentSafe(textLayer);
+        if (!doc) {
+            return [{ left: -tw * 0.5, right: tw * 0.5, cy: 0, fontH: th }];
+        }
+
+        var fullText = String((typeof doc === "object" && doc.text !== undefined) ? doc.text : doc);
+        var fontSize = (typeof doc === "object" && Number(doc.fontSize) > 0) ? Number(doc.fontSize) : 36;
+        var isBox = Boolean(typeof doc === "object" && doc.boxText && doc.boxTextSize);
+        var boxWidth = isBox ? Number(doc.boxTextSize[0]) : tw;
+
+        var just = "left";
+        try {
+            var jv = doc.justification;
+            if (jv === 7414 || jv === 2 || jv === "center" || jv === "CENTER_JUSTIFY" ||
+                (typeof ParagraphJustification !== "undefined" && jv === ParagraphJustification.CENTER_JUSTIFY)) {
+                just = "center";
+            } else if (jv === 7413 || jv === 1 || jv === "right" || jv === "RIGHT_JUSTIFY" ||
+                (typeof ParagraphJustification !== "undefined" && jv === ParagraphJustification.RIGHT_JUSTIFY)) {
+                just = "right";
+            }
+        } catch (eJ) {}
+
+        var rawParas = fullText.split(/\r\n|\r|\n/);
+        var visualLines = [];
+        var lineWidths = [];
+        var measLayer = null;
+
+        try {
+            if (comp && comp.layers && typeof comp.layers.addText === "function") {
+                measLayer = comp.layers.addText("");
+                measLayer.enabled = true;
+                try { measLayer.property("Transform").property("Position").setValue([-9999, -9999]); } catch (eMP) {}
+                var mDocProp = measLayer.property("Source Text");
+                var mDoc = mDocProp ? mDocProp.value : null;
+                if (mDoc && typeof mDoc === "object") {
+                    mDoc.fontSize = fontSize;
+                    if (doc.font) { try { mDoc.font = doc.font; } catch (eMF) {} }
+                    if (doc.tracking !== undefined) { try { mDoc.tracking = doc.tracking; } catch (eMT) {} }
+                    mDoc.applyStroke = false;
+                    mDoc.applyFill = true;
+                    try { mDoc.boxText = false; } catch (eMB) {}
+                    try { mDocProp.setValue(mDoc); } catch (eMS) {}
+                }
+
+                var curT = comp.time || 0;
+                var rawMeas = function (str) {
+                    if (!str || str.length === 0) return 0;
+                    if (mDoc && typeof mDoc === "object" && mDocProp) {
+                        mDoc.text = str;
+                        mDocProp.setValue(mDoc);
+                    } else if (mDocProp) {
+                        mDocProp.setValue(str);
+                    }
+                    var sr = measLayer.sourceRectAtTime(curT, false);
+                    return (sr && sr.width > 0) ? sr.width : 0;
+                };
+                var pipeW = rawMeas("|");
+                var measureAdv = function (str) {
+                    if (!str || str.length === 0) return 0;
+                    return Math.max(0, rawMeas(str + "|") - pipeW);
+                };
+
+                var pi, pw;
+                if (!isBox || boxWidth <= 0) {
+                    visualLines = rawParas;
+                } else {
+                    for (pi = 0; pi < rawParas.length; pi++) {
+                        var words = rawParas[pi].match(/\S+/g) || [];
+                        if (words.length === 0) {
+                            visualLines.push("");
+                            continue;
+                        }
+                        var curLine = words[0];
+                        for (pw = 1; pw < words.length; pw++) {
+                            var cand = curLine + " " + words[pw];
+                            if (measureAdv(cand) > boxWidth && curLine.length > 0) {
+                                visualLines.push(curLine);
+                                curLine = words[pw];
+                            } else {
+                                curLine = cand;
+                            }
+                        }
+                        visualLines.push(curLine);
+                    }
+                }
+
+                for (pi = 0; pi < visualLines.length; pi++) {
+                    var cleanStr = trimStr(visualLines[pi]);
+                    if (cleanStr.length > 0) {
+                        lineWidths.push({ idx: pi, width: Math.max(8, measureAdv(cleanStr)) });
+                    }
+                }
+            }
+        } catch (eMeas) {
+        } finally {
+            if (measLayer) {
+                try { measLayer.remove(); } catch (eRemM) {}
+            }
+        }
+
+        // Fallback proportional character-length widths if offscreen measure was unavailable
+        if (lineWidths.length === 0) {
+            for (var fi = 0; fi < rawParas.length; fi++) {
+                var fsStr = trimStr(rawParas[fi]);
+                if (fsStr.length > 0) {
+                    lineWidths.push({ idx: fi, width: Math.max(12, fsStr.length * fontSize * 0.52) });
+                }
+            }
+        }
+        if (lineWidths.length === 0) {
+            return [{ left: -tw * 0.5, right: tw * 0.5, cy: 0, fontH: th }];
+        }
+
+        var maxMeas = 0;
+        var li;
+        for (li = 0; li < lineWidths.length; li++) {
+            if (lineWidths[li].width > maxMeas) maxMeas = lineWidths[li].width;
+        }
+        var wRatio = (maxMeas > 1e-3) ? (tw / maxMeas) : 1.0;
+
+        var mCount = lineWidths.length;
+        var effFontH = (mCount === 1) ? th : Math.min(fontSize, th / (1.0 + 0.55 * (mCount - 1)));
+        var stepY = (mCount > 1) ? ((th - effFontH) / (mCount - 1)) : 0;
+
+        var specs = [];
+        for (li = 0; li < mCount; li++) {
+            var sw = Math.max(12, Math.min(tw, lineWidths[li].width * wRatio));
+            var lX, rX;
+            if (just === "center") {
+                lX = -sw * 0.5;
+                rX =  sw * 0.5;
+            } else if (just === "right") {
+                lX = (tw * 0.5) - sw;
+                rX =  tw * 0.5;
+            } else {
+                lX = -tw * 0.5;
+                rX = -tw * 0.5 + sw;
+            }
+            var cy = (mCount === 1) ? 0 : (-th * 0.5 + effFontH * 0.5 + li * stepY);
+            specs.push({
+                left: lX,
+                right: rX,
+                cy: cy,
+                fontH: effFontH
+            });
+        }
+        return specs;
+    }
+
+    /**
+     * Builds the unified closed clockwise perimeter for "bubble_lines" ("Bubble Lines"):
+     * inflates each text line like a thick marker highlight and merges all line bands
+     * into a single y-monotone contour with smooth rounded outer corners & inner step fillets.
+     */
+    function buildBubbleLinesPerimeterSegments(textW, textH, cfg, lineSpecs) {
+        var effPadX = Math.max(6, cfg.padX !== undefined ? cfg.padX : 24);
+        var effPadY = Math.max(4, cfg.padY !== undefined ? cfg.padY : 16);
+        var lines = lineSpecs;
+
+        if (!lines || lines.length === 0) {
+            if (cfg._isPreviewIcon) {
+                var pH = textH / 3.0;
+                lines = [
+                    { left: -textW * 0.50, right: textW * 0.50, cy: -textH * 0.34, fontH: pH },
+                    { left: -textW * 0.50, right: textW * 0.24, cy: 0,             fontH: pH },
+                    { left: -textW * 0.50, right: -textW * 0.04, cy: textH * 0.34, fontH: pH }
+                ];
+            } else {
+                lines = [{ left: -textW * 0.5, right: textW * 0.5, cy: 0, fontH: textH }];
+            }
+        }
+
+        var nL = lines.length;
+        var rects = [];
+        var i, j;
+
+        for (i = 0; i < nL; i++) {
+            var ln = lines[i];
+            var fh = Math.max(8, ln.fontH || (textH / nL));
+            var minAdjHalfH = fh * 0.5 + effPadY;
+            if (i > 0) {
+                minAdjHalfH = Math.max(minAdjHalfH, Math.abs(ln.cy - lines[i - 1].cy) * 0.54);
+            }
+            if (i < nL - 1) {
+                minAdjHalfH = Math.max(minAdjHalfH, Math.abs(lines[i + 1].cy - ln.cy) * 0.54);
+            }
+            rects.push({
+                L: ln.left - effPadX,
+                R: ln.right + effPadX,
+                y0: ln.cy - minAdjHalfH,
+                y1: ln.cy + minAdjHalfH
+            });
+        }
+
+        // Snap near-equal left/right line edges (< 4px) so almost-identical lines form a flush wall
+        var snapTol = cfg._isPreviewIcon ? 1.5 : 5.0;
+        for (i = 0; i < rects.length - 1; i++) {
+            if (Math.abs(rects[i + 1].L - rects[i].L) < snapTol) {
+                var minL = Math.min(rects[i].L, rects[i + 1].L);
+                rects[i].L = minL;
+                rects[i + 1].L = minL;
+            }
+            if (Math.abs(rects[i + 1].R - rects[i].R) < snapTol) {
+                var maxR = Math.max(rects[i].R, rects[i + 1].R);
+                rects[i].R = maxR;
+                rects[i + 1].R = maxR;
+            }
+        }
+
+        // Guarantee generous horizontal bridge between consecutive lines so contour is 100% single-piece
+        var minBridge = cfg._isPreviewIcon ? 10 : Math.max(20, Math.min(44, textW * 0.22));
+        for (i = 0; i < rects.length - 1; i++) {
+            var ov = Math.min(rects[i].R, rects[i + 1].R) - Math.max(rects[i].L, rects[i + 1].L);
+            if (ov < minBridge) {
+                var need = (minBridge - ov) * 0.5 + 1.0;
+                if (rects[i].R < rects[i + 1].R) rects[i].R += need; else rects[i + 1].R += need;
+                if (rects[i].L > rects[i + 1].L) rects[i].L -= need; else rects[i + 1].L -= need;
+            }
+        }
+
+        // 1D vertical scanline union of overlapping line highlight rectangles
+        var rawYs = [];
+        for (i = 0; i < rects.length; i++) {
+            rawYs.push(rects[i].y0);
+            rawYs.push(rects[i].y1);
+        }
+        rawYs.sort(function (a, b) { return a - b; });
+
+        var ys = [rawYs[0]];
+        for (i = 1; i < rawYs.length; i++) {
+            if (rawYs[i] - ys[ys.length - 1] > 0.5) {
+                ys.push(rawYs[i]);
+            }
+        }
+
+        var slabs = [];
+        for (i = 0; i < ys.length - 1; i++) {
+            var ym = 0.5 * (ys[i] + ys[i + 1]);
+            var sL = 1e9;
+            var sR = -1e9;
+            for (j = 0; j < rects.length; j++) {
+                if (ym >= rects[j].y0 - 0.1 && ym <= rects[j].y1 + 0.1) {
+                    if (rects[j].L < sL) sL = rects[j].L;
+                    if (rects[j].R > sR) sR = rects[j].R;
+                }
+            }
+            if (sL < sR) {
+                if (slabs.length > 0 &&
+                    Math.abs(slabs[slabs.length - 1].L - sL) < 1.0 &&
+                    Math.abs(slabs[slabs.length - 1].R - sR) < 1.0) {
+                    slabs[slabs.length - 1].y1 = ys[i + 1];
+                } else {
+                    slabs.push({ y0: ys[i], y1: ys[i + 1], L: sL, R: sR });
+                }
+            }
+        }
+
+        // Absorb ultra-thin vertical slivers (< 4px) into neighboring slab for clean fillets
+        var minSlabH = cfg._isPreviewIcon ? 2.0 : 5.0;
+        for (i = slabs.length - 1; i >= 0; i--) {
+            if (slabs.length > 1 && (slabs[i].y1 - slabs[i].y0) < minSlabH) {
+                if (i > 0) {
+                    slabs[i - 1].y1 = slabs[i].y1;
+                    slabs[i - 1].L = Math.min(slabs[i - 1].L, slabs[i].L);
+                    slabs[i - 1].R = Math.max(slabs[i - 1].R, slabs[i].R);
+                    slabs.splice(i, 1);
+                } else {
+                    slabs[1].y0 = slabs[0].y0;
+                    slabs[1].L = Math.min(slabs[1].L, slabs[0].L);
+                    slabs[1].R = Math.max(slabs[1].R, slabs[0].R);
+                    slabs.splice(0, 1);
+                }
+            }
+        }
+
+        // Trace clockwise rectilinear polygon starting at top-right corner of top slab
+        var rawPts = [];
+        var nS = slabs.length;
+        rawPts.push([slabs[0].R, slabs[0].y0]);
+        for (i = 0; i < nS; i++) {
+            rawPts.push([slabs[i].R, slabs[i].y1]);
+            if (i < nS - 1 && Math.abs(slabs[i + 1].R - slabs[i].R) > 0.5) {
+                rawPts.push([slabs[i + 1].R, slabs[i].y1]);
+            }
+        }
+        rawPts.push([slabs[nS - 1].L, slabs[nS - 1].y1]);
+        for (i = nS - 1; i >= 0; i--) {
+            rawPts.push([slabs[i].L, slabs[i].y0]);
+            if (i > 0 && Math.abs(slabs[i - 1].L - slabs[i].L) > 0.5) {
+                rawPts.push([slabs[i - 1].L, slabs[i].y0]);
+            }
+        }
+
+        // Remove duplicate or collinear points so every vertex is a true 90-degree corner
+        var dedup = [];
+        for (i = 0; i < rawPts.length; i++) {
+            var prevP = dedup.length > 0 ? dedup[dedup.length - 1] : rawPts[rawPts.length - 1];
+            if (dist2D(prevP, rawPts[i]) > 0.5) {
+                dedup.push(rawPts[i]);
+            }
+        }
+        var corners = [];
+        var nD = dedup.length;
+        for (i = 0; i < nD; i++) {
+            var pPrev = dedup[(i - 1 + nD) % nD];
+            var pCur  = dedup[i];
+            var pNext = dedup[(i + 1) % nD];
+            var vx1 = pCur[0] - pPrev[0], vy1 = pCur[1] - pPrev[1];
+            var vx2 = pNext[0] - pCur[0], vy2 = pNext[1] - pCur[1];
+            var l1 = Math.sqrt(vx1 * vx1 + vy1 * vy1) || 1;
+            var l2 = Math.sqrt(vx2 * vx2 + vy2 * vy2) || 1;
+            var cross = (vx1 / l1) * (vy2 / l2) - (vy1 / l1) * (vx2 / l2);
+            if (Math.abs(cross) > 0.05) {
+                corners.push(pCur);
+            }
+        }
+
+        var nC = corners.length;
+        var cRad = Math.max(0, cfg.cornerRadius !== undefined ? cfg.cornerRadius : 18);
+        var KB = 0.5522847498307936;
+        var cornerSpecs = [];
+
+        for (i = 0; i < nC; i++) {
+            var cPrev = corners[(i - 1 + nC) % nC];
+            var cCur  = corners[i];
+            var cNext = corners[(i + 1) % nC];
+            var dxIn  = cCur[0] - cPrev[0], dyIn  = cCur[1] - cPrev[1];
+            var dxOut = cNext[0] - cCur[0], dyOut = cNext[1] - cCur[1];
+            var lenIn  = Math.sqrt(dxIn * dxIn + dyIn * dyIn) || 1;
+            var lenOut = Math.sqrt(dxOut * dxOut + dyOut * dyOut) || 1;
+            var uIn  = [dxIn / lenIn, dyIn / lenIn];
+            var uOut = [dxOut / lenOut, dyOut / lenOut];
+            var rk = Math.min(cRad, lenIn * 0.46, lenOut * 0.46);
+
+            cornerSpecs.push({
+                arcStart: [cCur[0] - uIn[0] * rk,  cCur[1] - uIn[1] * rk],
+                arcEnd:   [cCur[0] + uOut[0] * rk, cCur[1] + uOut[1] * rk],
+                out0:     [uIn[0] * rk * KB,       uIn[1] * rk * KB],
+                in1:      [-uOut[0] * rk * KB,     -uOut[1] * rk * KB],
+                rk:       rk
+            });
+        }
+
+        // Start closed perimeter at Top-Center of the top highlight edge (between corner nC-1 and corner 0)
+        var topLeftEnd    = cornerSpecs[nC - 1].arcEnd;
+        var topRightStart = cornerSpecs[0].arcStart;
+        var topMid = [0.5 * (topLeftEnd[0] + topRightStart[0]), 0.5 * (topLeftEnd[1] + topRightStart[1])];
+
+        var outSegs = [];
+        function pushBLSeg(p0, out0, in1, p1) {
+            if (dist2D(p0, p1) > 0.05) {
+                outSegs.push({ p0: p0, out0: out0, in1: in1, p1: p1 });
+            }
+        }
+
+        pushBLSeg(topMid, [0, 0], [0, 0], topRightStart);
+        for (i = 0; i < nC; i++) {
+            var cs = cornerSpecs[i];
+            if (cs.rk > 0.05) {
+                pushBLSeg(cs.arcStart, cs.out0, cs.in1, cs.arcEnd);
+            }
+            if (i < nC - 1) {
+                pushBLSeg(cs.arcEnd, [0, 0], [0, 0], cornerSpecs[i + 1].arcStart);
+            } else {
+                pushBLSeg(cs.arcEnd, [0, 0], [0, 0], topMid);
+            }
+        }
+
+        return annotateArcLengths(outSegs);
+    }
+
+    /**
+     * Builds the closed clockwise perimeter segments starting at Top-Center (0, -b)
+     * for any of the 6 Balloon Geometries: square, rounded, cloud, explosion, wobbly, bubble_lines.
+     */
+    function buildBalloonPerimeterSegments(textW, textH, cfg, lineSpecs) {
         var padX = cfg.padX;
         var padY = cfg.padY;
         var w = Math.max(24, textW + padX * 2);
@@ -1835,6 +2260,10 @@
         var b = h / 2;
         var geom = cfg.geometry || "rounded";
         var segs = [];
+
+        if (geom === "bubble_lines") {
+            return buildBubbleLinesPerimeterSegments(textW, textH, cfg, lineSpecs);
+        }
 
         if (geom === "square" || geom === "rounded") {
             var r = (geom === "square") ? 0 : Math.max(0, Math.min(cfg.cornerRadius || 0, a, b));
@@ -1868,10 +2297,11 @@
             return annotateArcLengths(segs);
         }
 
-        if (geom === "dyamond") {
-            var waves = Math.max(4, Math.min(36, Math.round(cfg.dyamondWaves || 14)));
-            var wDepthPct = clampNum(cfg.dyamondDepth, 2, 50, 10);
-            var wRandPct  = clampNum(cfg.dyamondWidthRand !== undefined ? cfg.dyamondWidthRand : 65, 0, 100, 65);
+        if (geom === "wobbly" || geom === "dyamond") {
+            var waves = Math.max(4, Math.min(36, Math.round(cfg.wobblyWaves || cfg.dyamondWaves || 14)));
+            var wDepthPct = clampNum(cfg.wobblyDepth !== undefined ? cfg.wobblyDepth : cfg.dyamondDepth, 2, 50, 10);
+            var rawWR = (cfg.wobblyWidthRand !== undefined) ? cfg.wobblyWidthRand : cfg.dyamondWidthRand;
+            var wRandPct  = clampNum(rawWR !== undefined ? rawWR : 65, 0, 100, 65);
             var numPts = waves * 2; // Alternating outward crests (+1) and inward troughs (-1)
 
             // Cushion half-dimensions slightly so inward wave troughs never encroach on text bounds
@@ -2114,8 +2544,8 @@
     /**
      * Generates complete Balloon + Tail Shape specifications and exact outer bounds.
      */
-    function computeBalloonAndTail(textW, textH, cfg) {
-        var segs = buildBalloonPerimeterSegments(textW, textH, cfg);
+    function computeBalloonAndTail(textW, textH, cfg, lineSpecs) {
+        var segs = buildBalloonPerimeterSegments(textW, textH, cfg, lineSpecs);
         var tailStyle = cfg.tailStyle || "none";
 
         var startPct = cfg.tailStart;
@@ -2889,7 +3319,7 @@
         var capR = 16;
         if (cfg.geometry === "square") {
             capR = 2;
-        } else if (cfg.geometry === "rounded" || cfg.geometry === "dyamond") {
+        } else if (cfg.geometry === "rounded" || cfg.geometry === "wobbly" || cfg.geometry === "bubble_lines") {
             capR = Math.min(bodyHalfW * 0.9, Math.max(4, cfg.cornerRadius || 0));
         } else {
             capR = Math.min(bodyHalfW * 0.65, 22);
@@ -3548,7 +3978,8 @@
             var hexCode = existingEnv.precompHex || preferredHex || generateHexId(4);
 
             var centered = centerTextAnchorZeroShift(pItem, innerText, origRec);
-            var geo = computeBalloonAndTail(centered.bounds.width, centered.bounds.height, cfg);
+            var lineSpecsPre = (cfg.geometry === "bubble_lines") ? measureTextLineBoxes(pItem, innerText, centered.bounds) : null;
+            var geo = computeBalloonAndTail(centered.bounds.width, centered.bounds.height, cfg, lineSpecsPre);
 
             var halfW = Math.max(20, Math.ceil(Math.max(Math.abs(geo.bounds.minX), Math.abs(geo.bounds.maxX))));
             var halfH = Math.max(20, Math.ceil(Math.max(Math.abs(geo.bounds.minY), Math.abs(geo.bounds.maxY))));
@@ -3612,7 +4043,8 @@
         var cInfo = centerTextAnchorZeroShift(comp, targetText, origState);
 
         // Build Balloon + Tail Geometry & linked child Shape Layer
-        var geoData = computeBalloonAndTail(cInfo.bounds.width, cInfo.bounds.height, cfg);
+        var lineSpecsMain = (cfg.geometry === "bubble_lines") ? measureTextLineBoxes(comp, targetText, cInfo.bounds) : null;
+        var geoData = computeBalloonAndTail(cInfo.bounds.width, cInfo.bounds.height, cfg, lineSpecsMain);
         targetBalloon = createOrRebuildBalloonLayer(comp, targetText, targetBalloon, geoData, cfg);
 
         var env = { version: 2, precompHex: activeHex, orig: origState, config: cfg };
@@ -4157,23 +4589,23 @@
         ddGeometry.alignment = ["fill", "center"];
         ddGeometry.selection = 1;
 
-        var ctrlCornerRadius     = createSliderRow(pnlGeom, "Corner Radius:",   28,  0, 150, "px", refreshPreviewCanvas);
-        var ctrlCloudPuffs       = createSliderRow(pnlGeom, "Cloud Puffs:",     12,  6,  30, "",   refreshPreviewCanvas);
-        var ctrlCloudDepth       = createSliderRow(pnlGeom, "Puff Depth:",      42, 10, 120, "%",  refreshPreviewCanvas);
-        var ctrlCloudWidthRand   = createSliderRow(pnlGeom, "Puff Width Rand:",  0,  0, 100, "%",  refreshPreviewCanvas);
-        var ctrlSpikeCount       = createSliderRow(pnlGeom, "Burst Spikes:",    18,  6,  40, "",   refreshPreviewCanvas);
-        var ctrlSpikeDepth       = createSliderRow(pnlGeom, "Spike Depth:",     85, 15, 220, "%",  refreshPreviewCanvas);
-        var ctrlSpikeWidthRand   = createSliderRow(pnlGeom, "Spike Width Rand:", 0,  0, 100, "%",  refreshPreviewCanvas);
-        var ctrlDyamondWaves     = createSliderRow(pnlGeom, "Dyamond Waves:",   14,  4,  36, "",   refreshPreviewCanvas);
-        var ctrlDyamondDepth     = createSliderRow(pnlGeom, "Wave Depth:",      10,  2,  50, "%",  refreshPreviewCanvas);
-        var ctrlDyamondWidthRand = createSliderRow(pnlGeom, "Wave Width Rand:", 65,  0, 100, "%",  refreshPreviewCanvas);
+        var ctrlCornerRadius    = createSliderRow(pnlGeom, "Corner Radius:",   28,  0, 150, "px", refreshPreviewCanvas);
+        var ctrlCloudPuffs      = createSliderRow(pnlGeom, "Cloud Puffs:",     12,  6,  30, "",   refreshPreviewCanvas);
+        var ctrlCloudDepth      = createSliderRow(pnlGeom, "Puff Depth:",      42, 10, 120, "%",  refreshPreviewCanvas);
+        var ctrlCloudWidthRand  = createSliderRow(pnlGeom, "Puff Width Rand:",  0,  0, 100, "%",  refreshPreviewCanvas);
+        var ctrlSpikeCount      = createSliderRow(pnlGeom, "Burst Spikes:",    18,  6,  40, "",   refreshPreviewCanvas);
+        var ctrlSpikeDepth      = createSliderRow(pnlGeom, "Spike Depth:",     85, 15, 220, "%",  refreshPreviewCanvas);
+        var ctrlSpikeWidthRand  = createSliderRow(pnlGeom, "Spike Width Rand:", 0,  0, 100, "%",  refreshPreviewCanvas);
+        var ctrlWobblyWaves     = createSliderRow(pnlGeom, "Wobbly Waves:",    14,  4,  36, "",   refreshPreviewCanvas);
+        var ctrlWobblyDepth     = createSliderRow(pnlGeom, "Wave Depth:",      10,  2,  50, "%",  refreshPreviewCanvas);
+        var ctrlWobblyWidthRand = createSliderRow(pnlGeom, "Wave Width Rand:", 65,  0, 100, "%",  refreshPreviewCanvas);
 
-        ctrlCloudDepth.group.helpTip       = "Puff depth relative (%) to each individual puff's width.";
-        ctrlCloudWidthRand.group.helpTip   = "0% = constant arc-length puff width; >0% = randomizes puff widths while keeping exact puff count.";
-        ctrlSpikeDepth.group.helpTip       = "Spike height relative (%) to each individual spike's base width.";
-        ctrlSpikeWidthRand.group.helpTip   = "0% = constant arc-length spike width; >0% = randomizes spike widths while keeping exact spike count.";
-        ctrlDyamondDepth.group.helpTip     = "Organic wave amplitude relative (%) to each wave's local perimeter span.";
-        ctrlDyamondWidthRand.group.helpTip = "0% = uniform smooth waves; >0% = organic hand-drawn irregular wave widths & heights.";
+        ctrlCloudDepth.group.helpTip      = "Puff depth relative (%) to each individual puff's width.";
+        ctrlCloudWidthRand.group.helpTip  = "0% = constant arc-length puff width; >0% = randomizes puff widths while keeping exact puff count.";
+        ctrlSpikeDepth.group.helpTip      = "Spike height relative (%) to each individual spike's base width.";
+        ctrlSpikeWidthRand.group.helpTip  = "0% = constant arc-length spike width; >0% = randomizes spike widths while keeping exact spike count.";
+        ctrlWobblyDepth.group.helpTip     = "Organic wave amplitude relative (%) to each wave's local perimeter span.";
+        ctrlWobblyWidthRand.group.helpTip = "0% = uniform smooth waves; >0% = organic hand-drawn irregular wave widths & heights.";
 
         var pnlPadding = tabBalloon.add("panel", undefined, "Exterior Padding & Centering");
         pnlPadding.orientation = "column";
@@ -4190,16 +4622,16 @@
         function syncBalloonShapeVisibility() {
             var idx = ddGeometry.selection ? ddGeometry.selection.index : 1;
             var key = GEOMETRY_KEYS[idx] || "rounded";
-            ctrlCornerRadius.group.enabled     = (key === "rounded" || key === "dyamond");
-            ctrlCloudPuffs.group.enabled       = (key === "cloud");
-            ctrlCloudDepth.group.enabled       = (key === "cloud");
-            ctrlCloudWidthRand.group.enabled   = (key === "cloud");
-            ctrlSpikeCount.group.enabled       = (key === "explosion");
-            ctrlSpikeDepth.group.enabled       = (key === "explosion");
-            ctrlSpikeWidthRand.group.enabled   = (key === "explosion");
-            ctrlDyamondWaves.group.enabled     = (key === "dyamond");
-            ctrlDyamondDepth.group.enabled     = (key === "dyamond");
-            ctrlDyamondWidthRand.group.enabled = (key === "dyamond");
+            ctrlCornerRadius.group.enabled    = (key === "rounded" || key === "wobbly" || key === "bubble_lines");
+            ctrlCloudPuffs.group.enabled      = (key === "cloud");
+            ctrlCloudDepth.group.enabled      = (key === "cloud");
+            ctrlCloudWidthRand.group.enabled  = (key === "cloud");
+            ctrlSpikeCount.group.enabled      = (key === "explosion");
+            ctrlSpikeDepth.group.enabled      = (key === "explosion");
+            ctrlSpikeWidthRand.group.enabled  = (key === "explosion");
+            ctrlWobblyWaves.group.enabled     = (key === "wobbly");
+            ctrlWobblyDepth.group.enabled     = (key === "wobbly");
+            ctrlWobblyWidthRand.group.enabled = (key === "wobbly");
             refreshPreviewCanvas();
         }
         ddGeometry.onChange = syncBalloonShapeVisibility;
@@ -4526,9 +4958,9 @@
                 spikeCount: Math.round(ctrlSpikeCount.getValue()),
                 spikeDepth: ctrlSpikeDepth.getValue(),
                 spikeWidthRand: ctrlSpikeWidthRand.getValue(),
-                dyamondWaves: Math.round(ctrlDyamondWaves.getValue()),
-                dyamondDepth: ctrlDyamondDepth.getValue(),
-                dyamondWidthRand: ctrlDyamondWidthRand.getValue(),
+                wobblyWaves: Math.round(ctrlWobblyWaves.getValue()),
+                wobblyDepth: ctrlWobblyDepth.getValue(),
+                wobblyWidthRand: ctrlWobblyWidthRand.getValue(),
                 tailStyle: TAIL_KEYS[tIdx] || "triangle",
                 tailPosition: tPos,
                 tailStartWidth: tWidth,
@@ -4583,9 +5015,9 @@
             ctrlSpikeCount.setValue(c.spikeCount, false);
             ctrlSpikeDepth.setValue(c.spikeDepth, false);
             ctrlSpikeWidthRand.setValue(c.spikeWidthRand, false);
-            ctrlDyamondWaves.setValue(c.dyamondWaves, false);
-            ctrlDyamondDepth.setValue(c.dyamondDepth, false);
-            ctrlDyamondWidthRand.setValue(c.dyamondWidthRand, false);
+            ctrlWobblyWaves.setValue(c.wobblyWaves, false);
+            ctrlWobblyDepth.setValue(c.wobblyDepth, false);
+            ctrlWobblyWidthRand.setValue(c.wobblyWidthRand, false);
 
             ctrlTailPos.setValue(c.tailPosition, false);
             ctrlTailWidth.setValue(c.tailStartWidth, false);
@@ -4638,18 +5070,19 @@
 
                 var previewSegs = buildBalloonPerimeterSegments(68, 28, {
                     geometry: cfg.geometry,
-                    padX: 10,
-                    padY: 8,
-                    cornerRadius: Math.min(12, cfg.cornerRadius * 0.4),
+                    padX: cfg.geometry === "bubble_lines" ? 7 : 10,
+                    padY: cfg.geometry === "bubble_lines" ? 5 : 8,
+                    cornerRadius: Math.min(cfg.geometry === "bubble_lines" ? 6 : 12, cfg.cornerRadius * 0.4),
                     cloudPuffs: cfg.cloudPuffs,
                     cloudDepth: cfg.cloudDepth,
                     cloudWidthRand: cfg.cloudWidthRand,
                     spikeCount: Math.min(18, cfg.spikeCount),
                     spikeDepth: Math.min(95, cfg.spikeDepth),
                     spikeWidthRand: cfg.spikeWidthRand,
-                    dyamondWaves: cfg.dyamondWaves,
-                    dyamondDepth: cfg.dyamondDepth,
-                    dyamondWidthRand: cfg.dyamondWidthRand
+                    wobblyWaves: cfg.wobblyWaves,
+                    wobblyDepth: cfg.wobblyDepth,
+                    wobblyWidthRand: cfg.wobblyWidthRand,
+                    _isPreviewIcon: true
                 });
 
                 var cx = w * 0.5;
@@ -4717,18 +5150,19 @@
 
                     var segs = buildBalloonPerimeterSegments(68, 28, {
                         geometry: cfg.geometry,
-                        padX: 10,
-                        padY: 8,
-                        cornerRadius: Math.min(12, cfg.cornerRadius * 0.4),
+                        padX: cfg.geometry === "bubble_lines" ? 7 : 10,
+                        padY: cfg.geometry === "bubble_lines" ? 5 : 8,
+                        cornerRadius: Math.min(cfg.geometry === "bubble_lines" ? 6 : 12, cfg.cornerRadius * 0.4),
                         cloudPuffs: cfg.cloudPuffs,
                         cloudDepth: cfg.cloudDepth,
                         cloudWidthRand: cfg.cloudWidthRand,
                         spikeCount: Math.min(18, cfg.spikeCount),
                         spikeDepth: Math.min(95, cfg.spikeDepth),
                         spikeWidthRand: cfg.spikeWidthRand,
-                        dyamondWaves: cfg.dyamondWaves,
-                        dyamondDepth: cfg.dyamondDepth,
-                        dyamondWidthRand: cfg.dyamondWidthRand
+                        wobblyWaves: cfg.wobblyWaves,
+                        wobblyDepth: cfg.wobblyDepth,
+                        wobblyWidthRand: cfg.wobblyWidthRand,
+                        _isPreviewIcon: true
                     });
 
                     var cx = 68, cy = 36;
