@@ -604,7 +604,7 @@
         // -------------------------------------------------------------
         // SVG Vector Rendering for AE Shape Layers
         // -------------------------------------------------------------
-        renderShapeContents(contentsGroup, time) {
+        renderShapeContents(contentsGroup, time, layer = null) {
             let svgDefs = '';
             let svgChildren = '';
             let gradCounter = 0;
@@ -1043,6 +1043,26 @@
 
             if (contentsGroup) {
                 traverseGroup(contentsGroup);
+            }
+
+            if (layer && layer.masks && layer.masks.properties && layer.masks.properties.length > 0 && svgChildren) {
+                const maskPaths = [];
+                for (const mAtom of layer.masks.properties) {
+                    if (!mAtom || mAtom.enabled === false || mAtom.maskMode === 6012) continue;
+                    const msProp = mAtom.maskShape || (mAtom.property && (mAtom.property('ADBE Mask Shape') || mAtom.property('Mask Path')));
+                    if (msProp) {
+                        const sd = (typeof msProp.getValueAtTime === 'function') ? msProp.getValueAtTime(time) : msProp.value;
+                        if (sd && sd.vertices && sd.vertices.length > 0) {
+                            const md = this.generateSVGPathData(sd);
+                            if (md) maskPaths.push(`<path d="${md}" />`);
+                        }
+                    }
+                }
+                if (maskPaths.length > 0) {
+                    const clipId = 'ae_mask_' + (layer.id || 'lyr') + '_' + Math.random().toString(36).substr(2, 6);
+                    svgDefs += `<clipPath id="${clipId}">${maskPaths.join('')}</clipPath>`;
+                    svgChildren = `<g clip-path="url(#${clipId})">${svgChildren}</g>`;
+                }
             }
 
             return (svgDefs ? `<defs>${svgDefs}</defs>` : '') + svgChildren;
@@ -2084,7 +2104,7 @@
                     layer.source.time = subTime;
                     layerEl.innerHTML = this.renderCompLayersHtml(layer.source, subTime, isStaticPreview, 0);
                 } else if (layer instanceof ShapeLayer) {
-                    const svgContent = this.renderShapeContents(layer.contents, time);
+                    const svgContent = this.renderShapeContents(layer.contents, time, layer);
                     layerEl.innerHTML = `
                         <svg class="ae-layer-svg" style="overflow: visible;">
                             ${svgContent}
@@ -2147,7 +2167,7 @@
                 } else if (subLayer.sourceText) {
                     subContent = `<svg class="ae-layer-svg" style="overflow: visible;">${this.renderTextContent(subLayer, time)}</svg>`;
                 } else if (subLayer.contents) {
-                    subContent = `<svg class="ae-layer-svg" style="overflow: visible;">${this.renderShapeContents(subLayer.contents, time)}</svg>`;
+                    subContent = `<svg class="ae-layer-svg" style="overflow: visible;">${this.renderShapeContents(subLayer.contents, time, subLayer)}</svg>`;
                 }
 
                 if (subContent) {

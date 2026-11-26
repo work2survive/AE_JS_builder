@@ -30,7 +30,8 @@
 //      - Perimeter Position (%), Tail Start Width (0.1 - 4.0), and Offset (deg).
 //   6. In / Out Animation Engine & Custom Expression Telemetry:
 //      - Styles: Clementine (Trim from Tail), Bloat (Horizontal Expand Mask),
-//        and Sparse Dotted to Solid — all paired with AE Opacity Typewriter.
+//        Sparse Dotted to Solid, and Rovi (Inner-Glow Stroke Expanding Fill) —
+//        all paired with AE Opacity Typewriter.
 //      - Auto Read-Time linked to character count (seconds per 25 characters).
 //      - Exposes "Bubble Status" (0=waiting, 1=start, 2=in, 3=reading, 4=out, 5=end)
 //        and In / Reading / Out timing controls in Effects for custom expressions.
@@ -53,12 +54,14 @@
     var REPO_URL       = "https://github.com/work2survive/AE-comic-text-bubble";
     var LIVE_DEMO_URL  = "https://work2survive.github.io/AE_JS_builder/?jsx=AE_Comic_Text_Bubble.jsx&autobuild=true";
 
-    var BALLOON_LAYER_TAG  = "AE_COMIC_BALLOON_SHAPE";
-    var BALLOON_LAYER_NAME = "Comic Balloon";
-    var STATE_EFFECT_NAME  = "Comic Balloon State";
-    var PRESETS_STORAGE_KEY = "AE_COMIC_BALLOON_PRESETS_V2";
-    var PRESETS_FOLDER_NAME = "comic_balloon_presets";
-    var PRESETS_FILE_NAME   = "presets.json";
+    var BALLOON_LAYER_TAG    = "AE_COMIC_BALLOON_SHAPE";
+    var BALLOON_LAYER_NAME   = "Comic Balloon";
+    var ROVI_FILL_LAYER_TAG  = "AE_COMIC_ROVI_FILL_SHAPE";
+    var ROVI_FILL_LAYER_NAME = "Comic Balloon Rovi Fill";
+    var STATE_EFFECT_NAME    = "Comic Balloon State";
+    var PRESETS_STORAGE_KEY  = "AE_COMIC_BALLOON_PRESETS_V2";
+    var PRESETS_FOLDER_NAME  = "comic_balloon_presets";
+    var PRESETS_FILE_NAME    = "presets.json";
 
     var TYPEWRITER_ANIMATOR_NAME = "Comic Typewriter Animator";
     var BLOAT_MASK_NAME          = "Comic Bloat Mask";
@@ -282,12 +285,13 @@
     var STROKE_KEYS     = ["none", "solid", "variable", "dotted"];
     var STROKE_LABELS   = ["None", "Solid (Thickness)", "Variable Thickness (Min & Max)", "Dotted (Whisper)"];
 
-    var ANIM_KEYS       = ["none", "clementine", "bloat", "sparse_dots"];
+    var ANIM_KEYS       = ["none", "clementine", "bloat", "sparse_dots", "rovi"];
     var ANIM_LABELS     = [
         "None (Static)",
         "1. Clementine (Trim from Tail)",
         "2. Bloat (Horizontal Expand Mask)",
-        "3. Sparse Dotted to Solid"
+        "3. Sparse Dotted to Solid",
+        "4. Rovi (Inner Glow Stroke Fill)"
     ];
 
     function getDefaultPresets() {
@@ -562,7 +566,7 @@
         }
 
         var aStyle = def.animStyle;
-        if (raw.animStyle === "none" || raw.animStyle === "clementine" || raw.animStyle === "bloat" || raw.animStyle === "sparse_dots") {
+        if (raw.animStyle === "none" || raw.animStyle === "clementine" || raw.animStyle === "bloat" || raw.animStyle === "sparse_dots" || raw.animStyle === "rovi") {
             aStyle = raw.animStyle;
         }
 
@@ -798,6 +802,15 @@
         return false;
     }
 
+    function isRoviFillLayer(layer) {
+        if (!layer) return false;
+        try {
+            if (layer.comment && String(layer.comment).indexOf(ROVI_FILL_LAYER_TAG) !== -1) return true;
+            if (layer.name === ROVI_FILL_LAYER_NAME) return true;
+        } catch (e) {}
+        return false;
+    }
+
     function isComicBalloonPrecompLayer(layer) {
         if (!layer) return false;
         try {
@@ -836,7 +849,7 @@
         var count = getCompLayerCount(comp);
         for (var i = 1; i <= count; i++) {
             var lyr = getCompLayerAt(comp, i);
-            if (!lyr || lyr === textLayer || isComicBalloonShapeLayer(lyr)) continue;
+            if (!lyr || lyr === textLayer || isComicBalloonShapeLayer(lyr) || isRoviFillLayer(lyr)) continue;
             if (lyr.parent === textLayer) {
                 all.push(lyr);
                 if (lyr.index < textLayer.index) {
@@ -1238,6 +1251,20 @@
                 }
             }
         } catch (eMsk) {}
+
+        // 4. Remove Rovi Inner-Glow Fill helper layer if present
+        try {
+            var ownerComp = textLayer.containingComp || (balloonLayer ? balloonLayer.containingComp : null);
+            if (ownerComp) {
+                var lCnt = getCompLayerCount(ownerComp);
+                for (var ri = lCnt; ri >= 1; ri--) {
+                    var candL = getCompLayerAt(ownerComp, ri);
+                    if (candL && isRoviFillLayer(candL) && (!candL.parent || candL.parent === textLayer)) {
+                        try { candL.remove(); } catch (eRR) {}
+                    }
+                }
+            }
+        } catch (eRoviCln) {}
     }
 
     function removeStateEffectsFromLayer(layer) {
@@ -2734,6 +2761,172 @@
         );
     }
 
+    /**
+     * Creates the masked companion Shape Layer ("Comic Balloon Rovi Fill") directly
+     * behind `balloonLayer` for Style 4 ("rovi"):
+     *   - Clipped strictly to the balloon interior via native AE Masks (ADBE Mask Parade)
+     *     so zero stroke glow ever bleeds outside the perimeter.
+     *   - Uses 4 concentric round-capped/round-joined Stroke bands in `fillColor` driven
+     *     by the exact same Trim Paths arc from the tail tip as the outer stroke:
+     *     expanding inward toward the center while thickening and gaining opacity until
+     *     100% of the balloon interior is uniformly filled at `p = 1`.
+     */
+    function createRoviInnerGlowFillLayer(comp, textLayer, balloonLayer, geoResult, textBounds, cfg, bodyOffsetDeg, hasTailLead, envFromChildExpr) {
+        if (!comp || !textLayer || !balloonLayer || !cfg.fillEnabled) return null;
+        var layerFillOp = clampNum(cfg.fillOpacity, 0, 100, 100);
+        if (layerFillOp <= 0.01) return null;
+
+        var roviLayer = comp.layers.addShape();
+        roviLayer.name = ROVI_FILL_LAYER_NAME;
+        try { roviLayer.comment = ROVI_FILL_LAYER_TAG; } catch (eRC) {}
+        try { roviLayer.label = 11; } catch (eRL) {}
+        try { roviLayer.enabled = true; } catch (eRE) {}
+
+        var is3D = Boolean(textLayer.threeDLayer);
+        try { roviLayer.threeDLayer = is3D; } catch (eR3D) {}
+
+        roviLayer.parent = textLayer;
+        var rTr = roviLayer.property("Transform");
+        rTr.property("Anchor Point").setValue(is3D ? [0, 0, 0] : [0, 0]);
+        rTr.property("Position").setValue(is3D ? [0, 0, 0] : [0, 0]);
+        rTr.property("Scale").setValue(is3D ? [100, 100, 100] : [100, 100]);
+        var rRot = rTr.property("Rotation") || rTr.property("Z Rotation");
+        if (rRot) rRot.setValue(0);
+        var rOp = rTr.property("Opacity");
+        if (rOp) rOp.setValue(layerFillOp);
+
+        try { roviLayer.moveAfter(balloonLayer); } catch (eRMv) {}
+
+        // 1. Add Interior Clipping Masks (ADBE Mask Parade) so stroke expands strictly inward
+        var masksParade = roviLayer.property("ADBE Mask Parade") || roviLayer.property("Masks");
+        function appendInteriorMask(maskName, sd) {
+            if (!masksParade || typeof masksParade.addProperty !== "function" || !sd || !sd.vertices) return;
+            try {
+                var mAtom = masksParade.addProperty("ADBE Mask Atom");
+                if (!mAtom) return;
+                mAtom.name = maskName;
+                var mShapeProp = mAtom.property("ADBE Mask Shape") || mAtom.property("Mask Path");
+                if (mShapeProp) {
+                    var mObj = new ShapeClass();
+                    mObj.vertices = sd.vertices;
+                    mObj.inTangents = sd.inTangents;
+                    mObj.outTangents = sd.outTangents;
+                    mObj.closed = Boolean(sd.closed);
+                    mShapeProp.setValue(mObj);
+                }
+                if (typeof MaskMode !== "undefined" && MaskMode.ADD !== undefined) {
+                    try { mAtom.maskMode = MaskMode.ADD; } catch (eMM) {}
+                }
+            } catch (eAddM) {}
+        }
+
+        appendInteriorMask("Rovi Body Mask", geoResult.bodyShape);
+        var ei;
+        for (ei = 0; ei < geoResult.extraShapes.length; ei++) {
+            if (geoResult.extraShapes[ei].filled) {
+                appendInteriorMask("Rovi " + geoResult.extraShapes[ei].name + " Mask", geoResult.extraShapes[ei].shapeData);
+            }
+        }
+
+        // 2. Populate Concentric Inner-Glow Expanding Stroke Bands
+        var rContents = roviLayer.property("Contents") || roviLayer.property("ADBE Root Vectors Group");
+        if (!rContents) return roviLayer;
+
+        var fRgb = hexToRgb(cfg.fillColor);
+        var balloonW = Math.max(24, (textBounds.width || 160) + (cfg.padX || 0) * 2);
+        var balloonH = Math.max(24, (textBounds.height || 80) + (cfg.padY || 0) * 2);
+        var spanW = Math.max(balloonW, (geoResult.bounds.maxX - geoResult.bounds.minX));
+        var spanH = Math.max(balloonH, (geoResult.bounds.maxY - geoResult.bounds.minY));
+        var fullCoverW = Math.min(2000, Math.round(Math.max(100, Math.min(spanW, spanH) * 1.35 + Math.max(balloonW, balloonH) * 0.35)));
+
+        var ROVI_BANDS = [
+            { name: "Deep Center Fill", wScale: 1.00, wExp: 1.60, opFormula: "(p <= 0.002) ? 0 : Math.min(100.0, 100.0 * (0.22 * p + 0.78 * Math.pow(p, 2.8)))" },
+            { name: "Inner Glow Mid",   wScale: 0.68, wExp: 1.45, opFormula: "(p <= 0.002) ? 0 : Math.min(100.0, 100.0 * Math.pow(p, 1.85))" },
+            { name: "Inner Glow Near",  wScale: 0.40, wExp: 1.30, opFormula: "(p <= 0.002) ? 0 : Math.min(100.0, 100.0 * Math.pow(p, 1.15))" },
+            { name: "Inner Rim Core",   wScale: 0.18, wExp: 1.15, opFormula: "(p <= 0.002) ? 0 : Math.min(100.0, 100.0 * Math.pow(p, 0.65))" }
+        ];
+
+        function addGlowBandsForShape(baseLabel, sd, coverW, offsetDeg, pHeaderExpr) {
+            if (!sd || !sd.vertices) return;
+            for (var bi = 0; bi < ROVI_BANDS.length; bi++) {
+                var band = ROVI_BANDS[bi];
+                var bGrp = rContents.addProperty("ADBE Vector Group");
+                bGrp.name = baseLabel + " - " + band.name;
+                var bCont = bGrp.property("Contents") || bGrp.property("ADBE Vectors Group");
+                if (!bCont) continue;
+
+                var pGrp = bCont.addProperty("ADBE Vector Shape - Group");
+                var sObj = new ShapeClass();
+                sObj.vertices = sd.vertices;
+                sObj.inTangents = sd.inTangents;
+                sObj.outTangents = sd.outTangents;
+                sObj.closed = Boolean(sd.closed);
+                var pProp = pGrp.property("Path") || pGrp.property("ADBE Vector Shape");
+                if (pProp) pProp.setValue(sObj);
+
+                var stProp = bCont.addProperty("ADBE Vector Graphic - Stroke");
+                if (stProp) {
+                    var colP = stProp.property("Color") || stProp.property("ADBE Vector Stroke Color");
+                    if (colP) colP.setValue([fRgb[0], fRgb[1], fRgb[2], 1]);
+                    try {
+                        var lcP = stProp.property("Line Cap") || stProp.property("ADBE Vector Stroke Line Cap");
+                        if (lcP) lcP.setValue(2); // Round Cap
+                        var ljP = stProp.property("Line Join") || stProp.property("ADBE Vector Stroke Line Join");
+                        if (ljP) ljP.setValue(2); // Round Join for smooth inward glow curvature
+                        var mlP = stProp.property("Miter Limit") || stProp.property("ADBE Vector Stroke Miter Limit");
+                        if (mlP) mlP.setValue(10);
+                    } catch (eCapR) {}
+
+                    var maxBandW = Math.max(4, Math.round(coverW * band.wScale * 10) / 10);
+                    var swP = stProp.property("Stroke Width") || stProp.property("ADBE Vector Stroke Width");
+                    if (swP) {
+                        swP.setValue(maxBandW);
+                        swP.expression = pHeaderExpr + "value * Math.pow(p, " + band.wExp.toFixed(2) + ");";
+                    }
+                    var soP = stProp.property("Opacity") || stProp.property("ADBE Vector Stroke Opacity");
+                    if (soP) {
+                        soP.setValue(100);
+                        soP.expression = pHeaderExpr + band.opFormula + ";";
+                    }
+                }
+
+                var trm = bCont.addProperty("ADBE Vector Filter - Trim");
+                if (trm) {
+                    var tS = trm.property("Start")  || trm.property("ADBE Vector Trim Start");
+                    var tE = trm.property("End")    || trm.property("ADBE Vector Trim End");
+                    var tO = trm.property("Offset") || trm.property("ADBE Vector Trim Offset");
+                    if (tO && offsetDeg) tO.setValue(offsetDeg);
+                    if (tS) tS.expression = pHeaderExpr + "50.0 - 50.0 * p;";
+                    if (tE) tE.expression = pHeaderExpr + "50.0 + 50.0 * p;";
+                }
+            }
+        }
+
+        var leadStartB = hasTailLead ? 0.26 : 0.0;
+        var leadSpanB  = hasTailLead ? 0.74 : 1.0;
+        var bodyPHeader =
+            "var raw = " + envFromChildExpr + " / 100.0;\n" +
+            "var p = clamp((raw - " + leadStartB.toFixed(2) + ") / " + leadSpanB.toFixed(2) + ", 0, 1);\n";
+        addGlowBandsForShape("Body", geoResult.bodyShape, fullCoverW, bodyOffsetDeg, bodyPHeader);
+
+        for (ei = 0; ei < geoResult.extraShapes.length; ei++) {
+            var exS = geoResult.extraShapes[ei];
+            if (exS.filled && exS.shapeData && exS.shapeData.vertices && exS.shapeData.vertices.length >= 3) {
+                var cIdxR = parseInt(exS.name.replace("Thought Cloud ", ""), 10) || 1;
+                var p0R = (3 - cIdxR) * 0.10;
+                var p1R = p0R + 0.14;
+                var cloudPHeader =
+                    "var raw = " + envFromChildExpr + " / 100.0;\n" +
+                    "var p = clamp((raw - " + p0R.toFixed(2) + ") / " + (p1R - p0R).toFixed(2) + ", 0, 1);\n";
+                var cloudDiam = dist2D(exS.shapeData.vertices[0], exS.shapeData.vertices[2]);
+                var cloudCoverW = Math.max(18, Math.round(cloudDiam * 1.40));
+                addGlowBandsForShape(exS.name, exS.shapeData, cloudCoverW, 0, cloudPHeader);
+            }
+        }
+
+        return roviLayer;
+    }
+
     function applyInOutAnimationRig(comp, textLayer, balloonLayer, geoResult, textBounds, cfg, precompLayer, outerCompName) {
         if (!textLayer || !balloonLayer) return;
 
@@ -2758,13 +2951,13 @@
             return;
         }
 
-        // All 3 styles animate text with AE's basic Opacity Typewriter Animator
+        // All active styles animate text with AE's basic Opacity Typewriter Animator
         applyTypewriterAnimator(textLayer);
 
         var rootContents = balloonLayer.property("Contents") || balloonLayer.property("ADBE Root Vectors Group");
         if (!rootContents) return;
 
-        var envFromChildExpr = 'parent.effect("Bubble Envelope")(1).value';
+        var envFromChildExpr = '(thisLayer.hasParent ? parent.effect("Bubble Envelope")(1).value : 100)';
         var numGroups = (typeof rootContents.numProperties === "number")
             ? rootContents.numProperties
             : (rootContents.properties ? rootContents.properties.length : 0);
@@ -2772,11 +2965,13 @@
         var gi, grp, gCont, fillG, fillOp, strokeG, strokeOp, strokeW, pathG, pathP;
 
         // ---------------------------------------------------------------------
-        // STYLE 1: "clementine"
-        //   - Stroke grows from the tip of the tail via Trim Paths
-        //   - Fill fades from opacity 0 to 100 (scaled by fillOpacity)
+        // STYLE 1 ("clementine") & STYLE 4 ("rovi"):
+        //   - Outer Stroke grows from the tip of the tail via Trim Paths
+        //   - "clementine": flat Fill fades from opacity 0 to 100
+        //   - "rovi": flat Fill is 0; masked inner-glow stroke expands inward
+        //             from the growing perimeter toward the center to fill
         // ---------------------------------------------------------------------
-        if (style === "clementine") {
+        if (style === "clementine" || style === "rovi") {
             var tailStyle = cfg.tailStyle || "none";
             var hasTailLead = (tailStyle === "line" || tailStyle === "clouds");
             var bodyTargetPt = [0, (textBounds.height / 2) + (cfg.padY || 26)];
@@ -2799,7 +2994,12 @@
                 if (fillG) {
                     fillOp = fillG.property("Opacity") || fillG.property("ADBE Vector Fill Opacity");
                     if (fillOp) {
-                        fillOp.expression = 'var p = clamp(' + envFromChildExpr + ', 0, 100) / 100.0;\nvalue * p;';
+                        if (style === "rovi") {
+                            fillOp.setValue(0);
+                            fillOp.expression = "0;";
+                        } else {
+                            fillOp.expression = 'var p = clamp(' + envFromChildExpr + ', 0, 100) / 100.0;\nvalue * p;';
+                        }
                     }
                 }
 
@@ -2861,6 +3061,20 @@
                         }
                     }
                 }
+            }
+
+            if (style === "rovi" && cfg.fillEnabled) {
+                createRoviInnerGlowFillLayer(
+                    comp,
+                    textLayer,
+                    balloonLayer,
+                    geoResult,
+                    textBounds,
+                    cfg,
+                    bodyOffsetDeg,
+                    hasTailLead,
+                    envFromChildExpr
+                );
             }
             return;
         }
@@ -3056,6 +3270,7 @@
         for (i = 1; i <= count; i++) {
             var il = getCompLayerAt(precompItem, i);
             if (!il) continue;
+            if (isRoviFillLayer(il)) continue;
             if (isComicBalloonShapeLayer(il) && !innerBalloon) innerBalloon = il;
             if (!keepBalloon && isComicBalloonShapeLayer(il)) continue;
             if (isTextLayer(il) && !innerText) innerText = il;
@@ -4016,6 +4231,8 @@
             var aKey = ANIM_KEYS[aIdx] || "none";
             if (aKey === "clementine") {
                 lblAnimDesc.text = "Typewriter text + Stroke trims from tail tip + Fill fades 0-100%.";
+            } else if (aKey === "rovi") {
+                lblAnimDesc.text = "Typewriter + Stroke trims from tail + Inner-glow stroke expands to fill.";
             } else if (aKey === "bloat") {
                 lblAnimDesc.text = "Typewriter text + Balloon width expands masking text + Stroke 0->Max.";
             } else if (aKey === "sparse_dots") {

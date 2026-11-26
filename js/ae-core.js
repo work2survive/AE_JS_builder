@@ -903,6 +903,10 @@
                 case 'ADBE Text Opacity':
                     prop = new Property('Opacity', 'ADBE Text Opacity', 100, 'number');
                     break;
+                case 'ADBE Mask Atom':
+                case 'Mask':
+                    prop = new MaskAtomGroup('Mask ' + (this.properties.length + 1));
+                    break;
                 default:
                     prop = new PropertyGroup(nameOrMatchName, nameOrMatchName);
                     break;
@@ -950,6 +954,31 @@
 
         get numProperties() {
             return this.properties.length;
+        }
+    }
+
+    class MaskAtomGroup extends PropertyGroup {
+        constructor(name = 'Mask 1') {
+            super(name, 'ADBE Mask Atom');
+            this.maskMode = 6013; // MaskMode.ADD
+            this.inverted = false;
+            this.rotoBezier = false;
+            this.maskShape = new Property('Mask Path', 'ADBE Mask Shape', new Shape(), 'shape');
+            this.maskFeather = new Property('Mask Feather', 'ADBE Mask Feather', [0, 0], 'array2d');
+            this.maskOpacity = new Property('Mask Opacity', 'ADBE Mask Opacity', 100, 'number');
+            this.maskExpansion = new Property('Mask Expansion', 'ADBE Mask Offset', 0, 'number');
+            [this.maskShape, this.maskFeather, this.maskOpacity, this.maskExpansion].forEach(mp => {
+                mp.parentProperty = this;
+                this.properties.push(mp);
+            });
+        }
+
+        property(nameOrIndex) {
+            if (nameOrIndex === 1 || nameOrIndex === 'Mask Path' || nameOrIndex === 'Mask Shape' || nameOrIndex === 'ADBE Mask Shape') return this.maskShape;
+            if (nameOrIndex === 2 || nameOrIndex === 'Mask Feather' || nameOrIndex === 'ADBE Mask Feather') return this.maskFeather;
+            if (nameOrIndex === 3 || nameOrIndex === 'Mask Opacity' || nameOrIndex === 'ADBE Mask Opacity') return this.maskOpacity;
+            if (nameOrIndex === 4 || nameOrIndex === 'Mask Expansion' || nameOrIndex === 'ADBE Mask Offset') return this.maskExpansion;
+            return super.property(nameOrIndex);
         }
     }
 
@@ -1363,12 +1392,16 @@
             this.guideLayer = false;
             this.notShyable = false;
 
+            this.masks = new PropertyGroup('Masks', 'ADBE Mask Parade');
+            this.masks.parentProperty = this;
+
             this.effects = new PropertyGroup('Effects', 'ADBE Effect Parade');
             this.effects.parentProperty = this;
 
             this.transform = new TransformGroup(this._threeDLayer);
             this.transform.parentProperty = this;
 
+            this.properties.push(this.masks);
             this.properties.push(this.effects);
             this.properties.push(this.transform);
         }
@@ -1602,7 +1635,17 @@
         property(nameOrIndex) {
             if (nameOrIndex === 'Transform' || nameOrIndex === 'ADBE Transform Group') return this.transform;
             if (nameOrIndex === 'Effects' || nameOrIndex === 'ADBE Effect Parade') return this.effects;
+            if (nameOrIndex === 'Masks' || nameOrIndex === 'ADBE Mask Parade') return this.masks;
             if (nameOrIndex === 'Time Remap' || nameOrIndex === 'ADBE Time Remapping') return this.timeRemap || null;
+            if (typeof nameOrIndex === 'string') {
+                const clean = nameOrIndex.toLowerCase();
+                if (clean === 'masks' || clean === 'adbe mask parade') return this.masks;
+                if (clean === 'position' || clean === 'adbe position') return this.transform ? this.transform.position : null;
+                if (clean === 'scale' || clean === 'adbe scale') return this.transform ? this.transform.scale : null;
+                if (clean === 'rotation' || clean === 'adbe rotate z' || clean === 'z rotation') return this.transform ? this.transform.rotation : null;
+                if (clean === 'opacity' || clean === 'adbe opacity') return this.transform ? this.transform.opacity : null;
+                if (clean === 'anchor point' || clean === 'adbe anchor point') return this.transform ? this.transform.anchorPoint : null;
+            }
             return super.property(nameOrIndex);
         }
 
@@ -3549,6 +3592,16 @@
     global.EffectCheckboxControl = EffectCheckboxControl;
     global.EffectSliderControl = EffectSliderControl;
     global.EffectColorControl = EffectColorControl;
+    global.MaskAtomGroup = MaskAtomGroup;
+    global.MaskMode = {
+        NONE: 6012,
+        ADD: 6013,
+        SUBTRACT: 6014,
+        INTERSECT: 6015,
+        LIGHTEN: 6016,
+        DARKEN: 6017,
+        DIFFERENCE: 6018
+    };
     global.TrackMatteType = {
         NO_TRACK_MATTE: 5012,
         ALPHA: 5013,
