@@ -697,6 +697,7 @@
             slider.className = 'scriptui-slider';
             slider.min = this.minvalue;
             slider.max = this.maxvalue;
+            slider.step = (this.stepdelta !== undefined) ? String(this.stepdelta) : 'any';
             slider.value = this._value;
             if (this.enabled === false) {
                 slider.disabled = true;

@@ -851,6 +851,58 @@
                 case 'Point3D Control':
                     prop = new EffectPoint3DControl();
                     break;
+                case 'ADBE Text Animators':
+                case 'Animators':
+                    prop = new PropertyGroup('Animators', 'ADBE Text Animators');
+                    break;
+                case 'ADBE Text Animator':
+                case 'Animator': {
+                    prop = new PropertyGroup('Animator 1', 'ADBE Text Animator');
+                    const selectors = new PropertyGroup('Selectors', 'ADBE Text Selectors');
+                    selectors.parentProperty = prop;
+                    const rangeSel = new PropertyGroup('Range Selector 1', 'ADBE Text Selector');
+                    rangeSel.parentProperty = selectors;
+                    const pStart = new Property('Start', 'ADBE Text Percent Start', 0, 'number');
+                    const pEnd = new Property('End', 'ADBE Text Percent End', 100, 'number');
+                    const pOff = new Property('Offset', 'ADBE Text Percent Offset', 0, 'number');
+                    const pIdxStart = new Property('Start', 'ADBE Text Index Start', 0, 'number');
+                    const pIdxEnd = new Property('End', 'ADBE Text Index End', 0, 'number');
+                    const pAdv = new PropertyGroup('Advanced', 'ADBE Text Range Advanced');
+                    const pUnits = new Property('Units', 'ADBE Text Range Units', 1, 'number');
+                    const pSmooth = new Property('Smoothness', 'ADBE Text Range Smoothness', 100, 'number');
+                    [pUnits, pSmooth].forEach(sp => { sp.parentProperty = pAdv; pAdv.properties.push(sp); });
+                    [pStart, pEnd, pOff, pIdxStart, pIdxEnd, pAdv].forEach(rp => {
+                        rp.parentProperty = rangeSel;
+                        rangeSel.properties.push(rp);
+                    });
+                    selectors.properties.push(rangeSel);
+                    const animProps = new PropertyGroup('Properties', 'ADBE Text Animator Properties');
+                    animProps.parentProperty = prop;
+                    prop.properties.push(selectors);
+                    prop.properties.push(animProps);
+                    break;
+                }
+                case 'ADBE Text Selector':
+                case 'Range Selector': {
+                    prop = new PropertyGroup('Range Selector', 'ADBE Text Selector');
+                    const rsStart = new Property('Start', 'ADBE Text Percent Start', 0, 'number');
+                    const rsEnd = new Property('End', 'ADBE Text Percent End', 100, 'number');
+                    const rsOff = new Property('Offset', 'ADBE Text Percent Offset', 0, 'number');
+                    const rsIdxS = new Property('Start', 'ADBE Text Index Start', 0, 'number');
+                    const rsIdxE = new Property('End', 'ADBE Text Index End', 0, 'number');
+                    const rsAdv = new PropertyGroup('Advanced', 'ADBE Text Range Advanced');
+                    const rsUnits = new Property('Units', 'ADBE Text Range Units', 1, 'number');
+                    const rsSmooth = new Property('Smoothness', 'ADBE Text Range Smoothness', 100, 'number');
+                    [rsUnits, rsSmooth].forEach(sp => { sp.parentProperty = rsAdv; rsAdv.properties.push(sp); });
+                    [rsStart, rsEnd, rsOff, rsIdxS, rsIdxE, rsAdv].forEach(rp => {
+                        rp.parentProperty = prop;
+                        prop.properties.push(rp);
+                    });
+                    break;
+                }
+                case 'ADBE Text Opacity':
+                    prop = new Property('Opacity', 'ADBE Text Opacity', 100, 'number');
+                    break;
                 default:
                     prop = new PropertyGroup(nameOrMatchName, nameOrMatchName);
                     break;
@@ -1298,6 +1350,10 @@
             this.enabled = true;
             this.parent = null;
             this.source = null;
+            this.inPoint = 0;
+            this.outPoint = containingComp ? (containingComp.duration || 10) : 10;
+            this.trackMatteLayer = null;
+            this.trackMatteType = 5012;
             this._threeDLayer = false;
             this._shy = false;
             this._animMode = 'rand'; // 'rand' (default) | 'wiggle' | 'stop' | 'base'
@@ -1385,6 +1441,14 @@
             const eff = this.effects.property(nameOrIndex);
             if (eff && eff.asCallable) return eff.asCallable();
             return eff;
+        }
+
+        setTrackMatte(matteLayer, trackMatteType) {
+            this.trackMatteLayer = matteLayer || null;
+            this.trackMatteType = (matteLayer && trackMatteType !== undefined) ? trackMatteType : 5012;
+            if (this.containingComp && this.containingComp._onChanged) {
+                this.containingComp._onChanged();
+            }
         }
 
         get threeDLayer() {
@@ -2437,6 +2501,12 @@
             this.sourceText.parentProperty = this.text;
             this.text.properties.push(this.sourceText);
             this.text.sourceText = this.sourceText;
+
+            this.animators = new PropertyGroup('Animators', 'ADBE Text Animators');
+            this.animators.parentProperty = this.text;
+            this.text.properties.push(this.animators);
+            this.text.animators = this.animators;
+
             Object.defineProperties(this.sourceText, {
                 style: {
                     get: () => textDoc,
@@ -3479,5 +3549,12 @@
     global.EffectCheckboxControl = EffectCheckboxControl;
     global.EffectSliderControl = EffectSliderControl;
     global.EffectColorControl = EffectColorControl;
+    global.TrackMatteType = {
+        NO_TRACK_MATTE: 5012,
+        ALPHA: 5013,
+        ALPHA_INVERTED: 5014,
+        LUMA: 5015,
+        LUMA_INVERTED: 5016
+    };
 
 })(typeof window !== 'undefined' ? window : (typeof globalThis !== 'undefined' ? globalThis : (typeof global !== 'undefined' ? global : this)));

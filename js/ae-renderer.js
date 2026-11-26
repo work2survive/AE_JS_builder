@@ -1571,7 +1571,7 @@
                         dashNums = dashNums.concat(dashNums);
                     }
                     const patternLen = dashNums.reduce((acc, v) => acc + v, 0);
-                    if (patternLen <= 0.1) {
+                    if (patternLen <= 0.1 || (dashNums.length === 2 && dashNums[1] <= 0.05 && dashNums[0] > 0.5)) {
                         const taperedD = this.buildTaperedRibbonD(poly, strokeInfo);
                         if (taperedD) svgOut += `<path d="${taperedD}" fill="${strokeInfo.color}" stroke="none" />`;
                         continue;
@@ -1777,10 +1777,101 @@
                 firstBaselineY = -baselineShift + (profile.yOffset || 0);
             }
 
+            // Evaluate active Opacity Text Animators (e.g. Typewriter)
+            const opacityAnimators = [];
+            let hideFontEmojis = false;
+            if (this.comp && this.comp.layers) {
+                const allLayers = Array.isArray(this.comp.layers) ? this.comp.layers : (this.comp.layers._layers || []);
+                hideFontEmojis = allLayers.some(l => l && l.parent === layer && (l.comment === 'AE_COLOR_EMOJI_CHILD' || (l.name && (l.name.indexOf('Color Emoji') !== -1 || l.name.indexOf('[Emoji]') !== -1))));
+            }
+            try {
+                const textProps = layer.property && (layer.property('ADBE Text Properties') || layer.property('Text'));
+                const animators = textProps && (textProps.property('ADBE Text Animators') || textProps.property('Animators'));
+                if (animators) {
+                    const count = animators.numProperties || (animators.properties ? animators.properties.length : 0);
+                    for (let ai = 1; ai <= count; ai++) {
+                        const a = animators.property ? animators.property(ai) : null;
+                        if (!a || a.enabled === false) continue;
+                        if (a.name && (a.name.indexOf('Hide Font Emojis') !== -1 || a.name.indexOf('Hide Emojis') !== -1)) {
+                            hideFontEmojis = true;
+                            continue;
+                        }
+                        const aProps = a.property && (a.property('ADBE Text Animator Properties') || a.property('Properties'));
+                        const opProp = aProps && (aProps.property('ADBE Text Opacity') || aProps.property('Opacity'));
+                        if (!opProp) continue;
+                        const targetOp = Math.max(0, Math.min(100, Number(opProp.getValueAtTime ? opProp.getValueAtTime(time) : opProp.value) || 0)) / 100;
+                        const sels = a.property && (a.property('ADBE Text Selectors') || a.property('Selectors'));
+                        const sel1 = sels && sels.property ? sels.property(1) : null;
+                        if (sel1) {
+                            const readSub = (mName, pName, defV) => {
+                                const sp = sel1.property && (sel1.property(mName) || sel1.property(pName));
+                                if (!sp) return defV;
+                                const v = sp.getValueAtTime ? sp.getValueAtTime(time) : sp.value;
+                                return (v !== undefined && v !== null && !isNaN(v)) ? Number(v) : defV;
+                            };
+                            const sPct = readSub('ADBE Text Percent Start', 'Start', 0);
+                            const ePct = readSub('ADBE Text Percent End', 'End', 100);
+                            const oPct = readSub('ADBE Text Percent Offset', 'Offset', 0);
+                            opacityAnimators.push({
+                                start: Math.max(0, Math.min(100, Math.min(sPct, ePct) + oPct)),
+                                end: Math.max(0, Math.min(100, Math.max(sPct, ePct) + oPct)),
+                                targetOp
+                            });
+                        }
+                    }
+                }
+            } catch (eAnimEval) {}
+
+            const totalPrintableChars = Math.max(1, linesData.reduce((acc, lo) => acc + (lo.text ? lo.text.length : 0), 0));
+            let globalCharCursor = 0;
+
+            const evalCharOpacity = (charIdx) => {
+                if (opacityAnimators.length === 0) return 1;
+                const pct = ((charIdx + 0.5) / totalPrintableChars) * 100;
+                let op = 1;
+                for (const oa of opacityAnimators) {
+                    if (pct >= oa.start && pct <= oa.end) {
+                        op *= oa.targetOp;
+                    }
+                }
+                return op;
+            };
+
+            const buildRunTspans = (substr, fontFam, baseIdx, extraAttrs = '') => {
+                if (!substr) return '';
+                if (opacityAnimators.length === 0) {
+                    return `<tspan font-family="${fontFam}"${extraAttrs}>${escapeXml(substr)}</tspan>`;
+                }
+                let out = '';
+                let runText = '';
+                let runOp = null;
+                for (let ci = 0; ci < substr.length; ci++) {
+                    const cOp = Math.round(evalCharOpacity(baseIdx + ci) * 100) / 100;
+                    if (runOp === null) {
+                        runOp = cOp;
+                        runText = substr[ci];
+                    } else if (Math.abs(cOp - runOp) < 0.01) {
+                        runText += substr[ci];
+                    } else {
+                        const opAttrs = (runOp < 0.999) ? ` fill-opacity="${runOp}" stroke-opacity="${runOp}"` : '';
+                        out += `<tspan font-family="${fontFam}"${extraAttrs}${opAttrs}>${escapeXml(runText)}</tspan>`;
+                        runOp = cOp;
+                        runText = substr[ci];
+                    }
+                }
+                if (runText) {
+                    const opAttrs = (runOp < 0.999) ? ` fill-opacity="${runOp}" stroke-opacity="${runOp}"` : '';
+                    out += `<tspan font-family="${fontFam}"${extraAttrs}${opAttrs}>${escapeXml(runText)}</tspan>`;
+                }
+                return out;
+            };
+
             // Build calibrated tspans
             const tspans = linesData.map((lineObj, li) => {
                 const lineText = lineObj.text;
                 const lineY = firstBaselineY + (li * effectiveLeading);
+                const lineBaseChar = globalCharCursor;
+                globalCharCursor += lineText ? lineText.length : 0;
 
                 let lineX = 0;
                 let textAnchor = 'start';
@@ -1818,45 +1909,22 @@
                 let match;
                 emojiRegex.lastIndex = 0;
 
-                // Detect if this text layer has color emoji vector children or hide-emoji text animators
-                let hideFontEmojis = false;
-                if (this.comp && this.comp.layers) {
-                    const allLayers = Array.isArray(this.comp.layers) ? this.comp.layers : (this.comp.layers._layers || []);
-                    hideFontEmojis = allLayers.some(l => l && l.parent === layer && (l.comment === 'AE_COLOR_EMOJI_CHILD' || (l.name && (l.name.indexOf('Color Emoji') !== -1 || l.name.indexOf('[Emoji]') !== -1))));
-                }
-                if (!hideFontEmojis) {
-                    try {
-                        const textProps = layer.property && (layer.property('ADBE Text Properties') || layer.property('Text'));
-                        const animators = textProps && (textProps.property('ADBE Text Animators') || textProps.property('Animators'));
-                        if (animators) {
-                            const count = animators.numProperties || (animators._list ? animators._list.length : 0);
-                            for (let ai = 1; ai <= count; ai++) {
-                                const a = animators.property ? animators.property(ai) : (animators._list ? animators._list[ai - 1] : null);
-                                if (a && a.name && (a.name.indexOf('Hide Font Emojis') !== -1 || a.name.indexOf('Hide Emojis') !== -1)) {
-                                    hideFontEmojis = true;
-                                    break;
-                                }
-                            }
-                        }
-                    } catch (eH) {}
-                }
-
                 while ((match = emojiRegex.exec(lineText)) !== null) {
                     if (match.index > lastIndex) {
-                        parts.push(`<tspan font-family="${textFont}">${escapeXml(lineText.substring(lastIndex, match.index))}</tspan>`);
+                        parts.push(buildRunTspans(lineText.substring(lastIndex, match.index), textFont, lineBaseChar + lastIndex));
                     }
                     if (hideFontEmojis) {
                         parts.push(`<tspan font-family="${emojiFont}" font-size="${Math.round(fs * 1.05)}px" fill="transparent" fill-opacity="0" stroke="none" style="opacity: 0;">${escapeXml(match[0])}</tspan>`);
                     } else {
-                        parts.push(`<tspan font-family="${emojiFont}" font-size="${Math.round(fs * 1.05)}px">${escapeXml(match[0])}</tspan>`);
+                        parts.push(buildRunTspans(match[0], emojiFont, lineBaseChar + match.index, ` font-size="${Math.round(fs * 1.05)}px"`));
                     }
                     lastIndex = emojiRegex.lastIndex;
                 }
                 if (lastIndex < lineText.length) {
-                    parts.push(`<tspan font-family="${textFont}">${escapeXml(lineText.substring(lastIndex))}</tspan>`);
+                    parts.push(buildRunTspans(lineText.substring(lastIndex), textFont, lineBaseChar + lastIndex));
                 }
                 if (parts.length === 0) {
-                    parts.push(`<tspan font-family="${textFont}">${escapeXml(lineText)}</tspan>`);
+                    parts.push(buildRunTspans(lineText, textFont, lineBaseChar));
                 }
 
                 return `<tspan x="${lineX}" y="${lineY}" text-anchor="${textAnchor}">${parts.join('')}</tspan>`;
@@ -1871,11 +1939,53 @@
                 trackingPx !== 0 ? `letter-spacing:${trackingPx.toFixed(2)}px` : ''
             ].filter(Boolean).join('; ');
 
-            return `
+            const textElem = `
                 <text fill="${fill}" font-size="${fs}px" ${strokeAttr} style="${styleAttr}">
                     ${tspans}
                 </text>
             `;
+
+            // Alpha Track Matte clipping (e.g. Bloat balloon masking text horizontally)
+            if (layer.trackMatteLayer && layer.trackMatteLayer.contents && layer.trackMatteType === 5013) {
+                try {
+                    const matteLayer = layer.trackMatteLayer;
+                    const lAnchor = layer.transform ? (layer.transform.anchorPoint.getValueAtTime(time) || [0, 0]) : [0, 0];
+                    const mPos = matteLayer.transform ? (matteLayer.transform.position.getValueAtTime(time) || [0, 0]) : [0, 0];
+                    const mAnchor = matteLayer.transform ? (matteLayer.transform.anchorPoint.getValueAtTime(time) || [0, 0]) : [0, 0];
+                    const offX = (matteLayer.parent === layer) ? ((lAnchor[0] || 0) + (mPos[0] || 0) - (mAnchor[0] || 0)) : 0;
+                    const offY = (matteLayer.parent === layer) ? ((lAnchor[1] || 0) + (mPos[1] || 0) - (mAnchor[1] || 0)) : 0;
+
+                    const clipPaths = [];
+                    const collectMattePaths = (grp) => {
+                        if (!grp || !grp.properties) return;
+                        for (const p of grp.properties) {
+                            if (!p || p.enabled === false) continue;
+                            if (typeof VectorShapePath !== 'undefined' && p instanceof VectorShapePath) {
+                                const sd = p.path.getValueAtTime(time);
+                                if (sd && sd.vertices && sd.vertices.length > 0) {
+                                    const shifted = {
+                                        vertices: sd.vertices.map(v => [v[0] + offX, v[1] + offY]),
+                                        inTangents: sd.inTangents,
+                                        outTangents: sd.outTangents,
+                                        closed: sd.closed
+                                    };
+                                    const dStr = this.generateSVGPathData(shifted);
+                                    if (dStr) clipPaths.push(`<path d="${dStr}" />`);
+                                }
+                            } else if (p.properties) {
+                                collectMattePaths(p);
+                            }
+                        }
+                    };
+                    collectMattePaths(matteLayer.contents);
+                    if (clipPaths.length > 0) {
+                        const clipId = `ae_tm_${layer.id || 'txt'}`;
+                        return `<defs><clipPath id="${clipId}">${clipPaths.join('')}</clipPath></defs><g clip-path="url(#${clipId})">${textElem}</g>`;
+                    }
+                } catch (eMatte) {}
+            }
+
+            return textElem;
         }
 
         renderLayers(time) {

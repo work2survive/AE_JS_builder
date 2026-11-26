@@ -1,12 +1,13 @@
 // Co-authored & architected with Google DeepMind Antigravity.
 // =============================================================================
-// ADOBE AFTER EFFECTS EXTENDSCRIPT & SCRIPTUI PANEL: AE COMIC TEXT BUBBLE v2.0.0
+// ADOBE AFTER EFFECTS EXTENDSCRIPT & SCRIPTUI PANEL: AE COMIC TEXT BUBBLE v2.1.0
 // =============================================================================
 //
 // PURPOSE:
 //   Ground-up parametric Comic Balloon generator for Adobe After Effects.
 //   Transforms any existing Point Text or Paragraph (Box) Text layer into a
-//   stylized comic speech, thought, whisper, or shout balloon.
+//   stylized comic speech, thought, whisper, or shout balloon with optional
+//   parametric In / Out animations and expression-ready timing telemetry.
 //
 // CORE ARCHITECTURE & COMBINED ENGINES:
 //   1. AE Text Precomp (https://github.com/work2survive/AE-text-precomp):
@@ -23,10 +24,17 @@
 //        * AE-Text-Highlight       (https://github.com/work2survive/AE-Text-Highlight)
 //   4. Preset Management System:
 //      - Store, Rename, Delete, Open (.json), and Download (.json) presets.
-//   5. Trim-Paths-Style Tail Perimeter Targeting:
-//      - Exact arc-length Start (%), End (%), and Offset (deg) controls with
-//        live visual perimeter preview + De Casteljau Bézier splicing.
-//   6. Non-Destructive Effect State Backup & Full Reversal:
+//   5. Arc-Length Geometry & Trim-Paths Tail Perimeter Targeting:
+//      - Constant-width or width-randomized Cloud Puffs & Explosion Spikes
+//        with depth relative (%) to each individual puff/spike width.
+//      - Perimeter Position (%), Tail Start Width (0.1 - 4.0), and Offset (deg).
+//   6. In / Out Animation Engine & Custom Expression Telemetry:
+//      - Styles: Clementine (Trim from Tail), Bloat (Horizontal Expand Mask),
+//        and Sparse Dotted to Solid — all paired with AE Opacity Typewriter.
+//      - Auto Read-Time linked to character count (seconds per 25 characters).
+//      - Exposes "Bubble Status" (0=waiting, 1=start, 2=in, 3=reading, 4=out, 5=end)
+//        and In / Reading / Out timing controls in Effects for custom expressions.
+//   7. Non-Destructive Effect State Backup & Full Reversal:
 //      - Stores original text box, content, and transform properties in Effects.
 //      - Idempotent Build / Update & 1-click Remove Balloon (full reversal).
 //
@@ -41,7 +49,7 @@
     "use strict";
 
     var SCRIPT_NAME    = "AE Comic Text Bubble";
-    var SCRIPT_VERSION = "v2.0.0";
+    var SCRIPT_VERSION = "v2.1.0";
     var REPO_URL       = "https://github.com/work2survive/AE-comic-text-bubble";
     var LIVE_DEMO_URL  = "https://work2survive.github.io/AE_JS_builder/?jsx=AE_Comic_Text_Bubble.jsx&autobuild=true";
 
@@ -51,6 +59,22 @@
     var PRESETS_STORAGE_KEY = "AE_COMIC_BALLOON_PRESETS_V2";
     var PRESETS_FOLDER_NAME = "comic_balloon_presets";
     var PRESETS_FILE_NAME   = "presets.json";
+
+    var TYPEWRITER_ANIMATOR_NAME = "Comic Typewriter Animator";
+    var BLOAT_MASK_NAME          = "Comic Bloat Mask";
+    var TIMING_EFFECT_NAMES = [
+        "Bubble Start Delay (s)",
+        "Bubble In Time (s)",
+        "Bubble Link Read Time",
+        "Bubble Sec Per 25 Chars",
+        "Bubble Read Time (s)",
+        "Bubble Out Time (s)",
+        "Bubble Status",
+        "Bubble In Timing",
+        "Bubble Reading Timing",
+        "Bubble Out Timing",
+        "Bubble Envelope"
+    ];
 
     // -------------------------------------------------------------------------
     // 1. Safe Environment, Polyfills & ES3 JSON Helpers
@@ -256,6 +280,14 @@
     var STROKE_KEYS     = ["none", "solid", "variable", "dotted"];
     var STROKE_LABELS   = ["None", "Solid (Thickness)", "Variable Thickness (Min & Max)", "Dotted (Whisper)"];
 
+    var ANIM_KEYS       = ["none", "clementine", "bloat", "sparse_dots"];
+    var ANIM_LABELS     = [
+        "None (Static)",
+        "1. Clementine (Trim from Tail)",
+        "2. Bloat (Horizontal Expand Mask)",
+        "3. Sparse Dotted to Solid"
+    ];
+
     function getDefaultPresets() {
         return {
             "Classic Speech": {
@@ -264,12 +296,16 @@
                 padY: 26,
                 cornerRadius: 28,
                 cloudPuffs: 12,
-                cloudDepth: 18,
+                cloudDepth: 42,
+                cloudWidthRand: 0,
                 spikeCount: 18,
-                spikeDepth: 28,
+                spikeDepth: 85,
+                spikeWidthRand: 0,
                 tailStyle: "triangle",
-                tailStart: 52,
-                tailEnd: 60,
+                tailPosition: 56,
+                tailStartWidth: 2.5,
+                tailStart: 54.75,
+                tailEnd: 57.25,
                 tailOffset: 0,
                 tailLength: 85,
                 tailAngle: 12,
@@ -282,6 +318,13 @@
                 strokeMinWidth: 2,
                 strokeMaxWidth: 9,
                 dotGap: 12,
+                animStyle: "none",
+                startDelay: 0,
+                inTime: 0.6,
+                readTime: 2.0,
+                linkReadTime: true,
+                secPer25: 1.2,
+                outTime: 0.5,
                 makePrecomp: true
             },
             "Comic Ink Box": {
@@ -290,12 +333,16 @@
                 padY: 24,
                 cornerRadius: 0,
                 cloudPuffs: 12,
-                cloudDepth: 18,
+                cloudDepth: 42,
+                cloudWidthRand: 0,
                 spikeCount: 18,
-                spikeDepth: 28,
+                spikeDepth: 85,
+                spikeWidthRand: 0,
                 tailStyle: "triangle",
-                tailStart: 45,
-                tailEnd: 53,
+                tailPosition: 49,
+                tailStartWidth: 2.4,
+                tailStart: 47.8,
+                tailEnd: 50.2,
                 tailOffset: 0,
                 tailLength: 80,
                 tailAngle: -10,
@@ -308,6 +355,13 @@
                 strokeMinWidth: 2,
                 strokeMaxWidth: 9,
                 dotGap: 12,
+                animStyle: "none",
+                startDelay: 0,
+                inTime: 0.6,
+                readTime: 2.0,
+                linkReadTime: true,
+                secPer25: 1.2,
+                outTime: 0.5,
                 makePrecomp: true
             },
             "Thought Cloud": {
@@ -316,12 +370,16 @@
                 padY: 30,
                 cornerRadius: 28,
                 cloudPuffs: 12,
-                cloudDepth: 18,
+                cloudDepth: 44,
+                cloudWidthRand: 0,
                 spikeCount: 18,
-                spikeDepth: 28,
+                spikeDepth: 85,
+                spikeWidthRand: 0,
                 tailStyle: "clouds",
-                tailStart: 54,
-                tailEnd: 60,
+                tailPosition: 57,
+                tailStartWidth: 2.0,
+                tailStart: 56.0,
+                tailEnd: 58.0,
                 tailOffset: 0,
                 tailLength: 95,
                 tailAngle: 15,
@@ -334,6 +392,13 @@
                 strokeMinWidth: 2,
                 strokeMaxWidth: 8,
                 dotGap: 12,
+                animStyle: "none",
+                startDelay: 0,
+                inTime: 0.6,
+                readTime: 2.0,
+                linkReadTime: true,
+                secPer25: 1.2,
+                outTime: 0.5,
                 makePrecomp: true
             },
             "Explosion Shout!": {
@@ -342,12 +407,16 @@
                 padY: 32,
                 cornerRadius: 0,
                 cloudPuffs: 12,
-                cloudDepth: 18,
+                cloudDepth: 42,
+                cloudWidthRand: 0,
                 spikeCount: 18,
-                spikeDepth: 30,
+                spikeDepth: 90,
+                spikeWidthRand: 0,
                 tailStyle: "lightning",
-                tailStart: 52,
-                tailEnd: 60,
+                tailPosition: 56,
+                tailStartWidth: 3.2,
+                tailStart: 54.4,
+                tailEnd: 57.6,
                 tailOffset: 0,
                 tailLength: 100,
                 tailAngle: 10,
@@ -360,6 +429,13 @@
                 strokeMinWidth: 2,
                 strokeMaxWidth: 10,
                 dotGap: 12,
+                animStyle: "none",
+                startDelay: 0,
+                inTime: 0.5,
+                readTime: 2.0,
+                linkReadTime: true,
+                secPer25: 1.1,
+                outTime: 0.4,
                 makePrecomp: true
             },
             "Whisper Dotted": {
@@ -368,12 +444,16 @@
                 padY: 26,
                 cornerRadius: 36,
                 cloudPuffs: 12,
-                cloudDepth: 18,
+                cloudDepth: 42,
+                cloudWidthRand: 0,
                 spikeCount: 18,
-                spikeDepth: 28,
+                spikeDepth: 85,
+                spikeWidthRand: 0,
                 tailStyle: "line",
-                tailStart: 52,
-                tailEnd: 58,
+                tailPosition: 55,
+                tailStartWidth: 1.5,
+                tailStart: 54.25,
+                tailEnd: 55.75,
                 tailOffset: 0,
                 tailLength: 75,
                 tailAngle: 15,
@@ -386,6 +466,13 @@
                 strokeMinWidth: 2,
                 strokeMaxWidth: 8,
                 dotGap: 12,
+                animStyle: "none",
+                startDelay: 0,
+                inTime: 0.7,
+                readTime: 2.0,
+                linkReadTime: true,
+                secPer25: 1.3,
+                outTime: 0.6,
                 makePrecomp: true
             },
             "Electric Radio": {
@@ -394,12 +481,16 @@
                 padY: 24,
                 cornerRadius: 12,
                 cloudPuffs: 12,
-                cloudDepth: 18,
+                cloudDepth: 42,
+                cloudWidthRand: 0,
                 spikeCount: 18,
-                spikeDepth: 28,
+                spikeDepth: 85,
+                spikeWidthRand: 0,
                 tailStyle: "lightning",
-                tailStart: 50,
-                tailEnd: 58,
+                tailPosition: 54,
+                tailStartWidth: 2.8,
+                tailStart: 52.6,
+                tailEnd: 55.4,
                 tailOffset: 0,
                 tailLength: 95,
                 tailAngle: -15,
@@ -412,6 +503,13 @@
                 strokeMinWidth: 2,
                 strokeMaxWidth: 8,
                 dotGap: 12,
+                animStyle: "none",
+                startDelay: 0,
+                inTime: 0.6,
+                readTime: 2.0,
+                linkReadTime: true,
+                secPer25: 1.2,
+                outTime: 0.5,
                 makePrecomp: true
             }
         };
@@ -420,18 +518,68 @@
     function normalizePresetData(raw) {
         var def = getDefaultPresets()["Classic Speech"];
         if (!raw || typeof raw !== "object") return cloneObject(def);
+
+        var tPos = def.tailPosition;
+        var tWidth = def.tailStartWidth;
+
+        if (raw.tailPosition !== undefined && raw.tailPosition !== null) {
+            tPos = clampNum(raw.tailPosition, 0, 100, def.tailPosition);
+        } else if (raw.tailStart !== undefined && raw.tailEnd !== undefined) {
+            var s0 = ((parseFloat(raw.tailStart) || 0) % 100 + 100) % 100;
+            var e0 = ((parseFloat(raw.tailEnd) || 0) % 100 + 100) % 100;
+            var sp0 = ((e0 - s0) % 100 + 100) % 100;
+            if (sp0 > 50) {
+                var tmp0 = s0; s0 = e0; e0 = tmp0;
+                sp0 = 100 - sp0;
+            }
+            tPos = (s0 + sp0 * 0.5) % 100;
+            if (raw.tailStartWidth === undefined) {
+                tWidth = sp0;
+            }
+        }
+
+        if (raw.tailStartWidth !== undefined && raw.tailStartWidth !== null) {
+            tWidth = raw.tailStartWidth;
+        }
+
+        tPos   = Math.round(clampNum(tPos, 0, 100, def.tailPosition) * 10) / 10;
+        tWidth = Math.round(clampNum(tWidth, 0.1, 4.0, def.tailStartWidth) * 10) / 10;
+
+        var halfW = tWidth * 0.5;
+        var computedStart = ((tPos - halfW) % 100 + 100) % 100;
+        var computedEnd   = ((tPos + halfW) % 100 + 100) % 100;
+
+        var rawCloudD = raw.cloudDepth;
+        var rawSpikeD = raw.spikeDepth;
+        // Seamless upgrade from v2.0 pixel depths when width randomizer fields were absent
+        if (raw.cloudWidthRand === undefined && typeof rawCloudD === "number" && rawCloudD <= 25) {
+            rawCloudD = Math.round(rawCloudD * 2.3);
+        }
+        if (raw.spikeWidthRand === undefined && typeof rawSpikeD === "number" && rawSpikeD <= 40) {
+            rawSpikeD = Math.round(rawSpikeD * 3.0);
+        }
+
+        var aStyle = def.animStyle;
+        if (raw.animStyle === "none" || raw.animStyle === "clementine" || raw.animStyle === "bloat" || raw.animStyle === "sparse_dots") {
+            aStyle = raw.animStyle;
+        }
+
         return {
             geometry: (raw.geometry === "square" || raw.geometry === "rounded" || raw.geometry === "cloud" || raw.geometry === "explosion") ? raw.geometry : def.geometry,
             padX: clampNum(raw.padX, 0, 200, def.padX),
             padY: clampNum(raw.padY, 0, 200, def.padY),
             cornerRadius: clampNum(raw.cornerRadius, 0, 200, def.cornerRadius),
             cloudPuffs: Math.round(clampNum(raw.cloudPuffs, 6, 30, def.cloudPuffs)),
-            cloudDepth: clampNum(raw.cloudDepth, 4, 60, def.cloudDepth),
+            cloudDepth: Math.round(clampNum(rawCloudD, 10, 120, def.cloudDepth)),
+            cloudWidthRand: Math.round(clampNum(raw.cloudWidthRand, 0, 100, 0)),
             spikeCount: Math.round(clampNum(raw.spikeCount, 6, 40, def.spikeCount)),
-            spikeDepth: clampNum(raw.spikeDepth, 6, 100, def.spikeDepth),
+            spikeDepth: Math.round(clampNum(rawSpikeD, 15, 220, def.spikeDepth)),
+            spikeWidthRand: Math.round(clampNum(raw.spikeWidthRand, 0, 100, 0)),
             tailStyle: (raw.tailStyle === "none" || raw.tailStyle === "line" || raw.tailStyle === "triangle" || raw.tailStyle === "lightning" || raw.tailStyle === "clouds") ? raw.tailStyle : def.tailStyle,
-            tailStart: clampNum(raw.tailStart, 0, 100, def.tailStart),
-            tailEnd: clampNum(raw.tailEnd, 0, 100, def.tailEnd),
+            tailPosition: tPos,
+            tailStartWidth: tWidth,
+            tailStart: computedStart,
+            tailEnd: computedEnd,
             tailOffset: clampNum(raw.tailOffset, -360, 360, def.tailOffset),
             tailLength: clampNum(raw.tailLength, 15, 450, def.tailLength),
             tailAngle: clampNum(raw.tailAngle, -75, 75, def.tailAngle),
@@ -444,6 +592,13 @@
             strokeMinWidth: clampNum(raw.strokeMinWidth, 0.5, 60, def.strokeMinWidth),
             strokeMaxWidth: clampNum(raw.strokeMaxWidth, 0.5, 60, def.strokeMaxWidth),
             dotGap: clampNum(raw.dotGap, 2, 80, def.dotGap),
+            animStyle: aStyle,
+            startDelay: Math.round(clampNum(raw.startDelay, 0, 30, def.startDelay) * 10) / 10,
+            inTime: Math.round(clampNum(raw.inTime, 0.1, 10, def.inTime) * 10) / 10,
+            readTime: Math.round(clampNum(raw.readTime, 0.2, 60, def.readTime) * 10) / 10,
+            linkReadTime: (raw.linkReadTime !== undefined) ? Boolean(raw.linkReadTime) : true,
+            secPer25: Math.round(clampNum(raw.secPer25, 0.2, 10, def.secPer25) * 10) / 10,
+            outTime: Math.round(clampNum(raw.outTime, 0.1, 10, def.outTime) * 10) / 10,
             makePrecomp: (raw.makePrecomp !== undefined) ? Boolean(raw.makePrecomp) : true
         };
     }
@@ -1030,6 +1185,56 @@
         return null;
     }
 
+    function cleanupTextAnimationArtifacts(textLayer, balloonLayer) {
+        if (!textLayer) return;
+
+        // 1. Remove Comic Typewriter Animator from Text Layer
+        try {
+            var textProps = textLayer.property("ADBE Text Properties") || textLayer.property("Text");
+            if (textProps) {
+                var animators = textProps.property("ADBE Text Animators") || textProps.property("Animators");
+                if (animators) {
+                    var aCnt = (typeof animators.numProperties === "number")
+                        ? animators.numProperties
+                        : (animators.properties ? animators.properties.length : 0);
+                    for (var ai = aCnt; ai >= 1; ai--) {
+                        var anim = animators.property(ai);
+                        if (anim && anim.name === TYPEWRITER_ANIMATOR_NAME && typeof anim.remove === "function") {
+                            try { anim.remove(); } catch (eRA) {}
+                        }
+                    }
+                }
+            }
+        } catch (eTAnim) {}
+
+        // 2. Clear Alpha Track Matte from Text Layer & re-enable Balloon visibility
+        try {
+            var noMatte = (typeof TrackMatteType !== "undefined" && TrackMatteType.NO_TRACK_MATTE !== undefined)
+                ? TrackMatteType.NO_TRACK_MATTE
+                : 5012;
+            if (typeof textLayer.setTrackMatte === "function") {
+                textLayer.setTrackMatte(null, noMatte);
+            } else if (textLayer.trackMatteType !== undefined && typeof TrackMatteType !== "undefined") {
+                textLayer.trackMatteType = noMatte;
+            }
+        } catch (eTM) {}
+
+        if (balloonLayer) {
+            try { balloonLayer.enabled = true; } catch (eBE) {}
+        }
+
+        // 3. Remove fallback Bloat Mask from Text Layer if present
+        try {
+            var masks = textLayer.property("ADBE Mask Parade") || textLayer.property("Masks");
+            if (masks) {
+                var mProp = masks.property(BLOAT_MASK_NAME);
+                if (mProp && typeof mProp.remove === "function") {
+                    mProp.remove();
+                }
+            }
+        } catch (eMsk) {}
+    }
+
     function removeStateEffectsFromLayer(layer) {
         if (!layer) return;
         try {
@@ -1042,7 +1247,7 @@
                 "CB Orig Scale",
                 "CB Orig Rotation",
                 "CB Orig Box Size"
-            ];
+            ].concat(TIMING_EFFECT_NAMES);
             for (var i = 0; i < names.length; i++) {
                 var eff = fxParade.property(names[i]);
                 if (eff && typeof eff.remove === "function") {
@@ -1054,6 +1259,8 @@
 
     function restoreTextLayerFromOrigState(comp, textLayer, orig) {
         if (!textLayer || !orig) return;
+
+        cleanupTextAnimationArtifacts(textLayer, null);
 
         // 1. Restore Text Box & Content
         try {
@@ -1431,6 +1638,91 @@
     }
 
     /**
+     * Builds a smooth 72-segment arc-length-annotated base superellipse starting
+     * clockwise at Top-Center (0, -B) so u in [0, 1) divides true perimeter length.
+     */
+    function buildSmoothBasePerimeter(A, B, nExp) {
+        var steps = 72;
+        var raw = [];
+        var i;
+        for (i = 0; i < steps; i++) {
+            var a0 = -Math.PI / 2 + (2 * Math.PI * i) / steps;
+            var a1 = -Math.PI / 2 + (2 * Math.PI * (i + 1)) / steps;
+            raw.push({
+                p0: superellipsePoint(a0, A, B, nExp),
+                out0: [0, 0],
+                in1: [0, 0],
+                p1: superellipsePoint(a1, A, B, nExp)
+            });
+        }
+        return annotateArcLengths(raw);
+    }
+
+    /**
+     * Divides the closed `baseSegs` perimeter into `count` intervals:
+     *   - When randPct == 0: exact constant visual chord width across every puff/spike.
+     *   - When randPct > 0: deterministic randomized widths preserving exact `count`.
+     */
+    function computePerimeterIntervals(baseSegs, count, randPct, salt) {
+        var r = clampNum(randPct, 0, 100, 0) / 100.0;
+        var weights = [];
+        var sumW = 0;
+        var i, iter;
+        for (i = 0; i < count; i++) {
+            var w = 1.0;
+            if (r > 1e-4) {
+                var seed = Math.sin((i + 1) * 12.9898 + count * 78.233 + (salt || 0)) * 43758.5453;
+                var frac = seed - Math.floor(seed); // [0, 1)
+                var signed = frac * 2.0 - 1.0;      // [-1, 1)
+                w = Math.max(0.18, 1.0 + 0.80 * r * signed);
+            }
+            weights.push(w);
+            sumW += w;
+        }
+        var du = [];
+        for (i = 0; i < count; i++) {
+            du.push(weights[i] / (sumW || count));
+        }
+
+        // Equalize true chord widths around tight corners in 5 fast passes
+        if (baseSegs && baseSegs.length > 0) {
+            for (iter = 0; iter < 5; iter++) {
+                var uTmp = [0];
+                var accTmp = 0;
+                for (i = 0; i < count; i++) {
+                    accTmp += du[i];
+                    uTmp.push(i === count - 1 ? 1.0 : accTmp);
+                }
+                var ptsTmp = [];
+                for (i = 0; i < count; i++) {
+                    ptsTmp.push(evaluatePerimeterAtU(baseSegs, uTmp[i]).point);
+                }
+                var nextDu = [];
+                var sumNext = 0;
+                for (i = 0; i < count; i++) {
+                    var chord = dist2D(ptsTmp[i], ptsTmp[(i + 1) % count]);
+                    var corr = du[i] * (weights[i] / Math.max(1e-3, chord));
+                    nextDu.push(corr);
+                    sumNext += corr;
+                }
+                if (sumNext > 1e-6) {
+                    for (i = 0; i < count; i++) {
+                        du[i] = nextDu[i] / sumNext;
+                    }
+                }
+            }
+        }
+
+        var uBounds = [0];
+        var acc = 0;
+        for (i = 0; i < count; i++) {
+            acc += du[i];
+            uBounds.push(i === count - 1 ? 1.0 : acc);
+        }
+        return uBounds;
+    }
+
+    /**
      * Builds the closed clockwise perimeter segments starting at Top-Center (0, -b)
      * for any of the 4 Balloon Geometries: square, rounded, cloud, explosion.
      */
@@ -1489,25 +1781,28 @@
             B *= scaleUp;
         }
 
+        var baseSegs = buildSmoothBasePerimeter(A, B, nExp);
+
         if (geom === "cloud") {
             var puffs = Math.max(6, Math.min(30, Math.round(cfg.cloudPuffs || 12)));
-            var depth = Math.max(4, cfg.cloudDepth || 18);
+            var depthPct = clampNum(cfg.cloudDepth, 10, 120, 42);
+            var puffRand = clampNum(cfg.cloudWidthRand, 0, 100, 0);
+            var uPuffs = computePerimeterIntervals(baseSegs, puffs, puffRand, 17.3);
             var cusps = [];
             var ci;
             for (ci = 0; ci < puffs; ci++) {
-                var ang = -Math.PI / 2 + (2 * Math.PI * ci) / puffs;
-                cusps.push(superellipsePoint(ang, A, B, nExp));
+                cusps.push(evaluatePerimeterAtU(baseSegs, uPuffs[ci]).point);
             }
             for (ci = 0; ci < puffs; ci++) {
                 var c0 = cusps[ci];
                 var c1 = cusps[(ci + 1) % puffs];
                 var ex = c1[0] - c0[0];
                 var ey = c1[1] - c0[1];
-                var elen = Math.sqrt(ex * ex + ey * ey) || 1;
-                var nx = ey / elen;
-                var ny = -ex / elen;
-                var midAng = -Math.PI / 2 + (2 * Math.PI * (ci + 0.5)) / puffs;
-                var lobeD = depth * (1.0 + 0.12 * Math.cos(2 * midAng));
+                var puffWidth = Math.sqrt(ex * ex + ey * ey) || 1;
+                var nx = ey / puffWidth;
+                var ny = -ex / puffWidth;
+                // Puff depth is strictly relative to each particular puff's width
+                var lobeD = puffWidth * (depthPct / 100.0);
                 segs.push({
                     p0: c0,
                     out0: [ex * 0.18 + nx * lobeD * 1.33, ey * 0.18 + ny * lobeD * 1.33],
@@ -1518,32 +1813,43 @@
             return annotateArcLengths(segs);
         }
 
-        // Explosion / Shout
+        // Explosion / Shout (true arc-length division + optional width randomizer + width-relative spike depth)
         var spikes = Math.max(6, Math.min(40, Math.round(cfg.spikeCount || 18)));
-        var sDepth = Math.max(6, cfg.spikeDepth || 28);
-        var totalVerts = spikes * 2;
-        var pts = [];
+        var sDepthPct = clampNum(cfg.spikeDepth, 15, 220, 85);
+        var spikeRand = clampNum(cfg.spikeWidthRand, 0, 100, 0);
+        var uSpikes = computePerimeterIntervals(baseSegs, spikes, spikeRand, 53.7);
+        var valleys = [];
         var si;
-        for (si = 0; si < totalVerts; si++) {
-            var sAng = -Math.PI / 2 + (2 * Math.PI * si) / totalVerts;
-            var basePt = superellipsePoint(sAng, A, B, nExp);
-            if (si % 2 === 0) {
-                pts.push(basePt);
-            } else {
-                var rLen = Math.sqrt(basePt[0] * basePt[0] + basePt[1] * basePt[1]) || 1;
-                var rx = basePt[0] / rLen;
-                var ry = basePt[1] / rLen;
-                var mult = ((((si - 1) / 2) % 2) === 0) ? 1.12 : 0.84;
-                pts.push([basePt[0] + rx * sDepth * mult, basePt[1] + ry * sDepth * mult]);
-            }
+        for (si = 0; si < spikes; si++) {
+            valleys.push(evaluatePerimeterAtU(baseSegs, uSpikes[si]).point);
         }
-        for (si = 0; si < totalVerts; si++) {
-            segs.push({
-                p0: pts[si],
-                out0: [0, 0],
-                in1: [0, 0],
-                p1: pts[(si + 1) % totalVerts]
-            });
+        for (si = 0; si < spikes; si++) {
+            var v0 = valleys[si];
+            var v1 = valleys[(si + 1) % spikes];
+            var sx = v1[0] - v0[0];
+            var sy = v1[1] - v0[1];
+            var spikeWidth = Math.sqrt(sx * sx + sy * sy) || 1;
+            var cnx = sy / spikeWidth;
+            var cny = -sx / spikeWidth;
+
+            var midU = (uSpikes[si] + uSpikes[si + 1]) * 0.5;
+            var midPt = evaluatePerimeterAtU(baseSegs, midU).point;
+            var rMag = Math.sqrt(midPt[0] * midPt[0] + midPt[1] * midPt[1]) || 1;
+            var rnx = midPt[0] / rMag;
+            var rny = midPt[1] / rMag;
+
+            var onx = cnx * 0.65 + rnx * 0.35;
+            var ony = cny * 0.65 + rny * 0.35;
+            var oMag = Math.sqrt(onx * onx + ony * ony) || 1;
+            onx /= oMag;
+            ony /= oMag;
+
+            // Spike depth is strictly relative to each particular spike's base width
+            var spikeH = spikeWidth * (sDepthPct / 100.0);
+            var tipPt = [midPt[0] + onx * spikeH, midPt[1] + ony * spikeH];
+
+            segs.push({ p0: v0,    out0: [0, 0], in1: [0, 0], p1: tipPt });
+            segs.push({ p0: tipPt, out0: [0, 0], in1: [0, 0], p1: v1 });
         }
         return annotateArcLengths(segs);
     }
@@ -1595,9 +1901,18 @@
         var segs = buildBalloonPerimeterSegments(textW, textH, cfg);
         var tailStyle = cfg.tailStyle || "none";
 
+        var startPct = cfg.tailStart;
+        var endPct   = cfg.tailEnd;
+        if (cfg.tailPosition !== undefined && cfg.tailStartWidth !== undefined) {
+            var posP = clampNum(cfg.tailPosition, 0, 100, 56);
+            var widP = clampNum(cfg.tailStartWidth, 0.1, 4.0, 2.5);
+            startPct = ((posP - widP * 0.5) % 100 + 100) % 100;
+            endPct   = ((posP + widP * 0.5) % 100 + 100) % 100;
+        }
+
         var offFrac = (cfg.tailOffset || 0) / 360.0;
-        var uA = (((cfg.tailStart / 100.0) + offFrac) % 1 + 1) % 1;
-        var uB = (((cfg.tailEnd / 100.0) + offFrac) % 1 + 1) % 1;
+        var uA = (((startPct / 100.0) + offFrac) % 1 + 1) % 1;
+        var uB = (((endPct / 100.0) + offFrac) % 1 + 1) % 1;
         var span = ((uB - uA) % 1 + 1) % 1;
 
         // Always take the minor perimeter arc so the tail base never swallows the balloon
@@ -1608,12 +1923,12 @@
         var uMid = (uA + span * 0.5) % 1;
 
         if (tailStyle === "triangle" || tailStyle === "lightning") {
-            if (span < 0.025) {
-                span = 0.05;
+            if (span < 0.001) {
+                span = 0.001;
                 uA = ((uMid - span * 0.5) % 1 + 1) % 1;
                 uB = (uMid + span * 0.5) % 1;
-            } else if (span > 0.35) {
-                span = 0.35;
+            } else if (span > 0.04) {
+                span = 0.04;
                 uA = ((uMid - span * 0.5) % 1 + 1) % 1;
                 uB = (uMid + span * 0.5) % 1;
             }
@@ -1723,7 +2038,7 @@
                     var bDist = Math.sqrt(bx * bx + by * by) || 1;
                     var px = bx / bDist;
                     var py = by / bDist;
-                    var w0 = Math.max(6, bDist * 0.5);
+                    var w0 = Math.max(1.5, bDist * 0.5);
                     var jog = Math.max(9, tailLen * 0.14);
 
                     var h1 = w0 * 0.56;
@@ -1844,7 +2159,7 @@
             var scProp = strokeProp.property("Color") || strokeProp.property("ADBE Vector Stroke Color");
             if (scProp) scProp.setValue([sRgb[0], sRgb[1], sRgb[2], 1]);
 
-            var useRoundJoin = (cfg.geometry === "rounded" || cfg.geometry === "cloud" || effStrokeStyle === "dotted");
+            var useRoundJoin = (cfg.geometry === "rounded" || cfg.geometry === "cloud" || effStrokeStyle === "dotted" || cfg.animStyle === "sparse_dots");
             try {
                 var lcProp = strokeProp.property("Line Cap") || strokeProp.property("ADBE Vector Stroke Line Cap");
                 if (lcProp) lcProp.setValue(2); // Round Cap
@@ -1905,6 +2220,19 @@
                     }
                 } catch (eDash) {}
             }
+
+            // Style 3 ("sparse_dots"): ensure Dash 1 & Gap 1 exist on non-dotted strokes too so they animate from sparse dots -> solid
+            if (cfg.animStyle === "sparse_dots" && effStrokeStyle !== "dotted") {
+                try {
+                    var dashesAnim = strokeProp.dashes || strokeProp.property("ADBE Vector Stroke Dashes") || strokeProp.property("Dashes");
+                    if (dashesAnim && typeof dashesAnim.addProperty === "function") {
+                        var da1 = dashesAnim.property("ADBE Vector Stroke Dash 1") || dashesAnim.addProperty("ADBE Vector Stroke Dash 1");
+                        if (da1) da1.setValue(180);
+                        var ga1 = dashesAnim.property("ADBE Vector Stroke Gap 1") || dashesAnim.addProperty("ADBE Vector Stroke Gap 1");
+                        if (ga1) ga1.setValue(0);
+                    }
+                } catch (eDashA) {}
+            }
         }
 
         return grp;
@@ -1918,6 +2246,7 @@
         balloonLayer.name = BALLOON_LAYER_NAME;
         try { balloonLayer.comment = BALLOON_LAYER_TAG; } catch (eC) {}
         try { balloonLayer.label = 11; } catch (eL) {}
+        try { balloonLayer.enabled = true; } catch (eEn) {}
 
         var is3D = Boolean(textLayer.threeDLayer);
         try { balloonLayer.threeDLayer = is3D; } catch (e3D) {}
@@ -1972,6 +2301,637 @@
     }
 
     // -------------------------------------------------------------------------
+    // 7B. Timing & Status Telemetry Effects + In / Out Animation Engine
+    //     Styles:
+    //       1. "clementine": Typewriter + Stroke Trim from Tail Tip + Fill Fade
+    //       2. "bloat":      Typewriter + Horizontal Width Expand Mask + Stroke Width 0->Max + Fill 100%
+    //       3. "sparse_dots":Typewriter + Sparse Dotted Line -> Solid Stroke + Fill Fade
+    // -------------------------------------------------------------------------
+    function countReadableChars(textLayer) {
+        var doc = getTextDocumentSafe(textLayer);
+        var txt = "";
+        if (doc && typeof doc === "object" && doc.text !== undefined) {
+            txt = String(doc.text);
+        } else if (typeof doc === "string") {
+            txt = doc;
+        }
+        var flat = txt.replace(/[\r\n]+/g, "");
+        return flat.length > 0 ? flat.length : 1;
+    }
+
+    function computeEffectiveReadTime(cfg, charCount) {
+        if (cfg.linkReadTime) {
+            var c = Math.max(1, charCount || 1);
+            var sp25 = clampNum(cfg.secPer25, 0.2, 10, 1.2);
+            return Math.max(0.2, Math.round(((c / 25.0) * sp25) * 100) / 100);
+        }
+        return clampNum(cfg.readTime, 0.2, 60, 2.0);
+    }
+
+    /**
+     * Finds the exact normalized arc-length fraction f in [0, 1) along a closed
+     * ShapeData path closest to `targetPt` (e.g. `pTip` of the tail).
+     */
+    function computePointArcFraction(shapeData, targetPt) {
+        if (!shapeData || !shapeData.vertices || shapeData.vertices.length < 2 || !targetPt) {
+            return 0.5;
+        }
+        var verts = shapeData.vertices;
+        var inT = shapeData.inTangents || [];
+        var outT = shapeData.outTangents || [];
+        var n = verts.length;
+        var segCount = shapeData.closed ? n : (n - 1);
+        var STEPS = 24;
+        var cumLen = 0;
+        var bestDist2 = 1e18;
+        var bestLen = 0;
+        var i, s;
+
+        for (i = 0; i < segCount; i++) {
+            var j = (i + 1) % n;
+            var p0 = verts[i];
+            var o0 = outT[i] || [0, 0];
+            var i1 = inT[j] || [0, 0];
+            var p1 = verts[j];
+            var prev = p0;
+            for (s = 0; s <= STEPS; s++) {
+                var pt = (s === 0) ? p0 : evalCubicPt(p0, o0, i1, p1, s / STEPS);
+                if (s > 0) {
+                    cumLen += dist2D(prev, pt);
+                }
+                var dx = pt[0] - targetPt[0];
+                var dy = pt[1] - targetPt[1];
+                var d2 = dx * dx + dy * dy;
+                if (d2 < bestDist2) {
+                    bestDist2 = d2;
+                    bestLen = cumLen;
+                }
+                prev = pt;
+            }
+        }
+        if (cumLen <= 1e-5) return 0.5;
+        return ((bestLen / cumLen) % 1 + 1) % 1;
+    }
+
+    function setEffectExpression(eff, exprStr) {
+        if (!eff) return;
+        try {
+            var p = eff.property(1);
+            if (p) p.expression = exprStr || "";
+        } catch (e) {}
+    }
+
+    /**
+     * Attaches user-accessible Timing & Status Effect Controls onto `layer`:
+     *   - Bubble Start Delay (s)
+     *   - Bubble In Time (s)
+     *   - Bubble Link Read Time (Checkbox)
+     *   - Bubble Sec Per 25 Chars
+     *   - Bubble Read Time (s)
+     *   - Bubble Out Time (s)
+     *   - Bubble Status          (0=waiting, 1=start, 2=in, 3=reading, 4=out, 5=end)
+     *   - Bubble In Timing       (0 - 100%)
+     *   - Bubble Reading Timing  (0 - 100%)
+     *   - Bubble Out Timing      (0 - 100%)
+     *   - Bubble Envelope        (0 - 100% active visibility progress)
+     */
+    function applyTimingAndStatusEffects(layer, cfg, charCount, linkOpts) {
+        if (!layer) return;
+        var fxParade = layer.property("ADBE Effect Parade") || layer.property("Effects");
+        if (!fxParade) return;
+
+        var startDelay = clampNum(cfg.startDelay, 0, 30, 0);
+        var inTime     = clampNum(cfg.inTime, 0.1, 10, 0.6);
+        var outTime    = clampNum(cfg.outTime, 0.1, 10, 0.5);
+        var secPer25   = clampNum(cfg.secPer25, 0.2, 10, 1.2);
+        var linkRead   = cfg.linkReadTime ? 1 : 0;
+        var effRead    = computeEffectiveReadTime(cfg, charCount);
+        var bakedChars = Math.max(1, charCount || 1);
+
+        var eDelay  = ensureEffectCtrl(fxParade, "ADBE Slider Control",   "Bubble Start Delay (s)", startDelay);
+        var eIn     = ensureEffectCtrl(fxParade, "ADBE Slider Control",   "Bubble In Time (s)",     inTime);
+        var eLink   = ensureEffectCtrl(fxParade, "ADBE Checkbox Control", "Bubble Link Read Time",  linkRead);
+        var eSp25   = ensureEffectCtrl(fxParade, "ADBE Slider Control",   "Bubble Sec Per 25 Chars", secPer25);
+        var eRead   = ensureEffectCtrl(fxParade, "ADBE Slider Control",   "Bubble Read Time (s)",   effRead);
+        var eOut    = ensureEffectCtrl(fxParade, "ADBE Slider Control",   "Bubble Out Time (s)",    outTime);
+        var eStatus = ensureEffectCtrl(fxParade, "ADBE Slider Control",   "Bubble Status",          0);
+        var eInPrg  = ensureEffectCtrl(fxParade, "ADBE Slider Control",   "Bubble In Timing",       0);
+        var eRdPrg  = ensureEffectCtrl(fxParade, "ADBE Slider Control",   "Bubble Reading Timing",  0);
+        var eOtPrg  = ensureEffectCtrl(fxParade, "ADBE Slider Control",   "Bubble Out Timing",      0);
+        var eEnv    = ensureEffectCtrl(fxParade, "ADBE Slider Control",   "Bubble Envelope",        100);
+
+        // Mirror input controls from outer precomp layer when inside a precomp
+        if (linkOpts && linkOpts.outerCompName && linkOpts.outerLayerName) {
+            var oc = escapeJsonStr(linkOpts.outerCompName);
+            var ol = escapeJsonStr(linkOpts.outerLayerName);
+            function mirrorOuter(effName) {
+                return 'var v = value;\ntry { v = comp("' + oc + '").layer("' + ol + '").effect("' + effName + '")(1).value; } catch (e) {}\nv;';
+            }
+            setEffectExpression(eDelay, mirrorOuter("Bubble Start Delay (s)"));
+            setEffectExpression(eIn,    mirrorOuter("Bubble In Time (s)"));
+            setEffectExpression(eLink,  mirrorOuter("Bubble Link Read Time"));
+            setEffectExpression(eSp25,  mirrorOuter("Bubble Sec Per 25 Chars"));
+            setEffectExpression(eOut,   mirrorOuter("Bubble Out Time (s)"));
+        } else {
+            setEffectExpression(eDelay, "");
+            setEffectExpression(eIn,    "");
+            setEffectExpression(eLink,  "");
+            setEffectExpression(eSp25,  "");
+            setEffectExpression(eOut,   "");
+        }
+
+        // Dynamic Read-Time expression (links to 25-character reading speed when checkbox is ON)
+        var readSourceSnippet = "";
+        if (linkOpts && linkOpts.innerCompName && linkOpts.innerTextName) {
+            readSourceSnippet =
+                'var st = comp("' + escapeJsonStr(linkOpts.innerCompName) + '").layer("' + escapeJsonStr(linkOpts.innerTextName) + '").text.sourceText.value;\n';
+        } else {
+            readSourceSnippet =
+                'var st = thisLayer.text.sourceText.value;\n';
+        }
+
+        var manualFallbackSnippet = "var outVal = value;\n";
+        if (linkOpts && linkOpts.outerCompName && linkOpts.outerLayerName) {
+            manualFallbackSnippet =
+                'var outVal = value;\n' +
+                'try { outVal = comp("' + escapeJsonStr(linkOpts.outerCompName) + '").layer("' + escapeJsonStr(linkOpts.outerLayerName) + '").effect("Bubble Read Time (s)")(1).value; } catch (eM) {}\n';
+        }
+
+        var readExpr =
+            'var isLinked = effect("Bubble Link Read Time")(1).value;\n' +
+            manualFallbackSnippet +
+            'if (isLinked && Number(isLinked) > 0.5) {\n' +
+            '    var sp25 = Math.max(0.05, effect("Bubble Sec Per 25 Chars")(1).value);\n' +
+            '    var nChars = ' + bakedChars + ';\n' +
+            '    try {\n' +
+            '        ' + readSourceSnippet +
+            '        var s = (st && st.text !== undefined) ? String(st.text) : String(st);\n' +
+            '        s = s.replace(/[\\r\\n]+/g, "");\n' +
+            '        if (s.length > 0) nChars = s.length;\n' +
+            '    } catch (eTxt) {}\n' +
+            '    outVal = Math.max(0.1, (nChars / 25.0) * sp25);\n' +
+            '}\n' +
+            'outVal;';
+        setEffectExpression(eRead, readExpr);
+
+        var commonHeader =
+            'var dly = Math.max(0, effect("Bubble Start Delay (s)")(1).value);\n' +
+            'var tIn = Math.max(0.01, effect("Bubble In Time (s)")(1).value);\n' +
+            'var tRd = Math.max(0.01, effect("Bubble Read Time (s)")(1).value);\n' +
+            'var tOt = Math.max(0.01, effect("Bubble Out Time (s)")(1).value);\n' +
+            'var inPt = (thisLayer && thisLayer.inPoint !== undefined) ? thisLayer.inPoint : 0;\n' +
+            'var t0 = inPt + dly;\n' +
+            'var t1 = t0 + tIn;\n' +
+            'var t2 = t1 + tRd;\n' +
+            'var t3 = t2 + tOt;\n';
+
+        var statusExpr =
+            '/* Bubble Status: 0=waiting, 1=start, 2=in, 3=reading, 4=out, 5=end */\n' +
+            commonHeader +
+            'var fd = (thisComp && thisComp.frameDuration) ? thisComp.frameDuration : (1.0 / 30.0);\n' +
+            'var st = 0;\n' +
+            'if (time < t0 - fd * 0.5) { st = 0; }\n' +
+            'else if (Math.abs(time - t0) <= fd * 0.5) { st = 1; }\n' +
+            'else if (time < t1) { st = 2; }\n' +
+            'else if (time < t2) { st = 3; }\n' +
+            'else if (time < t3) { st = 4; }\n' +
+            'else { st = 5; }\n' +
+            'st;';
+        setEffectExpression(eStatus, statusExpr);
+
+        setEffectExpression(eInPrg,
+            commonHeader +
+            'var p = 0;\n' +
+            'if (time <= t0) { p = 0; }\n' +
+            'else if (time >= t1) { p = 100; }\n' +
+            'else { p = ((time - t0) / tIn) * 100.0; }\n' +
+            'p;'
+        );
+
+        setEffectExpression(eRdPrg,
+            commonHeader +
+            'var p = 0;\n' +
+            'if (time <= t1) { p = 0; }\n' +
+            'else if (time >= t2) { p = 100; }\n' +
+            'else { p = ((time - t1) / tRd) * 100.0; }\n' +
+            'p;'
+        );
+
+        setEffectExpression(eOtPrg,
+            commonHeader +
+            'var p = 0;\n' +
+            'if (time <= t2) { p = 0; }\n' +
+            'else if (time >= t3) { p = 100; }\n' +
+            'else { p = ((time - t2) / tOt) * 100.0; }\n' +
+            'p;'
+        );
+
+        setEffectExpression(eEnv,
+            commonHeader +
+            'var env = 0;\n' +
+            'if (time <= t0 || time >= t3) { env = 0; }\n' +
+            'else if (time < t1) { env = ((time - t0) / tIn) * 100.0; }\n' +
+            'else if (time <= t2) { env = 100.0; }\n' +
+            'else { env = (1.0 - (time - t2) / tOt) * 100.0; }\n' +
+            'clamp(env, 0, 100);'
+        );
+    }
+
+    function applyTypewriterAnimator(textLayer) {
+        if (!textLayer) return;
+        try {
+            var textProps = textLayer.property("ADBE Text Properties") || textLayer.property("Text");
+            if (!textProps) return;
+            var animators = textProps.property("ADBE Text Animators") || textProps.property("Animators");
+            if (!animators || typeof animators.addProperty !== "function") return;
+
+            var anim = animators.addProperty("ADBE Text Animator");
+            if (!anim) return;
+            anim.name = TYPEWRITER_ANIMATOR_NAME;
+
+            var aProps = anim.property("ADBE Text Animator Properties") || anim.property("Properties");
+            if (aProps && typeof aProps.addProperty === "function") {
+                var opProp = aProps.addProperty("ADBE Text Opacity");
+                if (opProp) opProp.setValue(0);
+            }
+
+            var sels = anim.property("ADBE Text Selectors") || anim.property("Selectors");
+            if (sels) {
+                var sel = sels.property(1);
+                if (!sel && typeof sels.addProperty === "function") {
+                    sel = sels.addProperty("ADBE Text Selector");
+                }
+                if (sel) {
+                    var startProp = sel.property("ADBE Text Percent Start") || sel.property("Start");
+                    var endProp   = sel.property("ADBE Text Percent End")   || sel.property("End");
+                    if (endProp) endProp.setValue(100);
+                    if (startProp) {
+                        startProp.setValue(0);
+                        startProp.expression = 'clamp(effect("Bubble Envelope")(1).value, 0, 100);';
+                    }
+                    var adv = sel.property("ADBE Text Range Advanced") || sel.property("Advanced");
+                    if (adv) {
+                        var sm = adv.property("ADBE Text Range Smoothness") || adv.property("Smoothness");
+                        if (sm) sm.setValue(0);
+                    }
+                }
+            }
+        } catch (eTW) {}
+    }
+
+    function serialize2DArrayCompact(arr) {
+        var parts = [];
+        for (var i = 0; i < arr.length; i++) {
+            var x = Math.round((arr[i][0] || 0) * 100) / 100;
+            var y = Math.round((arr[i][1] || 0) * 100) / 100;
+            parts.push("[" + x + "," + y + "]");
+        }
+        return "[" + parts.join(",") + "]";
+    }
+
+    /**
+     * Generates a createPath(...) expression that expands the balloon's width
+     * horizontally from 0 -> full width WITHOUT Scale distortion (preserving
+     * corner radii, puff curves, and spike tips along the left & right caps).
+     */
+    function buildBloatPathExpression(shapeData, halfTextW, cfg, envRefExpr, offsetXY) {
+        var bodyHalfW = Math.max(12, halfTextW + (cfg.padX || 0));
+        var capR = 16;
+        if (cfg.geometry === "square") {
+            capR = 2;
+        } else if (cfg.geometry === "rounded") {
+            capR = Math.min(bodyHalfW * 0.9, Math.max(4, cfg.cornerRadius || 0));
+        } else {
+            capR = Math.min(bodyHalfW * 0.65, 22);
+        }
+        var splitX = Math.max(0, Math.round((bodyHalfW - capR) * 100) / 100);
+        bodyHalfW  = Math.round(bodyHalfW * 100) / 100;
+        capR       = Math.round(capR * 100) / 100;
+
+        var ox = offsetXY ? (Math.round(offsetXY[0] * 100) / 100) : 0;
+        var oy = offsetXY ? (Math.round(offsetXY[1] * 100) / 100) : 0;
+
+        return (
+            'var env = clamp(' + envRefExpr + ', 0, 100) / 100.0;\n' +
+            'var p = env * env * (3.0 - 2.0 * env);\n' +
+            'var V0 = ' + serialize2DArrayCompact(shapeData.vertices) + ';\n' +
+            'var I0 = ' + serialize2DArrayCompact(shapeData.inTangents) + ';\n' +
+            'var O0 = ' + serialize2DArrayCompact(shapeData.outTangents) + ';\n' +
+            'var fullW = ' + bodyHalfW + ';\n' +
+            'var capR = ' + capR + ';\n' +
+            'var splitX = ' + splitX + ';\n' +
+            'var targetW = fullW * p;\n' +
+            'var q = 1.0;\n' +
+            'var k = 1.0;\n' +
+            'if (fullW > capR + 0.01) {\n' +
+            '    if (targetW >= capR) {\n' +
+            '        q = (targetW - capR) / (fullW - capR);\n' +
+            '        k = 1.0;\n' +
+            '    } else {\n' +
+            '        q = 0.0;\n' +
+            '        k = (capR > 0.01) ? (targetW / capR) : p;\n' +
+            '    }\n' +
+            '} else {\n' +
+            '    q = 0.0;\n' +
+            '    k = p;\n' +
+            '}\n' +
+            'var shift = (1.0 - q) * splitX;\n' +
+            'var n = V0.length;\n' +
+            'var V = [];\n' +
+            'var IT = [];\n' +
+            'var OT = [];\n' +
+            'for (var i = 0; i < n; i++) {\n' +
+            '    var vx = V0[i][0], vy = V0[i][1];\n' +
+            '    var ix = I0[i][0], iy = I0[i][1];\n' +
+            '    var ox = O0[i][0], oy = O0[i][1];\n' +
+            '    var nx, nix, nox;\n' +
+            '    if (vx > splitX) { nx = (vx - shift) * k; nix = ix * k; nox = ox * k; }\n' +
+            '    else if (vx < -splitX) { nx = (vx + shift) * k; nix = ix * k; nox = ox * k; }\n' +
+            '    else { nx = (vx * q) * k; nix = (ix * q) * k; nox = (ox * q) * k; }\n' +
+            '    V.push([nx + ' + ox + ', vy + ' + oy + ']);\n' +
+            '    IT.push([nix, iy]);\n' +
+            '    OT.push([nox, oy]);\n' +
+            '}\n' +
+            'createPath(V, IT, OT, ' + (shapeData.closed ? "true" : "false") + ');'
+        );
+    }
+
+    function applyInOutAnimationRig(comp, textLayer, balloonLayer, geoResult, textBounds, cfg, precompLayer, outerCompName) {
+        if (!textLayer || !balloonLayer) return;
+
+        var charCount = countReadableChars(textLayer);
+
+        // Always populate Timing & Bubble Status Effects so custom user expressions can read them
+        if (precompLayer && outerCompName) {
+            applyTimingAndStatusEffects(precompLayer, cfg, charCount, {
+                innerCompName: comp.name,
+                innerTextName: textLayer.name
+            });
+            applyTimingAndStatusEffects(textLayer, cfg, charCount, {
+                outerCompName: outerCompName,
+                outerLayerName: precompLayer.name
+            });
+        } else {
+            applyTimingAndStatusEffects(textLayer, cfg, charCount, null);
+        }
+
+        var style = cfg.animStyle || "none";
+        if (style === "none") {
+            return;
+        }
+
+        // All 3 styles animate text with AE's basic Opacity Typewriter Animator
+        applyTypewriterAnimator(textLayer);
+
+        var rootContents = balloonLayer.property("Contents") || balloonLayer.property("ADBE Root Vectors Group");
+        if (!rootContents) return;
+
+        var envFromChildExpr = 'parent.effect("Bubble Envelope")(1).value';
+        var numGroups = (typeof rootContents.numProperties === "number")
+            ? rootContents.numProperties
+            : (rootContents.properties ? rootContents.properties.length : 0);
+
+        var gi, grp, gCont, fillG, fillOp, strokeG, strokeOp, strokeW, pathG, pathP;
+
+        // ---------------------------------------------------------------------
+        // STYLE 1: "clementine"
+        //   - Stroke grows from the tip of the tail via Trim Paths
+        //   - Fill fades from opacity 0 to 100 (scaled by fillOpacity)
+        // ---------------------------------------------------------------------
+        if (style === "clementine") {
+            var tailStyle = cfg.tailStyle || "none";
+            var hasTailLead = (tailStyle === "line" || tailStyle === "clouds");
+            var bodyTargetPt = [0, (textBounds.height / 2) + (cfg.padY || 26)];
+            if (tailStyle === "triangle" || tailStyle === "lightning") {
+                bodyTargetPt = geoResult.pTip;
+            } else if (hasTailLead) {
+                bodyTargetPt = geoResult.pMid;
+            }
+
+            var fTip = computePointArcFraction(geoResult.bodyShape, bodyTargetPt);
+            var bodyOffsetDeg = Math.round(((((fTip - 0.5) % 1) + 1) % 1) * 360 * 100) / 100;
+
+            for (gi = 1; gi <= numGroups; gi++) {
+                grp = rootContents.property(gi);
+                if (!grp) continue;
+                gCont = grp.property("Contents") || grp.property("ADBE Vectors Group");
+                if (!gCont) continue;
+
+                fillG = gCont.property("ADBE Vector Graphic - Fill") || gCont.property("Fill 1") || gCont.property("Fill");
+                if (fillG) {
+                    fillOp = fillG.property("Opacity") || fillG.property("ADBE Vector Fill Opacity");
+                    if (fillOp) {
+                        fillOp.expression = 'var p = clamp(' + envFromChildExpr + ', 0, 100) / 100.0;\nvalue * p;';
+                    }
+                }
+
+                strokeG = gCont.property("ADBE Vector Graphic - Stroke") || gCont.property("Stroke 1") || gCont.property("Stroke");
+                if (strokeG) {
+                    strokeOp = strokeG.property("Opacity") || strokeG.property("ADBE Vector Stroke Opacity");
+                    if (strokeOp) {
+                        strokeOp.expression = '(' + envFromChildExpr + ' <= 0.2) ? 0 : value;';
+                    }
+
+                    var trimG = gCont.addProperty("ADBE Vector Filter - Trim");
+                    if (trimG) {
+                        var trStart  = trimG.property("Start")  || trimG.property("ADBE Vector Trim Start");
+                        var trEnd    = trimG.property("End")    || trimG.property("ADBE Vector Trim End");
+                        var trOffset = trimG.property("Offset") || trimG.property("ADBE Vector Trim Offset");
+
+                        if (grp.name === "Tail Line") {
+                            // Line vertices are [pMid (0%), pTip (100%)]: grow from tip (100% -> 0%) during first 28% of envelope
+                            if (trEnd) trEnd.setValue(100);
+                            if (trStart) {
+                                trStart.expression =
+                                    'var p = clamp((' + envFromChildExpr + ' / 100.0) / 0.28, 0, 1);\n' +
+                                    '100.0 - 100.0 * p;';
+                            }
+                        } else if (grp.name.indexOf("Thought Cloud ") === 0) {
+                            var cIdx = parseInt(grp.name.replace("Thought Cloud ", ""), 10) || 1;
+                            // Cloud 3 (tip) grows first [0..0.14], Cloud 2 [0.10..0.24], Cloud 1 [0.20..0.34]
+                            var p0c = (3 - cIdx) * 0.10;
+                            var p1c = p0c + 0.14;
+                            if (trStart) {
+                                trStart.expression =
+                                    'var raw = ' + envFromChildExpr + ' / 100.0;\n' +
+                                    'var p = clamp((raw - ' + p0c.toFixed(2) + ') / ' + (p1c - p0c).toFixed(2) + ', 0, 1);\n' +
+                                    '50.0 - 50.0 * p;';
+                            }
+                            if (trEnd) {
+                                trEnd.expression =
+                                    'var raw = ' + envFromChildExpr + ' / 100.0;\n' +
+                                    'var p = clamp((raw - ' + p0c.toFixed(2) + ') / ' + (p1c - p0c).toFixed(2) + ', 0, 1);\n' +
+                                    '50.0 + 50.0 * p;';
+                            }
+                        } else {
+                            // Main Balloon Body: emerges symmetrically from tail tip (or pMid after lead-in tail)
+                            if (trOffset) trOffset.setValue(bodyOffsetDeg);
+                            var leadStart = hasTailLead ? 0.26 : 0.0;
+                            var leadSpan  = hasTailLead ? 0.74 : 1.0;
+                            if (trStart) {
+                                trStart.expression =
+                                    'var raw = ' + envFromChildExpr + ' / 100.0;\n' +
+                                    'var p = clamp((raw - ' + leadStart.toFixed(2) + ') / ' + leadSpan.toFixed(2) + ', 0, 1);\n' +
+                                    '50.0 - 50.0 * p;';
+                            }
+                            if (trEnd) {
+                                trEnd.expression =
+                                    'var raw = ' + envFromChildExpr + ' / 100.0;\n' +
+                                    'var p = clamp((raw - ' + leadStart.toFixed(2) + ') / ' + leadSpan.toFixed(2) + ', 0, 1);\n' +
+                                    '50.0 + 50.0 * p;';
+                            }
+                        }
+                    }
+                }
+            }
+            return;
+        }
+
+        // ---------------------------------------------------------------------
+        // STYLE 2: "bloat"
+        //   - Balloon expands horizontally in width (createPath, NOT Scale!)
+        //   - Balloon masks the Text Layer (Alpha Track Matte + kept visible)
+        //   - Stroke thickness grows from 0 to selected thickness
+        //   - Fill stays at 100% (selected fillOpacity) while active
+        // ---------------------------------------------------------------------
+        if (style === "bloat") {
+            var halfTW = (textBounds.width || 160) / 2.0;
+
+            for (gi = 1; gi <= numGroups; gi++) {
+                grp = rootContents.property(gi);
+                if (!grp) continue;
+                gCont = grp.property("Contents") || grp.property("ADBE Vectors Group");
+                if (!gCont) continue;
+
+                pathG = gCont.property("ADBE Vector Shape - Group") || gCont.property("Path 1");
+                if (pathG) {
+                    pathP = pathG.property("Path") || pathG.property("ADBE Vector Shape");
+                    if (pathP) {
+                        var srcShape = (grp.name === "Balloon Body") ? geoResult.bodyShape : null;
+                        if (!srcShape) {
+                            for (var esi = 0; esi < geoResult.extraShapes.length; esi++) {
+                                if (geoResult.extraShapes[esi].name === grp.name) {
+                                    srcShape = geoResult.extraShapes[esi].shapeData;
+                                    break;
+                                }
+                            }
+                        }
+                        if (srcShape) {
+                            pathP.expression = buildBloatPathExpression(srcShape, halfTW, cfg, envFromChildExpr, null);
+                        }
+                    }
+                }
+
+                fillG = gCont.property("ADBE Vector Graphic - Fill") || gCont.property("Fill 1") || gCont.property("Fill");
+                if (fillG) {
+                    fillOp = fillG.property("Opacity") || fillG.property("ADBE Vector Fill Opacity");
+                    if (fillOp) {
+                        // 100% (user's fillOpacity) throughout active bloat; 0% only when completely closed
+                        fillOp.expression = '(' + envFromChildExpr + ' <= 0.1) ? 0 : value;';
+                    }
+                }
+
+                strokeG = gCont.property("ADBE Vector Graphic - Stroke") || gCont.property("Stroke 1") || gCont.property("Stroke");
+                if (strokeG) {
+                    strokeW = strokeG.property("Stroke Width") || strokeG.property("ADBE Vector Stroke Width");
+                    if (strokeW) {
+                        strokeW.expression = 'var p = clamp(' + envFromChildExpr + ', 0, 100) / 100.0;\nvalue * p;';
+                    }
+                    strokeOp = strokeG.property("Opacity") || strokeG.property("ADBE Vector Stroke Opacity");
+                    if (strokeOp) {
+                        strokeOp.expression = '(' + envFromChildExpr + ' <= 0.1) ? 0 : value;';
+                    }
+                }
+            }
+
+            // Mask the Text Layer with the horizontally expanding Balloon
+            var usedTrackMatte = false;
+            try {
+                if (typeof textLayer.setTrackMatte === "function") {
+                    var alphaType = (typeof TrackMatteType !== "undefined" && TrackMatteType.ALPHA !== undefined)
+                        ? TrackMatteType.ALPHA
+                        : 5013;
+                    textLayer.setTrackMatte(balloonLayer, alphaType);
+                    balloonLayer.enabled = true; // Keep balloon visible behind text while acting as Alpha Matte
+                    usedTrackMatte = true;
+                }
+            } catch (eMatte) {}
+
+            // Fallback for older AE versions (< 2023) without layer.setTrackMatte(...)
+            if (!usedTrackMatte) {
+                try {
+                    var masks = textLayer.property("ADBE Mask Parade") || textLayer.property("Masks");
+                    if (masks && typeof masks.addProperty === "function") {
+                        var mAtom = masks.property(BLOAT_MASK_NAME) || masks.addProperty("ADBE Mask Atom");
+                        if (mAtom) {
+                            mAtom.name = BLOAT_MASK_NAME;
+                            var mShapeProp = mAtom.property("ADBE Mask Shape") || mAtom.property("Mask Path");
+                            if (mShapeProp) {
+                                var tAp = textLayer.property("Transform").property("Anchor Point").value;
+                                mShapeProp.expression = buildBloatPathExpression(
+                                    geoResult.bodyShape,
+                                    halfTW,
+                                    cfg,
+                                    'effect("Bubble Envelope")(1).value',
+                                    [tAp[0] || 0, tAp[1] || 0]
+                                );
+                            }
+                        }
+                    }
+                } catch (eOldMask) {}
+            }
+            return;
+        }
+
+        // ---------------------------------------------------------------------
+        // STYLE 3: "sparse_dots"
+        //   - Stroke appears from a very sparse dotted line to a solid line
+        //   - Fill gains in opacity from 0 to selected fillOpacity
+        // ---------------------------------------------------------------------
+        if (style === "sparse_dots") {
+            for (gi = 1; gi <= numGroups; gi++) {
+                grp = rootContents.property(gi);
+                if (!grp) continue;
+                gCont = grp.property("Contents") || grp.property("ADBE Vectors Group");
+                if (!gCont) continue;
+
+                fillG = gCont.property("ADBE Vector Graphic - Fill") || gCont.property("Fill 1") || gCont.property("Fill");
+                if (fillG) {
+                    fillOp = fillG.property("Opacity") || fillG.property("ADBE Vector Fill Opacity");
+                    if (fillOp) {
+                        fillOp.expression = 'var p = clamp(' + envFromChildExpr + ', 0, 100) / 100.0;\nvalue * p;';
+                    }
+                }
+
+                strokeG = gCont.property("ADBE Vector Graphic - Stroke") || gCont.property("Stroke 1") || gCont.property("Stroke");
+                if (strokeG) {
+                    strokeOp = strokeG.property("Opacity") || strokeG.property("ADBE Vector Stroke Opacity");
+                    if (strokeOp) {
+                        strokeOp.expression =
+                            'var p = clamp(' + envFromChildExpr + ', 0, 100) / 100.0;\n' +
+                            '(p <= 0.002) ? 0 : Math.min(value, value * p * 5.0);';
+                    }
+                    var dashesG = strokeG.dashes || strokeG.property("ADBE Vector Stroke Dashes") || strokeG.property("Dashes");
+                    if (dashesG) {
+                        var dProp = dashesG.property("ADBE Vector Stroke Dash 1") || dashesG.property("Dash") || dashesG.property(1);
+                        var gProp = dashesG.property("ADBE Vector Stroke Gap 1")  || dashesG.property("Gap")  || dashesG.property(2);
+                        if (dProp) {
+                            dProp.expression =
+                                'var p = clamp(' + envFromChildExpr + ', 0, 100) / 100.0;\n' +
+                                '0.5 + 220.0 * Math.pow(p, 1.6);';
+                        }
+                        if (gProp) {
+                            gProp.expression =
+                                'var p = clamp(' + envFromChildExpr + ', 0, 100) / 100.0;\n' +
+                                '140.0 * Math.pow(1.0 - p, 1.8);';
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // -------------------------------------------------------------------------
     // 8. Build / Update & Remove / Reverse Orchestrator (AE-text-precomp)
     // -------------------------------------------------------------------------
     function moveLayerBetweenComps(layer, fromComp, toComp, targetOneBasedIdx) {
@@ -2011,15 +2971,21 @@
         var pre3D = Boolean(precompLayer.threeDLayer);
 
         var innerText = null;
+        var innerBalloon = null;
         var layersToExtract = [];
         var count = getCompLayerCount(precompItem);
         var i;
         for (i = 1; i <= count; i++) {
             var il = getCompLayerAt(precompItem, i);
             if (!il) continue;
+            if (isComicBalloonShapeLayer(il) && !innerBalloon) innerBalloon = il;
             if (!keepBalloon && isComicBalloonShapeLayer(il)) continue;
             if (isTextLayer(il) && !innerText) innerText = il;
             layersToExtract.push(il);
+        }
+
+        if (innerText) {
+            cleanupTextAnimationArtifacts(innerText, innerBalloon);
         }
 
         // Record parent relationships inside precomp before moving
@@ -2097,6 +3063,8 @@
             var pItem  = ctx.precompItem;
             var innerText = ctx.textLayer;
 
+            cleanupTextAnimationArtifacts(innerText, ctx.balloonLayer);
+
             var existingEnv = readLayerStateEffect(pLayer) || readLayerStateEffect(innerText) || {};
             var origRec = existingEnv.orig || capturePristineTextState(innerText);
             var hexCode = existingEnv.precompHex || preferredHex || generateHexId(4);
@@ -2117,7 +3085,7 @@
             var iRot = innerText.property("Transform").property("Rotation") || innerText.property("Transform").property("Z Rotation");
             if (iRot) iRot.setValue(0);
 
-            createOrRebuildBalloonLayer(pItem, innerText, ctx.balloonLayer, geo, cfg);
+            var rebuiltBalloon = createOrRebuildBalloonLayer(pItem, innerText, ctx.balloonLayer, geo, cfg);
 
             var pAnchorProp = pLayer.property("Transform").property("Anchor Point");
             if (pLayer.threeDLayer) {
@@ -2125,6 +3093,8 @@
             } else {
                 pAnchorProp.setValue([newW / 2, newH / 2]);
             }
+
+            applyInOutAnimationRig(pItem, innerText, rebuiltBalloon, geo, centered.bounds, cfg, pLayer, comp.name);
 
             var envUpdate = { version: 2, precompHex: hexCode, orig: origRec, config: cfg };
             writeLayerStateEffect(innerText, envUpdate);
@@ -2154,6 +3124,8 @@
             throw new Error("Could not locate target text layer.");
         }
 
+        cleanupTextAnimationArtifacts(targetText, targetBalloon);
+
         var isUpdateRun = Boolean(priorEnv && priorEnv.orig);
         var origState = isUpdateRun ? priorEnv.orig : capturePristineTextState(targetText);
         var activeHex = (priorEnv && priorEnv.precompHex) ? priorEnv.precompHex : (preferredHex || generateHexId(4));
@@ -2168,8 +3140,9 @@
         var env = { version: 2, precompHex: activeHex, orig: origState, config: cfg };
         writeLayerStateEffect(targetText, env);
 
-        // If Make Precomp is OFF, keep in current comp with Balloon linked as child
+        // If Make Precomp is OFF, rig timing/animation directly in current comp
         if (!cfg.makePrecomp) {
+            applyInOutAnimationRig(comp, targetText, targetBalloon, geoData, cInfo.bounds, cfg, null, "");
             try {
                 var cLen = getCompLayerCount(comp);
                 for (var s = 1; s <= cLen; s++) getCompLayerAt(comp, s).selected = false;
@@ -2213,10 +3186,12 @@
 
         // Inside precompItem: place centered textLayer at [preW/2, preH/2] with neutral local scale/rot
         var innerTxt = null;
+        var innerBln = null;
         var innerCnt = getCompLayerCount(precompItem);
         for (si = 1; si <= innerCnt; si++) {
             var cand = getCompLayerAt(precompItem, si);
-            if (isTextLayer(cand)) { innerTxt = cand; break; }
+            if (!innerTxt && isTextLayer(cand)) innerTxt = cand;
+            if (!innerBln && isComicBalloonShapeLayer(cand)) innerBln = cand;
         }
         if (innerTxt) {
             try { innerTxt.threeDLayer = false; } catch (eI3) {}
@@ -2250,6 +3225,10 @@
             }
             writeLayerStateEffect(precompLayer, env);
 
+            if (innerTxt && innerBln) {
+                applyInOutAnimationRig(precompItem, innerTxt, innerBln, geoData, cInfo.bounds, cfg, precompLayer, comp.name);
+            }
+
             try {
                 var tot = getCompLayerCount(comp);
                 for (si = 1; si <= tot; si++) getCompLayerAt(comp, si).selected = false;
@@ -2266,7 +3245,7 @@
     /**
      * Reverses the entire Comic Balloon process:
      *   - Unpacks precomposition if precomposed
-     *   - Removes the Balloon layer
+     *   - Removes the Balloon layer & animation artifacts
      *   - Restores original text box, content, and transform properties from Effects
      */
     function executeRemoveAndReverse() {
@@ -2286,6 +3265,7 @@
         } else {
             textLayer = ctx.textLayer;
             env = readLayerStateEffect(textLayer);
+            cleanupTextAnimationArtifacts(textLayer, ctx.balloonLayer);
             if (ctx.balloonLayer) {
                 try { ctx.balloonLayer.remove(); } catch (eRB) {}
             }
@@ -2301,6 +3281,7 @@
             if (env && env.orig) {
                 restoreTextLayerFromOrigState(comp, textLayer, env.orig);
             } else {
+                cleanupTextAnimationArtifacts(textLayer, null);
                 removeStateEffectsFromLayer(textLayer);
             }
             try {
@@ -2409,7 +3390,17 @@
         return picker;
     }
 
-    function createSliderRow(parent, labelStr, defVal, minVal, maxVal, unitStr, onValueChanged) {
+    function createSliderRow(parent, labelStr, defVal, minVal, maxVal, unitStr, onValueChanged, decimals, fixedDecimals) {
+        var dec = (typeof decimals === "number" && decimals > 0) ? decimals : 0;
+        var factor = (dec > 0) ? Math.pow(10, dec) : 1;
+        var stepVal = (dec > 0) ? (1 / factor) : 1;
+
+        function fmtNum(val) {
+            var r = Math.round(val * factor) / factor;
+            if (dec > 0 && fixedDecimals) return r.toFixed(dec);
+            return String(r);
+        }
+
         var grp = parent.add("group");
         grp.orientation = "row";
         grp.alignment = ["fill", "top"];
@@ -2417,33 +3408,43 @@
         grp.spacing = 6;
 
         var lbl = grp.add("statictext", undefined, labelStr);
-        lbl.preferredSize = [95, -1];
+        lbl.preferredSize = [104, -1];
 
         var sld = grp.add("slider", undefined, defVal, minVal, maxVal);
         sld.minvalue = minVal;
         sld.maxvalue = maxVal;
+        sld.stepdelta = stepVal;
         sld.value = defVal;
         sld.alignment = ["fill", "center"];
 
-        var txt = grp.add("edittext", undefined, String(defVal));
-        txt.preferredSize = [42, 20];
+        var txt = grp.add("edittext", undefined, fmtNum(defVal));
+        txt.preferredSize = [46, 20];
 
         if (unitStr) {
             var uLbl = grp.add("statictext", undefined, unitStr);
             uLbl.preferredSize = [18, -1];
         }
 
+        function syncDomStep() {
+            if (sld.domElement && sld.domElement.step !== String(stepVal)) {
+                sld.domElement.step = String(stepVal);
+            }
+        }
+
         function setVal(v, notify) {
+            syncDomStep();
             var clamped = clampNum(v, minVal, maxVal, defVal);
-            var rounded = (Math.abs(clamped - Math.round(clamped)) < 0.05) ? Math.round(clamped) : (Math.round(clamped * 10) / 10);
+            var rounded = Math.round(clamped * factor) / factor;
             sld.value = rounded;
-            txt.text = String(rounded);
+            txt.text = fmtNum(rounded);
             if (notify && typeof onValueChanged === "function") onValueChanged(rounded);
         }
 
         sld.onChanging = sld.onChange = function () {
-            var r = Math.round(sld.value);
-            txt.text = String(r);
+            syncDomStep();
+            var clamped = clampNum(sld.value, minVal, maxVal, defVal);
+            var r = Math.round(clamped * factor) / factor;
+            txt.text = fmtNum(r);
             if (typeof onValueChanged === "function") onValueChanged(r);
         };
 
@@ -2455,7 +3456,11 @@
             group: grp,
             slider: sld,
             edittext: txt,
-            getValue: function () { return clampNum(txt.text, minVal, maxVal, defVal); },
+            syncDomStep: syncDomStep,
+            getValue: function () {
+                var c = clampNum(txt.text, minVal, maxVal, defVal);
+                return Math.round(c * factor) / factor;
+            },
             setValue: setVal
         };
     }
@@ -2546,7 +3551,7 @@
         btnLiveDemo.onClick = function () { openExternalUrl(LIVE_DEMO_URL); };
 
         // =====================================================================
-        // MIDDLE: TABS (1. Balloon | 2. Tail | 3. Appearance)
+        // MIDDLE: TABS (1. Balloon | 2. Tail | 3. Appearance | 4. In / Out)
         // =====================================================================
         var tabs = win.add("tabbedpanel");
         tabs.alignment = ["fill", "fill"];
@@ -2563,7 +3568,7 @@
         var pnlGeom = tabBalloon.add("panel", undefined, "Balloon Geometry");
         pnlGeom.orientation = "column";
         pnlGeom.alignChildren = ["fill", "top"];
-        pnlGeom.spacing = 6;
+        pnlGeom.spacing = 5;
         pnlGeom.margins = [8, 10, 8, 8];
 
         var grpGeomRow = pnlGeom.add("group");
@@ -2571,16 +3576,23 @@
         grpGeomRow.alignment = ["fill", "top"];
         grpGeomRow.spacing = 6;
         var lblGeom = grpGeomRow.add("statictext", undefined, "Shape:");
-        lblGeom.preferredSize = [95, -1];
+        lblGeom.preferredSize = [104, -1];
         var ddGeometry = grpGeomRow.add("dropdownlist", undefined, GEOMETRY_LABELS);
         ddGeometry.alignment = ["fill", "center"];
         ddGeometry.selection = 1;
 
-        var ctrlCornerRadius = createSliderRow(pnlGeom, "Corner Radius:", 28, 0, 150, "px", refreshPreviewCanvas);
-        var ctrlCloudPuffs   = createSliderRow(pnlGeom, "Cloud Puffs:", 12, 6, 26, "",   refreshPreviewCanvas);
-        var ctrlCloudDepth   = createSliderRow(pnlGeom, "Puff Depth:", 18, 4, 50, "px",  refreshPreviewCanvas);
-        var ctrlSpikeCount   = createSliderRow(pnlGeom, "Burst Spikes:", 18, 6, 36, "",  refreshPreviewCanvas);
-        var ctrlSpikeDepth   = createSliderRow(pnlGeom, "Spike Length:", 28, 6, 80, "px", refreshPreviewCanvas);
+        var ctrlCornerRadius   = createSliderRow(pnlGeom, "Corner Radius:",   28,  0, 150, "px", refreshPreviewCanvas);
+        var ctrlCloudPuffs     = createSliderRow(pnlGeom, "Cloud Puffs:",     12,  6,  30, "",   refreshPreviewCanvas);
+        var ctrlCloudDepth     = createSliderRow(pnlGeom, "Puff Depth:",      42, 10, 120, "%",  refreshPreviewCanvas);
+        var ctrlCloudWidthRand = createSliderRow(pnlGeom, "Puff Width Rand:",  0,  0, 100, "%",  refreshPreviewCanvas);
+        var ctrlSpikeCount     = createSliderRow(pnlGeom, "Burst Spikes:",    18,  6,  40, "",   refreshPreviewCanvas);
+        var ctrlSpikeDepth     = createSliderRow(pnlGeom, "Spike Depth:",     85, 15, 220, "%",  refreshPreviewCanvas);
+        var ctrlSpikeWidthRand = createSliderRow(pnlGeom, "Spike Width Rand:", 0,  0, 100, "%",  refreshPreviewCanvas);
+
+        ctrlCloudDepth.group.helpTip     = "Puff depth relative (%) to each individual puff's width.";
+        ctrlCloudWidthRand.group.helpTip = "0% = constant arc-length puff width; >0% = randomizes puff widths while keeping exact puff count.";
+        ctrlSpikeDepth.group.helpTip     = "Spike height relative (%) to each individual spike's base width.";
+        ctrlSpikeWidthRand.group.helpTip = "0% = constant arc-length spike width; >0% = randomizes spike widths while keeping exact spike count.";
 
         var pnlPadding = tabBalloon.add("panel", undefined, "Exterior Padding & Centering");
         pnlPadding.orientation = "column";
@@ -2597,11 +3609,13 @@
         function syncBalloonShapeVisibility() {
             var idx = ddGeometry.selection ? ddGeometry.selection.index : 1;
             var key = GEOMETRY_KEYS[idx] || "rounded";
-            ctrlCornerRadius.group.enabled = (key === "rounded");
-            ctrlCloudPuffs.group.enabled   = (key === "cloud");
-            ctrlCloudDepth.group.enabled   = (key === "cloud");
-            ctrlSpikeCount.group.enabled   = (key === "explosion");
-            ctrlSpikeDepth.group.enabled   = (key === "explosion");
+            ctrlCornerRadius.group.enabled   = (key === "rounded");
+            ctrlCloudPuffs.group.enabled     = (key === "cloud");
+            ctrlCloudDepth.group.enabled     = (key === "cloud");
+            ctrlCloudWidthRand.group.enabled = (key === "cloud");
+            ctrlSpikeCount.group.enabled     = (key === "explosion");
+            ctrlSpikeDepth.group.enabled     = (key === "explosion");
+            ctrlSpikeWidthRand.group.enabled = (key === "explosion");
             refreshPreviewCanvas();
         }
         ddGeometry.onChange = syncBalloonShapeVisibility;
@@ -2661,9 +3675,9 @@
         var btnEdgeBL    = qRow3.add("button", undefined, "Bot-L 56%"); btnEdgeBL.preferredSize    = [62, 20];
         var btnEdgeBR    = qRow3.add("button", undefined, "Bot-R 44%"); btnEdgeBR.preferredSize    = [62, 20];
 
-        var ctrlTailStart  = createSliderRow(pnlTrim, "Start:",       52,   0, 100, "%", refreshPreviewCanvas);
-        var ctrlTailEnd    = createSliderRow(pnlTrim, "End:",         60,   0, 100, "%", refreshPreviewCanvas);
-        var ctrlTailOffset = createSliderRow(pnlTrim, "Offset:",       0, -180, 180, "°", refreshPreviewCanvas);
+        var ctrlTailPos    = createSliderRow(pnlTrim, "Position:",         56,   0, 100, "%", refreshPreviewCanvas, 1, false);
+        var ctrlTailWidth  = createSliderRow(pnlTrim, "Tail Start Width:", 2.5, 0.1, 4.0, "",  refreshPreviewCanvas, 1, true);
+        var ctrlTailOffset = createSliderRow(pnlTrim, "Offset:",            0, -180, 180, "°", refreshPreviewCanvas, 0, false);
 
         var pnlTailTarget = tabTail.add("panel", undefined, "Tail Target Length & Slant");
         pnlTailTarget.orientation = "column";
@@ -2675,16 +3689,9 @@
         var ctrlTailAngle  = createSliderRow(pnlTailTarget, "Tip Slant:",   12, -70,  70, "°",  refreshPreviewCanvas);
 
         function snapPerimeterAt(centerPct) {
-            var curStart = ctrlTailStart.getValue();
-            var curEnd   = ctrlTailEnd.getValue();
-            var curSpan  = Math.abs(curEnd - curStart);
-            if (curSpan < 4 || curSpan > 40) curSpan = 8;
-            var half = curSpan / 2;
-            var s = ((centerPct - half) % 100 + 100) % 100;
-            var e = ((centerPct + half) % 100 + 100) % 100;
+            var p = Math.round((((centerPct % 100) + 100) % 100) * 10) / 10;
             ctrlTailOffset.setValue(0, false);
-            ctrlTailStart.setValue(Math.round(s), false);
-            ctrlTailEnd.setValue(Math.round(e), true);
+            ctrlTailPos.setValue(p, true);
         }
 
         btnEdgeTop.onClick   = function () { snapPerimeterAt(0); };
@@ -2773,6 +3780,90 @@
         }
         ddStrokeStyle.onChange = syncStrokeControlsVisibility;
 
+        // ---------------------------------------------------------------------
+        // TAB 4: IN / OUT (Animation Styles, Read-Time Link & Expression Effects)
+        // ---------------------------------------------------------------------
+        var tabInOut = tabs.add("tab", undefined, "In / Out");
+        tabInOut.orientation = "column";
+        tabInOut.alignChildren = ["fill", "top"];
+        tabInOut.spacing = 6;
+        tabInOut.margins = 8;
+
+        var pnlAnimStyle = tabInOut.add("panel", undefined, "In / Out Animation Style");
+        pnlAnimStyle.orientation = "column";
+        pnlAnimStyle.alignChildren = ["fill", "top"];
+        pnlAnimStyle.spacing = 5;
+        pnlAnimStyle.margins = [8, 10, 8, 8];
+
+        var grpAnimRow = pnlAnimStyle.add("group");
+        grpAnimRow.orientation = "row";
+        grpAnimRow.alignment = ["fill", "top"];
+        grpAnimRow.spacing = 6;
+        var lblAnimStyle = grpAnimRow.add("statictext", undefined, "Style:");
+        lblAnimStyle.preferredSize = [56, -1];
+        var ddAnimStyle = grpAnimRow.add("dropdownlist", undefined, ANIM_LABELS);
+        ddAnimStyle.alignment = ["fill", "center"];
+        ddAnimStyle.selection = 0;
+
+        var lblAnimDesc = pnlAnimStyle.add("statictext", undefined, "Static balloon (Timing & Status effects still generated).");
+        lblAnimDesc.alignment = ["fill", "top"];
+
+        var pnlTiming = tabInOut.add("panel", undefined, "Timing & Reading Duration");
+        pnlTiming.orientation = "column";
+        pnlTiming.alignChildren = ["fill", "top"];
+        pnlTiming.spacing = 5;
+        pnlTiming.margins = [8, 10, 8, 8];
+
+        var ctrlStartDelay = createSliderRow(pnlTiming, "Start Delay:",    0.0, 0.0, 10.0, "s", onTimingControlChanged, 1, true);
+        var ctrlInTime     = createSliderRow(pnlTiming, "Fade In Time:",   0.6, 0.1,  5.0, "s", onTimingControlChanged, 1, true);
+        var ctrlOutTime    = createSliderRow(pnlTiming, "Fade Out Time:",  0.5, 0.1,  5.0, "s", onTimingControlChanged, 1, true);
+        var ctrlReadTime   = createSliderRow(pnlTiming, "Read Time:",      2.0, 0.2, 20.0, "s", onTimingControlChanged, 1, true);
+
+        var chkLinkReadTime = pnlTiming.add("checkbox", undefined, "Link Read Time to Text Length (25 chars)");
+        chkLinkReadTime.value = true;
+        chkLinkReadTime.helpTip = "Automatically computes Read Time from text length based on seconds per 25 characters.";
+
+        var ctrlSecPer25 = createSliderRow(pnlTiming, "Sec / 25 Chars:", 1.2, 0.2, 5.0, "s", onTimingControlChanged, 1, true);
+
+        var lblReadSummary = pnlTiming.add("statictext", undefined, "Status Effect: 0=waiting, 1=start, 2=in, 3=reading, 4=out, 5=end");
+        lblReadSummary.alignment = ["fill", "top"];
+        lblReadSummary.helpTip = 'Creates "Bubble Status", "Bubble In Timing", "Bubble Reading Timing", and "Bubble Out Timing" Effects for custom expressions.';
+
+        function syncInOutControlsVisibility() {
+            var aIdx = ddAnimStyle.selection ? ddAnimStyle.selection.index : 0;
+            var aKey = ANIM_KEYS[aIdx] || "none";
+            if (aKey === "clementine") {
+                lblAnimDesc.text = "Typewriter text + Stroke trims from tail tip + Fill fades 0-100%.";
+            } else if (aKey === "bloat") {
+                lblAnimDesc.text = "Typewriter text + Balloon width expands masking text + Stroke 0->Max.";
+            } else if (aKey === "sparse_dots") {
+                lblAnimDesc.text = "Typewriter text + Sparse dotted stroke coalesces to solid + Fill fades.";
+            } else {
+                lblAnimDesc.text = "Static balloon (Timing & Status effects still generated).";
+            }
+
+            var isLinked = Boolean(chkLinkReadTime.value);
+            ctrlSecPer25.group.enabled = isLinked;
+            ctrlReadTime.group.enabled = !isLinked;
+
+            if (isLinked) {
+                var cTarget = resolveTargetContext(true);
+                var nChars = (cTarget && cTarget.textLayer) ? countReadableChars(cTarget.textLayer) : 33;
+                var autoRd = Math.max(0.2, Math.round(((nChars / 25.0) * ctrlSecPer25.getValue()) * 10) / 10);
+                ctrlReadTime.setValue(autoRd, false);
+                lblReadSummary.text = "Auto Read: " + autoRd.toFixed(1) + "s (" + nChars + " chars) | Status: 0..5 in Effects";
+            } else {
+                lblReadSummary.text = "Status Effect: 0=waiting, 1=start, 2=in, 3=reading, 4=out, 5=end";
+            }
+        }
+
+        function onTimingControlChanged() {
+            syncInOutControlsVisibility();
+        }
+
+        ddAnimStyle.onChange = syncInOutControlsVisibility;
+        chkLinkReadTime.onClick = syncInOutControlsVisibility;
+
         tabs.selection = tabBalloon;
 
         // =====================================================================
@@ -2812,12 +3903,19 @@
             var gIdx = ddGeometry.selection ? ddGeometry.selection.index : 1;
             var tIdx = ddTailStyle.selection ? ddTailStyle.selection.index : 2;
             var sIdx = ddStrokeStyle.selection ? ddStrokeStyle.selection.index : 1;
+            var aIdx = ddAnimStyle.selection ? ddAnimStyle.selection.index : 0;
 
             var minW = ctrlStrokeMinWidth.getValue();
             var maxW = ctrlStrokeMaxWidth.getValue();
             if (minW > maxW) {
                 var swap = minW; minW = maxW; maxW = swap;
             }
+
+            var tPos   = ctrlTailPos.getValue();
+            var tWidth = ctrlTailWidth.getValue();
+            var halfTW = tWidth * 0.5;
+            var tStart = ((tPos - halfTW) % 100 + 100) % 100;
+            var tEnd   = ((tPos + halfTW) % 100 + 100) % 100;
 
             return {
                 geometry: GEOMETRY_KEYS[gIdx] || "rounded",
@@ -2826,11 +3924,15 @@
                 cornerRadius: ctrlCornerRadius.getValue(),
                 cloudPuffs: Math.round(ctrlCloudPuffs.getValue()),
                 cloudDepth: ctrlCloudDepth.getValue(),
+                cloudWidthRand: ctrlCloudWidthRand.getValue(),
                 spikeCount: Math.round(ctrlSpikeCount.getValue()),
                 spikeDepth: ctrlSpikeDepth.getValue(),
+                spikeWidthRand: ctrlSpikeWidthRand.getValue(),
                 tailStyle: TAIL_KEYS[tIdx] || "triangle",
-                tailStart: ctrlTailStart.getValue(),
-                tailEnd: ctrlTailEnd.getValue(),
+                tailPosition: tPos,
+                tailStartWidth: tWidth,
+                tailStart: tStart,
+                tailEnd: tEnd,
                 tailOffset: ctrlTailOffset.getValue(),
                 tailLength: ctrlTailLength.getValue(),
                 tailAngle: ctrlTailAngle.getValue(),
@@ -2843,6 +3945,13 @@
                 strokeMinWidth: minW,
                 strokeMaxWidth: maxW,
                 dotGap: ctrlDotGap.getValue(),
+                animStyle: ANIM_KEYS[aIdx] || "none",
+                startDelay: ctrlStartDelay.getValue(),
+                inTime: ctrlInTime.getValue(),
+                readTime: ctrlReadTime.getValue(),
+                linkReadTime: Boolean(chkLinkReadTime.value),
+                secPer25: ctrlSecPer25.getValue(),
+                outTime: ctrlOutTime.getValue(),
                 makePrecomp: Boolean(chkMakePrecomp.value)
             };
         }
@@ -2859,17 +3968,20 @@
             ddGeometry.selection    = indexOfKey(GEOMETRY_KEYS, c.geometry, 1);
             ddTailStyle.selection   = indexOfKey(TAIL_KEYS, c.tailStyle, 2);
             ddStrokeStyle.selection = indexOfKey(STROKE_KEYS, c.strokeStyle, 1);
+            ddAnimStyle.selection   = indexOfKey(ANIM_KEYS, c.animStyle, 0);
 
             ctrlPadX.setValue(c.padX, false);
             ctrlPadY.setValue(c.padY, false);
             ctrlCornerRadius.setValue(c.cornerRadius, false);
             ctrlCloudPuffs.setValue(c.cloudPuffs, false);
             ctrlCloudDepth.setValue(c.cloudDepth, false);
+            ctrlCloudWidthRand.setValue(c.cloudWidthRand, false);
             ctrlSpikeCount.setValue(c.spikeCount, false);
             ctrlSpikeDepth.setValue(c.spikeDepth, false);
+            ctrlSpikeWidthRand.setValue(c.spikeWidthRand, false);
 
-            ctrlTailStart.setValue(c.tailStart, false);
-            ctrlTailEnd.setValue(c.tailEnd, false);
+            ctrlTailPos.setValue(c.tailPosition, false);
+            ctrlTailWidth.setValue(c.tailStartWidth, false);
             ctrlTailOffset.setValue(c.tailOffset, false);
             ctrlTailLength.setValue(c.tailLength, false);
             ctrlTailAngle.setValue(c.tailAngle, false);
@@ -2886,11 +3998,19 @@
             ctrlStrokeMaxWidth.setValue(c.strokeMaxWidth, false);
             ctrlDotGap.setValue(c.dotGap, false);
 
+            ctrlStartDelay.setValue(c.startDelay, false);
+            ctrlInTime.setValue(c.inTime, false);
+            ctrlReadTime.setValue(c.readTime, false);
+            chkLinkReadTime.value = Boolean(c.linkReadTime);
+            ctrlSecPer25.setValue(c.secPer25, false);
+            ctrlOutTime.setValue(c.outTime, false);
+
             chkMakePrecomp.value = Boolean(c.makePrecomp);
 
             syncBalloonShapeVisibility();
             syncTailControlsVisibility();
             syncStrokeControlsVisibility();
+            syncInOutControlsVisibility();
             refreshPreviewCanvas();
         }
 
@@ -2912,17 +4032,19 @@
                     padY: 8,
                     cornerRadius: Math.min(12, cfg.cornerRadius * 0.4),
                     cloudPuffs: cfg.cloudPuffs,
-                    cloudDepth: 5,
-                    spikeCount: Math.min(14, cfg.spikeCount),
-                    spikeDepth: 7
+                    cloudDepth: cfg.cloudDepth,
+                    cloudWidthRand: cfg.cloudWidthRand,
+                    spikeCount: Math.min(18, cfg.spikeCount),
+                    spikeDepth: Math.min(95, cfg.spikeDepth),
+                    spikeWidthRand: cfg.spikeWidthRand
                 });
 
                 var cx = w * 0.5;
                 var cy = h * 0.46;
                 var penDim = g.newPen(g.PenType.SOLID_COLOR, [0.55, 0.62, 0.72, 1], 1.5);
                 g.newPath();
-                for (var s = 0; s <= 48; s++) {
-                    var pt = evaluatePerimeterAtU(previewSegs, s / 48).point;
+                for (var s = 0; s <= 56; s++) {
+                    var pt = evaluatePerimeterAtU(previewSegs, s / 56).point;
                     if (s === 0) g.moveTo(cx + pt[0], cy + pt[1]);
                     else g.lineTo(cx + pt[0], cy + pt[1]);
                 }
@@ -2934,7 +4056,7 @@
                     var u2 = (((cfg.tailEnd / 100.0) + off) % 1 + 1) % 1;
                     var sp = ((u2 - u1) % 1 + 1) % 1;
                     if (sp > 0.5) { var t = u1; u1 = u2; u2 = t; sp = 1 - sp; }
-                    if (sp < 0.03) sp = 0.03;
+                    if (sp < 0.005) sp = 0.005;
 
                     var penHi = g.newPen(g.PenType.SOLID_COLOR, [0.15, 0.82, 0.98, 1], 3);
                     g.newPath();
@@ -2958,6 +4080,13 @@
         };
 
         function refreshPreviewCanvas() {
+            try {
+                var fracSliders = [ctrlTailPos, ctrlTailWidth, ctrlStartDelay, ctrlInTime, ctrlOutTime, ctrlReadTime, ctrlSecPer25];
+                for (var fi = 0; fi < fracSliders.length; fi++) {
+                    if (fracSliders[fi] && fracSliders[fi].syncDomStep) fracSliders[fi].syncDomStep();
+                }
+            } catch (eStep) {}
+
             if (!previewWidget) return;
             try { if (previewWidget.notify) previewWidget.notify("onDraw"); } catch (eN) {}
 
@@ -2979,16 +4108,18 @@
                         padY: 8,
                         cornerRadius: Math.min(12, cfg.cornerRadius * 0.4),
                         cloudPuffs: cfg.cloudPuffs,
-                        cloudDepth: 5,
-                        spikeCount: Math.min(14, cfg.spikeCount),
-                        spikeDepth: 7
+                        cloudDepth: cfg.cloudDepth,
+                        cloudWidthRand: cfg.cloudWidthRand,
+                        spikeCount: Math.min(18, cfg.spikeCount),
+                        spikeDepth: Math.min(95, cfg.spikeDepth),
+                        spikeWidthRand: cfg.spikeWidthRand
                     });
 
                     var cx = 68, cy = 36;
                     var ptsAll = [];
                     var s;
-                    for (s = 0; s <= 56; s++) {
-                        var p = evaluatePerimeterAtU(segs, s / 56).point;
+                    for (s = 0; s <= 64; s++) {
+                        var p = evaluatePerimeterAtU(segs, s / 64).point;
                         ptsAll.push((cx + p[0]).toFixed(1) + "," + (cy + p[1]).toFixed(1));
                     }
 
@@ -2999,7 +4130,7 @@
                         var u2 = (((cfg.tailEnd / 100.0) + off) % 1 + 1) % 1;
                         var sp = ((u2 - u1) % 1 + 1) % 1;
                         if (sp > 0.5) { var tmp = u1; u1 = u2; u2 = tmp; sp = 1 - sp; }
-                        if (sp < 0.03) sp = 0.03;
+                        if (sp < 0.005) sp = 0.005;
 
                         var arcPts = [];
                         for (s = 0; s <= 14; s++) {
@@ -3020,7 +4151,7 @@
                     }
 
                     el.innerHTML =
-                        '<svg width="136" height="76" viewBox="0 0 136 76" style="display:block;pointer-events:none;">' +
+                        '<svg width="100%" height="100%" viewBox="0 0 136 76" style="display:block;pointer-events:none;">' +
                         '<polygon points="' + ptsAll.join(" ") + '" fill="rgba(255,255,255,0.08)" stroke="#64748b" stroke-width="1.5"/>' +
                         hiSvg +
                         '</svg>';
@@ -3029,8 +4160,10 @@
                         el._trimDragBound = true;
                         var updateFromMouse = function (ev) {
                             var rect = el.getBoundingClientRect();
-                            var dx = (ev.clientX - rect.left) - 68;
-                            var dy = (ev.clientY - rect.top) - 36;
+                            var rw = rect.width || 136;
+                            var rh = rect.height || 76;
+                            var dx = ((ev.clientX - rect.left) / rw) * 136 - 68;
+                            var dy = ((ev.clientY - rect.top) / rh) * 76 - 36;
                             var angDeg = Math.atan2(dy, dx) * (180 / Math.PI);
                             // Top-Center (-90 deg) corresponds to 0% perimeter
                             var pct = (((angDeg + 90) / 360) * 100 % 100 + 100) % 100;
@@ -3330,6 +4463,7 @@
                 lblTargetLayer.text = "Target: Select a Text Layer in Comp.";
                 btnBuildUpdate.text = "Build / Update Balloon";
             }
+            syncInOutControlsVisibility();
         }
 
         btnRefresh.onClick = function () {
@@ -3347,10 +4481,20 @@
                 var res = executeBuildOrUpdate(cfg, pendingHex);
                 pendingHex = generateHexId(4);
                 syncTargetStatus(false);
+
+                // In AE_JS_builder live demo, restart playhead at 0s so In/Out animation plays immediately
+                try {
+                    if (cfg.animStyle !== "none" && typeof window !== "undefined" && window.aeRenderer && window.aeRenderer.comp) {
+                        window.aeRenderer.comp.time = 0;
+                        window.aeRenderer.isPlaying = true;
+                    }
+                } catch (ePlay) {}
+
+                var animTag = (cfg.animStyle && cfg.animStyle !== "none") ? (" [" + cfg.animStyle + "]") : "";
                 if (res.mode === "precomp") {
-                    lblStatus.text = (res.isUpdate ? "Updated: " : "Built: ") + '"' + res.precompName + '"';
+                    lblStatus.text = (res.isUpdate ? "Updated: " : "Built: ") + '"' + res.precompName + '"' + animTag;
                 } else {
-                    lblStatus.text = (res.isUpdate ? "Updated" : "Built") + " Comic Balloon (linked child of Text).";
+                    lblStatus.text = (res.isUpdate ? "Updated" : "Built") + " Comic Balloon (linked child)" + animTag + ".";
                 }
             } catch (err) {
                 lblStatus.text = "Error: " + err.message;
