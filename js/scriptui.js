@@ -527,7 +527,10 @@
                 btn.style.color = '#64b5f6';
             }
             btn.textContent = this.text || '';
-            if (!this.text && (this.preferredSize[0] <= 45 || typeof this.onDraw === 'function' || (this.helpTip && this.helpTip.toLowerCase().includes('color')))) {
+            const isSmallSwatch = (this.preferredSize[0] > 0 && this.preferredSize[0] <= 45) && (this.preferredSize[1] <= 0 || this.preferredSize[1] <= 32);
+            const isFillCanvas = Array.isArray(this.alignment) && this.alignment[0] === 'fill';
+            const isLargeCanvas = this.preferredSize[0] > 60 || this.preferredSize[1] > 36;
+            if (!this.text && !isFillCanvas && !isLargeCanvas && (isSmallSwatch || typeof this.onDraw === 'function' || (this.helpTip && this.helpTip.toLowerCase().includes('color')))) {
                 btn.classList.add('scriptui-color-swatch-btn');
             }
             btn.onclick = () => {

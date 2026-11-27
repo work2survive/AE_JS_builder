@@ -6076,41 +6076,37 @@
         chkTargetSnapTip.value = true;
         chkTargetSnapTip.helpTip = "When checked, dragging the Guide Layer moves BOTH the closest-point tail origin on the perimeter AND the tail tip directly to the Guide Layer. Uncheck to aim toward the Guide Layer using fixed Tail Length & Tip Slant.";
 
-        // Trim-Paths-Style Perimeter Placement Panel
+        // Trim-Paths-Style Perimeter Placement Panel (Left Column: Graphic | Right Column: 3 Sliders)
         var pnlTrim = tabTail.add("panel", undefined, "Perimeter Placement & Base Width");
         pnlTrim.orientation = "column";
         pnlTrim.alignChildren = ["fill", "top"];
         pnlTrim.spacing = 4;
         pnlTrim.margins = [7, 9, 7, 6];
 
-        // Interactive Perimeter Visualizer (collapses to column only on very narrow <340px panels)
-        var grpPreviewWrap = createTwoColRow(pnlTrim, 340);
-        grpPreviewWrap.alignChildren = ["center", "center"];
+        var pairTrimSplit = createTwoColRow(pnlTrim);
 
-        var previewWidget = grpPreviewWrap.add("button", undefined, "");
-        previewWidget.preferredSize = [136, 70];
-        previewWidget.helpTip = "0% = Top, 25% = Right, 50% = Bottom, 75% = Left (Click to jump Offset around perimeter)";
+        var grpTrimLeft = pairTrimSplit.add("group");
+        grpTrimLeft.orientation = "column";
+        grpTrimLeft.alignment = ["fill", "fill"];
+        grpTrimLeft.alignChildren = ["fill", "fill"];
+        grpTrimLeft.spacing = 0;
+        grpTrimLeft.margins = 0;
 
-        var grpQuickEdges = grpPreviewWrap.add("group");
-        grpQuickEdges.orientation = "column";
-        grpQuickEdges.spacing = 3;
+        var previewWidget = grpTrimLeft.add("button", undefined, "");
+        previewWidget.alignment = ["fill", "fill"];
+        previewWidget.preferredSize = [180, 74];
+        previewWidget.helpTip = "Click or drag around the balloon perimeter to set Tail Position (%) — 0% = Top, 25% = Right, 50% = Bottom, 75% = Left";
 
-        var qRow1 = grpQuickEdges.add("group"); qRow1.spacing = 3;
-        var btnEdgeTop   = qRow1.add("button", undefined, "Top 0%");    btnEdgeTop.preferredSize   = [62, 20];
-        var btnEdgeRight = qRow1.add("button", undefined, "Right 25%"); btnEdgeRight.preferredSize = [62, 20];
+        var grpTrimRight = pairTrimSplit.add("group");
+        grpTrimRight.orientation = "column";
+        grpTrimRight.alignment = ["fill", "center"];
+        grpTrimRight.alignChildren = ["fill", "top"];
+        grpTrimRight.spacing = 4;
+        grpTrimRight.margins = 0;
 
-        var qRow2 = grpQuickEdges.add("group"); qRow2.spacing = 3;
-        var btnEdgeBot   = qRow2.add("button", undefined, "Bot 50%");   btnEdgeBot.preferredSize   = [62, 20];
-        var btnEdgeLeft  = qRow2.add("button", undefined, "Left 75%");  btnEdgeLeft.preferredSize  = [62, 20];
-
-        var qRow3 = grpQuickEdges.add("group"); qRow3.spacing = 3;
-        var btnEdgeBL    = qRow3.add("button", undefined, "Bot-L 56%"); btnEdgeBL.preferredSize    = [62, 20];
-        var btnEdgeBR    = qRow3.add("button", undefined, "Bot-R 44%"); btnEdgeBR.preferredSize    = [62, 20];
-
-        var pairTrimPosWidth = createTwoColRow(pnlTrim);
-        var ctrlTailPos      = regSlider(createSliderRow(pairTrimPosWidth, "Position:",         56,   0, 100, "%", refreshPreviewCanvas, 1, false));
-        var ctrlTailWidth    = regSlider(createSliderRow(pairTrimPosWidth, "Tail Start Width:", 2.5, 0.1, 4.0, "",  refreshPreviewCanvas, 1, true));
-        var ctrlTailOffset   = regSlider(createSliderRow(pnlTrim,          "Offset:",            0, -180, 180, "°", refreshPreviewCanvas, 0, false));
+        var ctrlTailPos    = regSlider(createSliderRow(grpTrimRight, "Position:",         56,   0, 100, "%", refreshPreviewCanvas, 1, false));
+        var ctrlTailWidth  = regSlider(createSliderRow(grpTrimRight, "Tail Start Width:", 2.5, 0.1, 4.0, "",  refreshPreviewCanvas, 1, true));
+        var ctrlTailOffset = regSlider(createSliderRow(grpTrimRight, "Offset:",            0, -180, 180, "°", refreshPreviewCanvas, 0, false));
 
         var pnlTailTarget = tabTail.add("panel", undefined, "Tail Target Length, Slant & Curve");
         pnlTailTarget.orientation = "column";
@@ -6130,15 +6126,8 @@
             ctrlTailPos.setValue(p, true);
         }
 
-        btnEdgeTop.onClick   = function () { snapPerimeterAt(0); };
-        btnEdgeRight.onClick = function () { snapPerimeterAt(25); };
-        btnEdgeBot.onClick   = function () { snapPerimeterAt(50); };
-        btnEdgeLeft.onClick  = function () { snapPerimeterAt(75); };
-        btnEdgeBL.onClick    = function () { snapPerimeterAt(56); };
-        btnEdgeBR.onClick    = function () { snapPerimeterAt(44); };
-
         previewWidget.onClick = function () {
-            // Cycle clockwise in 45° steps when clicked in native AE (or pointer handler in web demo)
+            // Cycle clockwise in 45° steps when clicked in native AE (or pointer drag handler in web demo)
             var nextOff = ctrlTailOffset.getValue() + 45;
             if (nextOff > 180) nextOff -= 360;
             ctrlTailOffset.setValue(nextOff, true);
@@ -6157,7 +6146,7 @@
             chkTargetSnapTip.enabled = (hasTail && isTargetMode);
 
             pnlTrim.enabled              = hasTail;
-            grpQuickEdges.enabled        = (hasTail && !isTargetMode);
+            previewWidget.enabled        = hasTail;
             ctrlTailPos.group.enabled    = (hasTail && !isTargetMode);
             ctrlTailOffset.group.enabled = (hasTail && !isTargetMode);
             ctrlTailWidth.group.enabled  = hasTail;
@@ -6518,17 +6507,18 @@
         previewWidget.onDraw = function () {
             try {
                 var cfg = collectUIConfig();
-                var w = this.size ? this.size[0] : 136;
-                var h = this.size ? this.size[1] : 76;
+                var w = (this.size && this.size[0] > 40) ? this.size[0] : 200;
+                var h = (this.size && this.size[1] > 30) ? this.size[1] : 74;
                 var g = this.graphics;
                 var bgBrush = g.newBrush(g.BrushType.SOLID_COLOR, [0.14, 0.16, 0.20, 1]);
                 g.newPath();
                 g.rectPath(0, 0, w, h);
                 g.fillPath(bgBrush);
 
-                var previewSegs = buildBalloonPerimeterSegments(cfg.geometry === "electric" ? 56 : 68, 26, {
+                var baseW = Math.max(64, Math.min(116, w * (cfg.geometry === "electric" ? 0.44 : 0.54)));
+                var previewSegs = buildBalloonPerimeterSegments(baseW, 28, {
                     geometry: cfg.geometry,
-                    padX: cfg.geometry === "bubble_lines" ? 7 : (cfg.geometry === "electric" ? 8 : 10),
+                    padX: cfg.geometry === "bubble_lines" ? 8 : (cfg.geometry === "electric" ? 10 : 12),
                     padY: cfg.geometry === "bubble_lines" ? 5 : 8,
                     cornerRadius: Math.min(cfg.geometry === "bubble_lines" ? 6 : 12, cfg.cornerRadius * 0.4),
                     electricPoint: cfg.electricPoint,
@@ -6546,7 +6536,7 @@
                 });
 
                 var cx = w * 0.5;
-                var cy = h * 0.46;
+                var cy = h * 0.47;
                 var penDim = g.newPen(g.PenType.SOLID_COLOR, [0.55, 0.62, 0.72, 1], 1.5);
                 g.newPath();
                 for (var s = 0; s <= 56; s++) {
@@ -6575,7 +6565,7 @@
 
                     var mEv = evaluatePerimeterAtU(previewSegs, u1 + sp * 0.5);
                     var outA = Math.atan2(mEv.normal[1], mEv.normal[0]) + (cfg.tailAngle * Math.PI / 180);
-                    var tipP = [cx + mEv.point[0] + 16 * Math.cos(outA), cy + mEv.point[1] + 16 * Math.sin(outA)];
+                    var tipP = [cx + mEv.point[0] + 15 * Math.cos(outA), cy + mEv.point[1] + 15 * Math.sin(outA)];
                     var penTip = g.newPen(g.PenType.SOLID_COLOR, [1.0, 0.72, 0.15, 1], 2);
                     g.newPath();
                     g.moveTo(cx + mEv.point[0], cy + mEv.point[1]);
@@ -6596,11 +6586,21 @@
             if (!previewWidget) return;
             try { if (previewWidget.notify) previewWidget.notify("onDraw"); } catch (eN) {}
 
-            // Rich interactive SVG preview inside AE_JS_builder Web Simulator
+            // Rich full-column interactive SVG preview inside AE_JS_builder Web Simulator
             if (previewWidget.domElement) {
                 try {
                     var cfg = collectUIConfig();
                     var el = previewWidget.domElement;
+                    if (el.classList && typeof el.classList.remove === "function") {
+                        el.classList.remove("scriptui-color-swatch-btn");
+                    }
+                    el.style.width = "100%";
+                    el.style.maxWidth = "none";
+                    el.style.minWidth = "0";
+                    el.style.height = "74px";
+                    el.style.minHeight = "74px";
+                    el.style.flex = "1";
+                    el.style.display = "block";
                     el.style.padding = "0";
                     el.style.background = "#181c24";
                     el.style.border = "1px solid #334155";
@@ -6608,9 +6608,14 @@
                     el.style.overflow = "hidden";
                     el.style.cursor = (cfg.tailPlacementMode === "target") ? "default" : "crosshair";
 
-                    var segs = buildBalloonPerimeterSegments(cfg.geometry === "electric" ? 56 : 68, 26, {
+                    var vbW = 200;
+                    var vbH = 74;
+                    var cx = vbW * 0.5;
+                    var cy = 35;
+
+                    var segs = buildBalloonPerimeterSegments(cfg.geometry === "electric" ? 86 : 104, 26, {
                         geometry: cfg.geometry,
-                        padX: cfg.geometry === "bubble_lines" ? 7 : (cfg.geometry === "electric" ? 8 : 10),
+                        padX: cfg.geometry === "bubble_lines" ? 9 : (cfg.geometry === "electric" ? 10 : 14),
                         padY: cfg.geometry === "bubble_lines" ? 5 : 8,
                         cornerRadius: Math.min(cfg.geometry === "bubble_lines" ? 6 : 12, cfg.cornerRadius * 0.4),
                         electricPoint: cfg.electricPoint,
@@ -6627,7 +6632,6 @@
                         _isPreviewIcon: true
                     });
 
-                    var cx = 68, cy = 36;
                     var ptsAll = [];
                     var s;
                     for (s = 0; s <= 64; s++) {
@@ -6651,8 +6655,8 @@
                         }
                         var mEv = evaluatePerimeterAtU(segs, u1 + sp * 0.5);
                         var outA = Math.atan2(mEv.point[1], mEv.point[0]) + (cfg.tailAngle * Math.PI / 180);
-                        var txNum = cx + mEv.point[0] + 16 * Math.cos(outA);
-                        var tyNum = cy + mEv.point[1] + 16 * Math.sin(outA);
+                        var txNum = cx + mEv.point[0] + 15 * Math.cos(outA);
+                        var tyNum = cy + mEv.point[1] + 15 * Math.sin(outA);
                         var mxNum = cx + mEv.point[0];
                         var myNum = cy + mEv.point[1];
                         var tx = txNum.toFixed(1);
@@ -6689,7 +6693,7 @@
                     }
 
                     el.innerHTML =
-                        '<svg width="100%" height="100%" viewBox="0 0 136 76" style="display:block;pointer-events:none;">' +
+                        '<svg width="100%" height="100%" viewBox="0 0 ' + vbW + ' ' + vbH + '" preserveAspectRatio="xMidYMid meet" style="display:block;pointer-events:none;">' +
                         '<polygon points="' + ptsAll.join(" ") + '" fill="rgba(255,255,255,0.08)" stroke="#64748b" stroke-width="1.5"/>' +
                         hiSvg +
                         '</svg>';
@@ -6699,10 +6703,10 @@
                         var updateFromMouse = function (ev) {
                             if (ddTailPlacement.selection && ddTailPlacement.selection.index === 1) return;
                             var rect = el.getBoundingClientRect();
-                            var rw = rect.width || 136;
-                            var rh = rect.height || 76;
-                            var dx = ((ev.clientX - rect.left) / rw) * 136 - 68;
-                            var dy = ((ev.clientY - rect.top) / rh) * 76 - 36;
+                            var rw = rect.width || vbW;
+                            var rh = rect.height || vbH;
+                            var dx = ((ev.clientX - rect.left) / rw) * vbW - cx;
+                            var dy = ((ev.clientY - rect.top) / rh) * vbH - cy;
                             var angDeg = Math.atan2(dy, dx) * (180 / Math.PI);
                             // Top-Center (-90 deg) corresponds to 0% perimeter
                             var pct = (((angDeg + 90) / 360) * 100 % 100 + 100) % 100;
