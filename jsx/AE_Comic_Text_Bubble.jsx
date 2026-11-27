@@ -5530,25 +5530,29 @@
     // -------------------------------------------------------------------------
     // 9. Color Picker Helper (Native AE $.colorPicker + Web Simulator Picker)
     // -------------------------------------------------------------------------
-    function createColorPickerRow(parent, labelStr, defaultHex, onColorChanged) {
+    function createColorPickerRow(parent, labelStr, defaultHex, onColorChanged, labelW) {
         var grp = parent.add("group");
         grp.orientation = "row";
+        grp.alignment = ["fill", "center"];
         grp.alignChildren = ["left", "center"];
-        grp.spacing = 6;
+        grp.spacing = 5;
 
         var lbl = grp.add("statictext", undefined, labelStr);
-        lbl.preferredSize = [86, -1];
+        lbl.preferredSize = [labelW || 72, -1];
 
         var btnSwatch = grp.add("button", undefined, "");
-        btnSwatch.preferredSize = [34, 22];
+        btnSwatch.preferredSize = [28, 20];
         btnSwatch.helpTip = "Click to open color picker";
 
         var txtHex = grp.add("edittext", undefined, defaultHex);
-        txtHex.preferredSize = [74, 22];
+        txtHex.preferredSize = [64, 20];
         txtHex.characters = 7;
 
         var picker = {
             group: grp,
+            label: lbl,
+            swatch: btnSwatch,
+            edittext: txtHex,
             value: defaultHex,
             setColor: null
         };
@@ -5560,7 +5564,7 @@
                 var brush = g.newBrush(g.BrushType.SOLID_COLOR, [rgb[0], rgb[1], rgb[2], 1.0]);
                 var pen = g.newPen(g.PenType.SOLID_COLOR, [0.55, 0.55, 0.55, 1.0], 1);
                 g.newPath();
-                g.rectPath(0, 0, this.size ? this.size[0] : 34, this.size ? this.size[1] : 22);
+                g.rectPath(0, 0, this.size ? this.size[0] : 28, this.size ? this.size[1] : 20);
                 g.fillPath(brush);
                 g.strokePath(pen);
             } catch (e) {}
@@ -5635,12 +5639,12 @@
 
         var grp = parent.add("group");
         grp.orientation = "row";
-        grp.alignment = ["fill", "top"];
+        grp.alignment = ["fill", "center"];
         grp.alignChildren = ["left", "center"];
-        grp.spacing = 6;
+        grp.spacing = 4;
 
         var lbl = grp.add("statictext", undefined, labelStr);
-        lbl.preferredSize = [104, -1];
+        lbl.preferredSize = [84, -1];
 
         var sld = grp.add("slider", undefined, defVal, minVal, maxVal);
         sld.minvalue = minVal;
@@ -5648,14 +5652,13 @@
         sld.stepdelta = stepVal;
         sld.value = defVal;
         sld.alignment = ["fill", "center"];
+        sld.preferredSize = [48, -1];
 
         var txt = grp.add("edittext", undefined, fmtNum(defVal));
-        txt.preferredSize = [46, 20];
+        txt.preferredSize = [36, 20];
 
-        if (unitStr) {
-            var uLbl = grp.add("statictext", undefined, unitStr);
-            uLbl.preferredSize = [18, -1];
-        }
+        var uLbl = grp.add("statictext", undefined, unitStr || "");
+        uLbl.preferredSize = [12, -1];
 
         function syncDomStep() {
             if (sld.domElement && sld.domElement.step !== String(stepVal)) {
@@ -5686,8 +5689,10 @@
 
         return {
             group: grp,
+            label: lbl,
             slider: sld,
             edittext: txt,
+            unitLabel: uLbl,
             syncDomStep: syncDomStep,
             getValue: function () {
                 var c = clampNum(txt.text, minVal, maxVal, defVal);
@@ -5710,12 +5715,12 @@
 
         var grp = parent.add("group");
         grp.orientation = "row";
-        grp.alignment = ["fill", "top"];
+        grp.alignment = ["fill", "center"];
         grp.alignChildren = ["left", "center"];
-        grp.spacing = 6;
+        grp.spacing = 4;
 
         var chk = grp.add("checkbox", undefined, labelStr);
-        chk.preferredSize = [104, -1];
+        chk.preferredSize = [76, -1];
         chk.value = Boolean(defEnabled);
 
         var sld = grp.add("slider", undefined, defVal, minVal, maxVal);
@@ -5724,15 +5729,13 @@
         sld.stepdelta = stepVal;
         sld.value = defVal;
         sld.alignment = ["fill", "center"];
+        sld.preferredSize = [48, -1];
 
         var txt = grp.add("edittext", undefined, fmtNum(defVal));
-        txt.preferredSize = [46, 20];
+        txt.preferredSize = [36, 20];
 
-        var uLbl = null;
-        if (unitStr) {
-            uLbl = grp.add("statictext", undefined, unitStr);
-            uLbl.preferredSize = [18, -1];
-        }
+        var uLbl = grp.add("statictext", undefined, unitStr || "");
+        uLbl.preferredSize = [12, -1];
 
         function syncDomStep() {
             if (sld.domElement && sld.domElement.step !== String(stepVal)) {
@@ -5778,8 +5781,11 @@
         return {
             group: grp,
             checkbox: chk,
+            label: chk,
             slider: sld,
             edittext: txt,
+            unitLabel: uLbl,
+            isToggleSlider: true,
             syncDomStep: syncDomStep,
             isEnabled: function () { return Boolean(chk.value); },
             setEnabled: function (en, notify) {
@@ -5796,10 +5802,10 @@
     }
 
     // -------------------------------------------------------------------------
-    // 10. Ground-Up ScriptUI Interface Construction
+    // 10. Ground-Up ScriptUI Interface Construction (Responsive 2-Column Sliders)
     //     Layout Order:
     //       1. Presets (Very Top: Dropdown + Store, Rename, Delete, Open, Download)
-    //       2. Tabs: [ Balloon ]  [ Tail ]  [ Appearance ]
+    //       2. Tabs: [ Balloon ]  [ Tail ]  [ Appearance ]  [ In / Out ]
     //       3. Bottom: Precomp Option + [ Build / Update ] + [ Remove Balloon ]
     // -------------------------------------------------------------------------
     function buildUI(thisObj) {
@@ -5809,10 +5815,34 @@
 
         win.orientation = "column";
         win.alignChildren = ["fill", "top"];
-        win.spacing = 6;
-        win.margins = 8;
+        win.spacing = 5;
+        win.margins = 7;
 
         var pendingHex = generateHexId(4);
+
+        // Responsive 2-column <-> 1-column registry
+        var TWO_COL_BREAKPOINT = 445;
+        var responsivePairs = [];
+        var responsiveSliders = [];
+
+        function createTwoColRow(parent, minW) {
+            var rowGrp = parent.add("group");
+            rowGrp.orientation = "row";
+            rowGrp.alignment = ["fill", "top"];
+            rowGrp.alignChildren = ["fill", "center"];
+            rowGrp.spacing = 8;
+            responsivePairs.push({
+                group: rowGrp,
+                minWidth: (typeof minW === "number" && minW > 0) ? minW : TWO_COL_BREAKPOINT,
+                lastTwoCol: null
+            });
+            return rowGrp;
+        }
+
+        function regSlider(ctrl) {
+            responsiveSliders.push(ctrl);
+            return ctrl;
+        }
 
         // =====================================================================
         // TOP: PRESETS MANAGER + SELECTION / LIVE DEMO BAR
@@ -5820,8 +5850,8 @@
         var pnlPresets = win.add("panel", undefined, "Presets");
         pnlPresets.orientation = "column";
         pnlPresets.alignChildren = ["fill", "top"];
-        pnlPresets.spacing = 5;
-        pnlPresets.margins = [8, 10, 8, 8];
+        pnlPresets.spacing = 4;
+        pnlPresets.margins = [7, 9, 7, 6];
 
         var grpPresetSel = pnlPresets.add("group");
         grpPresetSel.orientation = "row";
@@ -5887,26 +5917,27 @@
         tabs.alignment = ["fill", "fill"];
 
         // ---------------------------------------------------------------------
-        // TAB 1: BALLOON (Geometry & Exterior Padding)
+        // TAB 1: BALLOON (Geometry, Universal Wobbly & Exterior Padding)
         // ---------------------------------------------------------------------
         var tabBalloon = tabs.add("tab", undefined, "Balloon");
         tabBalloon.orientation = "column";
         tabBalloon.alignChildren = ["fill", "top"];
-        tabBalloon.spacing = 6;
-        tabBalloon.margins = 8;
+        tabBalloon.spacing = 5;
+        tabBalloon.margins = 6;
 
         var pnlGeom = tabBalloon.add("panel", undefined, "Balloon Geometry");
         pnlGeom.orientation = "column";
         pnlGeom.alignChildren = ["fill", "top"];
-        pnlGeom.spacing = 5;
-        pnlGeom.margins = [8, 10, 8, 8];
+        pnlGeom.spacing = 4;
+        pnlGeom.margins = [7, 9, 7, 6];
 
-        var grpGeomRow = pnlGeom.add("group");
+        var pairShapeCorner = createTwoColRow(pnlGeom);
+        var grpGeomRow = pairShapeCorner.add("group");
         grpGeomRow.orientation = "row";
-        grpGeomRow.alignment = ["fill", "top"];
-        grpGeomRow.spacing = 6;
+        grpGeomRow.alignment = ["fill", "center"];
+        grpGeomRow.spacing = 5;
         var lblGeom = grpGeomRow.add("statictext", undefined, "Shape:");
-        lblGeom.preferredSize = [104, -1];
+        lblGeom.preferredSize = [42, -1];
         var ddGeometry = grpGeomRow.add("dropdownlist", undefined, GEOMETRY_LABELS);
         ddGeometry.alignment = ["fill", "center"];
         ddGeometry.selection = 1;
@@ -5914,15 +5945,21 @@
         var suppressGeomAutoDefaults = false;
         var lastManualGeomKey = "rounded";
 
-        var ctrlCornerRadius    = createSliderRow(pnlGeom, "Corner Radius:",   28,   0, 150, "px", refreshPreviewCanvas);
-        var ctrlElectricPoint   = createSliderRow(pnlGeom, "Electric Point:",  58,  10, 150, "%",  refreshPreviewCanvas);
-        var ctrlElectricSkew    = createSliderRow(pnlGeom, "Electric Skew:",  -22, -75,  75, "%",  refreshPreviewCanvas);
-        var ctrlCloudPuffs      = createSliderRow(pnlGeom, "Cloud Puffs:",     12,   6,  30, "",   refreshPreviewCanvas);
-        var ctrlCloudDepth      = createSliderRow(pnlGeom, "Puff Depth:",      42,  10, 120, "%",  refreshPreviewCanvas);
-        var ctrlCloudWidthRand  = createSliderRow(pnlGeom, "Puff Width Rand:",  0,   0, 100, "%",  refreshPreviewCanvas);
-        var ctrlSpikeCount      = createSliderRow(pnlGeom, "Burst Spikes:",    18,   6,  40, "",   refreshPreviewCanvas);
-        var ctrlSpikeDepth      = createSliderRow(pnlGeom, "Spike Depth:",     85,  15, 220, "%",  refreshPreviewCanvas);
-        var ctrlSpikeWidthRand  = createSliderRow(pnlGeom, "Spike Width Rand:", 0,   0, 100, "%",  refreshPreviewCanvas);
+        var ctrlCornerRadius   = regSlider(createSliderRow(pairShapeCorner, "Corner Radius:", 28, 0, 150, "px", refreshPreviewCanvas));
+
+        var pairElectric       = createTwoColRow(pnlGeom);
+        var ctrlElectricPoint  = regSlider(createSliderRow(pairElectric, "Electric Point:", 58,  10, 150, "%", refreshPreviewCanvas));
+        var ctrlElectricSkew   = regSlider(createSliderRow(pairElectric, "Electric Skew:", -22, -75,  75, "%", refreshPreviewCanvas));
+
+        var pairCloud          = createTwoColRow(pnlGeom);
+        var ctrlCloudPuffs     = regSlider(createSliderRow(pairCloud, "Cloud Puffs:",       12,   6,  30, "",  refreshPreviewCanvas));
+        var ctrlCloudDepth     = regSlider(createSliderRow(pairCloud, "Puff Depth:",        42,  10, 120, "%", refreshPreviewCanvas));
+        var ctrlCloudWidthRand = regSlider(createSliderRow(pnlGeom,   "Puff Width Rand:",    0,   0, 100, "%", refreshPreviewCanvas));
+
+        var pairBurst          = createTwoColRow(pnlGeom);
+        var ctrlSpikeCount     = regSlider(createSliderRow(pairBurst, "Burst Spikes:",      18,   6,  40, "",  refreshPreviewCanvas));
+        var ctrlSpikeDepth     = regSlider(createSliderRow(pairBurst, "Spike Depth:",       85,  15, 220, "%", refreshPreviewCanvas));
+        var ctrlSpikeWidthRand = regSlider(createSliderRow(pnlGeom,   "Spike Width Rand:",   0,   0, 100, "%", refreshPreviewCanvas));
 
         ctrlElectricPoint.group.helpTip   = "Controls how far the pointed left & right Electric side chevrons jut outward (% of half-height).";
         ctrlElectricSkew.group.helpTip    = "Tilts the left & right Electric side tips vertically (0% = symmetric <--->, +/- slants tips).";
@@ -5934,12 +5971,13 @@
         var pnlWobbly = tabBalloon.add("panel", undefined, "Wobbly Outline (All Shapes — 0 = Crisp)");
         pnlWobbly.orientation = "column";
         pnlWobbly.alignChildren = ["fill", "top"];
-        pnlWobbly.spacing = 5;
-        pnlWobbly.margins = [8, 10, 8, 8];
+        pnlWobbly.spacing = 4;
+        pnlWobbly.margins = [7, 9, 7, 6];
 
-        var ctrlWobblyWaves     = createSliderRow(pnlWobbly, "Wobbly Waves:",    0,  0,  36, "",  refreshPreviewCanvas);
-        var ctrlWobblyDepth     = createSliderRow(pnlWobbly, "Wave Depth:",      0,  0,  50, "%", refreshPreviewCanvas);
-        var ctrlWobblyWidthRand = createSliderRow(pnlWobbly, "Wave Width Rand:", 65, 0, 100, "%", refreshPreviewCanvas);
+        var pairWobbly          = createTwoColRow(pnlWobbly);
+        var ctrlWobblyWaves     = regSlider(createSliderRow(pairWobbly, "Wobbly Waves:",    0,  0,  36, "",  refreshPreviewCanvas));
+        var ctrlWobblyDepth     = regSlider(createSliderRow(pairWobbly, "Wave Depth:",      0,  0,  50, "%", refreshPreviewCanvas));
+        var ctrlWobblyWidthRand = regSlider(createSliderRow(pnlWobbly,  "Wave Width Rand:", 65, 0, 100, "%", refreshPreviewCanvas));
 
         ctrlWobblyWaves.group.helpTip     = "0 = crisp non-wobbly shape; >0 = adds hand-drawn wobbly waves to ANY selected balloon shape.";
         ctrlWobblyDepth.group.helpTip     = "0% = crisp non-wobbly shape; >0% = wave amplitude relative (%) to each wave's local span.";
@@ -5948,11 +5986,12 @@
         var pnlPadding = tabBalloon.add("panel", undefined, "Exterior Padding & Centering");
         pnlPadding.orientation = "column";
         pnlPadding.alignChildren = ["fill", "top"];
-        pnlPadding.spacing = 6;
-        pnlPadding.margins = [8, 10, 8, 8];
+        pnlPadding.spacing = 4;
+        pnlPadding.margins = [7, 9, 7, 6];
 
-        var ctrlPadX = createSliderRow(pnlPadding, "Padding X:", 36, 0, 150, "px", refreshPreviewCanvas);
-        var ctrlPadY = createSliderRow(pnlPadding, "Padding Y:", 26, 0, 150, "px", refreshPreviewCanvas);
+        var pairPad  = createTwoColRow(pnlPadding);
+        var ctrlPadX = regSlider(createSliderRow(pairPad, "Padding X:", 36, 0, 150, "px", refreshPreviewCanvas));
+        var ctrlPadY = regSlider(createSliderRow(pairPad, "Padding Y:", 26, 0, 150, "px", refreshPreviewCanvas));
 
         var lblAnchorNote = pnlPadding.add("statictext", undefined, "Anchor Points centered (H & V) with Balloon linked as child.");
         lblAnchorNote.helpTip = "Compatible with AE-replace-color-emojis, AE-advanced-text-wrap, and AE-Text-Highlight.";
@@ -6000,31 +6039,34 @@
         var tabTail = tabs.add("tab", undefined, "Tail");
         tabTail.orientation = "column";
         tabTail.alignChildren = ["fill", "top"];
-        tabTail.spacing = 6;
-        tabTail.margins = 8;
+        tabTail.spacing = 5;
+        tabTail.margins = 6;
 
         var pnlTailStyle = tabTail.add("panel", undefined, "Tail Style & Placement Method");
         pnlTailStyle.orientation = "column";
         pnlTailStyle.alignChildren = ["fill", "top"];
-        pnlTailStyle.spacing = 5;
-        pnlTailStyle.margins = [8, 10, 8, 8];
+        pnlTailStyle.spacing = 4;
+        pnlTailStyle.margins = [7, 9, 7, 6];
 
-        var grpTailTypeRow = pnlTailStyle.add("group");
+        var pairTailHeader = createTwoColRow(pnlTailStyle);
+        var grpTailTypeRow = pairTailHeader.add("group");
         grpTailTypeRow.orientation = "row";
+        grpTailTypeRow.alignment = ["fill", "center"];
         grpTailTypeRow.alignChildren = ["left", "center"];
-        grpTailTypeRow.spacing = 6;
+        grpTailTypeRow.spacing = 5;
         var lblTailStyle = grpTailTypeRow.add("statictext", undefined, "Tail Type:");
-        lblTailStyle.preferredSize = [95, -1];
+        lblTailStyle.preferredSize = [56, -1];
         var ddTailStyle = grpTailTypeRow.add("dropdownlist", undefined, TAIL_LABELS);
         ddTailStyle.alignment = ["fill", "center"];
         ddTailStyle.selection = 2;
 
-        var grpTailModeRow = pnlTailStyle.add("group");
+        var grpTailModeRow = pairTailHeader.add("group");
         grpTailModeRow.orientation = "row";
+        grpTailModeRow.alignment = ["fill", "center"];
         grpTailModeRow.alignChildren = ["left", "center"];
-        grpTailModeRow.spacing = 6;
+        grpTailModeRow.spacing = 5;
         var lblTailMode = grpTailModeRow.add("statictext", undefined, "Placement:");
-        lblTailMode.preferredSize = [95, -1];
+        lblTailMode.preferredSize = [60, -1];
         var ddTailPlacement = grpTailModeRow.add("dropdownlist", undefined, TAIL_PLACEMENT_LABELS);
         ddTailPlacement.alignment = ["fill", "center"];
         ddTailPlacement.selection = 0;
@@ -6038,18 +6080,15 @@
         var pnlTrim = tabTail.add("panel", undefined, "Perimeter Placement & Base Width");
         pnlTrim.orientation = "column";
         pnlTrim.alignChildren = ["fill", "top"];
-        pnlTrim.spacing = 5;
-        pnlTrim.margins = [8, 10, 8, 8];
+        pnlTrim.spacing = 4;
+        pnlTrim.margins = [7, 9, 7, 6];
 
-        // Interactive Perimeter Visualizer (works in both native AE ScriptUI & AE_JS_builder DOM)
-        var grpPreviewWrap = pnlTrim.add("group");
-        grpPreviewWrap.orientation = "row";
-        grpPreviewWrap.alignment = ["fill", "top"];
+        // Interactive Perimeter Visualizer (collapses to column only on very narrow <340px panels)
+        var grpPreviewWrap = createTwoColRow(pnlTrim, 340);
         grpPreviewWrap.alignChildren = ["center", "center"];
-        grpPreviewWrap.spacing = 8;
 
         var previewWidget = grpPreviewWrap.add("button", undefined, "");
-        previewWidget.preferredSize = [136, 76];
+        previewWidget.preferredSize = [136, 70];
         previewWidget.helpTip = "0% = Top, 25% = Right, 50% = Bottom, 75% = Left (Click to jump Offset around perimeter)";
 
         var grpQuickEdges = grpPreviewWrap.add("group");
@@ -6068,19 +6107,21 @@
         var btnEdgeBL    = qRow3.add("button", undefined, "Bot-L 56%"); btnEdgeBL.preferredSize    = [62, 20];
         var btnEdgeBR    = qRow3.add("button", undefined, "Bot-R 44%"); btnEdgeBR.preferredSize    = [62, 20];
 
-        var ctrlTailPos    = createSliderRow(pnlTrim, "Position:",         56,   0, 100, "%", refreshPreviewCanvas, 1, false);
-        var ctrlTailWidth  = createSliderRow(pnlTrim, "Tail Start Width:", 2.5, 0.1, 4.0, "",  refreshPreviewCanvas, 1, true);
-        var ctrlTailOffset = createSliderRow(pnlTrim, "Offset:",            0, -180, 180, "°", refreshPreviewCanvas, 0, false);
+        var pairTrimPosWidth = createTwoColRow(pnlTrim);
+        var ctrlTailPos      = regSlider(createSliderRow(pairTrimPosWidth, "Position:",         56,   0, 100, "%", refreshPreviewCanvas, 1, false));
+        var ctrlTailWidth    = regSlider(createSliderRow(pairTrimPosWidth, "Tail Start Width:", 2.5, 0.1, 4.0, "",  refreshPreviewCanvas, 1, true));
+        var ctrlTailOffset   = regSlider(createSliderRow(pnlTrim,          "Offset:",            0, -180, 180, "°", refreshPreviewCanvas, 0, false));
 
         var pnlTailTarget = tabTail.add("panel", undefined, "Tail Target Length, Slant & Curve");
         pnlTailTarget.orientation = "column";
         pnlTailTarget.alignChildren = ["fill", "top"];
-        pnlTailTarget.spacing = 5;
-        pnlTailTarget.margins = [8, 10, 8, 8];
+        pnlTailTarget.spacing = 4;
+        pnlTailTarget.margins = [7, 9, 7, 6];
 
-        var ctrlTailLength = createSliderRow(pnlTailTarget, "Tail Length:", 85,   15, 350, "px", refreshPreviewCanvas);
-        var ctrlTailAngle  = createSliderRow(pnlTailTarget, "Tip Slant:",   12,  -70,  70, "°",  refreshPreviewCanvas);
-        var ctrlTailCurve  = createSliderRow(pnlTailTarget, "Tail Curve:",  45, -100, 100, "%",  refreshPreviewCanvas);
+        var pairTailLenAngle = createTwoColRow(pnlTailTarget);
+        var ctrlTailLength   = regSlider(createSliderRow(pairTailLenAngle, "Tail Length:", 85,   15, 350, "px", refreshPreviewCanvas));
+        var ctrlTailAngle    = regSlider(createSliderRow(pairTailLenAngle, "Tip Slant:",   12,  -70,  70, "°",  refreshPreviewCanvas));
+        var ctrlTailCurve    = regSlider(createSliderRow(pnlTailTarget,    "Tail Curve:",  45, -100, 100, "%",  refreshPreviewCanvas));
         ctrlTailCurve.group.helpTip = "Controls the swooping bend of the Curved Triangle tail (-100% to +100%).";
 
         function snapPerimeterAt(centerPct) {
@@ -6138,19 +6179,20 @@
         var tabAppearance = tabs.add("tab", undefined, "Appearance");
         tabAppearance.orientation = "column";
         tabAppearance.alignChildren = ["fill", "top"];
-        tabAppearance.spacing = 6;
-        tabAppearance.margins = 8;
+        tabAppearance.spacing = 5;
+        tabAppearance.margins = 6;
 
         var pnlFill = tabAppearance.add("panel", undefined, "Fill");
         pnlFill.orientation = "column";
         pnlFill.alignChildren = ["fill", "top"];
-        pnlFill.spacing = 5;
-        pnlFill.margins = [8, 10, 8, 8];
+        pnlFill.spacing = 4;
+        pnlFill.margins = [7, 9, 7, 6];
 
-        var chkFillEnabled = pnlFill.add("checkbox", undefined, "Enable Balloon Fill");
+        var chkFillEnabled  = pnlFill.add("checkbox", undefined, "Enable Balloon Fill");
         chkFillEnabled.value = true;
-        var cpFillColor = createColorPickerRow(pnlFill, "Fill Color:", "#FFFFFF", refreshPreviewCanvas);
-        var ctrlFillOpacity = createSliderRow(pnlFill, "Fill Opacity:", 100, 0, 100, "%", refreshPreviewCanvas);
+        var pairFill        = createTwoColRow(pnlFill);
+        var cpFillColor     = createColorPickerRow(pairFill, "Fill Color:", "#FFFFFF", refreshPreviewCanvas, 64);
+        var ctrlFillOpacity = regSlider(createSliderRow(pairFill, "Fill Opacity:", 100, 0, 100, "%", refreshPreviewCanvas));
 
         chkFillEnabled.onClick = function () {
             cpFillColor.group.enabled = chkFillEnabled.value;
@@ -6161,35 +6203,39 @@
         var pnlStroke = tabAppearance.add("panel", undefined, "Lines / Stroke Style & Color");
         pnlStroke.orientation = "column";
         pnlStroke.alignChildren = ["fill", "top"];
-        pnlStroke.spacing = 5;
-        pnlStroke.margins = [8, 10, 8, 8];
+        pnlStroke.spacing = 4;
+        pnlStroke.margins = [7, 9, 7, 6];
 
-        var grpStrokeStyle = pnlStroke.add("group");
+        var pairStrokeHeader = createTwoColRow(pnlStroke);
+        var grpStrokeStyle = pairStrokeHeader.add("group");
         grpStrokeStyle.orientation = "row";
-        grpStrokeStyle.alignment = ["fill", "top"];
-        grpStrokeStyle.spacing = 6;
+        grpStrokeStyle.alignment = ["fill", "center"];
+        grpStrokeStyle.spacing = 5;
         var lblStrokeStyle = grpStrokeStyle.add("statictext", undefined, "Stroke Style:");
-        lblStrokeStyle.preferredSize = [86, -1];
+        lblStrokeStyle.preferredSize = [68, -1];
         var ddStrokeStyle = grpStrokeStyle.add("dropdownlist", undefined, STROKE_LABELS);
         ddStrokeStyle.alignment = ["fill", "center"];
         ddStrokeStyle.selection = 1;
 
-        var cpStrokeColor = createColorPickerRow(pnlStroke, "Stroke Color:", "#111111", refreshPreviewCanvas);
+        var cpStrokeColor = createColorPickerRow(pairStrokeHeader, "Stroke Color:", "#111111", refreshPreviewCanvas, 72);
 
-        var ctrlStrokeWidth    = createSliderRow(pnlStroke, "Thickness:",     5, 1, 40, "px", refreshPreviewCanvas);
-        var ctrlStrokeMinWidth = createSliderRow(pnlStroke, "Min Thickness:", 2, 1, 30, "px", refreshPreviewCanvas);
-        var ctrlStrokeMaxWidth = createSliderRow(pnlStroke, "Max Thickness:", 9, 1, 50, "px", refreshPreviewCanvas);
-        var ctrlDotGap         = createSliderRow(pnlStroke, "Dot Spacing:",  12, 3, 50, "px", refreshPreviewCanvas);
+        var pairStrokeMain     = createTwoColRow(pnlStroke);
+        var ctrlStrokeWidth    = regSlider(createSliderRow(pairStrokeMain, "Thickness:",     5, 1, 40, "px", refreshPreviewCanvas));
+        var ctrlDotGap         = regSlider(createSliderRow(pairStrokeMain, "Dot Spacing:",  12, 3, 50, "px", refreshPreviewCanvas));
+
+        var pairStrokeVar      = createTwoColRow(pnlStroke);
+        var ctrlStrokeMinWidth = regSlider(createSliderRow(pairStrokeVar, "Min Thickness:", 2, 1, 30, "px", refreshPreviewCanvas));
+        var ctrlStrokeMaxWidth = regSlider(createSliderRow(pairStrokeVar, "Max Thickness:", 9, 1, 50, "px", refreshPreviewCanvas));
 
         function syncStrokeControlsVisibility() {
             var idx = ddStrokeStyle.selection ? ddStrokeStyle.selection.index : 1;
             var key = STROKE_KEYS[idx] || "solid";
             var hasStroke = (key !== "none");
-            cpStrokeColor.group.enabled    = hasStroke;
-            ctrlStrokeWidth.group.enabled  = (key === "solid" || key === "dotted");
+            cpStrokeColor.group.enabled      = hasStroke;
+            ctrlStrokeWidth.group.enabled    = (key === "solid" || key === "dotted");
             ctrlStrokeMinWidth.group.enabled = (key === "variable");
             ctrlStrokeMaxWidth.group.enabled = (key === "variable");
-            ctrlDotGap.group.enabled       = (key === "dotted");
+            ctrlDotGap.group.enabled         = (key === "dotted");
             refreshPreviewCanvas();
         }
         ddStrokeStyle.onChange = syncStrokeControlsVisibility;
@@ -6200,21 +6246,21 @@
         var tabInOut = tabs.add("tab", undefined, "In / Out");
         tabInOut.orientation = "column";
         tabInOut.alignChildren = ["fill", "top"];
-        tabInOut.spacing = 6;
-        tabInOut.margins = 8;
+        tabInOut.spacing = 5;
+        tabInOut.margins = 6;
 
         var pnlAnimStyle = tabInOut.add("panel", undefined, "In / Out Animation Style");
         pnlAnimStyle.orientation = "column";
         pnlAnimStyle.alignChildren = ["fill", "top"];
-        pnlAnimStyle.spacing = 5;
-        pnlAnimStyle.margins = [8, 10, 8, 8];
+        pnlAnimStyle.spacing = 4;
+        pnlAnimStyle.margins = [7, 9, 7, 6];
 
         var grpAnimRow = pnlAnimStyle.add("group");
         grpAnimRow.orientation = "row";
         grpAnimRow.alignment = ["fill", "top"];
         grpAnimRow.spacing = 6;
         var lblAnimStyle = grpAnimRow.add("statictext", undefined, "Style:");
-        lblAnimStyle.preferredSize = [56, -1];
+        lblAnimStyle.preferredSize = [48, -1];
         var ddAnimStyle = grpAnimRow.add("dropdownlist", undefined, ANIM_LABELS);
         ddAnimStyle.alignment = ["fill", "center"];
         ddAnimStyle.selection = 0;
@@ -6225,13 +6271,16 @@
         var pnlTiming = tabInOut.add("panel", undefined, "Timing & Reading Duration");
         pnlTiming.orientation = "column";
         pnlTiming.alignChildren = ["fill", "top"];
-        pnlTiming.spacing = 5;
-        pnlTiming.margins = [8, 10, 8, 8];
+        pnlTiming.spacing = 4;
+        pnlTiming.margins = [7, 9, 7, 6];
 
-        var ctrlStartDelay = createSliderRow(pnlTiming, "Start Delay:", 0.0, 0.0, 10.0, "s", onTimingControlChanged, 1, true);
-        var ctrlInTime     = createToggleSliderRow(pnlTiming, "Fade In:",  true, 0.6, 0.1, 5.0, "s", onTimingControlChanged, 1, true);
-        var ctrlOutTime    = createToggleSliderRow(pnlTiming, "Fade Out:", true, 0.5, 0.1, 5.0, "s", onTimingControlChanged, 1, true);
-        var ctrlReadTime   = createSliderRow(pnlTiming, "Read Time:",   2.0, 0.2, 20.0, "s", onTimingControlChanged, 1, true);
+        var pairFadeInOut  = createTwoColRow(pnlTiming);
+        var ctrlInTime     = regSlider(createToggleSliderRow(pairFadeInOut, "Fade In:",  true, 0.6, 0.1, 5.0, "s", onTimingControlChanged, 1, true));
+        var ctrlOutTime    = regSlider(createToggleSliderRow(pairFadeInOut, "Fade Out:", true, 0.5, 0.1, 5.0, "s", onTimingControlChanged, 1, true));
+
+        var pairDelayRead  = createTwoColRow(pnlTiming);
+        var ctrlStartDelay = regSlider(createSliderRow(pairDelayRead, "Start Delay:", 0.0, 0.0, 10.0, "s", onTimingControlChanged, 1, true));
+        var ctrlReadTime   = regSlider(createSliderRow(pairDelayRead, "Read Time:",   2.0, 0.2, 20.0, "s", onTimingControlChanged, 1, true));
 
         ctrlInTime.checkbox.helpTip  = "Activate or disable Fade In (uncheck to use Fade Out only).";
         ctrlOutTime.checkbox.helpTip = "Activate or disable Fade Out (uncheck to use Fade In only).";
@@ -6240,7 +6289,7 @@
         chkLinkReadTime.value = true;
         chkLinkReadTime.helpTip = "Automatically computes Read Time from text length based on seconds per 25 characters.";
 
-        var ctrlSecPer25 = createSliderRow(pnlTiming, "Sec / 25 Chars:", 1.2, 0.2, 5.0, "s", onTimingControlChanged, 1, true);
+        var ctrlSecPer25 = regSlider(createSliderRow(pnlTiming, "Sec / 25 Chars:", 1.2, 0.2, 5.0, "s", onTimingControlChanged, 1, true));
 
         var lblReadSummary = pnlTiming.add("statictext", undefined, "Status Effect: 0=waiting, 1=start, 2=in, 3=reading, 4=out, 5=end");
         lblReadSummary.alignment = ["fill", "top"];
@@ -7023,8 +7072,94 @@
         }
         syncTargetStatus(true);
 
+        var lastGlobalTwoCol = null;
+
+        function measureWindowWidth() {
+            try {
+                if (win.domWrapper && typeof win.domWrapper.getBoundingClientRect === "function") {
+                    var wr = win.domWrapper.getBoundingClientRect();
+                    if (wr && wr.width > 0) return wr.width;
+                }
+                if (win.size && win.size.length >= 1 && win.size[0] > 0) {
+                    return win.size[0];
+                }
+                if (win.bounds) {
+                    if (typeof win.bounds.width === "number" && win.bounds.width > 0) return win.bounds.width;
+                    if (win.bounds.length >= 3 && (win.bounds[2] - win.bounds[0]) > 0) {
+                        return win.bounds[2] - win.bounds[0];
+                    }
+                }
+            } catch (eW) {}
+            return 480;
+        }
+
+        function applyResponsiveLayout(forceReflow) {
+            var w = measureWindowWidth();
+            var anyModeChanged = false;
+            var pi;
+            for (pi = 0; pi < responsivePairs.length; pi++) {
+                var item = responsivePairs[pi];
+                var useTwoCol = (w >= item.minWidth);
+                if (forceReflow || item.lastTwoCol !== useTwoCol) {
+                    item.lastTwoCol = useTwoCol;
+                    anyModeChanged = true;
+                    var g = item.group;
+                    var isPreviewRow = (item.minWidth < 400);
+                    g.orientation = useTwoCol ? "row" : "column";
+                    g.alignChildren = isPreviewRow
+                        ? ["center", "center"]
+                        : (useTwoCol ? ["fill", "center"] : ["fill", "top"]);
+                    g.spacing = useTwoCol ? 8 : 4;
+                    if (g.domElement && g.domElement.style) {
+                        g.domElement.style.flexDirection = useTwoCol ? "row" : "column";
+                        g.domElement.style.alignItems = isPreviewRow
+                            ? "center"
+                            : (useTwoCol ? "center" : "stretch");
+                        g.domElement.style.gap = (useTwoCol ? 8 : 4) + "px";
+                    }
+                }
+            }
+
+            var globalTwoCol = (w >= TWO_COL_BREAKPOINT);
+            if (forceReflow || lastGlobalTwoCol !== globalTwoCol) {
+                lastGlobalTwoCol = globalTwoCol;
+                anyModeChanged = true;
+                var si;
+                for (si = 0; si < responsiveSliders.length; si++) {
+                    var sc = responsiveSliders[si];
+                    var lblW = sc.isToggleSlider ? (globalTwoCol ? 76 : 92) : (globalTwoCol ? 84 : 96);
+                    var txtW = globalTwoCol ? 36 : 42;
+                    var gapW = globalTwoCol ? 4 : 6;
+                    sc.label.preferredSize = [lblW, -1];
+                    sc.edittext.preferredSize = [txtW, 20];
+                    sc.group.spacing = gapW;
+
+                    if (sc.isToggleSlider && sc.checkbox && sc.checkbox.domElement) {
+                        var chkWrap = sc.checkbox.domElement.parentNode;
+                        if (chkWrap && chkWrap.style) chkWrap.style.width = lblW + "px";
+                    } else if (sc.label && sc.label.domElement && sc.label.domElement.style) {
+                        sc.label.domElement.style.width = lblW + "px";
+                    }
+                    if (sc.edittext && sc.edittext.domElement && sc.edittext.domElement.style) {
+                        sc.edittext.domElement.style.width = txtW + "px";
+                    }
+                    if (sc.group && sc.group.domElement && sc.group.domElement.style) {
+                        sc.group.domElement.style.gap = gapW + "px";
+                    }
+                }
+            }
+
+            // Native After Effects ScriptUI AutoLayout reflow / resize
+            if (!win.domWrapper && win.layout) {
+                try {
+                    if (anyModeChanged) win.layout.layout(true);
+                    else win.layout.resize();
+                } catch (eLay) {}
+            }
+        }
+
         win.onResizing = win.onResize = function () {
-            if (this.layout) this.layout.resize();
+            applyResponsiveLayout(false);
         };
 
         if (win instanceof Window) {
@@ -7033,7 +7168,22 @@
         } else if (win.layout) {
             win.layout.layout(true);
         }
-        setTimeoutSafe(refreshPreviewCanvas);
+
+        applyResponsiveLayout(true);
+
+        if (win.domWrapper && typeof ResizeObserver === "function") {
+            try {
+                var ro = new ResizeObserver(function () {
+                    applyResponsiveLayout(false);
+                });
+                ro.observe(win.domWrapper);
+            } catch (eRO) {}
+        }
+
+        setTimeoutSafe(function () {
+            applyResponsiveLayout(false);
+            refreshPreviewCanvas();
+        });
 
         return win;
     }

@@ -259,9 +259,11 @@
             }
             if (this.preferredSize && this.preferredSize[0] > 0) {
                 el.style.width = `${this.preferredSize[0]}px`;
+                if (el.tagName === 'SPAN' || el.tagName === 'LABEL' || el.tagName === 'INPUT' || el.tagName === 'BUTTON') {
+                    el.style.flexShrink = '0';
+                }
                 if (el.tagName === 'SPAN') {
                     el.style.display = 'inline-block';
-                    el.style.flexShrink = '0';
                 }
             }
             if (this.preferredSize && this.preferredSize[1] > 0) {
@@ -271,6 +273,7 @@
                 if (Array.isArray(this.alignment)) {
                     if (this.alignment[0] === 'fill') {
                         el.style.width = '100%';
+                        el.style.minWidth = '0';
                         el.style.boxSizing = 'border-box';
                         el.style.flex = '1';
                     } else if (this.alignment[0] === 'left') {
@@ -283,12 +286,17 @@
                 }
             }
             if (this.alignChildren && Array.isArray(this.alignChildren)) {
-                if (this.alignChildren[0] === 'fill') {
+                const crossAlign = (isContainer && this.orientation === 'row')
+                    ? this.alignChildren[1]
+                    : this.alignChildren[0];
+                if (crossAlign === 'fill') {
                     el.style.alignItems = 'stretch';
-                } else if (this.alignChildren[0] === 'left') {
+                } else if (crossAlign === 'left' || crossAlign === 'top') {
                     el.style.alignItems = 'flex-start';
-                } else if (this.alignChildren[0] === 'right') {
+                } else if (crossAlign === 'right' || crossAlign === 'bottom') {
                     el.style.alignItems = 'flex-end';
+                } else if (crossAlign === 'center') {
+                    el.style.alignItems = 'center';
                 }
             }
             if (this.enabled === false) {
@@ -1329,7 +1337,9 @@
         get size() {
             if (this.domWrapper) {
                 const rect = this.domWrapper.getBoundingClientRect();
-                return [rect.width, rect.height];
+                if (rect.width > 0 && rect.height > 0) {
+                    return [rect.width, rect.height];
+                }
             }
             return [this._width || 480, this._height || 680];
         }
