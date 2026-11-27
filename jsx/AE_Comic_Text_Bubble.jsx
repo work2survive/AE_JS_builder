@@ -2109,11 +2109,10 @@
      *   - When randPct == 0: exact constant visual chord width across every puff/spike.
      *   - When randPct > 0: deterministic randomized widths preserving exact `count`.
      */
-    function computePerimeterIntervals(baseSegs, count, randPct, salt) {
+    function computeIntervalWeights(count, randPct, salt) {
         var r = clampNum(randPct, 0, 100, 0) / 100.0;
         var weights = [];
-        var sumW = 0;
-        var i, iter;
+        var i;
         for (i = 0; i < count; i++) {
             var w = 1.0;
             if (r > 1e-4) {
@@ -2123,30 +2122,44 @@
                 w = Math.max(0.18, 1.0 + 0.80 * r * signed);
             }
             weights.push(w);
-            sumW += w;
         }
+        return weights;
+    }
+
+    function computePerimeterIntervals(baseSegs, count, randPct, salt, startU, remSpanU) {
+        var sU = (typeof startU === "number") ? (((startU % 1) + 1) % 1) : 0.0;
+        var rSpan = (typeof remSpanU === "number") ? Math.max(0.05, Math.min(1.0, remSpanU)) : 1.0;
+        var isFullLoop = (rSpan >= 0.999999);
+
+        var weights = computeIntervalWeights(count, randPct, salt);
+        var sumW = 0;
+        var i, iter;
+        for (i = 0; i < count; i++) sumW += weights[i];
+
         var du = [];
         for (i = 0; i < count; i++) {
             du.push(weights[i] / (sumW || count));
         }
 
-        // Equalize true chord widths around tight corners in 5 fast passes
+        // Equalize true chord widths around tight corners in 5 fast passes along [sU, sU + rSpan]
         if (baseSegs && baseSegs.length > 0) {
             for (iter = 0; iter < 5; iter++) {
-                var uTmp = [0];
+                var uTmp = [sU];
                 var accTmp = 0;
                 for (i = 0; i < count; i++) {
                     accTmp += du[i];
-                    uTmp.push(i === count - 1 ? 1.0 : accTmp);
+                    uTmp.push(i === count - 1 ? (sU + rSpan) : (sU + accTmp * rSpan));
                 }
                 var ptsTmp = [];
-                for (i = 0; i < count; i++) {
-                    ptsTmp.push(evaluatePerimeterAtU(baseSegs, uTmp[i]).point);
+                var nEval = isFullLoop ? count : (count + 1);
+                for (i = 0; i < nEval; i++) {
+                    ptsTmp.push(evaluatePerimeterAtU(baseSegs, uTmp[i] % 1).point);
                 }
                 var nextDu = [];
                 var sumNext = 0;
                 for (i = 0; i < count; i++) {
-                    var chord = dist2D(ptsTmp[i], ptsTmp[(i + 1) % count]);
+                    var pNext = isFullLoop ? ptsTmp[(i + 1) % count] : ptsTmp[i + 1];
+                    var chord = dist2D(ptsTmp[i], pNext);
                     var corr = du[i] * (weights[i] / Math.max(1e-3, chord));
                     nextDu.push(corr);
                     sumNext += corr;
@@ -2159,11 +2172,11 @@
             }
         }
 
-        var uBounds = [0];
+        var uBounds = [sU];
         var acc = 0;
         for (i = 0; i < count; i++) {
             acc += du[i];
-            uBounds.push(i === count - 1 ? 1.0 : acc);
+            uBounds.push(i === count - 1 ? (sU + rSpan) : (sU + acc * rSpan));
         }
         return uBounds;
     }
@@ -3193,7 +3206,249 @@
             return applyWobblyToPerimeterSegments(rectSegs, wobCfg, { dA: dA, dB: dB, dR: dR });
         }
 
-        // Safe superellipse inner cushion so text corners never touch cloud cusps or explosion valleys
+        return buildCloudOrExplosionSegments(
+            buildCloudOrExplosionBasePerimeter(textW, textH, cfg),
+            cfg,
+            0.0,
+            1.0
+        );
+    }
+
+    /**
+     * Applies Universal Wobbly waves to an open or cusp-started segment sequence (`segs`)
+     * while pinning the exact start endpoint (`segs[0].p0`), end endpoint (`segs[last].p1`),
+     * and every interior sharp cusp / valley / spike tip — WITHOUT rotating start index.
+     */
+    function applyWobblyToOpenChain(segs, cfg) {
+        if (!segs || segs.length === 0) return segs;
+        var rawW = (cfg.wobblyWaves !== undefined) ? cfg.wobblyWaves : cfg.dyamondWaves;
+        var rawD = (cfg.wobblyDepth !== undefined) ? cfg.wobblyDepth : cfg.dyamondDepth;
+        var rawR = (cfg.wobblyWidthRand !== undefined) ? cfg.wobblyWidthRand : cfg.dyamondWidthRand;
+
+        var waves     = Math.round(clampNum(rawW, 0, 36, 0));
+        var wDepthPct = clampNum(rawD, 0, 50, 0);
+        var wRandPct  = clampNum(rawR !== undefined ? rawR : 65, 0, 100, 65);
+
+        if (waves <= 0 || wDepthPct <= 0.01) {
+            return segs;
+        }
+
+        var nSegs = segs.length;
+        var breakIdx = [0];
+        var i;
+        for (i = 1; i < nSegs; i++) {
+            var dPrev = segUnitEndDir(segs[i - 1]);
+            var dCur  = segUnitStartDir(segs[i]);
+            if (dPrev[0] * dCur[0] + dPrev[1] * dCur[1] < 0.92) {
+                breakIdx.push(i);
+            }
+        }
+        breakIdx.push(nSegs);
+
+        var minX = 1e9, maxX = -1e9, minY = 1e9, maxY = -1e9;
+        for (i = 0; i < nSegs; i++) {
+            var bp = segs[i].p0;
+            if (bp[0] < minX) minX = bp[0];
+            if (bp[0] > maxX) maxX = bp[0];
+            if (bp[1] < minY) minY = bp[1];
+            if (bp[1] > maxY) maxY = bp[1];
+        }
+        var maxInward = Math.min(Math.max(12, 0.5 * (maxX - minX)), Math.max(12, 0.5 * (maxY - minY))) * 0.24;
+        var rFrac = wRandPct / 100.0;
+        var tension = 0.36;
+
+        var chains = [];
+        var totalLen = 0;
+        var c;
+        for (c = 0; c < breakIdx.length - 1; c++) {
+            var sI = breakIdx[c];
+            var eI = breakIdx[c + 1];
+            var sub = [];
+            var isCurved = false;
+            for (i = sI; i < eI; i++) {
+                var sg = segs[i];
+                sub.push({ p0: sg.p0, out0: sg.out0, in1: sg.in1, p1: sg.p1 });
+                if (sg.out0[0] * sg.out0[0] + sg.out0[1] * sg.out0[1] > 0.05 ||
+                    sg.in1[0] * sg.in1[0] + sg.in1[1] * sg.in1[1] > 0.05) {
+                    isCurved = true;
+                }
+            }
+            annotateArcLengths(sub);
+            var cLen = 0;
+            for (i = 0; i < sub.length; i++) cLen += sub[i].arcLen;
+            totalLen += cLen;
+            chains.push({ segs: sub, len: cLen, curved: isCurved });
+        }
+
+        var totalHalfWaves = Math.max(2, waves * 2);
+        var accLen = 0;
+        var prevQuota = 0;
+        var globalWaveIdx = 0;
+        var outSegs = [];
+
+        for (c = 0; c < chains.length; c++) {
+            var ch = chains[c];
+            accLen += ch.len;
+            var curQuota = Math.round((accLen / Math.max(1e-4, totalLen)) * totalHalfWaves);
+            var m = Math.max(0, curQuota - prevQuota);
+            prevQuota = curQuota;
+
+            if (m <= 0 || ch.len < 4.0) {
+                for (i = 0; i < ch.segs.length; i++) outSegs.push(ch.segs[i]);
+                continue;
+            }
+
+            var nInt = m + 1;
+            var wArr = [];
+            var wSum = 0;
+            var k;
+            for (k = 0; k < nInt; k++) {
+                var wk = 1.0;
+                if (rFrac > 1e-4) {
+                    var sd = Math.sin((globalWaveIdx + k + 1) * 17.371 + waves * 53.19 + c * 11.7) * 43758.5453;
+                    wk = Math.max(0.25, 1.0 + 0.72 * rFrac * ((sd - Math.floor(sd)) * 2.0 - 1.0));
+                }
+                wArr.push(wk);
+                wSum += wk;
+            }
+            var uNodes = [0];
+            var uAcc = 0;
+            for (k = 0; k < nInt; k++) {
+                uAcc += wArr[k] / (wSum || nInt);
+                uNodes.push(k === nInt - 1 ? 1.0 : uAcc);
+            }
+
+            var chainPts = [];
+            if (ch.curved) {
+                chainPts.push(ch.segs[0].p0);
+                for (k = 0; k < nInt; k++) {
+                    var uMidC = 0.5 * (uNodes[k] + uNodes[k + 1]);
+                    var evMid = evaluatePerimeterAtU(ch.segs, uMidC);
+                    var dispStart = (k > 0) ? (chainPts[chainPts.length - 1]._disp || 0) : 0;
+                    if (k < nInt - 1) {
+                        var evPeak = evaluatePerimeterAtU(ch.segs, uNodes[k + 1]);
+                        var spanEst = ch.len / nInt;
+                        var aModC = 1.0;
+                        if (rFrac > 1e-4) {
+                            var asC = Math.sin((globalWaveIdx + 1) * 41.317 + waves * 19.73 + 7.13) * 43758.5453;
+                            aModC = Math.max(0.25, 1.0 + 0.60 * rFrac * ((asC - Math.floor(asC)) * 2.0 - 1.0));
+                        }
+                        var sgnC = (globalWaveIdx % 2 === 0) ? 1.0 : -1.0;
+                        globalWaveIdx++;
+                        var magC = spanEst * (wDepthPct / 100.0) * aModC;
+                        if (sgnC < 0 && magC > maxInward) magC = maxInward;
+                        var nextDisp = sgnC * magC;
+
+                        var midDisp = 0.5 * (dispStart + nextDisp);
+                        chainPts.push([
+                            evMid.point[0] + evMid.normal[0] * midDisp,
+                            evMid.point[1] + evMid.normal[1] * midDisp
+                        ]);
+
+                        var pkPt = [
+                            evPeak.point[0] + evPeak.normal[0] * nextDisp,
+                            evPeak.point[1] + evPeak.normal[1] * nextDisp
+                        ];
+                        pkPt._disp = nextDisp;
+                        chainPts.push(pkPt);
+                    } else {
+                        var tailDisp = 0.5 * dispStart;
+                        chainPts.push([
+                            evMid.point[0] + evMid.normal[0] * tailDisp,
+                            evMid.point[1] + evMid.normal[1] * tailDisp
+                        ]);
+                    }
+                }
+                chainPts.push(ch.segs[ch.segs.length - 1].p1);
+            } else {
+                chainPts.push(ch.segs[0].p0);
+                for (k = 1; k <= m; k++) {
+                    var evN = evaluatePerimeterAtU(ch.segs, uNodes[k]);
+                    var evPrev = evaluatePerimeterAtU(ch.segs, uNodes[k - 1]);
+                    var evNext = evaluatePerimeterAtU(ch.segs, uNodes[k + 1]);
+                    var lSpan = 0.5 * (dist2D(evPrev.point, evN.point) + dist2D(evN.point, evNext.point));
+
+                    var aModS = 1.0;
+                    if (rFrac > 1e-4) {
+                        var asS = Math.sin((globalWaveIdx + 1) * 41.317 + waves * 19.73 + 7.13) * 43758.5453;
+                        aModS = Math.max(0.20, 1.0 + 0.65 * rFrac * ((asS - Math.floor(asS)) * 2.0 - 1.0));
+                    }
+                    var sgnS = (globalWaveIdx % 2 === 0) ? 1.0 : -1.0;
+                    globalWaveIdx++;
+
+                    var magS = lSpan * (wDepthPct / 100.0) * aModS;
+                    if (sgnS < 0 && magS > maxInward) magS = maxInward;
+                    var dispS = sgnS * magS;
+                    chainPts.push([
+                        evN.point[0] + evN.normal[0] * dispS,
+                        evN.point[1] + evN.normal[1] * dispS
+                    ]);
+                }
+                chainPts.push(ch.segs[ch.segs.length - 1].p1);
+            }
+
+            var nCP = chainPts.length;
+            var cIn  = [];
+            var cOut = [];
+            for (k = 0; k < nCP; k++) {
+                if (k === 0) {
+                    cIn.push([0, 0]);
+                    cOut.push([(chainPts[1][0] - chainPts[0][0]) * 0.30, (chainPts[1][1] - chainPts[0][1]) * 0.30]);
+                } else if (k === nCP - 1) {
+                    cIn.push([(chainPts[nCP - 2][0] - chainPts[nCP - 1][0]) * 0.30, (chainPts[nCP - 2][1] - chainPts[nCP - 1][1]) * 0.30]);
+                    cOut.push([0, 0]);
+                } else {
+                    var qPrev = chainPts[k - 1], qCur = chainPts[k], qNext = chainPts[k + 1];
+                    var vx1 = qCur[0] - qPrev[0], vy1 = qCur[1] - qPrev[1];
+                    var vl1 = Math.sqrt(vx1 * vx1 + vy1 * vy1) || 1;
+                    var vx2 = qNext[0] - qCur[0], vy2 = qNext[1] - qCur[1];
+                    var vl2 = Math.sqrt(vx2 * vx2 + vy2 * vy2) || 1;
+                    var qtx = (vx1 / vl1) * vl2 + (vx2 / vl2) * vl1;
+                    var qty = (vy1 / vl1) * vl2 + (vy2 / vl2) * vl1;
+                    var qtMag = Math.sqrt(qtx * qtx + qty * qty) || 1;
+                    qtx /= qtMag; qty /= qtMag;
+                    cIn.push([-qtx * vl1 * tension, -qty * vl1 * tension]);
+                    cOut.push([qtx * vl2 * tension,  qty * vl2 * tension]);
+                }
+            }
+
+            for (k = 0; k < nCP - 1; k++) {
+                if (dist2D(chainPts[k], chainPts[k + 1]) > 0.05) {
+                    outSegs.push({
+                        p0: [chainPts[k][0], chainPts[k][1]],
+                        out0: cOut[k],
+                        in1: cIn[k + 1],
+                        p1: [chainPts[k + 1][0], chainPts[k + 1][1]]
+                    });
+                }
+            }
+        }
+
+        return annotateArcLengths(outSegs);
+    }
+
+    /**
+     * Builds the smooth inner superellipse base perimeter for `cloud` and `explosion`
+     * with text-corner and inward-wobble clearance.
+     */
+    function buildCloudOrExplosionBasePerimeter(textW, textH, cfg) {
+        var rawWWaves = (cfg.wobblyWaves !== undefined) ? cfg.wobblyWaves : cfg.dyamondWaves;
+        var rawWDepth = (cfg.wobblyDepth !== undefined) ? cfg.wobblyDepth : cfg.dyamondDepth;
+        var effWaves  = Math.round(clampNum(rawWWaves, 0, 36, 0));
+        var effWDepth = clampNum(rawWDepth, 0, 50, 0);
+        var hasWobble = (effWaves > 0 && effWDepth > 0.01);
+
+        var w = Math.max(24, textW + (cfg.padX || 0) * 2);
+        var h = Math.max(24, textH + (cfg.padY || 0) * 2);
+        var wobblePad = 0;
+        if (hasWobble) {
+            var estPerim = 2.0 * (w + h);
+            var estHalfWave = estPerim / Math.max(4, effWaves * 2);
+            wobblePad = estHalfWave * (effWDepth / 100.0) * (cfg._isPreviewIcon ? 0.25 : 0.55);
+        }
+
+        var a = w / 2 + wobblePad;
+        var b = h / 2 + wobblePad;
         var halfTW = textW / 2 + 4;
         var halfTH = textH / 2 + 4;
         var nExp = 2.8;
@@ -3205,28 +3460,43 @@
             A *= scaleUp;
             B *= scaleUp;
         }
+        return buildSmoothBasePerimeter(A, B, nExp);
+    }
 
-        var baseSegs = buildSmoothBasePerimeter(A, B, nExp);
+    /**
+     * Divides the sub-arc `[startU, startU + remSpanU]` on `baseSegs` into `cloud` puffs
+     * or `explosion` spikes. When `remSpanU < 1`, `startU` (`uB`) and `startU + remSpanU` (`uA`)
+     * are the exact pre-calculated tail insert points so EVERY puff/spike is 100% uncut.
+     */
+    function buildCloudOrExplosionSegments(baseSegs, cfg, startU, remSpanU) {
+        var geom = cfg.geometry || "cloud";
+        var isFull = (remSpanU === undefined || remSpanU >= 0.999999);
+        var sU = (typeof startU === "number") ? (((startU % 1) + 1) % 1) : 0.0;
+        var rSpan = isFull ? 1.0 : Math.max(0.05, Math.min(1.0, remSpanU));
+        var segs = [];
 
         if (geom === "cloud") {
             var puffs = Math.max(6, Math.min(30, Math.round(cfg.cloudPuffs || 12)));
             var depthPct = clampNum(cfg.cloudDepth, 10, 120, 42);
             var puffRand = clampNum(cfg.cloudWidthRand, 0, 100, 0);
-            var uPuffs = computePerimeterIntervals(baseSegs, puffs, puffRand, 17.3);
+            var uPuffs = computePerimeterIntervals(baseSegs, puffs, puffRand, 17.3, sU, rSpan);
             var cusps = [];
             var ci;
-            for (ci = 0; ci < puffs; ci++) {
-                cusps.push(evaluatePerimeterAtU(baseSegs, uPuffs[ci]).point);
+            for (ci = 0; ci <= puffs; ci++) {
+                if (ci === puffs && isFull) {
+                    cusps.push(cusps[0]);
+                } else {
+                    cusps.push(evaluatePerimeterAtU(baseSegs, uPuffs[ci] % 1).point);
+                }
             }
             for (ci = 0; ci < puffs; ci++) {
                 var c0 = cusps[ci];
-                var c1 = cusps[(ci + 1) % puffs];
+                var c1 = cusps[ci + 1];
                 var ex = c1[0] - c0[0];
                 var ey = c1[1] - c0[1];
                 var puffWidth = Math.sqrt(ex * ex + ey * ey) || 1;
                 var nx = ey / puffWidth;
                 var ny = -ex / puffWidth;
-                // Puff depth is strictly relative to each particular puff's width
                 var lobeD = puffWidth * (depthPct / 100.0);
                 segs.push({
                     p0: c0,
@@ -3236,29 +3506,33 @@
                 });
             }
             annotateArcLengths(segs);
-            return applyWobblyToPerimeterSegments(segs, cfg, null);
+            return applyWobblyToOpenChain(segs, cfg);
         }
 
-        // Explosion / Shout (true arc-length division + optional width randomizer + width-relative spike depth)
+        // Explosion / Shout
         var spikes = Math.max(6, Math.min(40, Math.round(cfg.spikeCount || 18)));
         var sDepthPct = clampNum(cfg.spikeDepth, 15, 220, 85);
         var spikeRand = clampNum(cfg.spikeWidthRand, 0, 100, 0);
-        var uSpikes = computePerimeterIntervals(baseSegs, spikes, spikeRand, 53.7);
+        var uSpikes = computePerimeterIntervals(baseSegs, spikes, spikeRand, 53.7, sU, rSpan);
         var valleys = [];
         var si;
-        for (si = 0; si < spikes; si++) {
-            valleys.push(evaluatePerimeterAtU(baseSegs, uSpikes[si]).point);
+        for (si = 0; si <= spikes; si++) {
+            if (si === spikes && isFull) {
+                valleys.push(valleys[0]);
+            } else {
+                valleys.push(evaluatePerimeterAtU(baseSegs, uSpikes[si] % 1).point);
+            }
         }
         for (si = 0; si < spikes; si++) {
             var v0 = valleys[si];
-            var v1 = valleys[(si + 1) % spikes];
+            var v1 = valleys[si + 1];
             var sx = v1[0] - v0[0];
             var sy = v1[1] - v0[1];
             var spikeWidth = Math.sqrt(sx * sx + sy * sy) || 1;
             var cnx = sy / spikeWidth;
             var cny = -sx / spikeWidth;
 
-            var midU = (uSpikes[si] + uSpikes[si + 1]) * 0.5;
+            var midU = ((uSpikes[si] + uSpikes[si + 1]) * 0.5) % 1;
             var midPt = evaluatePerimeterAtU(baseSegs, midU).point;
             var rMag = Math.sqrt(midPt[0] * midPt[0] + midPt[1] * midPt[1]) || 1;
             var rnx = midPt[0] / rMag;
@@ -3270,7 +3544,6 @@
             onx /= oMag;
             ony /= oMag;
 
-            // Spike depth is strictly relative to each particular spike's base width
             var spikeH = spikeWidth * (sDepthPct / 100.0);
             var tipPt = [midPt[0] + onx * spikeH, midPt[1] + ony * spikeH];
 
@@ -3278,7 +3551,7 @@
             segs.push({ p0: tipPt, out0: [0, 0], in1: [0, 0], p1: v1 });
         }
         annotateArcLengths(segs);
-        return applyWobblyToPerimeterSegments(segs, cfg, null);
+        return applyWobblyToOpenChain(segs, cfg);
     }
 
     function segmentsToClosedShapeData(segs) {
@@ -3388,10 +3661,21 @@
 
     /**
      * Generates complete Balloon + Tail Shape specifications and exact outer bounds.
+     * For `cloud` and `explosion`, priority 1 is calculating the tail insert points on
+     * the base balloon perimeter, and priority 2 (only after) is dividing the remaining
+     * perimeter space into complete, uncut puffs or spikes.
      */
     function computeBalloonAndTail(textW, textH, cfg, lineSpecs, targetLocalPt) {
-        var segs = buildBalloonPerimeterSegments(textW, textH, cfg, lineSpecs);
+        var geom = cfg.geometry || "rounded";
+        if (geom === "dyamond" || geom === "diamond") geom = "wobbly";
+        var isTailFirstGeom = (geom === "cloud" || geom === "explosion");
+
+        var basePerimeterSegs = isTailFirstGeom ? buildCloudOrExplosionBasePerimeter(textW, textH, cfg) : null;
+        var segs = isTailFirstGeom ? null : buildBalloonPerimeterSegments(textW, textH, cfg, lineSpecs);
+        var refPerimeterSegs = isTailFirstGeom ? basePerimeterSegs : segs;
+
         var tailStyle = cfg.tailStyle || "none";
+        var isSplicedTail = (tailStyle === "triangle" || tailStyle === "curved_triangle" || tailStyle === "lightning");
         var useTargetMode = (cfg.tailPlacementMode === "target" && tailStyle !== "none" && targetLocalPt && targetLocalPt.length >= 2);
 
         var startPct = cfg.tailStart;
@@ -3416,13 +3700,13 @@
         var uMid = (uA + span * 0.5) % 1;
 
         if (useTargetMode) {
-            uMid = findClosestPerimeterU(segs, targetLocalPt);
+            uMid = findClosestPerimeterU(refPerimeterSegs, targetLocalPt);
             span = clampNum(cfg.tailStartWidth, 0.1, 4.0, 2.5) / 100.0;
             uA = ((uMid - span * 0.5) % 1 + 1) % 1;
             uB = (uMid + span * 0.5) % 1;
         }
 
-        if (tailStyle === "triangle" || tailStyle === "curved_triangle" || tailStyle === "lightning") {
+        if (isSplicedTail) {
             if (span < 0.001) {
                 span = 0.001;
                 uA = ((uMid - span * 0.5) % 1 + 1) % 1;
@@ -3434,7 +3718,21 @@
             }
         }
 
-        var midEval = evaluatePerimeterAtU(segs, uMid);
+        // Priority 2 for Cloud / Explosion: now that tail insert points (uA, uB, uMid) are fixed
+        // on the base perimeter, divide ONLY the remaining perimeter space into puffs or spikes.
+        var prebuiltOpenChain = null;
+        if (isTailFirstGeom) {
+            if (isSplicedTail) {
+                prebuiltOpenChain = buildCloudOrExplosionSegments(basePerimeterSegs, cfg, uB, 1.0 - span);
+                segs = prebuiltOpenChain;
+            } else if (tailStyle === "line" || tailStyle === "clouds") {
+                segs = buildCloudOrExplosionSegments(basePerimeterSegs, cfg, uMid, 1.0);
+            } else {
+                segs = buildCloudOrExplosionSegments(basePerimeterSegs, cfg, 0.0, 1.0);
+            }
+        }
+
+        var midEval = evaluatePerimeterAtU(refPerimeterSegs, uMid);
         var pMid = midEval.point;
         var nOut = midEval.normal;
 
@@ -3516,9 +3814,9 @@
                 });
             }
 
-        } else if (tailStyle === "triangle" || tailStyle === "curved_triangle" || tailStyle === "lightning") {
+        } else if (isSplicedTail) {
             // Splice open perimeter chain clockwise from uB around to uA
-            var chain = extractSubpathBetweenU(segs, uB, uA);
+            var chain = isTailFirstGeom ? prebuiltOpenChain : extractSubpathBetweenU(segs, uB, uA);
             if (!chain || chain.length === 0) {
                 bodyShape = segmentsToClosedShapeData(segs);
             } else {
@@ -3684,6 +3982,7 @@
 
         return {
             perimeterSegs: segs,
+            basePerimeterSegs: basePerimeterSegs,
             bodyShape: bodyShape,
             extraShapes: extraShapes,
             pMid: pMid,
@@ -4224,7 +4523,11 @@
      */
     function buildDynamicTargetShapeSnippet(geoResult, cfg, targetLink, role, cloudIdx) {
         if (!geoResult || !geoResult.perimeterSegs || !targetLink || !targetLink.guideName) return "";
-        var segs = geoResult.perimeterSegs;
+        var geom = cfg.geometry || "rounded";
+        if (geom === "dyamond" || geom === "diamond") geom = "wobbly";
+        var isTailFirstGeom = ((geom === "cloud" || geom === "explosion") && Boolean(geoResult.basePerimeterSegs));
+
+        var segs = isTailFirstGeom ? geoResult.basePerimeterSegs : geoResult.perimeterSegs;
         var fbTip = targetLink.fallbackTip || geoResult.pTip || [0, 90];
         var fbX = Math.round((fbTip[0] || 0) * 100) / 100;
         var fbY = Math.round((fbTip[1] || 0) * 100) / 100;
@@ -4341,54 +4644,174 @@
             );
         }
 
-        // role === "body" (spliced tail: triangle, curved_triangle, lightning)
+        // role === "body" (spliced tail) or "closed_body" (cusp-aligned closed Cloud/Explosion)
         var tailBuildSnippet = "";
-        if (tStyle === "triangle") {
-            tailBuildSnippet =
-                'V0.push(pTip); I0.push([0,0]); O0.push([0,0]);\n';
-        } else if (tStyle === "curved_triangle") {
-            tailBuildSnippet =
-                'var cMid = [(b1[0] + b2[0]) * 0.5, (b1[1] + b2[1]) * 0.5];\n' +
-                'var cvx = pTip[0] - cMid[0], cvy = pTip[1] - cMid[1];\n' +
-                'var cLen = Math.sqrt(cvx*cvx + cvy*cvy) || 1;\n' +
-                'var perpX = -cvy / cLen, perpY = cvx / cLen;\n' +
-                'var tbx = b2[0] - b1[0], tby = b2[1] - b1[1];\n' +
-                'var tbLen = Math.sqrt(tbx*tbx + tby*tby) || 1;\n' +
-                'var baseHW = Math.max(1.0, tbLen * 0.5);\n' +
-                'var bnx = tby / tbLen, bny = -tbx / tbLen;\n' +
-                'var dotNP = bnx * perpX + bny * perpY;\n' +
-                'var bowSign = (Math.abs(dotNP) > 0.05) ? (dotNP >= 0 ? 1 : -1) : 1;\n' +
-                'var bxD = perpX * bowSign, byD = perpY * bowSign;\n' +
-                'var bowD = cLen * 0.44 * ' + curveFrac + ';\n' +
-                'var sc1 = [cMid[0] + cvx * 0.30 + bxD * (bowD * 0.95), cMid[1] + cvy * 0.30 + byD * (bowD * 0.95)];\n' +
-                'var sc2 = [cMid[0] + cvx * 0.68 + bxD * (bowD * 0.72), cMid[1] + cvy * 0.68 + byD * (bowD * 0.72)];\n' +
-                'var d1x = sc2[0] - cMid[0], d1y = sc2[1] - cMid[1], d1L = Math.sqrt(d1x*d1x + d1y*d1y) || 1;\n' +
-                'var n1x = d1y / d1L, n1y = -d1x / d1L;\n' +
-                'var d2x = pTip[0] - sc1[0], d2y = pTip[1] - sc1[1], d2L = Math.sqrt(d2x*d2x + d2y*d2y) || 1;\n' +
-                'var n2x = d2y / d2L, n2y = -d2x / d2L;\n' +
-                'var cw1 = baseHW * 0.58, cw2 = baseHW * 0.22;\n' +
-                'O0[V0.length - 1] = [sc1[0] + n1x * cw1 - b1[0], sc1[1] + n1y * cw1 - b1[1]];\n' +
-                'V0.push(pTip);\n' +
-                'I0.push([sc2[0] + n2x * cw2 - pTip[0], sc2[1] + n2y * cw2 - pTip[1]]);\n' +
-                'O0.push([sc2[0] - n2x * cw2 - pTip[0], sc2[1] - n2y * cw2 - pTip[1]]);\n' +
-                'I0[0] = [sc1[0] - n1x * cw1 - b2[0], sc1[1] - n1y * cw1 - b2[1]];\n';
-        } else {
-            tailBuildSnippet =
-                'var midB = [(b1[0] + b2[0]) * 0.5, (b1[1] + b2[1]) * 0.5];\n' +
-                'var vxB = pTip[0] - midB[0], vyB = pTip[1] - midB[1];\n' +
-                'var bxB = b1[0] - b2[0], byB = b1[1] - b2[1];\n' +
-                'var bDist = Math.sqrt(bxB*bxB + byB*byB) || 1;\n' +
-                'var pxB = bxB / bDist, pyB = byB / bDist;\n' +
-                'var w0B = Math.max(1.5, bDist * 0.5), jog = Math.max(9, tLen * 0.14);\n' +
-                'var h1B = w0B * 0.56, h2B = w0B * 0.36;\n' +
-                'var bPts = [\n' +
-                '    [midB[0] + vxB * 0.48 + pxB * (jog + h1B), midB[1] + vyB * 0.48 + pyB * (jog + h1B)],\n' +
-                '    [midB[0] + vxB * 0.41 + pxB * (-0.35 * jog + h2B), midB[1] + vyB * 0.41 + pyB * (-0.35 * jog + h2B)],\n' +
-                '    pTip,\n' +
-                '    [midB[0] + vxB * 0.35 + pxB * (-0.35 * jog - h2B), midB[1] + vyB * 0.35 + pyB * (-0.35 * jog - h2B)],\n' +
-                '    [midB[0] + vxB * 0.42 + pxB * (jog - h1B), midB[1] + vyB * 0.42 + pyB * (jog - h1B)]\n' +
-                '];\n' +
-                'for (var bi = 0; bi < 5; bi++) { V0.push(bPts[bi]); I0.push([0,0]); O0.push([0,0]); }\n';
+        if (role === "body") {
+            if (tStyle === "triangle") {
+                tailBuildSnippet =
+                    'V0.push(pTip); I0.push([0,0]); O0.push([0,0]);\n';
+            } else if (tStyle === "curved_triangle") {
+                tailBuildSnippet =
+                    'var cMid = [(b1[0] + b2[0]) * 0.5, (b1[1] + b2[1]) * 0.5];\n' +
+                    'var cvx = pTip[0] - cMid[0], cvy = pTip[1] - cMid[1];\n' +
+                    'var cLen = Math.sqrt(cvx*cvx + cvy*cvy) || 1;\n' +
+                    'var perpX = -cvy / cLen, perpY = cvx / cLen;\n' +
+                    'var tbx = b2[0] - b1[0], tby = b2[1] - b1[1];\n' +
+                    'var tbLen = Math.sqrt(tbx*tbx + tby*tby) || 1;\n' +
+                    'var baseHW = Math.max(1.0, tbLen * 0.5);\n' +
+                    'var bnx = tby / tbLen, bny = -tbx / tbLen;\n' +
+                    'var dotNP = bnx * perpX + bny * perpY;\n' +
+                    'var bowSign = (Math.abs(dotNP) > 0.05) ? (dotNP >= 0 ? 1 : -1) : 1;\n' +
+                    'var bxD = perpX * bowSign, byD = perpY * bowSign;\n' +
+                    'var bowD = cLen * 0.44 * ' + curveFrac + ';\n' +
+                    'var sc1 = [cMid[0] + cvx * 0.30 + bxD * (bowD * 0.95), cMid[1] + cvy * 0.30 + byD * (bowD * 0.95)];\n' +
+                    'var sc2 = [cMid[0] + cvx * 0.68 + bxD * (bowD * 0.72), cMid[1] + cvy * 0.68 + byD * (bowD * 0.72)];\n' +
+                    'var d1x = sc2[0] - cMid[0], d1y = sc2[1] - cMid[1], d1L = Math.sqrt(d1x*d1x + d1y*d1y) || 1;\n' +
+                    'var n1x = d1y / d1L, n1y = -d1x / d1L;\n' +
+                    'var d2x = pTip[0] - sc1[0], d2y = pTip[1] - sc1[1], d2L = Math.sqrt(d2x*d2x + d2y*d2y) || 1;\n' +
+                    'var n2x = d2y / d2L, n2y = -d2x / d2L;\n' +
+                    'var cw1 = baseHW * 0.58, cw2 = baseHW * 0.22;\n' +
+                    'O0[V0.length - 1] = [sc1[0] + n1x * cw1 - b1[0], sc1[1] + n1y * cw1 - b1[1]];\n' +
+                    'V0.push(pTip);\n' +
+                    'I0.push([sc2[0] + n2x * cw2 - pTip[0], sc2[1] + n2y * cw2 - pTip[1]]);\n' +
+                    'O0.push([sc2[0] - n2x * cw2 - pTip[0], sc2[1] - n2y * cw2 - pTip[1]]);\n' +
+                    'I0[0] = [sc1[0] - n1x * cw1 - b2[0], sc1[1] - n1y * cw1 - b2[1]];\n';
+            } else {
+                tailBuildSnippet =
+                    'var midB = [(b1[0] + b2[0]) * 0.5, (b1[1] + b2[1]) * 0.5];\n' +
+                    'var vxB = pTip[0] - midB[0], vyB = pTip[1] - midB[1];\n' +
+                    'var bxB = b1[0] - b2[0], byB = b1[1] - b2[1];\n' +
+                    'var bDist = Math.sqrt(bxB*bxB + byB*byB) || 1;\n' +
+                    'var pxB = bxB / bDist, pyB = byB / bDist;\n' +
+                    'var w0B = Math.max(1.5, bDist * 0.5), jog = Math.max(9, tLen * 0.14);\n' +
+                    'var h1B = w0B * 0.56, h2B = w0B * 0.36;\n' +
+                    'var bPts = [\n' +
+                    '    [midB[0] + vxB * 0.48 + pxB * (jog + h1B), midB[1] + vyB * 0.48 + pyB * (jog + h1B)],\n' +
+                    '    [midB[0] + vxB * 0.41 + pxB * (-0.35 * jog + h2B), midB[1] + vyB * 0.41 + pyB * (-0.35 * jog + h2B)],\n' +
+                    '    pTip,\n' +
+                    '    [midB[0] + vxB * 0.35 + pxB * (-0.35 * jog - h2B), midB[1] + vyB * 0.35 + pyB * (-0.35 * jog - h2B)],\n' +
+                    '    [midB[0] + vxB * 0.42 + pxB * (jog - h1B), midB[1] + vyB * 0.42 + pyB * (jog - h1B)]\n' +
+                    '];\n' +
+                    'for (var bi = 0; bi < 5; bi++) { V0.push(bPts[bi]); I0.push([0,0]); O0.push([0,0]); }\n';
+            }
+        }
+
+        // Tail-First Dynamic Solver for Cloud & Explosion:
+        //   1. Computes tail insert points (uA, uB) on smooth base perimeter S first.
+        //   2. Divides ONLY the remaining space [startU, startU + remSpan] into uncut puffs or spikes.
+        if (isTailFirstGeom) {
+            var countItems = (geom === "cloud")
+                ? Math.max(6, Math.min(30, Math.round(cfg.cloudPuffs || 12)))
+                : Math.max(6, Math.min(40, Math.round(cfg.spikeCount || 18)));
+            var randVal = (geom === "cloud")
+                ? clampNum(cfg.cloudWidthRand, 0, 100, 0)
+                : clampNum(cfg.spikeWidthRand, 0, 100, 0);
+            var saltVal = (geom === "cloud") ? 17.3 : 53.7;
+            var wArr = computeIntervalWeights(countItems, randVal, saltVal);
+            var wParts = [];
+            for (var wi = 0; wi < wArr.length; wi++) {
+                wParts.push(String(Math.round(wArr[wi] * 10000) / 10000));
+            }
+            var isSplicedRole = (role === "body");
+            var itemBuildExpr = "";
+            if (geom === "cloud") {
+                var cDepthFrac = Math.round((clampNum(cfg.cloudDepth, 10, 120, 42) / 100.0) * 10000) / 10000;
+                itemBuildExpr =
+                    'var pO = [], pI = [], ci;\n' +
+                    'for (ci = 0; ci < N; ci++) {\n' +
+                    '    var c0 = pts[ci], c1 = pts[ci + 1];\n' +
+                    '    var ex = c1[0] - c0[0], ey = c1[1] - c0[1];\n' +
+                    '    var pw = Math.sqrt(ex*ex + ey*ey) || 1;\n' +
+                    '    var nx = ey / pw, ny = -ex / pw;\n' +
+                    '    var lD = pw * ' + cDepthFrac + ' * 1.33;\n' +
+                    '    pO.push([ex * 0.18 + nx * lD, ey * 0.18 + ny * lD]);\n' +
+                    '    pI.push([-ex * 0.18 + nx * lD, -ey * 0.18 + ny * lD]);\n' +
+                    '}\n' +
+                    (isSplicedRole
+                        ? (
+                            'var b2 = pts[0], b1 = pts[N];\n' +
+                            'V0.push(b2); I0.push([0,0]); O0.push(pO[0]);\n' +
+                            'for (ci = 1; ci < N; ci++) {\n' +
+                            '    V0.push(pts[ci]); I0.push(pI[ci - 1]); O0.push(pO[ci]);\n' +
+                            '}\n' +
+                            'V0.push(b1); I0.push(pI[N - 1]); O0.push([0,0]);\n' +
+                            tailBuildSnippet
+                        )
+                        : (
+                            'for (ci = 0; ci < N; ci++) {\n' +
+                            '    V0.push(pts[ci]); I0.push(pI[(ci - 1 + N) % N]); O0.push(pO[ci]);\n' +
+                            '}\n'
+                        )
+                    );
+            } else {
+                var sDepthFrac = Math.round((clampNum(cfg.spikeDepth, 15, 220, 85) / 100.0) * 10000) / 10000;
+                itemBuildExpr =
+                    'var sj;\n' +
+                    'for (sj = 0; sj < N; sj++) {\n' +
+                    '    var v0 = pts[sj], v1 = pts[sj + 1];\n' +
+                    '    var sx = v1[0] - v0[0], sy = v1[1] - v0[1];\n' +
+                    '    var sw = Math.sqrt(sx*sx + sy*sy) || 1;\n' +
+                    '    var cnx = sy / sw, cny = -sx / sw;\n' +
+                    '    var mU = ((uBnd[sj] + uBnd[sj + 1]) * 0.5) % 1;\n' +
+                    '    var mP = evalU(mU).pt;\n' +
+                    '    var rM = Math.sqrt(mP[0]*mP[0] + mP[1]*mP[1]) || 1;\n' +
+                    '    var onx = cnx * 0.65 + (mP[0] / rM) * 0.35;\n' +
+                    '    var ony = cny * 0.65 + (mP[1] / rM) * 0.35;\n' +
+                    '    var oM = Math.sqrt(onx*onx + ony*ony) || 1;\n' +
+                    '    var sH = sw * ' + sDepthFrac + ';\n' +
+                    '    var tp = [mP[0] + (onx / oM) * sH, mP[1] + (ony / oM) * sH];\n' +
+                    '    V0.push(v0); I0.push([0,0]); O0.push([0,0]);\n' +
+                    '    V0.push(tp); I0.push([0,0]); O0.push([0,0]);\n' +
+                    '}\n' +
+                    (isSplicedRole
+                        ? (
+                            'var b2 = pts[0], b1 = pts[N];\n' +
+                            'V0.push(b1); I0.push([0,0]); O0.push([0,0]);\n' +
+                            tailBuildSnippet
+                        )
+                        : ''
+                    );
+            }
+
+            return (
+                solverHeader +
+                'var W = [' + wParts.join(",") + '], N = W.length;\n' +
+                'var spW = ' + (isSplicedRole ? ('clamp(' + widFrac + ', 0.001, 0.04)') : '0.0') + ';\n' +
+                'var sU = ' + (isSplicedRole ? '((bestU + spW * 0.5) % 1)' : 'bestU') + ';\n' +
+                'var rSpan = 1.0 - spW;\n' +
+                'var sumW = 0, ii, it;\n' +
+                'for (ii = 0; ii < N; ii++) sumW += W[ii];\n' +
+                'var du = [];\n' +
+                'for (ii = 0; ii < N; ii++) du.push(W[ii] / (sumW || N));\n' +
+                'var uBnd = [], pts = [];\n' +
+                'for (it = 0; it < 3; it++) {\n' +
+                '    uBnd = [sU]; var accT = 0;\n' +
+                '    for (ii = 0; ii < N; ii++) { accT += du[ii]; uBnd.push(ii === N - 1 ? (sU + rSpan) : (sU + accT * rSpan)); }\n' +
+                '    pts = [];\n' +
+                '    for (ii = 0; ii <= N; ii++) {\n' +
+                '        if (ii === N && spW <= 1e-6) pts.push(pts[0]);\n' +
+                '        else pts.push(evalU(uBnd[ii] % 1).pt);\n' +
+                '    }\n' +
+                '    var nxtDu = [], sNxt = 0;\n' +
+                '    for (ii = 0; ii < N; ii++) {\n' +
+                '        var dxC = pts[ii + 1][0] - pts[ii][0], dyC = pts[ii + 1][1] - pts[ii][1];\n' +
+                '        var chd = Math.sqrt(dxC*dxC + dyC*dyC) || 1e-3;\n' +
+                '        var cr = du[ii] * (W[ii] / chd);\n' +
+                '        nxtDu.push(cr); sNxt += cr;\n' +
+                '    }\n' +
+                '    if (sNxt > 1e-6) { for (ii = 0; ii < N; ii++) du[ii] = nxtDu[ii] / sNxt; }\n' +
+                '}\n' +
+                'uBnd = [sU]; var accF = 0;\n' +
+                'for (ii = 0; ii < N; ii++) { accF += du[ii]; uBnd.push(ii === N - 1 ? (sU + rSpan) : (sU + accF * rSpan)); }\n' +
+                'pts = [];\n' +
+                'for (ii = 0; ii <= N; ii++) {\n' +
+                '    if (ii === N && spW <= 1e-6) pts.push(pts[0]);\n' +
+                '    else pts.push(evalU(uBnd[ii] % 1).pt);\n' +
+                '}\n' +
+                'var V0 = [], I0 = [], O0 = [];\n' +
+                itemBuildExpr +
+                'var IS_CLOSED = true;\n'
+            );
         }
 
         return (
@@ -4465,6 +4888,7 @@
             : (rootContents.properties ? rootContents.properties.length : 0);
 
         var tStyle = cfg.tailStyle;
+        var isTailFirstBody = ((cfg.geometry === "cloud" || cfg.geometry === "explosion") && Boolean(geoResult.basePerimeterSegs));
         for (var gi = 1; gi <= numGroups; gi++) {
             var grp = rootContents.property(gi);
             if (!grp) continue;
@@ -4478,6 +4902,8 @@
             var snippet = "";
             if (grp.name === "Balloon Body" && (tStyle === "triangle" || tStyle === "curved_triangle" || tStyle === "lightning")) {
                 snippet = buildDynamicTargetShapeSnippet(geoResult, cfg, targetLink, "body", 0);
+            } else if (grp.name === "Balloon Body" && isTailFirstBody && (tStyle === "line" || tStyle === "clouds")) {
+                snippet = buildDynamicTargetShapeSnippet(geoResult, cfg, targetLink, "closed_body", 0);
             } else if (grp.name === "Tail Line" && tStyle === "line") {
                 snippet = buildDynamicTargetShapeSnippet(geoResult, cfg, targetLink, "line", 0);
             } else if (grp.name.indexOf("Thought Cloud ") === 0 && tStyle === "clouds") {
@@ -4612,10 +5038,14 @@
         try { roviLayer.moveAfter(balloonLayer); } catch (eRMv) {}
 
         var isDynTarget = Boolean(targetLink && targetLink.guideName && cfg.tailPlacementMode === "target" && cfg.tailStyle && cfg.tailStyle !== "none");
+        var isTailFirstRovi = ((cfg.geometry === "cloud" || cfg.geometry === "explosion") && Boolean(geoResult.basePerimeterSegs));
         var dynBodyPathExpr = "";
         if (isDynTarget && (cfg.tailStyle === "triangle" || cfg.tailStyle === "curved_triangle" || cfg.tailStyle === "lightning")) {
             var bSnip = buildDynamicTargetShapeSnippet(geoResult, cfg, targetLink, "body", 0);
             if (bSnip) dynBodyPathExpr = bSnip + "createPath(V0, I0, O0, IS_CLOSED);";
+        } else if (isDynTarget && isTailFirstRovi && (cfg.tailStyle === "line" || cfg.tailStyle === "clouds")) {
+            var cbSnip = buildDynamicTargetShapeSnippet(geoResult, cfg, targetLink, "closed_body", 0);
+            if (cbSnip) dynBodyPathExpr = cbSnip + "createPath(V0, I0, O0, IS_CLOSED);";
         }
 
         // 1. Add Interior Clipping Masks (ADBE Mask Parade) so stroke expands strictly inward
@@ -4965,8 +5395,11 @@
                         if (srcShape) {
                             var bloatDynSnip = "";
                             if (targetLink) {
+                                var isTailFirstBloat = ((cfg.geometry === "cloud" || cfg.geometry === "explosion") && Boolean(geoResult.basePerimeterSegs));
                                 if (grp.name === "Balloon Body" && (cfg.tailStyle === "triangle" || cfg.tailStyle === "curved_triangle" || cfg.tailStyle === "lightning")) {
                                     bloatDynSnip = buildDynamicTargetShapeSnippet(geoResult, cfg, targetLink, "body", 0);
+                                } else if (grp.name === "Balloon Body" && isTailFirstBloat && (cfg.tailStyle === "line" || cfg.tailStyle === "clouds")) {
+                                    bloatDynSnip = buildDynamicTargetShapeSnippet(geoResult, cfg, targetLink, "closed_body", 0);
                                 } else if (grp.name === "Tail Line" && cfg.tailStyle === "line") {
                                     bloatDynSnip = buildDynamicTargetShapeSnippet(geoResult, cfg, targetLink, "line", 0);
                                 } else if (grp.name.indexOf("Thought Cloud ") === 0 && cfg.tailStyle === "clouds") {
@@ -6503,6 +6936,69 @@
             refreshPreviewCanvas();
         }
 
+        function buildPreviewOutlineData(baseW, baseH, cfg) {
+            var pCfg = {
+                geometry: cfg.geometry,
+                padX: cfg.geometry === "bubble_lines" ? 9 : (cfg.geometry === "electric" ? 10 : 12),
+                padY: cfg.geometry === "bubble_lines" ? 5 : 8,
+                cornerRadius: Math.min(cfg.geometry === "bubble_lines" ? 6 : 12, cfg.cornerRadius * 0.4),
+                electricPoint: cfg.electricPoint,
+                electricSkew: cfg.electricSkew,
+                cloudPuffs: cfg.cloudPuffs,
+                cloudDepth: cfg.cloudDepth,
+                cloudWidthRand: cfg.cloudWidthRand,
+                spikeCount: Math.min(18, cfg.spikeCount),
+                spikeDepth: Math.min(95, cfg.spikeDepth),
+                spikeWidthRand: cfg.spikeWidthRand,
+                wobblyWaves: cfg.wobblyWaves,
+                wobblyDepth: cfg.wobblyDepth,
+                wobblyWidthRand: cfg.wobblyWidthRand,
+                _isPreviewIcon: true
+            };
+
+            var off = (cfg.tailOffset || 0) / 360.0;
+            var u1 = (((cfg.tailStart / 100.0) + off) % 1 + 1) % 1;
+            var u2 = (((cfg.tailEnd / 100.0) + off) % 1 + 1) % 1;
+            var sp = ((u2 - u1) % 1 + 1) % 1;
+            if (sp > 0.5) { var tmpU = u1; u1 = u2; u2 = tmpU; sp = 1 - sp; }
+            if (sp < 0.005) sp = 0.005;
+            var uMid = (u1 + sp * 0.5) % 1;
+
+            var isTF = (cfg.geometry === "cloud" || cfg.geometry === "explosion");
+            var isSpl = (cfg.tailStyle === "triangle" || cfg.tailStyle === "curved_triangle" || cfg.tailStyle === "lightning");
+            if (isTF && cfg.tailStyle !== "none") {
+                var pBase = buildCloudOrExplosionBasePerimeter(baseW, baseH, pCfg);
+                var pChain = isSpl
+                    ? buildCloudOrExplosionSegments(pBase, pCfg, u2, 1.0 - sp)
+                    : buildCloudOrExplosionSegments(pBase, pCfg, uMid, 1.0);
+                var arcPtsLocal = [];
+                var k;
+                for (k = 0; k <= 12; k++) {
+                    arcPtsLocal.push(evaluatePerimeterAtU(pBase, u1 + sp * (k / 12)).point);
+                }
+                var mEvBase = evaluatePerimeterAtU(pBase, uMid);
+                return {
+                    outlineSegs: pChain,
+                    isOpenWithGap: isSpl,
+                    arcPts: arcPtsLocal,
+                    midEval: mEvBase
+                };
+            }
+
+            var fullSegs = buildBalloonPerimeterSegments(baseW, baseH, pCfg);
+            var arcStd = [];
+            var j;
+            for (j = 0; j <= 14; j++) {
+                arcStd.push(evaluatePerimeterAtU(fullSegs, u1 + sp * (j / 14)).point);
+            }
+            return {
+                outlineSegs: fullSegs,
+                isOpenWithGap: false,
+                arcPts: arcStd,
+                midEval: evaluatePerimeterAtU(fullSegs, uMid)
+            };
+        }
+
         // Custom-drawn Trim-Paths Perimeter Preview (ScriptUI Graphics + Web DOM SVG)
         previewWidget.onDraw = function () {
             try {
@@ -6516,24 +7012,8 @@
                 g.fillPath(bgBrush);
 
                 var baseW = Math.max(64, Math.min(116, w * (cfg.geometry === "electric" ? 0.44 : 0.54)));
-                var previewSegs = buildBalloonPerimeterSegments(baseW, 28, {
-                    geometry: cfg.geometry,
-                    padX: cfg.geometry === "bubble_lines" ? 8 : (cfg.geometry === "electric" ? 10 : 12),
-                    padY: cfg.geometry === "bubble_lines" ? 5 : 8,
-                    cornerRadius: Math.min(cfg.geometry === "bubble_lines" ? 6 : 12, cfg.cornerRadius * 0.4),
-                    electricPoint: cfg.electricPoint,
-                    electricSkew: cfg.electricSkew,
-                    cloudPuffs: cfg.cloudPuffs,
-                    cloudDepth: cfg.cloudDepth,
-                    cloudWidthRand: cfg.cloudWidthRand,
-                    spikeCount: Math.min(18, cfg.spikeCount),
-                    spikeDepth: Math.min(95, cfg.spikeDepth),
-                    spikeWidthRand: cfg.spikeWidthRand,
-                    wobblyWaves: cfg.wobblyWaves,
-                    wobblyDepth: cfg.wobblyDepth,
-                    wobblyWidthRand: cfg.wobblyWidthRand,
-                    _isPreviewIcon: true
-                });
+                var pData = buildPreviewOutlineData(baseW, 28, cfg);
+                var previewSegs = pData.outlineSegs;
 
                 var cx = w * 0.5;
                 var cy = h * 0.47;
@@ -6544,26 +7024,22 @@
                     if (s === 0) g.moveTo(cx + pt[0], cy + pt[1]);
                     else g.lineTo(cx + pt[0], cy + pt[1]);
                 }
+                if (pData.isOpenWithGap && previewSegs.length > 0) {
+                    g.lineTo(cx + previewSegs[0].p0[0], cy + previewSegs[0].p0[1]);
+                }
                 g.strokePath(penDim);
 
                 if (cfg.tailStyle !== "none") {
-                    var off = (cfg.tailOffset || 0) / 360.0;
-                    var u1 = (((cfg.tailStart / 100.0) + off) % 1 + 1) % 1;
-                    var u2 = (((cfg.tailEnd / 100.0) + off) % 1 + 1) % 1;
-                    var sp = ((u2 - u1) % 1 + 1) % 1;
-                    if (sp > 0.5) { var t = u1; u1 = u2; u2 = t; sp = 1 - sp; }
-                    if (sp < 0.005) sp = 0.005;
-
                     var penHi = g.newPen(g.PenType.SOLID_COLOR, [0.15, 0.82, 0.98, 1], 3);
                     g.newPath();
-                    for (var k = 0; k <= 12; k++) {
-                        var pArc = evaluatePerimeterAtU(previewSegs, u1 + sp * (k / 12)).point;
+                    for (var k = 0; k < pData.arcPts.length; k++) {
+                        var pArc = pData.arcPts[k];
                         if (k === 0) g.moveTo(cx + pArc[0], cy + pArc[1]);
                         else g.lineTo(cx + pArc[0], cy + pArc[1]);
                     }
                     g.strokePath(penHi);
 
-                    var mEv = evaluatePerimeterAtU(previewSegs, u1 + sp * 0.5);
+                    var mEv = pData.midEval;
                     var outA = Math.atan2(mEv.normal[1], mEv.normal[0]) + (cfg.tailAngle * Math.PI / 180);
                     var tipP = [cx + mEv.point[0] + 15 * Math.cos(outA), cy + mEv.point[1] + 15 * Math.sin(outA)];
                     var penTip = g.newPen(g.PenType.SOLID_COLOR, [1.0, 0.72, 0.15, 1], 2);
@@ -6613,47 +7089,24 @@
                     var cx = vbW * 0.5;
                     var cy = 35;
 
-                    var segs = buildBalloonPerimeterSegments(cfg.geometry === "electric" ? 86 : 104, 26, {
-                        geometry: cfg.geometry,
-                        padX: cfg.geometry === "bubble_lines" ? 9 : (cfg.geometry === "electric" ? 10 : 14),
-                        padY: cfg.geometry === "bubble_lines" ? 5 : 8,
-                        cornerRadius: Math.min(cfg.geometry === "bubble_lines" ? 6 : 12, cfg.cornerRadius * 0.4),
-                        electricPoint: cfg.electricPoint,
-                        electricSkew: cfg.electricSkew,
-                        cloudPuffs: cfg.cloudPuffs,
-                        cloudDepth: cfg.cloudDepth,
-                        cloudWidthRand: cfg.cloudWidthRand,
-                        spikeCount: Math.min(18, cfg.spikeCount),
-                        spikeDepth: Math.min(95, cfg.spikeDepth),
-                        spikeWidthRand: cfg.spikeWidthRand,
-                        wobblyWaves: cfg.wobblyWaves,
-                        wobblyDepth: cfg.wobblyDepth,
-                        wobblyWidthRand: cfg.wobblyWidthRand,
-                        _isPreviewIcon: true
-                    });
+                    var pDataSvg = buildPreviewOutlineData(cfg.geometry === "electric" ? 86 : 104, 26, cfg);
+                    var segs = pDataSvg.outlineSegs;
 
                     var ptsAll = [];
                     var s;
-                    for (s = 0; s <= 64; s++) {
-                        var p = evaluatePerimeterAtU(segs, s / 64).point;
+                    for (s = 0; s <= 72; s++) {
+                        var p = evaluatePerimeterAtU(segs, s / 72).point;
                         ptsAll.push((cx + p[0]).toFixed(1) + "," + (cy + p[1]).toFixed(1));
                     }
 
                     var hiSvg = "";
                     if (cfg.tailStyle !== "none") {
-                        var off = (cfg.tailOffset || 0) / 360.0;
-                        var u1 = (((cfg.tailStart / 100.0) + off) % 1 + 1) % 1;
-                        var u2 = (((cfg.tailEnd / 100.0) + off) % 1 + 1) % 1;
-                        var sp = ((u2 - u1) % 1 + 1) % 1;
-                        if (sp > 0.5) { var tmp = u1; u1 = u2; u2 = tmp; sp = 1 - sp; }
-                        if (sp < 0.005) sp = 0.005;
-
                         var arcPts = [];
-                        for (s = 0; s <= 14; s++) {
-                            var pa = evaluatePerimeterAtU(segs, u1 + sp * (s / 14)).point;
+                        for (s = 0; s < pDataSvg.arcPts.length; s++) {
+                            var pa = pDataSvg.arcPts[s];
                             arcPts.push((cx + pa[0]).toFixed(1) + "," + (cy + pa[1]).toFixed(1));
                         }
-                        var mEv = evaluatePerimeterAtU(segs, u1 + sp * 0.5);
+                        var mEv = pDataSvg.midEval;
                         var outA = Math.atan2(mEv.point[1], mEv.point[0]) + (cfg.tailAngle * Math.PI / 180);
                         var txNum = cx + mEv.point[0] + 15 * Math.cos(outA);
                         var tyNum = cy + mEv.point[1] + 15 * Math.sin(outA);
