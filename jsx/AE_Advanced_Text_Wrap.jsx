@@ -1,6 +1,6 @@
 // Co-authored & architected with Google DeepMind Antigravity.
 // =============================================================================
-// ADOBE AFTER EFFECTS EXTENDSCRIPT & SCRIPTUI PANEL: AE ADVANCED TEXT WRAP v1.3.0
+// ADOBE AFTER EFFECTS EXTENDSCRIPT & SCRIPTUI PANEL: AE ADVANCED TEXT WRAP v1.6.0
 // =============================================================================
 //
 // PURPOSE:
@@ -18,6 +18,7 @@
 //      - Optical Pyramid (Centered / Stanza card with expanding line lengths)
 //      - Reverse Pyramid (Top-heavy headline style tapering downwards)
 //      - Compact Block (Maximum density within Max Width)
+//      - Optical Ellipse (Curved lens contour / oval paragraph with forced center justification)
 //   3. Multilingual Algorithmic Hyphenation:
 //      - Built-in syllable segmentation for English, Spanish, French, German, Italian, and Universal.
 //      - Configurable minimum word length, minimum prefix, and minimum suffix.
@@ -62,7 +63,7 @@
     "use strict";
 
     var SCRIPT_TITLE   = "AE Advanced Text Wrap";
-    var SCRIPT_VERSION = "v1.5.2";
+    var SCRIPT_VERSION = "v1.6.0";
     var GITHUB_URL     = "https://github.com/work2survive/AE-advanced-text-wrap";
     var README_URL     = "https://github.com/work2survive/AE-advanced-text-wrap/blob/main/README.md";
 
@@ -794,6 +795,143 @@
         return wrapGreedy(paraText, maxW, desiredW, lang, useHyphen, minWordLen, measurer, spaceW);
     }
 
+    /**
+     * Method 6: Optical Ellipse (Curved Lens Contour - Forced Center Justification)
+     * Distributes words across lines following a symmetrical elliptical contour:
+     * narrow top -> expanding middle -> tapering bottom.
+     */
+    function wrapOpticalEllipse(paraText, maxW, desiredW, lang, useHyphen, minWordLen, measurer, spaceW) {
+        if (!desiredW || desiredW >= maxW) desiredW = Math.max(50, maxW - 20);
+        var tokens = tokenizeParagraph(paraText, lang, useHyphen, minWordLen, measurer);
+        if (tokens.length === 0) return [""];
+        if (tokens.length <= 3) {
+            var shortWords = [];
+            for (var si = 0; si < tokens.length; si++) shortWords.push(tokens[si].text);
+            return [shortWords.join(" ")];
+        }
+
+        var totalAdvance = 0;
+        for (var ti = 0; ti < tokens.length; ti++) {
+            totalAdvance += tokens[ti].width + (ti > 0 ? spaceW : 0);
+        }
+
+        var maxEllipseW = Math.min(maxW, desiredW);
+        // An ellipse has area (pi/4) * W * H, so average chord width is ~0.785 * maxEllipseW
+        var avgChord = maxEllipseW * 0.785;
+        var estLineCount = Math.max(3, Math.round(totalAdvance / avgChord));
+
+        var bestLines = null;
+        var lowestPenalty = Infinity;
+
+        var minLines = Math.max(3, estLineCount - 2);
+        var maxLines = Math.max(minLines + 1, estLineCount + 3);
+
+        for (var N = minLines; N <= maxLines; N++) {
+            var targets = [];
+            for (var k = 0; k < N; k++) {
+                var v = (2 * (k + 0.5) - N) / N; // normalized vertical coordinate (-1, 1)
+                var u = v * 0.88; // edge cushion factor
+                var chordRatio = Math.sqrt(Math.max(0.18, 1.0 - (u * u)));
+                var targetW = Math.min(maxW, Math.max(maxEllipseW * 0.35, maxEllipseW * chordRatio));
+                targets.push(targetW);
+            }
+
+            // DP table: dp[i][line] is min penalty placing first i tokens into line lines
+            var M = tokens.length;
+            var dp = [];
+            var parent = [];
+            for (var r = 0; r <= M; r++) {
+                dp[r] = [];
+                parent[r] = [];
+                for (var c = 0; c <= N; c++) {
+                    dp[r][c] = Infinity;
+                    parent[r][c] = -1;
+                }
+            }
+            dp[0][0] = 0;
+
+            for (var line = 1; line <= N; line++) {
+                var targetForLine = targets[line - 1];
+                for (var i = 1; i <= M; i++) {
+                    var w = 0;
+                    for (var j = i - 1; j >= 0; j--) {
+                        var tok = tokens[j];
+                        w = (j === i - 1) ? tok.width : (w + spaceW + tok.width);
+                        if (w > maxW * 1.10) break;
+
+                        var prevCost = dp[j][line - 1];
+                        if (prevCost !== Infinity) {
+                            var dev = w - targetForLine;
+                            var lineCost = dev * dev;
+                            if (w > maxW) lineCost += (w - maxW) * 8000;
+                            if (line === N && i < M) lineCost += 50000;
+
+                            var total = prevCost + lineCost;
+                            if (total < dp[i][line]) {
+                                dp[i][line] = total;
+                                parent[i][line] = j;
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (dp[M][N] < lowestPenalty) {
+                lowestPenalty = dp[M][N];
+                var candLines = [];
+                var curr = M;
+                for (var lIdx = N; lIdx >= 1; lIdx--) {
+                    var pTokIdx = parent[curr][lIdx];
+                    var lineToks = [];
+                    for (var x = pTokIdx; x < curr; x++) {
+                        lineToks.push(tokens[x].text);
+                    }
+                    candLines.unshift(lineToks.join(" "));
+                    curr = pTokIdx;
+                }
+                bestLines = candLines;
+            }
+        }
+
+        if (bestLines && bestLines.length > 0) {
+            return bestLines;
+        }
+
+        // Fallback to greedy ellipse fit if DP found no exact match
+        var fallbackLines = [];
+        var fWordIdx = 0;
+        var fN = Math.max(3, estLineCount);
+        for (var fl = 0; fl < fN; fl++) {
+            var fv = (2 * (fl + 0.5) - fN) / fN;
+            var fu = fv * 0.88;
+            var fChord = Math.min(maxW, maxEllipseW * Math.sqrt(Math.max(0.18, 1.0 - (fu * fu))));
+            var fWords = [];
+            var fW = 0;
+
+            while (fWordIdx < tokens.length) {
+                var ftok = tokens[fWordIdx];
+                var fTestW = (fWords.length === 0) ? ftok.width : (fW + spaceW + ftok.width);
+                if (fl === fN - 1 || fTestW <= fChord || fWords.length === 0) {
+                    fWords.push(ftok.text);
+                    fW = fTestW;
+                    fWordIdx++;
+                } else {
+                    break;
+                }
+            }
+            if (fWords.length > 0) fallbackLines.push(fWords.join(" "));
+            if (fWordIdx >= tokens.length) break;
+        }
+
+        if (fWordIdx < tokens.length) {
+            var fRem = [];
+            while (fWordIdx < tokens.length) fRem.push(tokens[fWordIdx++].text);
+            fallbackLines.push(fRem.join(" "));
+        }
+
+        return fallbackLines.length > 0 ? fallbackLines : [paraText];
+    }
+
     // -------------------------------------------------------------------------
     // 7. State Storage & Restoration Engine
     // -------------------------------------------------------------------------
@@ -1496,7 +1634,7 @@
      * Aligns the layer Anchor Point according to text justification
      * Mode: 'once' (zero-shift baked position) or 'expression' (live reactive expression)
      */
-    function alignTextLayerAnchor(textLayer, alignMode, verticalAlign, baseAnchor, matchOriginalPos, matchRefMode, wrapRefOffset) {
+    function alignTextLayerAnchor(textLayer, alignMode, verticalAlign, baseAnchor, matchOriginalPos, matchRefMode, wrapRefOffset, overrideXMode) {
         if (!textLayer) return false;
         var comp = textLayer.containingComp;
         var curTime = comp ? comp.time : 0;
@@ -1529,7 +1667,7 @@
             return true;
         } else {
             // One-Time Static Bake Mode
-            var xMode = detectLayerJustification(textLayer);
+            var xMode = overrideXMode || detectLayerJustification(textLayer);
             var bounds = getLayerSourceRectBounds(textLayer, curTime);
             var targetA = computeTargetAnchor(bounds, xMode, yMode);
 
@@ -1577,7 +1715,7 @@
     /**
      * Compensates layer Position so the wrapped text visually matches the original text position
      */
-    function matchWrappedPosition(textLayer, origBounds, matchRefMode, baseAnchor, basePos, is3D) {
+    function matchWrappedPosition(textLayer, origBounds, matchRefMode, baseAnchor, basePos, is3D, overrideJust) {
         if (!textLayer || !origBounds) return false;
         var transform = textLayer.property("Transform");
         if (!transform) return false;
@@ -1590,7 +1728,7 @@
         var comp = textLayer.containingComp;
         var curTime = comp ? comp.time : 0;
         var curBounds = getLayerSourceRectBounds(textLayer, curTime);
-        var just = detectLayerJustification(textLayer);
+        var just = overrideJust || detectLayerJustification(textLayer);
 
         var rOrig = computeReferencePoint(origBounds, matchRefMode, just);
         var rNew = computeReferencePoint(curBounds, matchRefMode, just);
@@ -1742,6 +1880,9 @@
                     case "compact":
                         paraLines = wrapCompactBlock(pText, maxW, desiredW, options.language, options.useHyphen, options.minWordLen, measurer, spaceW);
                         break;
+                    case "ellipse":
+                        paraLines = wrapOpticalEllipse(pText, maxW, desiredW, options.language, options.useHyphen, options.minWordLen, measurer, spaceW);
+                        break;
                     case "greedy":
                     default:
                         paraLines = wrapGreedy(pText, maxW, desiredW, options.language, options.useHyphen, options.minWordLen, measurer, spaceW);
@@ -1757,7 +1898,17 @@
             var wrappedFullText = finalWrappedLines.join("\r");
 
             // 6. Commit text update to layer TextDocument
+            var isEllipse = (options.method === "ellipse");
             if (doc) {
+                if (isEllipse) {
+                    try {
+                        if (typeof ParagraphJustification !== "undefined" && ParagraphJustification.CENTER_JUSTIFY !== undefined) {
+                            doc.justification = ParagraphJustification.CENTER_JUSTIFY;
+                        } else {
+                            doc.justification = 7414;
+                        }
+                    } catch (eJust) {}
+                }
                 doc.text = wrappedFullText;
                 if (isBox) {
                     // Update box text width constraint to match maxW
@@ -1774,19 +1925,21 @@
             }
 
             // 7. Auto-align Anchor Point if enabled
-            var just = detectLayerJustification(textLayer);
-            var rOrig = computeReferencePoint(origBounds, options.matchRefMode, just);
+            // For Optical Ellipse, force center justification and visual center reference
+            var just = isEllipse ? "center" : detectLayerJustification(textLayer);
+            var effectiveMatchRef = isEllipse ? "center" : options.matchRefMode;
+            var rOrig = computeReferencePoint(origBounds, effectiveMatchRef, just);
             var curBounds = getLayerSourceRectBounds(textLayer, comp.time);
-            var rNew = computeReferencePoint(curBounds, options.matchRefMode, just);
+            var rNew = computeReferencePoint(curBounds, effectiveMatchRef, just);
             var wrapRefOffset = [rNew[0] - rOrig[0], rNew[1] - rOrig[1]];
 
             if (options.autoAlignAnchor) {
-                alignTextLayerAnchor(textLayer, options.alignMode, options.verticalAlign, baseAnchor, options.matchOriginalPosition, options.matchRefMode, wrapRefOffset);
+                alignTextLayerAnchor(textLayer, options.alignMode, options.verticalAlign, baseAnchor, options.matchOriginalPosition, effectiveMatchRef, wrapRefOffset, isEllipse ? "center" : null);
             }
 
             // 8. Visually match original text position if enabled (default ON)
             if (options.matchOriginalPosition && options.alignMode !== "expression") {
-                matchWrappedPosition(textLayer, origBounds, options.matchRefMode, baseAnchor, basePos, is3D);
+                matchWrappedPosition(textLayer, origBounds, effectiveMatchRef, baseAnchor, basePos, is3D, isEllipse ? "center" : null);
             }
 
             // 9. Update effect status slider
@@ -1971,7 +2124,8 @@
             "2. Greedy Fit (Fast)",
             "3. Optical Pyramid (Cards)",
             "4. Reverse Pyramid (Headline)",
-            "5. Compact Block (Density)"
+            "5. Compact Block (Density)",
+            "6. Optical Ellipse (Center)"
         ]);
         ddMethod.selection = 0;
         ddMethod.alignment = ["fill", "center"];
@@ -2074,6 +2228,13 @@
 
         chkMatchPos.onClick = function () {
             ddMatchRef.enabled = chkMatchPos.value;
+        };
+
+        ddMethod.onChange = function () {
+            if (ddMethod.selection && ddMethod.selection.index === 5) {
+                // Optical Ellipse selected: automatically select Visual Center reference mode
+                ddMatchRef.selection = 1;
+            }
         };
 
         // 2. Anchor Point Auto-Alignment (AE-Align-AnchorPoint)
@@ -2246,7 +2407,7 @@
                 return;
             }
 
-            var methodKeys = ["balanced", "greedy", "pyramid", "reverse_pyramid", "compact"];
+            var methodKeys = ["balanced", "greedy", "pyramid", "reverse_pyramid", "compact", "ellipse"];
             var langKeys = ["english", "spanish", "french", "german", "italian", "universal"];
 
             var matchRefIdx = (ddMatchRef.selection ? ddMatchRef.selection.index : 0);

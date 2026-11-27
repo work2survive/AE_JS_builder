@@ -1860,4 +1860,50 @@ var p = value;
 > **Legacy ExtendScript Engine Compatibility**:
 > Always use `var` instead of ES6 `let` or `const` in generated expressions. When an After Effects project is set to the **Legacy ExtendScript** expression engine in Project Settings, ES6 keywords cause a fatal expression syntax error.
 
+---
+
+## 29. Elliptical Silhouette Paragraph Composition & Forced Center Justification
+
+### 1. The Typographic Challenge of Curved Paragraph Silhouettes
+In motion graphics, UI cards, badge designs, and promotional title sequences, designers often desire paragraphs that conform to geometric contours such as circles, ovals, and convex lenses. Standard typesetting engines (including Adobe InDesign, web CSS, and native After Effects box text) only support rectangular bounding containers ($W \times H$). Attempting to manually create an elliptical paragraph by inserting arbitrary line breaks is tedious, fragile when text changes, and nearly impossible to balance across varied word lengths.
+
+### 2. Mathematical Chord Geometry of an Ellipse
+An ellipse centered at $(0, 0)$ with horizontal semi-axis $a = \frac{W_{\text{target}}}{2}$ and vertical semi-axis $b = \frac{H_{\text{total}}}{2}$ obeys:
+$$\frac{x^2}{a^2} + \frac{y^2}{b^2} = 1 \implies x(y) = a \sqrt{1 - \left(\frac{y}{b}\right)^2}$$
+
+The full horizontal chord width at vertical offset $y \in (-b, b)$ is:
+$$W_{\text{chord}}(y) = 2 x(y) = W_{\text{target}} \sqrt{1 - \left(\frac{y}{b}\right)^2}$$
+
+For a discrete sequence of $N$ lines indexed by $k \in [0, N - 1]$, the normalized vertical coordinate $v_k$ of line $k$'s centerline is:
+$$v_k = \frac{2(k + 0.5) - N}{N} \in (-1, 1)$$
+
+#### Edge Cushioning Factor ($\alpha = 0.88$):
+If $v_k \to \pm 1.0$, the mathematical chord $\sqrt{1 - v_k^2} \to 0$, which would require top and bottom lines to have zero width (causing single characters or extreme overflow). By applying an edge cushioning factor $\alpha = 0.88$:
+$$u_k = \alpha \cdot v_k$$
+$$W_{\text{target}}(k) = W_{\text{target}} \cdot \sqrt{\max\left(0.18, 1 - u_k^2\right)}$$
+This preserves a minimum chord width of $\approx 35\text{--}42\%$ of $W_{\text{target}}$ on the top and bottom lines, ensuring sufficient space to accommodate standard words while preserving the pronounced oval curve.
+
+### 3. The Mathematical Necessity of Center Justification (`ParagraphJustification.CENTER_JUSTIFY`)
+A common misconception is that calculating elliptical line lengths alone will produce an ellipse. In reality:
+- **Left-Aligned Text**: If lines are left-aligned, every line starts at $x = 0$. The left edge remains a flat vertical line while only the right edge curves, producing an asymmetric half-ellipse (a "D" shape).
+- **Right-Aligned Text**: The right edge remains flat at $x = W$ while only the left edge curves.
+- **Center-Aligned Text (`ParagraphJustification.CENTER_JUSTIFY` / enum `7414`)**: Each line is centered along the vertical axis of symmetry $x = 0$. Half of the chord length $\frac{W(k)}{2}$ extends to the left and half to the right. Both left and right silhouettes curve symmetrically, producing the true circular/elliptical contour.
+
+Therefore, when the **Optical Ellipse** method is activated:
+1. The script forces `doc.justification = ParagraphJustification.CENTER_JUSTIFY` (or numeric code `7414`).
+2. The anchor point alignment engine forces `xMode = "center"`.
+3. The visual position matching compensator forces `matchRefMode = "center"`, ensuring the paragraph expands outward from its optical centroid rather than drifting.
+
+### 4. Dynamic Programming & Multi-Line Count Search
+Because total paragraph text advance $L_{\text{total}}$ is distributed over an elliptical area rather than a rectangle:
+- The area ratio of an ellipse to its bounding box is $\frac{\pi}{4} \approx 0.785$.
+- The average line width across an elliptical paragraph is $\overline{W} \approx 0.785 \times W_{\text{target}}$.
+- The estimated optimal line count is:
+  $$N_{\text{est}} = \operatorname{round}\left(\frac{L_{\text{total}}}{0.785 \cdot W_{\text{target}}}\right)$$
+
+To achieve the smoothest silhouette, the engine searches line counts $N \in [N_{\text{est}} - 2, N_{\text{est}} + 3]$ using a 2D dynamic programming matrix:
+$$DP[i][l] = \min_{0 \le j < i} \left( DP[j][l - 1] + (W_{j \dots i} - W_{\text{target}}(l))^2 + \text{penalties} \right)$$
+where $DP[i][l]$ represents the optimal penalty for placing the first $i$ tokens into $l$ lines. The candidate with the lowest total penalty across all $N$ is chosen, guaranteeing a mathematically optimal, symmetrical curved silhouette.
+
+
 
