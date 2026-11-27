@@ -58,6 +58,8 @@
     var BALLOON_LAYER_NAME   = "Comic Balloon";
     var ROVI_FILL_LAYER_TAG  = "AE_COMIC_ROVI_FILL_SHAPE";
     var ROVI_FILL_LAYER_NAME = "Comic Balloon Rovi Fill";
+    var TARGET_GUIDE_TAG     = "AE_COMIC_TARGET_GUIDE_SHAPE";
+    var TARGET_GUIDE_PREFIX  = "Tail Target ";
     var STATE_EFFECT_NAME    = "Comic Balloon State";
     var PRESETS_STORAGE_KEY  = "AE_COMIC_BALLOON_PRESETS_V2";
     var PRESETS_FOLDER_NAME  = "comic_balloon_presets";
@@ -276,11 +278,17 @@
     // -------------------------------------------------------------------------
     // 2. Preset System (Built-in Defaults + Store, Rename, Delete, Open, Download)
     // -------------------------------------------------------------------------
-    var GEOMETRY_KEYS   = ["square", "rounded", "cloud", "explosion", "wobbly", "bubble_lines"];
-    var GEOMETRY_LABELS = ["Square", "Rounded Corners", "Cloud Shape (Thoughts)", "Explosion / Shout", "Wobbly", "Bubble Lines"];
+    var GEOMETRY_KEYS   = ["square", "rounded", "electric", "cloud", "explosion", "wobbly", "bubble_lines"];
+    var GEOMETRY_LABELS = ["Square", "Rounded Corners", "Electric", "Cloud Shape (Thoughts)", "Explosion / Shout", "Wobbly", "Bubble Lines"];
 
     var TAIL_KEYS       = ["none", "line", "triangle", "curved_triangle", "lightning", "clouds"];
     var TAIL_LABELS     = ["None", "Line", "Triangle Sharp", "Curved Triangle", "Lightning Shaped", "Thinking Clouds"];
+
+    var TAIL_PLACEMENT_KEYS   = ["perimeter", "target"];
+    var TAIL_PLACEMENT_LABELS = [
+        "1. Trim Paths Perimeter (%)",
+        "2. Target Guide Layer (Closest Pt)"
+    ];
 
     var STROKE_KEYS     = ["none", "solid", "variable", "dotted"];
     var STROKE_LABELS   = ["None", "Solid (Thickness)", "Variable Thickness (Min & Max)", "Dotted (Whisper)"];
@@ -301,16 +309,20 @@
                 padX: 36,
                 padY: 26,
                 cornerRadius: 28,
+                electricPoint: 58,
+                electricSkew: -22,
                 cloudPuffs: 12,
                 cloudDepth: 42,
                 cloudWidthRand: 0,
                 spikeCount: 18,
                 spikeDepth: 85,
                 spikeWidthRand: 0,
-                wobblyWaves: 14,
-                wobblyDepth: 10,
+                wobblyWaves: 0,
+                wobblyDepth: 0,
                 wobblyWidthRand: 65,
                 tailStyle: "triangle",
+                tailPlacementMode: "perimeter",
+                tailTargetSnapTip: true,
                 tailPosition: 56,
                 tailStartWidth: 2.5,
                 tailStart: 54.75,
@@ -341,14 +353,16 @@
                 padX: 34,
                 padY: 24,
                 cornerRadius: 0,
+                electricPoint: 58,
+                electricSkew: -22,
                 cloudPuffs: 12,
                 cloudDepth: 42,
                 cloudWidthRand: 0,
                 spikeCount: 18,
                 spikeDepth: 85,
                 spikeWidthRand: 0,
-                wobblyWaves: 14,
-                wobblyDepth: 10,
+                wobblyWaves: 0,
+                wobblyDepth: 0,
                 wobblyWidthRand: 65,
                 tailStyle: "triangle",
                 tailPosition: 49,
@@ -376,19 +390,64 @@
                 outTime: 0.5,
                 makePrecomp: true
             },
+            "Electric Speech": {
+                geometry: "electric",
+                padX: 36,
+                padY: 26,
+                cornerRadius: 0,
+                electricPoint: 58,
+                electricSkew: -22,
+                cloudPuffs: 12,
+                cloudDepth: 42,
+                cloudWidthRand: 0,
+                spikeCount: 18,
+                spikeDepth: 85,
+                spikeWidthRand: 0,
+                wobblyWaves: 0,
+                wobblyDepth: 0,
+                wobblyWidthRand: 65,
+                tailStyle: "curved_triangle",
+                tailPosition: 52,
+                tailStartWidth: 2.4,
+                tailStart: 50.8,
+                tailEnd: 53.2,
+                tailOffset: 0,
+                tailLength: 75,
+                tailAngle: -10,
+                tailCurve: 50,
+                fillEnabled: true,
+                fillColor: "#FFFFFF",
+                fillOpacity: 100,
+                strokeStyle: "solid",
+                strokeColor: "#111111",
+                strokeWidth: 5,
+                strokeMinWidth: 2,
+                strokeMaxWidth: 9,
+                dotGap: 12,
+                animStyle: "none",
+                startDelay: 0,
+                inTime: 0.6,
+                readTime: 2.0,
+                linkReadTime: true,
+                secPer25: 1.2,
+                outTime: 0.5,
+                makePrecomp: true
+            },
             "Thought Cloud": {
                 geometry: "cloud",
                 padX: 40,
                 padY: 30,
                 cornerRadius: 28,
+                electricPoint: 58,
+                electricSkew: -22,
                 cloudPuffs: 12,
                 cloudDepth: 44,
                 cloudWidthRand: 0,
                 spikeCount: 18,
                 spikeDepth: 85,
                 spikeWidthRand: 0,
-                wobblyWaves: 14,
-                wobblyDepth: 10,
+                wobblyWaves: 0,
+                wobblyDepth: 0,
                 wobblyWidthRand: 65,
                 tailStyle: "clouds",
                 tailPosition: 57,
@@ -421,14 +480,16 @@
                 padX: 42,
                 padY: 32,
                 cornerRadius: 0,
+                electricPoint: 58,
+                electricSkew: -22,
                 cloudPuffs: 12,
                 cloudDepth: 42,
                 cloudWidthRand: 0,
                 spikeCount: 18,
                 spikeDepth: 90,
                 spikeWidthRand: 0,
-                wobblyWaves: 14,
-                wobblyDepth: 10,
+                wobblyWaves: 0,
+                wobblyDepth: 0,
                 wobblyWidthRand: 65,
                 tailStyle: "lightning",
                 tailPosition: 56,
@@ -461,6 +522,8 @@
                 padX: 38,
                 padY: 28,
                 cornerRadius: 28,
+                electricPoint: 58,
+                electricSkew: -22,
                 cloudPuffs: 12,
                 cloudDepth: 42,
                 cloudWidthRand: 0,
@@ -501,14 +564,16 @@
                 padX: 24,
                 padY: 16,
                 cornerRadius: 18,
+                electricPoint: 58,
+                electricSkew: -22,
                 cloudPuffs: 12,
                 cloudDepth: 42,
                 cloudWidthRand: 0,
                 spikeCount: 18,
                 spikeDepth: 85,
                 spikeWidthRand: 0,
-                wobblyWaves: 14,
-                wobblyDepth: 10,
+                wobblyWaves: 0,
+                wobblyDepth: 0,
                 wobblyWidthRand: 65,
                 tailStyle: "triangle",
                 tailPosition: 54,
@@ -541,14 +606,16 @@
                 padX: 36,
                 padY: 26,
                 cornerRadius: 36,
+                electricPoint: 58,
+                electricSkew: -22,
                 cloudPuffs: 12,
                 cloudDepth: 42,
                 cloudWidthRand: 0,
                 spikeCount: 18,
                 spikeDepth: 85,
                 spikeWidthRand: 0,
-                wobblyWaves: 14,
-                wobblyDepth: 10,
+                wobblyWaves: 0,
+                wobblyDepth: 0,
                 wobblyWidthRand: 65,
                 tailStyle: "line",
                 tailPosition: 55,
@@ -577,18 +644,20 @@
                 makePrecomp: true
             },
             "Electric Radio": {
-                geometry: "rounded",
+                geometry: "electric",
                 padX: 34,
                 padY: 24,
-                cornerRadius: 12,
+                cornerRadius: 0,
+                electricPoint: 62,
+                electricSkew: 24,
                 cloudPuffs: 12,
                 cloudDepth: 42,
                 cloudWidthRand: 0,
                 spikeCount: 18,
                 spikeDepth: 85,
                 spikeWidthRand: 0,
-                wobblyWaves: 14,
-                wobblyDepth: 10,
+                wobblyWaves: 0,
+                wobblyDepth: 0,
                 wobblyWidthRand: 65,
                 tailStyle: "lightning",
                 tailPosition: 54,
@@ -669,7 +738,7 @@
         }
 
         var gKey = def.geometry;
-        if (raw.geometry === "square" || raw.geometry === "rounded" || raw.geometry === "cloud" || raw.geometry === "explosion" || raw.geometry === "wobbly" || raw.geometry === "bubble_lines") {
+        if (raw.geometry === "square" || raw.geometry === "rounded" || raw.geometry === "electric" || raw.geometry === "cloud" || raw.geometry === "explosion" || raw.geometry === "wobbly" || raw.geometry === "bubble_lines") {
             gKey = raw.geometry;
         } else if (raw.geometry === "dyamond" || raw.geometry === "diamond") {
             gKey = "wobbly";
@@ -677,6 +746,8 @@
             gKey = "bubble_lines";
         }
 
+        var defaultWWaves = (gKey === "wobbly") ? 14 : 0;
+        var defaultWDepth = (gKey === "wobbly") ? 10 : 0;
         var rawWWaves = (raw.wobblyWaves !== undefined) ? raw.wobblyWaves : raw.dyamondWaves;
         var rawWDepth = (raw.wobblyDepth !== undefined) ? raw.wobblyDepth : raw.dyamondDepth;
         var rawWRand  = (raw.wobblyWidthRand !== undefined) ? raw.wobblyWidthRand : raw.dyamondWidthRand;
@@ -686,16 +757,20 @@
             padX: clampNum(raw.padX, 0, 200, def.padX),
             padY: clampNum(raw.padY, 0, 200, def.padY),
             cornerRadius: clampNum(raw.cornerRadius, 0, 200, def.cornerRadius),
+            electricPoint: Math.round(clampNum(raw.electricPoint, 10, 150, 58)),
+            electricSkew: Math.round(clampNum(raw.electricSkew, -75, 75, -22)),
             cloudPuffs: Math.round(clampNum(raw.cloudPuffs, 6, 30, def.cloudPuffs)),
             cloudDepth: Math.round(clampNum(rawCloudD, 10, 120, def.cloudDepth)),
             cloudWidthRand: Math.round(clampNum(raw.cloudWidthRand, 0, 100, 0)),
             spikeCount: Math.round(clampNum(raw.spikeCount, 6, 40, def.spikeCount)),
             spikeDepth: Math.round(clampNum(rawSpikeD, 15, 220, def.spikeDepth)),
             spikeWidthRand: Math.round(clampNum(raw.spikeWidthRand, 0, 100, 0)),
-            wobblyWaves: Math.round(clampNum(rawWWaves, 4, 36, 14)),
-            wobblyDepth: Math.round(clampNum(rawWDepth, 2, 50, 10)),
+            wobblyWaves: Math.round(clampNum(rawWWaves, 0, 36, defaultWWaves)),
+            wobblyDepth: Math.round(clampNum(rawWDepth, 0, 50, defaultWDepth)),
             wobblyWidthRand: Math.round(clampNum(rawWRand !== undefined ? rawWRand : 65, 0, 100, 65)),
             tailStyle: (raw.tailStyle === "none" || raw.tailStyle === "line" || raw.tailStyle === "triangle" || raw.tailStyle === "curved_triangle" || raw.tailStyle === "lightning" || raw.tailStyle === "clouds") ? raw.tailStyle : def.tailStyle,
+            tailPlacementMode: (raw.tailPlacementMode === "target") ? "target" : "perimeter",
+            tailTargetSnapTip: (raw.tailTargetSnapTip !== undefined) ? Boolean(raw.tailTargetSnapTip) : true,
             tailPosition: tPos,
             tailStartWidth: tWidth,
             tailStart: computedStart,
@@ -925,6 +1000,194 @@
         return false;
     }
 
+    function isTargetGuideLayer(layer) {
+        if (!layer) return false;
+        try {
+            if (layer.comment && String(layer.comment).indexOf(TARGET_GUIDE_TAG) !== -1) return true;
+            if (layer.name && String(layer.name).indexOf(TARGET_GUIDE_PREFIX) === 0) return true;
+        } catch (e) {}
+        return false;
+    }
+
+    function extractTargetGuideHex(layer) {
+        if (!layer) return "";
+        try {
+            var cmt = layer.comment ? String(layer.comment) : "";
+            var tagPrefix = TARGET_GUIDE_TAG + ":";
+            var idx = cmt.indexOf(tagPrefix);
+            if (idx !== -1) {
+                return trimStr(cmt.substring(idx + tagPrefix.length));
+            }
+            var nm = layer.name ? String(layer.name) : "";
+            if (nm.indexOf(TARGET_GUIDE_PREFIX) === 0) {
+                return trimStr(nm.substring(TARGET_GUIDE_PREFIX.length));
+            }
+        } catch (e) {}
+        return "";
+    }
+
+    function findTargetGuideLayer(comp, hexCode) {
+        if (!comp) return null;
+        var count = getCompLayerCount(comp);
+        var wantedName = hexCode ? (TARGET_GUIDE_PREFIX + hexCode) : "";
+        var wantedTag  = hexCode ? (TARGET_GUIDE_TAG + ":" + hexCode) : TARGET_GUIDE_TAG;
+        var fallbackGuide = null;
+        for (var i = 1; i <= count; i++) {
+            var lyr = getCompLayerAt(comp, i);
+            if (!lyr || !isTargetGuideLayer(lyr)) continue;
+            if (!fallbackGuide) fallbackGuide = lyr;
+            if (hexCode) {
+                var c = lyr.comment ? String(lyr.comment) : "";
+                if (c.indexOf(wantedTag) !== -1 || lyr.name === wantedName) {
+                    return lyr;
+                }
+            } else {
+                return lyr;
+            }
+        }
+        return hexCode ? null : fallbackGuide;
+    }
+
+    function removeTargetGuideLayer(comp, hexCode) {
+        if (!comp) return;
+        var count = getCompLayerCount(comp);
+        for (var i = count; i >= 1; i--) {
+            var lyr = getCompLayerAt(comp, i);
+            if (!lyr || !isTargetGuideLayer(lyr)) continue;
+            if (!hexCode || extractTargetGuideHex(lyr) === hexCode) {
+                try { lyr.remove(); } catch (eRMG) {}
+            }
+        }
+    }
+
+    /**
+     * Creates or reuses the draggable AE Guide Layer ("Tail Target <HEX>") in `comp`.
+     * Preserves any existing Position when updating so user placement is never lost.
+     */
+    function ensureTargetGuideLayer(comp, hexCode, defaultWorldPos, refLayerAbove) {
+        if (!comp) return null;
+        var code = hexCode || generateHexId(4);
+        var guideName = TARGET_GUIDE_PREFIX + code;
+        var guideTag  = TARGET_GUIDE_TAG + ":" + code;
+        var existing = findTargetGuideLayer(comp, code);
+        if (existing) {
+            try { existing.name = guideName; } catch (eGN) {}
+            try { existing.comment = guideTag; } catch (eGC) {}
+            try { existing.guideLayer = true; } catch (eG1) {}
+            try { existing.enabled = true; } catch (eGE) {}
+            return existing;
+        }
+
+        var gLayer = comp.layers.addShape();
+        gLayer.name = guideName;
+        try { gLayer.comment = guideTag; } catch (eGC2) {}
+        try { gLayer.guideLayer = true; } catch (eG2) {}
+        try { gLayer.label = 9; } catch (eGLb) {}
+        try { gLayer.threeDLayer = false; } catch (eG3D) {}
+
+        var gTr = gLayer.property("Transform");
+        gTr.property("Anchor Point").setValue([0, 0]);
+        gTr.property("Position").setValue([
+            Math.round((defaultWorldPos[0] || 0) * 10) / 10,
+            Math.round((defaultWorldPos[1] || 0) * 10) / 10
+        ]);
+        gTr.property("Scale").setValue([100, 100]);
+
+        var gCont = gLayer.property("Contents") || gLayer.property("ADBE Root Vectors Group");
+        if (gCont) {
+            // 1. Outer Ring + Subtle Clickable Fill
+            var ringGrp = gCont.addProperty("ADBE Vector Group");
+            ringGrp.name = "Target Ring";
+            var ringVec = ringGrp.property("Contents") || ringGrp.property("ADBE Vectors Group");
+            if (ringVec) {
+                var rPathG = ringVec.addProperty("ADBE Vector Shape - Group");
+                var rP = rPathG.property("Path") || rPathG.property("ADBE Vector Shape");
+                if (rP) {
+                    var rC = circleShapeData(0, 0, 15);
+                    var rS = new ShapeClass();
+                    rS.vertices = rC.vertices;
+                    rS.inTangents = rC.inTangents;
+                    rS.outTangents = rC.outTangents;
+                    rS.closed = true;
+                    rP.setValue(rS);
+                }
+                var rFill = ringVec.addProperty("ADBE Vector Graphic - Fill");
+                if (rFill) {
+                    var rfC = rFill.property("Color") || rFill.property("ADBE Vector Fill Color");
+                    var rfO = rFill.property("Opacity") || rFill.property("ADBE Vector Fill Opacity");
+                    if (rfC) rfC.setValue([0.05, 0.85, 1.0, 1]);
+                    if (rfO) rfO.setValue(18);
+                }
+                var rStr = ringVec.addProperty("ADBE Vector Graphic - Stroke");
+                if (rStr) {
+                    var rsC = rStr.property("Color") || rStr.property("ADBE Vector Stroke Color");
+                    var rsW = rStr.property("Stroke Width") || rStr.property("ADBE Vector Stroke Width");
+                    if (rsC) rsC.setValue([0.05, 0.88, 1.0, 1]);
+                    if (rsW) rsW.setValue(2.5);
+                }
+            }
+
+            // 2. Crosshair Ticks (4 cardinal hairlines)
+            var ticks = [
+                [[-23, 0], [-9, 0]],
+                [[9, 0], [23, 0]],
+                [[0, -23], [0, -9]],
+                [[0, 9], [0, 23]]
+            ];
+            for (var ti = 0; ti < ticks.length; ti++) {
+                var tGrp = gCont.addProperty("ADBE Vector Group");
+                tGrp.name = "Crosshair " + (ti + 1);
+                var tVec = tGrp.property("Contents") || tGrp.property("ADBE Vectors Group");
+                if (!tVec) continue;
+                var tPG = tVec.addProperty("ADBE Vector Shape - Group");
+                var tP = tPG.property("Path") || tPG.property("ADBE Vector Shape");
+                if (tP) {
+                    var tS = new ShapeClass();
+                    tS.vertices = ticks[ti];
+                    tS.inTangents = [[0, 0], [0, 0]];
+                    tS.outTangents = [[0, 0], [0, 0]];
+                    tS.closed = false;
+                    tP.setValue(tS);
+                }
+                var tStr = tVec.addProperty("ADBE Vector Graphic - Stroke");
+                if (tStr) {
+                    var tsC = tStr.property("Color") || tStr.property("ADBE Vector Stroke Color");
+                    var tsW = tStr.property("Stroke Width") || tStr.property("ADBE Vector Stroke Width");
+                    if (tsC) tsC.setValue([0.05, 0.88, 1.0, 1]);
+                    if (tsW) tsW.setValue(2);
+                }
+            }
+
+            // 3. Center Bullseye Dot
+            var dotGrp = gCont.addProperty("ADBE Vector Group");
+            dotGrp.name = "Center Dot";
+            var dotVec = dotGrp.property("Contents") || dotGrp.property("ADBE Vectors Group");
+            if (dotVec) {
+                var dPG = dotVec.addProperty("ADBE Vector Shape - Group");
+                var dP = dPG.property("Path") || dPG.property("ADBE Vector Shape");
+                if (dP) {
+                    var dC = circleShapeData(0, 0, 4);
+                    var dS = new ShapeClass();
+                    dS.vertices = dC.vertices;
+                    dS.inTangents = dC.inTangents;
+                    dS.outTangents = dC.outTangents;
+                    dS.closed = true;
+                    dP.setValue(dS);
+                }
+                var dFill = dotVec.addProperty("ADBE Vector Graphic - Fill");
+                if (dFill) {
+                    var dfC = dFill.property("Color") || dFill.property("ADBE Vector Fill Color");
+                    if (dfC) dfC.setValue([1.0, 0.72, 0.08, 1]);
+                }
+            }
+        }
+
+        if (refLayerAbove) {
+            try { gLayer.moveBefore(refLayerAbove); } catch (eGMv) {}
+        }
+        return gLayer;
+    }
+
     function isComicBalloonPrecompLayer(layer) {
         if (!layer) return false;
         try {
@@ -963,7 +1226,7 @@
         var count = getCompLayerCount(comp);
         for (var i = 1; i <= count; i++) {
             var lyr = getCompLayerAt(comp, i);
-            if (!lyr || lyr === textLayer || isComicBalloonShapeLayer(lyr) || isRoviFillLayer(lyr)) continue;
+            if (!lyr || lyr === textLayer || isComicBalloonShapeLayer(lyr) || isRoviFillLayer(lyr) || isTargetGuideLayer(lyr)) continue;
             if (lyr.parent === textLayer) {
                 all.push(lyr);
                 if (lyr.index < textLayer.index) {
@@ -991,6 +1254,43 @@
 
         for (i = 0; i < sel.length; i++) {
             lyr = sel[i];
+            if (isTargetGuideLayer(lyr)) {
+                var gHex = extractTargetGuideHex(lyr);
+                var gTot = getCompLayerCount(comp);
+                for (var gi = 1; gi <= gTot; gi++) {
+                    var gl = getCompLayerAt(comp, gi);
+                    if (!gl || gl === lyr) continue;
+                    var st = readLayerStateEffect(gl);
+                    if (isComicBalloonPrecompLayer(gl) && (!gHex || (st && st.precompHex === gHex) || gl.name === ("comic balloon " + gHex))) {
+                        var gpItem = gl.source;
+                        var gInTxt = null, gInBln = null;
+                        var gpCnt = getCompLayerCount(gpItem);
+                        for (var gk = 1; gk <= gpCnt; gk++) {
+                            var gil = getCompLayerAt(gpItem, gk);
+                            if (!gInTxt && isTextLayer(gil)) gInTxt = gil;
+                            if (!gInBln && isComicBalloonShapeLayer(gil)) gInBln = gil;
+                        }
+                        if (gInTxt) {
+                            return {
+                                mode: "precomp",
+                                comp: comp,
+                                precompLayer: gl,
+                                precompItem: gpItem,
+                                textLayer: gInTxt,
+                                balloonLayer: gInBln
+                            };
+                        }
+                    }
+                    if (isTextLayer(gl) && st && (!gHex || st.precompHex === gHex)) {
+                        return {
+                            mode: "text",
+                            comp: comp,
+                            textLayer: gl,
+                            balloonLayer: findChildBalloonForText(comp, gl)
+                        };
+                    }
+                }
+            }
             if (isComicBalloonPrecompLayer(lyr)) {
                 var pItem = lyr.source;
                 var innerText = null;
@@ -2225,22 +2525,22 @@
         var topMid = [0.5 * (topLeftEnd[0] + topRightStart[0]), 0.5 * (topLeftEnd[1] + topRightStart[1])];
 
         var outSegs = [];
-        function pushBLSeg(p0, out0, in1, p1) {
+        function pushBLSeg(p0, out0, in1, p1, isCorner) {
             if (dist2D(p0, p1) > 0.05) {
-                outSegs.push({ p0: p0, out0: out0, in1: in1, p1: p1 });
+                outSegs.push({ p0: p0, out0: out0, in1: in1, p1: p1, isCornerArc: Boolean(isCorner) });
             }
         }
 
-        pushBLSeg(topMid, [0, 0], [0, 0], topRightStart);
+        pushBLSeg(topMid, [0, 0], [0, 0], topRightStart, false);
         for (i = 0; i < nC; i++) {
             var cs = cornerSpecs[i];
             if (cs.rk > 0.05) {
-                pushBLSeg(cs.arcStart, cs.out0, cs.in1, cs.arcEnd);
+                pushBLSeg(cs.arcStart, cs.out0, cs.in1, cs.arcEnd, true);
             }
             if (i < nC - 1) {
-                pushBLSeg(cs.arcEnd, [0, 0], [0, 0], cornerSpecs[i + 1].arcStart);
+                pushBLSeg(cs.arcEnd, [0, 0], [0, 0], cornerSpecs[i + 1].arcStart, false);
             } else {
-                pushBLSeg(cs.arcEnd, [0, 0], [0, 0], topMid);
+                pushBLSeg(cs.arcEnd, [0, 0], [0, 0], topMid, false);
             }
         }
 
@@ -2248,21 +2548,580 @@
     }
 
     /**
+     * Builds the classic 6-sided angular pointed-end "Electric" comic balloon (<=======>)
+     * starting clockwise at Top-Center (0, -eB), with configurable side-tip pointiness,
+     * vertical tip skew, and optional circular corner fillets.
+     */
+    function buildElectricPerimeterSegments(textW, textH, cfg, extraPad) {
+        var padX = (cfg.padX !== undefined ? cfg.padX : 36) + (extraPad || 0);
+        var padY = (cfg.padY !== undefined ? cfg.padY : 26) + (extraPad || 0);
+        var w = Math.max(24, textW + padX * 2);
+        var h = Math.max(24, textH + padY * 2);
+        var a = w * 0.5;
+        var eB = h * 0.5;
+
+        var ePointPct = clampNum(cfg.electricPoint, 10, 150, 58);
+        var eSkewPct  = clampNum(cfg.electricSkew, -75, 75, -22);
+
+        // Guarantee full horizontal text clearance inside the flat top/bottom rails
+        var minClearX = cfg._isPreviewIcon ? 2 : Math.max(8, padX * 0.48);
+        var innerA = Math.max(textW * 0.5 + minClearX, a * 0.86);
+        var pointJut = Math.max(cfg._isPreviewIcon ? 5 : 10, eB * (ePointPct / 100.0));
+        var tipA = innerA + pointJut;
+
+        var skewShift = (eSkewPct / 100.0) * eB * 0.65;
+        var leftTipY  =  skewShift;
+        var rightTipY = -skewShift;
+
+        // 6 clockwise polygon corners starting at Top-Right
+        var ec = [
+            [ innerA, -eB],
+            [ tipA,    rightTipY],
+            [ innerA,  eB],
+            [-innerA,  eB],
+            [-tipA,    leftTipY],
+            [-innerA, -eB]
+        ];
+
+        var eRad = Math.max(0, cfg.cornerRadius || 0);
+        var eSpecs = [];
+        var i;
+        for (i = 0; i < 6; i++) {
+            var cPrev = ec[(i + 5) % 6];
+            var cCur  = ec[i];
+            var cNext = ec[(i + 1) % 6];
+
+            var dxIn  = cCur[0] - cPrev[0], dyIn  = cCur[1] - cPrev[1];
+            var dxOut = cNext[0] - cCur[0], dyOut = cNext[1] - cCur[1];
+            var lenIn  = Math.sqrt(dxIn * dxIn + dyIn * dyIn) || 1;
+            var lenOut = Math.sqrt(dxOut * dxOut + dyOut * dyOut) || 1;
+            var uIn  = [dxIn / lenIn, dyIn / lenIn];
+            var uOut = [dxOut / lenOut, dyOut / lenOut];
+
+            var dotTurn = clampNum(uIn[0] * uOut[0] + uIn[1] * uOut[1], -0.999, 0.999);
+            var theta   = Math.acos(dotTurn);
+            var tanHalf = Math.tan(theta * 0.5);
+
+            var trimD = 0;
+            var hLen  = 0;
+            if (eRad > 0.05 && tanHalf > 1e-4) {
+                trimD = Math.min(eRad * tanHalf, lenIn * 0.45, lenOut * 0.45);
+                var rEff = trimD / tanHalf;
+                hLen = (4.0 / 3.0) * Math.tan(theta * 0.25) * rEff;
+            }
+
+            eSpecs.push({
+                arcStart: [cCur[0] - uIn[0] * trimD,  cCur[1] - uIn[1] * trimD],
+                arcEnd:   [cCur[0] + uOut[0] * trimD, cCur[1] + uOut[1] * trimD],
+                out0:     [uIn[0] * hLen,             uIn[1] * hLen],
+                in1:      [-uOut[0] * hLen,           -uOut[1] * hLen],
+                trimD:    trimD
+            });
+        }
+
+        var topMid = [0.5 * (eSpecs[5].arcEnd[0] + eSpecs[0].arcStart[0]), -eB];
+        var eSegs = [];
+        function pushESeg(p0, out0, in1, p1, isCorner) {
+            if (dist2D(p0, p1) > 0.05) {
+                eSegs.push({ p0: p0, out0: out0, in1: in1, p1: p1, isCornerArc: Boolean(isCorner) });
+            }
+        }
+
+        pushESeg(topMid, [0, 0], [0, 0], eSpecs[0].arcStart, false);
+        for (i = 0; i < 6; i++) {
+            var es = eSpecs[i];
+            if (es.trimD > 0.05) {
+                pushESeg(es.arcStart, es.out0, es.in1, es.arcEnd, true);
+            }
+            if (i < 5) {
+                pushESeg(es.arcEnd, [0, 0], [0, 0], eSpecs[i + 1].arcStart, false);
+            } else {
+                pushESeg(es.arcEnd, [0, 0], [0, 0], topMid, false);
+            }
+        }
+
+        return annotateArcLengths(eSegs);
+    }
+
+    function segUnitStartDir(seg) {
+        var tx = seg.out0[0], ty = seg.out0[1];
+        if (tx * tx + ty * ty < 1e-6) {
+            var pA = evalCubicPt(seg.p0, seg.out0, seg.in1, seg.p1, 0.02);
+            tx = pA[0] - seg.p0[0];
+            ty = pA[1] - seg.p0[1];
+        }
+        var m = Math.sqrt(tx * tx + ty * ty) || 1;
+        return [tx / m, ty / m];
+    }
+
+    function segUnitEndDir(seg) {
+        var tx = -seg.in1[0], ty = -seg.in1[1];
+        if (tx * tx + ty * ty < 1e-6) {
+            var pB = evalCubicPt(seg.p0, seg.out0, seg.in1, seg.p1, 0.98);
+            tx = seg.p1[0] - pB[0];
+            ty = seg.p1[1] - pB[1];
+        }
+        var m = Math.sqrt(tx * tx + ty * ty) || 1;
+        return [tx / m, ty / m];
+    }
+
+    function rotateClosedSegmentsToTopCenter(segs) {
+        if (!segs || segs.length === 0) return segs;
+        annotateArcLengths(segs);
+
+        var bestU = 0;
+        var bestScore = 1e18;
+        var s, uCand, pt, score;
+        var STEPS = 96;
+        for (s = 0; s < STEPS; s++) {
+            uCand = s / STEPS;
+            pt = evaluatePerimeterAtU(segs, uCand).point;
+            if (pt[1] <= 0) {
+                score = Math.abs(pt[0]) + Math.max(0, pt[1]) * 10.0;
+                if (score < bestScore) {
+                    bestScore = score;
+                    bestU = uCand;
+                }
+            }
+        }
+        // Fine local search around bestU
+        var stepFine = 1.0 / (STEPS * 8);
+        for (s = -8; s <= 8; s++) {
+            uCand = (((bestU + s * stepFine) % 1) + 1) % 1;
+            pt = evaluatePerimeterAtU(segs, uCand).point;
+            if (pt[1] <= 0) {
+                score = Math.abs(pt[0]);
+                if (score < bestScore) {
+                    bestScore = score;
+                    bestU = uCand;
+                }
+            }
+        }
+
+        if (bestU <= 1e-4 || bestU >= 1.0 - 1e-4) {
+            return segs;
+        }
+
+        var ev = evaluatePerimeterAtU(segs, bestU);
+        var hitIdx = ev.segIndex;
+        var hitT   = ev.t;
+        var n = segs.length;
+        var rotated = [];
+        var i;
+
+        if (hitT <= 1e-3) {
+            for (i = 0; i < n; i++) {
+                rotated.push(segs[(hitIdx + i) % n]);
+            }
+        } else if (hitT >= 1.0 - 1e-3) {
+            for (i = 0; i < n; i++) {
+                rotated.push(segs[(hitIdx + 1 + i) % n]);
+            }
+        } else {
+            var sp = splitCubicSegment(segs[hitIdx], hitT);
+            if (dist2D(sp.right.p0, sp.right.p1) > 0.05) rotated.push(sp.right);
+            for (i = 1; i < n; i++) {
+                rotated.push(segs[(hitIdx + i) % n]);
+            }
+            if (dist2D(sp.left.p0, sp.left.p1) > 0.05) rotated.push(sp.left);
+        }
+
+        return rotated.length > 0 ? annotateArcLengths(rotated) : segs;
+    }
+
+    /**
+     * Universal Wobbly Outline modifier applicable to ALL balloon shapes:
+     *   - When wobblyWaves <= 0 or wobblyDepth <= 0: returns `baseSegs` untouched (crisp outline).
+     *   - For smooth closed contours (Rounded Corners, Wobbly, filleted Electric / Bubble Lines):
+     *     applies closed-loop G1 centripetal Catmull-Rom waves with corner-shoulder protection.
+     *   - For sharp-feature contours (Square, crisp Electric, Cloud cusps, Explosion spikes):
+     *     pins every sharp corner/cusp/spike tip while making the smooth/straight edges between
+     *     them organically wobbly, then re-anchors `u = 0` cleanly at Top-Center.
+     */
+    function applyWobblyToPerimeterSegments(baseSegs, cfg, rectCornerGuard) {
+        if (!baseSegs || baseSegs.length === 0) return baseSegs;
+        var rawW = (cfg.wobblyWaves !== undefined) ? cfg.wobblyWaves : cfg.dyamondWaves;
+        var rawD = (cfg.wobblyDepth !== undefined) ? cfg.wobblyDepth : cfg.dyamondDepth;
+        var rawR = (cfg.wobblyWidthRand !== undefined) ? cfg.wobblyWidthRand : cfg.dyamondWidthRand;
+
+        var waves     = Math.round(clampNum(rawW, 0, 36, 0));
+        var wDepthPct = clampNum(rawD, 0, 50, 0);
+        var wRandPct  = clampNum(rawR !== undefined ? rawR : 65, 0, 100, 65);
+
+        if (waves <= 0 || wDepthPct <= 0.01) {
+            return baseSegs;
+        }
+
+        var nBase = baseSegs.length;
+        var sharpIdx = [];
+        var i;
+        for (i = 0; i < nBase; i++) {
+            var prevSeg = baseSegs[(i - 1 + nBase) % nBase];
+            var curSeg  = baseSegs[i];
+            var dPrev = segUnitEndDir(prevSeg);
+            var dCur  = segUnitStartDir(curSeg);
+            var dotJ  = dPrev[0] * dCur[0] + dPrev[1] * dCur[1];
+            if (dotJ < 0.92) {
+                sharpIdx.push(i);
+            }
+        }
+
+        // Bounding half-extents for inward clamping
+        var minX = 1e9, maxX = -1e9, minY = 1e9, maxY = -1e9;
+        for (i = 0; i < nBase; i++) {
+            var bp = baseSegs[i].p0;
+            if (bp[0] < minX) minX = bp[0];
+            if (bp[0] > maxX) maxX = bp[0];
+            if (bp[1] < minY) minY = bp[1];
+            if (bp[1] > maxY) maxY = bp[1];
+        }
+        var halfW = Math.max(12, 0.5 * (maxX - minX));
+        var halfH = Math.max(12, 0.5 * (maxY - minY));
+        var maxInward = Math.min(halfW, halfH) * 0.24;
+        var rFrac = wRandPct / 100.0;
+        var tension = 0.36;
+
+        // CASE A: Smooth closed contour (no sharp vertices)
+        if (sharpIdx.length === 0) {
+            var numPts = Math.max(4, waves * 2);
+            var uWaves = computePerimeterIntervals(baseSegs, numPts, wRandPct, 31.7);
+            var evals = [];
+            var wi;
+            for (wi = 0; wi < numPts; wi++) {
+                evals.push(evaluatePerimeterAtU(baseSegs, uWaves[wi]));
+            }
+
+            var wavePts = [];
+            for (wi = 0; wi < numPts; wi++) {
+                var prevEv = evals[(wi - 1 + numPts) % numPts];
+                var curEv  = evals[wi];
+                var nextEv = evals[(wi + 1) % numPts];
+                var localSpan = 0.5 * (dist2D(prevEv.point, curEv.point) + dist2D(curEv.point, nextEv.point));
+
+                var ampMod = 1.0;
+                if (rFrac > 1e-4) {
+                    var aSeed = Math.sin((wi + 1) * 41.317 + waves * 19.73 + 7.13) * 43758.5453;
+                    var aSigned = (aSeed - Math.floor(aSeed)) * 2.0 - 1.0;
+                    ampMod = Math.max(0.20, 1.0 + 0.65 * rFrac * aSigned);
+                }
+
+                var sign = (wi % 2 === 0) ? 1.0 : -1.0;
+                var mag  = localSpan * (wDepthPct / 100.0) * ampMod;
+
+                var inProtectedCorner = false;
+                if (rectCornerGuard) {
+                    var inCornerX = Math.abs(curEv.point[0]) > (rectCornerGuard.dA - rectCornerGuard.dR * 1.15);
+                    var inCornerY = Math.abs(curEv.point[1]) > (rectCornerGuard.dB - rectCornerGuard.dR * 1.15);
+                    inProtectedCorner = (inCornerX && inCornerY);
+                } else if (baseSegs[curEv.segIndex] && baseSegs[curEv.segIndex].isCornerArc) {
+                    inProtectedCorner = true;
+                }
+
+                if (inProtectedCorner) {
+                    if (sign < 0) {
+                        mag *= 0.15;
+                    } else {
+                        mag *= 0.45;
+                    }
+                } else if (sign < 0 && mag > maxInward) {
+                    mag = maxInward;
+                }
+
+                var disp = sign * mag;
+                wavePts.push([
+                    curEv.point[0] + curEv.normal[0] * disp,
+                    curEv.point[1] + curEv.normal[1] * disp
+                ]);
+            }
+
+            var inHandles  = [];
+            var outHandles = [];
+            for (wi = 0; wi < numPts; wi++) {
+                var pPrev = wavePts[(wi - 1 + numPts) % numPts];
+                var pCur  = wavePts[wi];
+                var pNext = wavePts[(wi + 1) % numPts];
+
+                var dx1 = pCur[0] - pPrev[0];
+                var dy1 = pCur[1] - pPrev[1];
+                var d1  = Math.sqrt(dx1 * dx1 + dy1 * dy1) || 1;
+
+                var dx2 = pNext[0] - pCur[0];
+                var dy2 = pNext[1] - pCur[1];
+                var d2  = Math.sqrt(dx2 * dx2 + dy2 * dy2) || 1;
+
+                var tx = (dx1 / d1) * d2 + (dx2 / d2) * d1;
+                var ty = (dy1 / d1) * d2 + (dy2 / d2) * d1;
+                var tMag = Math.sqrt(tx * tx + ty * ty) || 1;
+                tx /= tMag;
+                ty /= tMag;
+
+                inHandles.push([-tx * d1 * tension, -ty * d1 * tension]);
+                outHandles.push([tx * d2 * tension,  ty * d2 * tension]);
+            }
+
+            var outSmooth = [];
+            for (wi = 0; wi < numPts; wi++) {
+                var nxt = (wi + 1) % numPts;
+                outSmooth.push({
+                    p0: wavePts[wi],
+                    out0: outHandles[wi],
+                    in1: inHandles[nxt],
+                    p1: wavePts[nxt]
+                });
+            }
+            return annotateArcLengths(outSmooth);
+        }
+
+        // CASE B: Sharp-cornered / cusped / spiked shapes — pin sharp vertices & wobble sub-chains
+        var K = sharpIdx.length;
+        var chains = [];
+        var totalPerim = 0;
+        var c, sIdx, endIdx;
+        for (c = 0; c < K; c++) {
+            sIdx = sharpIdx[c];
+            endIdx = sharpIdx[(c + 1) % K];
+            var sub = [];
+            var walk = sIdx;
+            var guard = 0;
+            var isCurvedChain = false;
+            while (guard < nBase + 1) {
+                var sg = baseSegs[walk];
+                sub.push({
+                    p0: sg.p0,
+                    out0: sg.out0,
+                    in1: sg.in1,
+                    p1: sg.p1
+                });
+                if (sg.out0[0] * sg.out0[0] + sg.out0[1] * sg.out0[1] > 0.05 ||
+                    sg.in1[0] * sg.in1[0] + sg.in1[1] * sg.in1[1] > 0.05) {
+                    isCurvedChain = true;
+                }
+                walk = (walk + 1) % nBase;
+                guard++;
+                if (walk === endIdx) break;
+            }
+            annotateArcLengths(sub);
+            var cLen = 0;
+            for (i = 0; i < sub.length; i++) cLen += sub[i].arcLen;
+            totalPerim += cLen;
+            chains.push({ segs: sub, len: cLen, curved: isCurvedChain });
+        }
+
+        var totalHalfWaves = Math.max(2, waves * 2);
+        var accLen = 0;
+        var prevQuota = 0;
+        var globalWaveIdx = 0;
+        var sharpOutSegs = [];
+
+        for (c = 0; c < K; c++) {
+            var ch = chains[c];
+            accLen += ch.len;
+            var curQuota = Math.round((accLen / Math.max(1e-4, totalPerim)) * totalHalfWaves);
+            var m = Math.max(0, curQuota - prevQuota);
+            prevQuota = curQuota;
+
+            if (m <= 0 || ch.len < 4.0) {
+                for (i = 0; i < ch.segs.length; i++) {
+                    sharpOutSegs.push(ch.segs[i]);
+                }
+                continue;
+            }
+
+            // Build interval weights along this sub-chain (m interior wave extrema -> m + 1 intervals)
+            var nInt = m + 1;
+            var wArr = [];
+            var wSum = 0;
+            var k;
+            for (k = 0; k < nInt; k++) {
+                var wk = 1.0;
+                if (rFrac > 1e-4) {
+                    var sd = Math.sin((globalWaveIdx + k + 1) * 17.371 + waves * 53.19 + c * 11.7) * 43758.5453;
+                    var fr = sd - Math.floor(sd);
+                    wk = Math.max(0.25, 1.0 + 0.72 * rFrac * (fr * 2.0 - 1.0));
+                }
+                wArr.push(wk);
+                wSum += wk;
+            }
+            var uNodes = [0];
+            var uAcc = 0;
+            for (k = 0; k < nInt; k++) {
+                uAcc += wArr[k] / (wSum || nInt);
+                uNodes.push(k === nInt - 1 ? 1.0 : uAcc);
+            }
+
+            var chainPts = [];
+            if (ch.curved) {
+                // Subdivide each interval at its midpoint so underlying curve lobes (e.g. Cloud puffs) stay round
+                chainPts.push(ch.segs[0].p0);
+                for (k = 0; k < nInt; k++) {
+                    var uMid = 0.5 * (uNodes[k] + uNodes[k + 1]);
+                    var evMid = evaluatePerimeterAtU(ch.segs, uMid);
+                    // Interpolate displacement smoothly across the curved arc
+                    var dispStart = 0;
+                    var dispEnd   = 0;
+                    if (k > 0) {
+                        dispStart = chainPts[chainPts.length - 1]._disp || 0;
+                    }
+                    var nextDisp = 0;
+                    if (k < nInt - 1) {
+                        var evPeak = evaluatePerimeterAtU(ch.segs, uNodes[k + 1]);
+                        var spanEst = ch.len / nInt;
+                        var aModC = 1.0;
+                        if (rFrac > 1e-4) {
+                            var asC = Math.sin((globalWaveIdx + 1) * 41.317 + waves * 19.73 + 7.13) * 43758.5453;
+                            aModC = Math.max(0.25, 1.0 + 0.60 * rFrac * ((asC - Math.floor(asC)) * 2.0 - 1.0));
+                        }
+                        var sgnC = (globalWaveIdx % 2 === 0) ? 1.0 : -1.0;
+                        globalWaveIdx++;
+                        var magC = spanEst * (wDepthPct / 100.0) * aModC;
+                        if (sgnC < 0 && magC > maxInward) magC = maxInward;
+                        nextDisp = sgnC * magC;
+
+                        var midDisp = 0.5 * (dispStart + nextDisp);
+                        chainPts.push([
+                            evMid.point[0] + evMid.normal[0] * midDisp,
+                            evMid.point[1] + evMid.normal[1] * midDisp
+                        ]);
+
+                        var pkPt = [
+                            evPeak.point[0] + evPeak.normal[0] * nextDisp,
+                            evPeak.point[1] + evPeak.normal[1] * nextDisp
+                        ];
+                        pkPt._disp = nextDisp;
+                        chainPts.push(pkPt);
+                    } else {
+                        var tailDisp = 0.5 * dispStart;
+                        chainPts.push([
+                            evMid.point[0] + evMid.normal[0] * tailDisp,
+                            evMid.point[1] + evMid.normal[1] * tailDisp
+                        ]);
+                    }
+                }
+                chainPts.push(ch.segs[ch.segs.length - 1].p1);
+            } else {
+                // Straight sub-chain (Square, Electric, Explosion, sharp Bubble Lines)
+                chainPts.push(ch.segs[0].p0);
+                for (k = 1; k <= m; k++) {
+                    var evN = evaluatePerimeterAtU(ch.segs, uNodes[k]);
+                    var evPrev = evaluatePerimeterAtU(ch.segs, uNodes[k - 1]);
+                    var evNext = evaluatePerimeterAtU(ch.segs, uNodes[k + 1]);
+                    var lSpan = 0.5 * (dist2D(evPrev.point, evN.point) + dist2D(evN.point, evNext.point));
+
+                    var aModS = 1.0;
+                    if (rFrac > 1e-4) {
+                        var asS = Math.sin((globalWaveIdx + 1) * 41.317 + waves * 19.73 + 7.13) * 43758.5453;
+                        aModS = Math.max(0.20, 1.0 + 0.65 * rFrac * ((asS - Math.floor(asS)) * 2.0 - 1.0));
+                    }
+                    var sgnS = (globalWaveIdx % 2 === 0) ? 1.0 : -1.0;
+                    globalWaveIdx++;
+
+                    var magS = lSpan * (wDepthPct / 100.0) * aModS;
+                    if (sgnS < 0 && magS > maxInward) magS = maxInward;
+                    var dispS = sgnS * magS;
+                    chainPts.push([
+                        evN.point[0] + evN.normal[0] * dispS,
+                        evN.point[1] + evN.normal[1] * dispS
+                    ]);
+                }
+                chainPts.push(ch.segs[ch.segs.length - 1].p1);
+            }
+
+            var nCP = chainPts.length;
+            var cIn  = [];
+            var cOut = [];
+            for (k = 0; k < nCP; k++) {
+                if (k === 0) {
+                    var fDx = chainPts[1][0] - chainPts[0][0];
+                    var fDy = chainPts[1][1] - chainPts[0][1];
+                    cIn.push([0, 0]);
+                    cOut.push([fDx * 0.30, fDy * 0.30]);
+                } else if (k === nCP - 1) {
+                    var lDx = chainPts[nCP - 2][0] - chainPts[nCP - 1][0];
+                    var lDy = chainPts[nCP - 2][1] - chainPts[nCP - 1][1];
+                    cIn.push([lDx * 0.30, lDy * 0.30]);
+                    cOut.push([0, 0]);
+                } else {
+                    var qPrev = chainPts[k - 1];
+                    var qCur  = chainPts[k];
+                    var qNext = chainPts[k + 1];
+
+                    var vx1 = qCur[0] - qPrev[0], vy1 = qCur[1] - qPrev[1];
+                    var vl1 = Math.sqrt(vx1 * vx1 + vy1 * vy1) || 1;
+                    var vx2 = qNext[0] - qCur[0], vy2 = qNext[1] - qCur[1];
+                    var vl2 = Math.sqrt(vx2 * vx2 + vy2 * vy2) || 1;
+
+                    var qtx = (vx1 / vl1) * vl2 + (vx2 / vl2) * vl1;
+                    var qty = (vy1 / vl1) * vl2 + (vy2 / vl2) * vl1;
+                    var qtMag = Math.sqrt(qtx * qtx + qty * qty) || 1;
+                    qtx /= qtMag;
+                    qty /= qtMag;
+
+                    cIn.push([-qtx * vl1 * tension, -qty * vl1 * tension]);
+                    cOut.push([qtx * vl2 * tension,  qty * vl2 * tension]);
+                }
+            }
+
+            for (k = 0; k < nCP - 1; k++) {
+                if (dist2D(chainPts[k], chainPts[k + 1]) > 0.05) {
+                    sharpOutSegs.push({
+                        p0: [chainPts[k][0], chainPts[k][1]],
+                        out0: cOut[k],
+                        in1: cIn[k + 1],
+                        p1: [chainPts[k + 1][0], chainPts[k + 1][1]]
+                    });
+                }
+            }
+        }
+
+        return rotateClosedSegmentsToTopCenter(sharpOutSegs);
+    }
+
+    /**
      * Builds the closed clockwise perimeter segments starting at Top-Center (0, -b)
-     * for any of the 6 Balloon Geometries: square, rounded, cloud, explosion, wobbly, bubble_lines.
+     * for any of the 7 Balloon Geometries (square, rounded, electric, cloud, explosion,
+     * wobbly, bubble_lines) and applies optional universal Wobbly waves when > 0.
      */
     function buildBalloonPerimeterSegments(textW, textH, cfg, lineSpecs) {
+        var geom = cfg.geometry || "rounded";
+        if (geom === "dyamond" || geom === "diamond") geom = "wobbly";
+
+        var rawWWaves = (cfg.wobblyWaves !== undefined) ? cfg.wobblyWaves : cfg.dyamondWaves;
+        var rawWDepth = (cfg.wobblyDepth !== undefined) ? cfg.wobblyDepth : cfg.dyamondDepth;
+        var effWaves  = Math.round(clampNum(rawWWaves, 0, 36, geom === "wobbly" ? 14 : 0));
+        var effWDepth = clampNum(rawWDepth, 0, 50, geom === "wobbly" ? 10 : 0);
+        var hasWobble = (effWaves > 0 && effWDepth > 0.01);
+
         var padX = cfg.padX;
         var padY = cfg.padY;
         var w = Math.max(24, textW + padX * 2);
         var h = Math.max(24, textH + padY * 2);
-        var a = w / 2;
-        var b = h / 2;
-        var geom = cfg.geometry || "rounded";
+
+        // Cushion inward wave troughs slightly so universal wobbly never touches text
+        var wobblePad = 0;
+        if (hasWobble && geom !== "wobbly") {
+            var estPerim = 2.0 * (w + h);
+            var estHalfWave = estPerim / Math.max(4, effWaves * 2);
+            wobblePad = estHalfWave * (effWDepth / 100.0) * (cfg._isPreviewIcon ? 0.25 : 0.55);
+        }
+
+        var a = w / 2 + wobblePad;
+        var b = h / 2 + wobblePad;
         var segs = [];
 
         if (geom === "bubble_lines") {
-            return buildBubbleLinesPerimeterSegments(textW, textH, cfg, lineSpecs);
+            var blCfg = cfg;
+            if (wobblePad > 0.5) {
+                blCfg = cloneObject(cfg);
+                blCfg.padX = (cfg.padX !== undefined ? cfg.padX : 24) + wobblePad * 0.7;
+                blCfg.padY = (cfg.padY !== undefined ? cfg.padY : 16) + wobblePad * 0.5;
+            }
+            var blSegs = buildBubbleLinesPerimeterSegments(textW, textH, blCfg, lineSpecs);
+            return applyWobblyToPerimeterSegments(blSegs, cfg, null);
+        }
+
+        if (geom === "electric") {
+            var elSegs = buildElectricPerimeterSegments(textW, textH, cfg, wobblePad);
+            return applyWobblyToPerimeterSegments(elSegs, cfg, null);
         }
 
         if (geom === "square" || geom === "rounded") {
@@ -2294,22 +3153,17 @@
             }
             pushLine([-a + r, -b], [0, -b]);
 
-            return annotateArcLengths(segs);
+            annotateArcLengths(segs);
+            var sqGuard = (r > 0.05) ? { dA: a, dB: b, dR: r } : null;
+            return applyWobblyToPerimeterSegments(segs, cfg, sqGuard);
         }
 
-        if (geom === "wobbly" || geom === "dyamond") {
-            var waves = Math.max(4, Math.min(36, Math.round(cfg.wobblyWaves || cfg.dyamondWaves || 14)));
-            var wDepthPct = clampNum(cfg.wobblyDepth !== undefined ? cfg.wobblyDepth : cfg.dyamondDepth, 2, 50, 10);
-            var rawWR = (cfg.wobblyWidthRand !== undefined) ? cfg.wobblyWidthRand : cfg.dyamondWidthRand;
-            var wRandPct  = clampNum(rawWR !== undefined ? rawWR : 65, 0, 100, 65);
-            var numPts = waves * 2; // Alternating outward crests (+1) and inward troughs (-1)
-
-            // Cushion half-dimensions slightly so inward wave troughs never encroach on text bounds
+        if (geom === "wobbly") {
             var approxPerim = 2.0 * (w + h);
-            var approxHalfWave = approxPerim / numPts;
-            var inwardAllowance = approxHalfWave * (wDepthPct / 100.0) * 0.75;
-            var dA = Math.max(a, textW / 2 + 6 + inwardAllowance);
-            var dB = Math.max(b, textH / 2 + 6 + inwardAllowance);
+            var approxHalfWave = hasWobble ? (approxPerim / Math.max(4, effWaves * 2)) : 0;
+            var inwardAllowance = hasWobble ? (approxHalfWave * (effWDepth / 100.0) * 0.75) : 0;
+            var dA = Math.max(w / 2, textW / 2 + 6 + inwardAllowance);
+            var dB = Math.max(h / 2, textH / 2 + 6 + inwardAllowance);
             var dR = Math.max(6, Math.min(cfg.cornerRadius !== undefined ? cfg.cornerRadius : 28, dA * 0.75, dB * 0.75));
             var KD = 0.5522847498307936;
 
@@ -2330,89 +3184,13 @@
             pushDLine([-dA + dR, -dB], [0, -dB]);
             annotateArcLengths(rectSegs);
 
-            var uWaves = computePerimeterIntervals(rectSegs, numPts, wRandPct, 31.7);
-            var evals = [];
-            var wi;
-            for (wi = 0; wi < numPts; wi++) {
-                evals.push(evaluatePerimeterAtU(rectSegs, uWaves[wi]));
+            var wobCfg = cfg;
+            if (cfg.wobblyWaves === undefined && cfg.dyamondWaves === undefined) {
+                wobCfg = cloneObject(cfg);
+                wobCfg.wobblyWaves = effWaves;
+                wobCfg.wobblyDepth = effWDepth;
             }
-
-            var maxInward = Math.min(dA, dB) * 0.24;
-            var rFrac = wRandPct / 100.0;
-            var wavePts = [];
-            for (wi = 0; wi < numPts; wi++) {
-                var prevEv = evals[(wi - 1 + numPts) % numPts];
-                var curEv  = evals[wi];
-                var nextEv = evals[(wi + 1) % numPts];
-                var localSpan = 0.5 * (dist2D(prevEv.point, curEv.point) + dist2D(curEv.point, nextEv.point));
-
-                var ampMod = 1.0;
-                if (rFrac > 1e-4) {
-                    var aSeed = Math.sin((wi + 1) * 41.317 + waves * 19.73 + 7.13) * 43758.5453;
-                    var aSigned = (aSeed - Math.floor(aSeed)) * 2.0 - 1.0;
-                    ampMod = Math.max(0.20, 1.0 + 0.65 * rFrac * aSigned);
-                }
-
-                var sign = (wi % 2 === 0) ? 1.0 : -1.0;
-                var mag  = localSpan * (wDepthPct / 100.0) * ampMod;
-
-                // Preserve full rounded-rectangle shoulder corners (prevent inward corner collapse)
-                var inCornerX = Math.abs(curEv.point[0]) > (dA - dR * 1.15);
-                var inCornerY = Math.abs(curEv.point[1]) > (dB - dR * 1.15);
-                if (inCornerX && inCornerY) {
-                    if (sign < 0) {
-                        mag *= 0.15;
-                    } else {
-                        mag *= 0.45;
-                    }
-                } else if (sign < 0 && mag > maxInward) {
-                    mag = maxInward;
-                }
-
-                var disp = sign * mag;
-                wavePts.push([
-                    curEv.point[0] + curEv.normal[0] * disp,
-                    curEv.point[1] + curEv.normal[1] * disp
-                ]);
-            }
-
-            // Smooth G1 centripetal Catmull-Rom tangents (zero cusps, zero loops)
-            var inHandles  = [];
-            var outHandles = [];
-            var tension = 0.36;
-            for (wi = 0; wi < numPts; wi++) {
-                var pPrev = wavePts[(wi - 1 + numPts) % numPts];
-                var pCur  = wavePts[wi];
-                var pNext = wavePts[(wi + 1) % numPts];
-
-                var dx1 = pCur[0] - pPrev[0];
-                var dy1 = pCur[1] - pPrev[1];
-                var d1  = Math.sqrt(dx1 * dx1 + dy1 * dy1) || 1;
-
-                var dx2 = pNext[0] - pCur[0];
-                var dy2 = pNext[1] - pCur[1];
-                var d2  = Math.sqrt(dx2 * dx2 + dy2 * dy2) || 1;
-
-                var tx = (dx1 / d1) * d2 + (dx2 / d2) * d1;
-                var ty = (dy1 / d1) * d2 + (dy2 / d2) * d1;
-                var tMag = Math.sqrt(tx * tx + ty * ty) || 1;
-                tx /= tMag;
-                ty /= tMag;
-
-                inHandles.push([-tx * d1 * tension, -ty * d1 * tension]);
-                outHandles.push([tx * d2 * tension,  ty * d2 * tension]);
-            }
-
-            for (wi = 0; wi < numPts; wi++) {
-                var nxt = (wi + 1) % numPts;
-                segs.push({
-                    p0: wavePts[wi],
-                    out0: outHandles[wi],
-                    in1: inHandles[nxt],
-                    p1: wavePts[nxt]
-                });
-            }
-            return annotateArcLengths(segs);
+            return applyWobblyToPerimeterSegments(rectSegs, wobCfg, { dA: dA, dB: dB, dR: dR });
         }
 
         // Safe superellipse inner cushion so text corners never touch cloud cusps or explosion valleys
@@ -2457,7 +3235,8 @@
                     p1: c1
                 });
             }
-            return annotateArcLengths(segs);
+            annotateArcLengths(segs);
+            return applyWobblyToPerimeterSegments(segs, cfg, null);
         }
 
         // Explosion / Shout (true arc-length division + optional width randomizer + width-relative spike depth)
@@ -2498,7 +3277,8 @@
             segs.push({ p0: v0,    out0: [0, 0], in1: [0, 0], p1: tipPt });
             segs.push({ p0: tipPt, out0: [0, 0], in1: [0, 0], p1: v1 });
         }
-        return annotateArcLengths(segs);
+        annotateArcLengths(segs);
+        return applyWobblyToPerimeterSegments(segs, cfg, null);
     }
 
     function segmentsToClosedShapeData(segs) {
@@ -2542,11 +3322,77 @@
     }
 
     /**
+     * Finds the arc-length parameter `u` in [0, 1) on `segs` whose point is closest to `targetPt`.
+     */
+    function findClosestPerimeterU(segs, targetPt) {
+        if (!segs || segs.length === 0 || !targetPt) return 0.56;
+        var tx = targetPt[0] || 0;
+        var ty = targetPt[1] || 0;
+        var bestU = 0;
+        var bestD = 1e18;
+        var COARSE = 120;
+        var s, uC, pt, dx, dy, d2;
+        for (s = 0; s < COARSE; s++) {
+            uC = s / COARSE;
+            pt = evaluatePerimeterAtU(segs, uC).point;
+            dx = pt[0] - tx;
+            dy = pt[1] - ty;
+            d2 = dx * dx + dy * dy;
+            if (d2 < bestD) {
+                bestD = d2;
+                bestU = uC;
+            }
+        }
+        var baseU = bestU;
+        var fineStep = 1.0 / (COARSE * 8);
+        for (s = -8; s <= 8; s++) {
+            uC = (((baseU + s * fineStep) % 1) + 1) % 1;
+            pt = evaluatePerimeterAtU(segs, uC).point;
+            dx = pt[0] - tx;
+            dy = pt[1] - ty;
+            d2 = dx * dx + dy * dy;
+            if (d2 < bestD) {
+                bestD = d2;
+                bestU = uC;
+            }
+        }
+        return bestU;
+    }
+
+    function worldPointToBalloonLocal(worldPt, centerPos, scaleArr, rotDeg) {
+        var dx = (worldPt[0] || 0) - (centerPos[0] || 0);
+        var dy = (worldPt[1] || 0) - (centerPos[1] || 0);
+        var rad = -((rotDeg || 0) * Math.PI / 180.0);
+        var cr = Math.cos(rad), sr = Math.sin(rad);
+        var rx = dx * cr - dy * sr;
+        var ry = dx * sr + dy * cr;
+        var sx = ((scaleArr && scaleArr[0]) ? scaleArr[0] : 100) / 100.0;
+        var sy = ((scaleArr && scaleArr[1]) ? scaleArr[1] : 100) / 100.0;
+        if (Math.abs(sx) < 1e-4) sx = 1.0;
+        if (Math.abs(sy) < 1e-4) sy = 1.0;
+        return [rx / sx, ry / sy];
+    }
+
+    function balloonLocalToWorldPoint(localPt, centerPos, scaleArr, rotDeg) {
+        var sx = ((scaleArr && scaleArr[0]) ? scaleArr[0] : 100) / 100.0;
+        var sy = ((scaleArr && scaleArr[1]) ? scaleArr[1] : 100) / 100.0;
+        var lx = (localPt[0] || 0) * sx;
+        var ly = (localPt[1] || 0) * sy;
+        var rad = (rotDeg || 0) * Math.PI / 180.0;
+        var cr = Math.cos(rad), sr = Math.sin(rad);
+        return [
+            (centerPos[0] || 0) + (lx * cr - ly * sr),
+            (centerPos[1] || 0) + (lx * sr + ly * cr)
+        ];
+    }
+
+    /**
      * Generates complete Balloon + Tail Shape specifications and exact outer bounds.
      */
-    function computeBalloonAndTail(textW, textH, cfg, lineSpecs) {
+    function computeBalloonAndTail(textW, textH, cfg, lineSpecs, targetLocalPt) {
         var segs = buildBalloonPerimeterSegments(textW, textH, cfg, lineSpecs);
         var tailStyle = cfg.tailStyle || "none";
+        var useTargetMode = (cfg.tailPlacementMode === "target" && tailStyle !== "none" && targetLocalPt && targetLocalPt.length >= 2);
 
         var startPct = cfg.tailStart;
         var endPct   = cfg.tailEnd;
@@ -2569,6 +3415,13 @@
         }
         var uMid = (uA + span * 0.5) % 1;
 
+        if (useTargetMode) {
+            uMid = findClosestPerimeterU(segs, targetLocalPt);
+            span = clampNum(cfg.tailStartWidth, 0.1, 4.0, 2.5) / 100.0;
+            uA = ((uMid - span * 0.5) % 1 + 1) % 1;
+            uB = (uMid + span * 0.5) % 1;
+        }
+
         if (tailStyle === "triangle" || tailStyle === "curved_triangle" || tailStyle === "lightning") {
             if (span < 0.001) {
                 span = 0.001;
@@ -2585,21 +3438,40 @@
         var pMid = midEval.point;
         var nOut = midEval.normal;
 
-        // Blend outward perimeter normal with radial vector from center for smooth comic direction
-        var rLen = Math.sqrt(pMid[0] * pMid[0] + pMid[1] * pMid[1]) || 1;
-        var rx = pMid[0] / rLen;
-        var ry = pMid[1] / rLen;
-        var dirX = nOut[0] * 0.45 + rx * 0.55;
-        var dirY = nOut[1] * 0.45 + ry * 0.55;
-        var dirMag = Math.sqrt(dirX * dirX + dirY * dirY) || 1;
-        var baseOutAng = Math.atan2(dirY / dirMag, dirX / dirMag);
-        var tipAng = baseOutAng + ((cfg.tailAngle || 0) * Math.PI / 180.0);
-
         var tailLen = Math.max(15, cfg.tailLength || 85);
-        var pTip = [
-            pMid[0] + tailLen * Math.cos(tipAng),
-            pMid[1] + tailLen * Math.sin(tipAng)
-        ];
+        var pTip;
+
+        if (useTargetMode) {
+            var vxT = targetLocalPt[0] - pMid[0];
+            var vyT = targetLocalPt[1] - pMid[1];
+            var dT  = Math.sqrt(vxT * vxT + vyT * vyT);
+            var dotOut = vxT * nOut[0] + vyT * nOut[1];
+            var dirTX = (dotOut > 2.0 && dT > 4.0) ? (vxT / dT) : nOut[0];
+            var dirTY = (dotOut > 2.0 && dT > 4.0) ? (vyT / dT) : nOut[1];
+
+            if (cfg.tailTargetSnapTip !== false) {
+                tailLen = (dotOut > 2.0) ? Math.max(15.0, dT) : 18.0;
+                pTip = [pMid[0] + dirTX * tailLen, pMid[1] + dirTY * tailLen];
+            } else {
+                var targAng = Math.atan2(dirTY, dirTX) + ((cfg.tailAngle || 0) * Math.PI / 180.0);
+                pTip = [pMid[0] + tailLen * Math.cos(targAng), pMid[1] + tailLen * Math.sin(targAng)];
+            }
+        } else {
+            // Blend outward perimeter normal with radial vector from center for smooth comic direction
+            var rLen = Math.sqrt(pMid[0] * pMid[0] + pMid[1] * pMid[1]) || 1;
+            var rx = pMid[0] / rLen;
+            var ry = pMid[1] / rLen;
+            var dirX = nOut[0] * 0.45 + rx * 0.55;
+            var dirY = nOut[1] * 0.45 + ry * 0.55;
+            var dirMag = Math.sqrt(dirX * dirX + dirY * dirY) || 1;
+            var baseOutAng = Math.atan2(dirY / dirMag, dirX / dirMag);
+            var tipAng = baseOutAng + ((cfg.tailAngle || 0) * Math.PI / 180.0);
+
+            pTip = [
+                pMid[0] + tailLen * Math.cos(tipAng),
+                pMid[1] + tailLen * Math.sin(tipAng)
+            ];
+        }
 
         var bodyShape = null;
         var extraShapes = []; // { name, shapeData, filled, stroked, isLine }
@@ -2811,6 +3683,7 @@
         var margin = maxSW + 14;
 
         return {
+            perimeterSegs: segs,
             bodyShape: bodyShape,
             extraShapes: extraShapes,
             pMid: pMid,
@@ -3309,16 +4182,335 @@
         return "[" + parts.join(",") + "]";
     }
 
+    function serializeSegsCompact(segs) {
+        var parts = [];
+        for (var i = 0; i < segs.length; i++) {
+            var s = segs[i];
+            parts.push("[" +
+                (Math.round(s.p0[0] * 100) / 100) + "," +
+                (Math.round(s.p0[1] * 100) / 100) + "," +
+                (Math.round(s.out0[0] * 100) / 100) + "," +
+                (Math.round(s.out0[1] * 100) / 100) + "," +
+                (Math.round(s.in1[0] * 100) / 100) + "," +
+                (Math.round(s.in1[1] * 100) / 100) + "," +
+                (Math.round(s.p1[0] * 100) / 100) + "," +
+                (Math.round(s.p1[1] * 100) / 100) + "," +
+                (Math.round((s.u0 || 0) * 10000) / 10000) + "," +
+                (Math.round((s.u1 !== undefined ? s.u1 : 1) * 10000) / 10000) +
+            "]");
+        }
+        return "[" + parts.join(",") + "]";
+    }
+
+    function serializePerimeterSamplesCompact(segs, count) {
+        var n = count || 96;
+        var parts = [];
+        for (var i = 0; i < n; i++) {
+            var u = i / n;
+            var pt = evaluatePerimeterAtU(segs, u).point;
+            parts.push("[" +
+                (Math.round(pt[0] * 10) / 10) + "," +
+                (Math.round(pt[1] * 10) / 10) + "," +
+                (Math.round(u * 10000) / 10000) +
+            "]");
+        }
+        return "[" + parts.join(",") + "]";
+    }
+
+    /**
+     * Builds an ES3 expression snippet that defines `V0`, `I0`, `O0`, and `IS_CLOSED`
+     * dynamically from the draggable Target Guide Layer ("Tail Target <HEX>"), placing
+     * the tail's origin at the closest point on the balloon perimeter to the guide layer.
+     */
+    function buildDynamicTargetShapeSnippet(geoResult, cfg, targetLink, role, cloudIdx) {
+        if (!geoResult || !geoResult.perimeterSegs || !targetLink || !targetLink.guideName) return "";
+        var segs = geoResult.perimeterSegs;
+        var fbTip = targetLink.fallbackTip || geoResult.pTip || [0, 90];
+        var fbX = Math.round((fbTip[0] || 0) * 100) / 100;
+        var fbY = Math.round((fbTip[1] || 0) * 100) / 100;
+
+        var targetCoordSnippet = "";
+        if (targetLink.outerCompName && targetLink.precompLayerName) {
+            targetCoordSnippet =
+                'var T = [' + fbX + ',' + fbY + '];\n' +
+                'try {\n' +
+                '    var oC = comp("' + escapeJsonStr(targetLink.outerCompName) + '");\n' +
+                '    var gL = oC.layer("' + escapeJsonStr(targetLink.guideName) + '");\n' +
+                '    var pL = oC.layer("' + escapeJsonStr(targetLink.precompLayerName) + '");\n' +
+                '    var gW = gL.toComp(gL.transform.anchorPoint.value);\n' +
+                '    var pP = pL.fromComp(gW);\n' +
+                '    var cO = pL.transform.anchorPoint.value;\n' +
+                '    T = [pP[0] - cO[0], pP[1] - cO[1]];\n' +
+                '} catch (eTG) {}\n';
+        } else {
+            targetCoordSnippet =
+                'var T = [' + fbX + ',' + fbY + '];\n' +
+                'try {\n' +
+                '    var gL = thisComp.layer("' + escapeJsonStr(targetLink.guideName) + '");\n' +
+                '    var gW = gL.toComp(gL.transform.anchorPoint.value);\n' +
+                '    var lP = thisLayer.fromComp(gW);\n' +
+                '    var lA = thisLayer.transform.anchorPoint.value;\n' +
+                '    T = [lP[0] - (lA[0] || 0), lP[1] - (lA[1] || 0)];\n' +
+                '} catch (eTG) {}\n';
+        }
+
+        var snapTip = (cfg.tailTargetSnapTip !== false) ? "true" : "false";
+        var fixedLen = Math.max(15, Math.round((cfg.tailLength || 85) * 100) / 100);
+        var slantRad = Math.round(((cfg.tailAngle || 0) * Math.PI / 180.0) * 10000) / 10000;
+        var widFrac  = Math.round((clampNum(cfg.tailStartWidth, 0.1, 4.0, 2.5) / 100.0) * 10000) / 10000;
+        var curveFrac = Math.round((clampNum(cfg.tailCurve !== undefined ? cfg.tailCurve : 45, -100, 100, 45) / 100.0) * 1000) / 1000;
+        var tStyle   = cfg.tailStyle || "triangle";
+
+        var solverHeader =
+            targetCoordSnippet +
+            'var S = ' + serializeSegsCompact(segs) + ';\n' +
+            'var P = ' + serializePerimeterSamplesCompact(segs, 96) + ';\n' +
+            'function evalS(sg, t) {\n' +
+            '    var mt = 1.0 - t, ax = sg[0], ay = sg[1], bx = ax + sg[2], by = ay + sg[3], dx = sg[6], dy = sg[7], cx = dx + sg[4], cy = dy + sg[5];\n' +
+            '    return [mt*mt*mt*ax + 3*mt*mt*t*bx + 3*mt*t*t*cx + t*t*t*dx, mt*mt*mt*ay + 3*mt*mt*t*by + 3*mt*t*t*cy + t*t*t*dy];\n' +
+            '}\n' +
+            'function evalU(uR) {\n' +
+            '    var u = ((uR % 1) + 1) % 1, si;\n' +
+            '    for (si = 0; si < S.length; si++) {\n' +
+            '        var sg = S[si];\n' +
+            '        if (u <= sg[9] || si === S.length - 1) {\n' +
+            '            var spn = Math.max(1e-6, sg[9] - sg[8]);\n' +
+            '            var t = clamp((u - sg[8]) / spn, 0, 1);\n' +
+            '            var pt = evalS(sg, t);\n' +
+            '            var pA = evalS(sg, Math.max(0, t - 0.01));\n' +
+            '            var pB = evalS(sg, Math.min(1, t + 0.01));\n' +
+            '            var tx = pB[0] - pA[0], ty = pB[1] - pA[1], tl = Math.sqrt(tx*tx + ty*ty) || 1;\n' +
+            '            return { pt: pt, n: [ty / tl, -tx / tl] };\n' +
+            '        }\n' +
+            '    }\n' +
+            '    return { pt: [S[0][0], S[0][1]], n: [0, -1] };\n' +
+            '}\n' +
+            'var bestU = P[0][2], bestD = 1e18, ki, ddx, ddy, dd;\n' +
+            'for (ki = 0; ki < P.length; ki++) {\n' +
+            '    ddx = P[ki][0] - T[0]; ddy = P[ki][1] - T[1]; dd = ddx*ddx + ddy*ddy;\n' +
+            '    if (dd < bestD) { bestD = dd; bestU = P[ki][2]; }\n' +
+            '}\n' +
+            'var baseU = bestU, fStep = 1.0 / 640.0;\n' +
+            'for (ki = -6; ki <= 6; ki++) {\n' +
+            '    var cU = (((baseU + ki * fStep) % 1) + 1) % 1;\n' +
+            '    var cp = evalU(cU).pt;\n' +
+            '    ddx = cp[0] - T[0]; ddy = cp[1] - T[1]; dd = ddx*ddx + ddy*ddy;\n' +
+            '    if (dd < bestD) { bestD = dd; bestU = cU; }\n' +
+            '}\n' +
+            'var mEv = evalU(bestU);\n' +
+            'var pMid = mEv.pt, nOut = mEv.n;\n' +
+            'var vxT = T[0] - pMid[0], vyT = T[1] - pMid[1];\n' +
+            'var dT = Math.sqrt(vxT*vxT + vyT*vyT);\n' +
+            'var dotO = vxT * nOut[0] + vyT * nOut[1];\n' +
+            'var dirX = (dotO > 2.0 && dT > 4.0) ? (vxT / dT) : nOut[0];\n' +
+            'var dirY = (dotO > 2.0 && dT > 4.0) ? (vyT / dT) : nOut[1];\n' +
+            'var tLen = ' + fixedLen + ';\n' +
+            'var pTip;\n' +
+            'if (' + snapTip + ') {\n' +
+            '    tLen = (dotO > 2.0) ? Math.max(15.0, dT) : 18.0;\n' +
+            '    pTip = [pMid[0] + dirX * tLen, pMid[1] + dirY * tLen];\n' +
+            '} else {\n' +
+            '    var tAng = Math.atan2(dirY, dirX) + ' + slantRad + ';\n' +
+            '    pTip = [pMid[0] + tLen * Math.cos(tAng), pMid[1] + tLen * Math.sin(tAng)];\n' +
+            '}\n';
+
+        if (role === "line") {
+            return (
+                solverHeader +
+                'var V0 = [pMid, pTip];\n' +
+                'var I0 = [[0,0],[0,0]];\n' +
+                'var O0 = [[0,0],[0,0]];\n' +
+                'var IS_CLOSED = false;\n'
+            );
+        }
+
+        if (role === "cloud") {
+            var cIdx = cloudIdx || 1;
+            var frac = (cIdx === 1) ? 0.34 : ((cIdx === 2) ? 0.68 : 0.96);
+            var rMul = (cIdx === 1) ? 1.00 : ((cIdx === 2) ? 0.65 : 0.40);
+            return (
+                solverHeader +
+                'var rB = clamp(tLen * 0.17, 9, 22) * ' + rMul.toFixed(2) + ';\n' +
+                'var ccx = pMid[0] + (pTip[0] - pMid[0]) * ' + frac.toFixed(2) + ';\n' +
+                'var ccy = pMid[1] + (pTip[1] - pMid[1]) * ' + frac.toFixed(2) + ';\n' +
+                'var ck = rB * 0.55228475;\n' +
+                'var V0 = [[ccx, ccy - rB], [ccx + rB, ccy], [ccx, ccy + rB], [ccx - rB, ccy]];\n' +
+                'var I0 = [[-ck, 0], [0, -ck], [ck, 0], [0, ck]];\n' +
+                'var O0 = [[ck, 0], [0, ck], [-ck, 0], [0, -ck]];\n' +
+                'var IS_CLOSED = true;\n'
+            );
+        }
+
+        // role === "body" (spliced tail: triangle, curved_triangle, lightning)
+        var tailBuildSnippet = "";
+        if (tStyle === "triangle") {
+            tailBuildSnippet =
+                'V0.push(pTip); I0.push([0,0]); O0.push([0,0]);\n';
+        } else if (tStyle === "curved_triangle") {
+            tailBuildSnippet =
+                'var cMid = [(b1[0] + b2[0]) * 0.5, (b1[1] + b2[1]) * 0.5];\n' +
+                'var cvx = pTip[0] - cMid[0], cvy = pTip[1] - cMid[1];\n' +
+                'var cLen = Math.sqrt(cvx*cvx + cvy*cvy) || 1;\n' +
+                'var perpX = -cvy / cLen, perpY = cvx / cLen;\n' +
+                'var tbx = b2[0] - b1[0], tby = b2[1] - b1[1];\n' +
+                'var tbLen = Math.sqrt(tbx*tbx + tby*tby) || 1;\n' +
+                'var baseHW = Math.max(1.0, tbLen * 0.5);\n' +
+                'var bnx = tby / tbLen, bny = -tbx / tbLen;\n' +
+                'var dotNP = bnx * perpX + bny * perpY;\n' +
+                'var bowSign = (Math.abs(dotNP) > 0.05) ? (dotNP >= 0 ? 1 : -1) : 1;\n' +
+                'var bxD = perpX * bowSign, byD = perpY * bowSign;\n' +
+                'var bowD = cLen * 0.44 * ' + curveFrac + ';\n' +
+                'var sc1 = [cMid[0] + cvx * 0.30 + bxD * (bowD * 0.95), cMid[1] + cvy * 0.30 + byD * (bowD * 0.95)];\n' +
+                'var sc2 = [cMid[0] + cvx * 0.68 + bxD * (bowD * 0.72), cMid[1] + cvy * 0.68 + byD * (bowD * 0.72)];\n' +
+                'var d1x = sc2[0] - cMid[0], d1y = sc2[1] - cMid[1], d1L = Math.sqrt(d1x*d1x + d1y*d1y) || 1;\n' +
+                'var n1x = d1y / d1L, n1y = -d1x / d1L;\n' +
+                'var d2x = pTip[0] - sc1[0], d2y = pTip[1] - sc1[1], d2L = Math.sqrt(d2x*d2x + d2y*d2y) || 1;\n' +
+                'var n2x = d2y / d2L, n2y = -d2x / d2L;\n' +
+                'var cw1 = baseHW * 0.58, cw2 = baseHW * 0.22;\n' +
+                'O0[V0.length - 1] = [sc1[0] + n1x * cw1 - b1[0], sc1[1] + n1y * cw1 - b1[1]];\n' +
+                'V0.push(pTip);\n' +
+                'I0.push([sc2[0] + n2x * cw2 - pTip[0], sc2[1] + n2y * cw2 - pTip[1]]);\n' +
+                'O0.push([sc2[0] - n2x * cw2 - pTip[0], sc2[1] - n2y * cw2 - pTip[1]]);\n' +
+                'I0[0] = [sc1[0] - n1x * cw1 - b2[0], sc1[1] - n1y * cw1 - b2[1]];\n';
+        } else {
+            tailBuildSnippet =
+                'var midB = [(b1[0] + b2[0]) * 0.5, (b1[1] + b2[1]) * 0.5];\n' +
+                'var vxB = pTip[0] - midB[0], vyB = pTip[1] - midB[1];\n' +
+                'var bxB = b1[0] - b2[0], byB = b1[1] - b2[1];\n' +
+                'var bDist = Math.sqrt(bxB*bxB + byB*byB) || 1;\n' +
+                'var pxB = bxB / bDist, pyB = byB / bDist;\n' +
+                'var w0B = Math.max(1.5, bDist * 0.5), jog = Math.max(9, tLen * 0.14);\n' +
+                'var h1B = w0B * 0.56, h2B = w0B * 0.36;\n' +
+                'var bPts = [\n' +
+                '    [midB[0] + vxB * 0.48 + pxB * (jog + h1B), midB[1] + vyB * 0.48 + pyB * (jog + h1B)],\n' +
+                '    [midB[0] + vxB * 0.41 + pxB * (-0.35 * jog + h2B), midB[1] + vyB * 0.41 + pyB * (-0.35 * jog + h2B)],\n' +
+                '    pTip,\n' +
+                '    [midB[0] + vxB * 0.35 + pxB * (-0.35 * jog - h2B), midB[1] + vyB * 0.35 + pyB * (-0.35 * jog - h2B)],\n' +
+                '    [midB[0] + vxB * 0.42 + pxB * (jog - h1B), midB[1] + vyB * 0.42 + pyB * (jog - h1B)]\n' +
+                '];\n' +
+                'for (var bi = 0; bi < 5; bi++) { V0.push(bPts[bi]); I0.push([0,0]); O0.push([0,0]); }\n';
+        }
+
+        return (
+            solverHeader +
+            'function splitSeg(sg, t) {\n' +
+            '    var ax = sg[0], ay = sg[1], bx = ax + sg[2], by = ay + sg[3], dx = sg[6], dy = sg[7], cx = dx + sg[4], cy = dy + sg[5];\n' +
+            '    var q0x = ax + (bx - ax)*t, q0y = ay + (by - ay)*t;\n' +
+            '    var q1x = bx + (cx - bx)*t, q1y = by + (cy - by)*t;\n' +
+            '    var q2x = cx + (dx - cx)*t, q2y = cy + (dy - cy)*t;\n' +
+            '    var r0x = q0x + (q1x - q0x)*t, r0y = q0y + (q1y - q0y)*t;\n' +
+            '    var r1x = q1x + (q2x - q1x)*t, r1y = q1y + (q2y - q1y)*t;\n' +
+            '    var sx = r0x + (r1x - r0x)*t, sy = r0y + (r1y - r0y)*t;\n' +
+            '    return {\n' +
+            '        L: [ax, ay, q0x - ax, q0y - ay, r0x - sx, r0y - sy, sx, sy],\n' +
+            '        R: [sx, sy, r1x - sx, r1y - sy, q2x - dx, q2y - dy, dx, dy]\n' +
+            '    };\n' +
+            '}\n' +
+            'function subLin(a, b) {\n' +
+            '    var out = [];\n' +
+            '    if (b <= a + 1e-6) return out;\n' +
+            '    for (var i = 0; i < S.length; i++) {\n' +
+            '        var sg = S[i];\n' +
+            '        if (sg[9] <= a + 1e-7 || sg[8] >= b - 1e-7) continue;\n' +
+            '        var sp = Math.max(1e-6, sg[9] - sg[8]);\n' +
+            '        var t0 = clamp((a - sg[8]) / sp, 0, 1);\n' +
+            '        var t1 = clamp((b - sg[8]) / sp, 0, 1);\n' +
+            '        if (t1 <= t0 + 1e-6) continue;\n' +
+            '        if (t0 <= 1e-5 && t1 >= 1.0 - 1e-5) {\n' +
+            '            out.push([sg[0], sg[1], sg[2], sg[3], sg[4], sg[5], sg[6], sg[7]]);\n' +
+            '        } else {\n' +
+            '            var s1 = splitSeg(sg, t0);\n' +
+            '            var rem = (1.0 - t0 > 1e-6) ? clamp((t1 - t0) / (1.0 - t0), 0, 1) : 1.0;\n' +
+            '            var s2 = splitSeg(s1.R, rem);\n' +
+            '            out.push(s2.L);\n' +
+            '        }\n' +
+            '    }\n' +
+            '    return out;\n' +
+            '}\n' +
+            'var spW = clamp(' + widFrac + ', 0.001, 0.04);\n' +
+            'var uA = ((bestU - spW * 0.5) % 1 + 1) % 1;\n' +
+            'var uB = (bestU + spW * 0.5) % 1;\n' +
+            'var ch = (uB < uA) ? subLin(uB, uA) : subLin(uB, 1.0).concat(subLin(0.0, uA));\n' +
+            'var V0 = [], I0 = [], O0 = [];\n' +
+            'if (ch.length > 0) {\n' +
+            '    var b2 = [ch[0][0], ch[0][1]];\n' +
+            '    var lastC = ch[ch.length - 1];\n' +
+            '    var b1 = [lastC[6], lastC[7]];\n' +
+            '    V0.push(b2); I0.push([0,0]); O0.push([ch[0][2], ch[0][3]]);\n' +
+            '    for (var mi = 1; mi < ch.length; mi++) {\n' +
+            '        V0.push([ch[mi][0], ch[mi][1]]);\n' +
+            '        I0.push([ch[mi - 1][4], ch[mi - 1][5]]);\n' +
+            '        O0.push([ch[mi][2], ch[mi][3]]);\n' +
+            '    }\n' +
+            '    V0.push(b1); I0.push([lastC[4], lastC[5]]); O0.push([0,0]);\n' +
+            tailBuildSnippet +
+            '} else {\n' +
+            '    for (var fi = 0; fi < S.length; fi++) {\n' +
+            '        var pr = S[(fi - 1 + S.length) % S.length], cu = S[fi];\n' +
+            '        V0.push([cu[0], cu[1]]); I0.push([pr[4], pr[5]]); O0.push([cu[2], cu[3]]);\n' +
+            '    }\n' +
+            '}\n' +
+            'var IS_CLOSED = true;\n'
+        );
+    }
+
+    function applyDynamicTargetTailPaths(balloonLayer, geoResult, cfg, targetLink) {
+        if (!balloonLayer || !geoResult || !targetLink || !targetLink.guideName) return;
+        if (cfg.tailPlacementMode !== "target" || !cfg.tailStyle || cfg.tailStyle === "none") return;
+
+        var rootContents = balloonLayer.property("Contents") || balloonLayer.property("ADBE Root Vectors Group");
+        if (!rootContents) return;
+        var numGroups = (typeof rootContents.numProperties === "number")
+            ? rootContents.numProperties
+            : (rootContents.properties ? rootContents.properties.length : 0);
+
+        var tStyle = cfg.tailStyle;
+        for (var gi = 1; gi <= numGroups; gi++) {
+            var grp = rootContents.property(gi);
+            if (!grp) continue;
+            var gCont = grp.property("Contents") || grp.property("ADBE Vectors Group");
+            if (!gCont) continue;
+            var pathG = gCont.property("ADBE Vector Shape - Group") || gCont.property("Path 1");
+            if (!pathG) continue;
+            var pathP = pathG.property("Path") || pathG.property("ADBE Vector Shape");
+            if (!pathP) continue;
+
+            var snippet = "";
+            if (grp.name === "Balloon Body" && (tStyle === "triangle" || tStyle === "curved_triangle" || tStyle === "lightning")) {
+                snippet = buildDynamicTargetShapeSnippet(geoResult, cfg, targetLink, "body", 0);
+            } else if (grp.name === "Tail Line" && tStyle === "line") {
+                snippet = buildDynamicTargetShapeSnippet(geoResult, cfg, targetLink, "line", 0);
+            } else if (grp.name.indexOf("Thought Cloud ") === 0 && tStyle === "clouds") {
+                var cIdx = parseInt(grp.name.replace("Thought Cloud ", ""), 10) || 1;
+                snippet = buildDynamicTargetShapeSnippet(geoResult, cfg, targetLink, "cloud", cIdx);
+            }
+            if (snippet) {
+                pathP.expression = snippet + "createPath(V0, I0, O0, IS_CLOSED);";
+            }
+        }
+    }
+
     /**
      * Generates a createPath(...) expression that expands the balloon's width
      * horizontally from 0 -> full width WITHOUT Scale distortion (preserving
-     * corner radii, puff curves, and spike tips along the left & right caps).
+     * corner radii, Electric chevrons, puff curves, and spike tips along the caps).
      */
-    function buildBloatPathExpression(shapeData, halfTextW, cfg, envRefExpr, offsetXY) {
+    function buildBloatPathExpression(shapeData, halfTextW, cfg, envRefExpr, offsetXY, dynamicSnippet) {
         var bodyHalfW = Math.max(12, halfTextW + (cfg.padX || 0));
+        if (shapeData && shapeData.vertices) {
+            for (var vi = 0; vi < shapeData.vertices.length; vi++) {
+                var avx = Math.abs(shapeData.vertices[vi][0] || 0);
+                if (cfg.geometry === "electric" && avx > bodyHalfW) {
+                    bodyHalfW = avx;
+                }
+            }
+        }
+
         var capR = 16;
         if (cfg.geometry === "square") {
             capR = 2;
+        } else if (cfg.geometry === "electric") {
+            capR = Math.min(bodyHalfW * 0.80, Math.max(14, bodyHalfW - halfTextW));
         } else if (cfg.geometry === "rounded" || cfg.geometry === "wobbly" || cfg.geometry === "bubble_lines") {
             capR = Math.min(bodyHalfW * 0.9, Math.max(4, cfg.cornerRadius || 0));
         } else {
@@ -3328,15 +4520,22 @@
         bodyHalfW  = Math.round(bodyHalfW * 100) / 100;
         capR       = Math.round(capR * 100) / 100;
 
-        var ox = offsetXY ? (Math.round(offsetXY[0] * 100) / 100) : 0;
-        var oy = offsetXY ? (Math.round(offsetXY[1] * 100) / 100) : 0;
+        var offX = offsetXY ? (Math.round(offsetXY[0] * 100) / 100) : 0;
+        var offY = offsetXY ? (Math.round(offsetXY[1] * 100) / 100) : 0;
+
+        var sourceInit = dynamicSnippet
+            ? dynamicSnippet
+            : (
+                'var V0 = ' + serialize2DArrayCompact(shapeData.vertices) + ';\n' +
+                'var I0 = ' + serialize2DArrayCompact(shapeData.inTangents) + ';\n' +
+                'var O0 = ' + serialize2DArrayCompact(shapeData.outTangents) + ';\n' +
+                'var IS_CLOSED = ' + (shapeData.closed ? "true" : "false") + ';\n'
+            );
 
         return (
             'var env = clamp(' + envRefExpr + ', 0, 100) / 100.0;\n' +
             'var p = env * env * (3.0 - 2.0 * env);\n' +
-            'var V0 = ' + serialize2DArrayCompact(shapeData.vertices) + ';\n' +
-            'var I0 = ' + serialize2DArrayCompact(shapeData.inTangents) + ';\n' +
-            'var O0 = ' + serialize2DArrayCompact(shapeData.outTangents) + ';\n' +
+            sourceInit +
             'var fullW = ' + bodyHalfW + ';\n' +
             'var capR = ' + capR + ';\n' +
             'var splitX = ' + splitX + ';\n' +
@@ -3368,11 +4567,11 @@
             '    if (vx > splitX) { nx = (vx - shift) * k; nix = ix * k; nox = ox * k; }\n' +
             '    else if (vx < -splitX) { nx = (vx + shift) * k; nix = ix * k; nox = ox * k; }\n' +
             '    else { nx = (vx * q) * k; nix = (ix * q) * k; nox = (ox * q) * k; }\n' +
-            '    V.push([nx + ' + ox + ', vy + ' + oy + ']);\n' +
+            '    V.push([nx + ' + offX + ', vy + ' + offY + ']);\n' +
             '    IT.push([nix, iy]);\n' +
             '    OT.push([nox, oy]);\n' +
             '}\n' +
-            'createPath(V, IT, OT, ' + (shapeData.closed ? "true" : "false") + ');'
+            'createPath(V, IT, OT, IS_CLOSED);'
         );
     }
 
@@ -3386,7 +4585,7 @@
      *     expanding inward toward the center while thickening and gaining opacity until
      *     100% of the balloon interior is uniformly filled at `p = 1`.
      */
-    function createRoviInnerGlowFillLayer(comp, textLayer, balloonLayer, geoResult, textBounds, cfg, bodyOffsetDeg, hasTailLead, envFromChildExpr) {
+    function createRoviInnerGlowFillLayer(comp, textLayer, balloonLayer, geoResult, textBounds, cfg, bodyOffsetDeg, hasTailLead, envFromChildExpr, targetLink) {
         if (!comp || !textLayer || !balloonLayer || !cfg.fillEnabled) return null;
         var layerFillOp = clampNum(cfg.fillOpacity, 0, 100, 100);
         if (layerFillOp <= 0.01) return null;
@@ -3412,9 +4611,16 @@
 
         try { roviLayer.moveAfter(balloonLayer); } catch (eRMv) {}
 
+        var isDynTarget = Boolean(targetLink && targetLink.guideName && cfg.tailPlacementMode === "target" && cfg.tailStyle && cfg.tailStyle !== "none");
+        var dynBodyPathExpr = "";
+        if (isDynTarget && (cfg.tailStyle === "triangle" || cfg.tailStyle === "curved_triangle" || cfg.tailStyle === "lightning")) {
+            var bSnip = buildDynamicTargetShapeSnippet(geoResult, cfg, targetLink, "body", 0);
+            if (bSnip) dynBodyPathExpr = bSnip + "createPath(V0, I0, O0, IS_CLOSED);";
+        }
+
         // 1. Add Interior Clipping Masks (ADBE Mask Parade) so stroke expands strictly inward
         var masksParade = roviLayer.property("ADBE Mask Parade") || roviLayer.property("Masks");
-        function appendInteriorMask(maskName, sd) {
+        function appendInteriorMask(maskName, sd, dynExpr) {
             if (!masksParade || typeof masksParade.addProperty !== "function" || !sd || !sd.vertices) return;
             try {
                 var mAtom = masksParade.addProperty("ADBE Mask Atom");
@@ -3428,6 +4634,7 @@
                     mObj.outTangents = sd.outTangents;
                     mObj.closed = Boolean(sd.closed);
                     mShapeProp.setValue(mObj);
+                    if (dynExpr) mShapeProp.expression = dynExpr;
                 }
                 if (typeof MaskMode !== "undefined" && MaskMode.ADD !== undefined) {
                     try { mAtom.maskMode = MaskMode.ADD; } catch (eMM) {}
@@ -3435,11 +4642,17 @@
             } catch (eAddM) {}
         }
 
-        appendInteriorMask("Rovi Body Mask", geoResult.bodyShape);
+        appendInteriorMask("Rovi Body Mask", geoResult.bodyShape, dynBodyPathExpr);
         var ei;
         for (ei = 0; ei < geoResult.extraShapes.length; ei++) {
             if (geoResult.extraShapes[ei].filled) {
-                appendInteriorMask("Rovi " + geoResult.extraShapes[ei].name + " Mask", geoResult.extraShapes[ei].shapeData);
+                var cDynM = "";
+                if (isDynTarget && cfg.tailStyle === "clouds" && geoResult.extraShapes[ei].name.indexOf("Thought Cloud ") === 0) {
+                    var cIdxM = parseInt(geoResult.extraShapes[ei].name.replace("Thought Cloud ", ""), 10) || 1;
+                    var cSnipM = buildDynamicTargetShapeSnippet(geoResult, cfg, targetLink, "cloud", cIdxM);
+                    if (cSnipM) cDynM = cSnipM + "createPath(V0, I0, O0, IS_CLOSED);";
+                }
+                appendInteriorMask("Rovi " + geoResult.extraShapes[ei].name + " Mask", geoResult.extraShapes[ei].shapeData, cDynM);
             }
         }
 
@@ -3461,7 +4674,7 @@
             { name: "Inner Rim Core",   wScale: 0.18, wExp: 1.15, opFormula: "(p <= 0.002) ? 0 : Math.min(100.0, 100.0 * Math.pow(p, 0.65))" }
         ];
 
-        function addGlowBandsForShape(baseLabel, sd, coverW, offsetDeg, pHeaderExpr) {
+        function addGlowBandsForShape(baseLabel, sd, coverW, offsetDeg, pHeaderExpr, dynExpr) {
             if (!sd || !sd.vertices) return;
             for (var bi = 0; bi < ROVI_BANDS.length; bi++) {
                 var band = ROVI_BANDS[bi];
@@ -3477,7 +4690,10 @@
                 sObj.outTangents = sd.outTangents;
                 sObj.closed = Boolean(sd.closed);
                 var pProp = pGrp.property("Path") || pGrp.property("ADBE Vector Shape");
-                if (pProp) pProp.setValue(sObj);
+                if (pProp) {
+                    pProp.setValue(sObj);
+                    if (dynExpr) pProp.expression = dynExpr;
+                }
 
                 var stProp = bCont.addProperty("ADBE Vector Graphic - Stroke");
                 if (stProp) {
@@ -3522,7 +4738,7 @@
         var bodyPHeader =
             "var raw = " + envFromChildExpr + " / 100.0;\n" +
             "var p = clamp((raw - " + leadStartB.toFixed(2) + ") / " + leadSpanB.toFixed(2) + ", 0, 1);\n";
-        addGlowBandsForShape("Body", geoResult.bodyShape, fullCoverW, bodyOffsetDeg, bodyPHeader);
+        addGlowBandsForShape("Body", geoResult.bodyShape, fullCoverW, bodyOffsetDeg, bodyPHeader, dynBodyPathExpr);
 
         for (ei = 0; ei < geoResult.extraShapes.length; ei++) {
             var exS = geoResult.extraShapes[ei];
@@ -3535,14 +4751,19 @@
                     "var p = clamp((raw - " + p0R.toFixed(2) + ") / " + (p1R - p0R).toFixed(2) + ", 0, 1);\n";
                 var cloudDiam = dist2D(exS.shapeData.vertices[0], exS.shapeData.vertices[2]);
                 var cloudCoverW = Math.max(18, Math.round(cloudDiam * 1.40));
-                addGlowBandsForShape(exS.name, exS.shapeData, cloudCoverW, 0, cloudPHeader);
+                var cDynB = "";
+                if (isDynTarget && cfg.tailStyle === "clouds") {
+                    var cSnipB = buildDynamicTargetShapeSnippet(geoResult, cfg, targetLink, "cloud", cIdxR);
+                    if (cSnipB) cDynB = cSnipB + "createPath(V0, I0, O0, IS_CLOSED);";
+                }
+                addGlowBandsForShape(exS.name, exS.shapeData, cloudCoverW, 0, cloudPHeader, cDynB);
             }
         }
 
         return roviLayer;
     }
 
-    function applyInOutAnimationRig(comp, textLayer, balloonLayer, geoResult, textBounds, cfg, precompLayer, outerCompName) {
+    function applyInOutAnimationRig(comp, textLayer, balloonLayer, geoResult, textBounds, cfg, precompLayer, outerCompName, hexCode) {
         if (!textLayer || !balloonLayer) return;
 
         var charCount = countReadableChars(textLayer);
@@ -3561,8 +4782,21 @@
             applyTimingAndStatusEffects(textLayer, cfg, charCount, null);
         }
 
+        var targetLink = null;
+        if (cfg.tailPlacementMode === "target" && cfg.tailStyle && cfg.tailStyle !== "none" && hexCode) {
+            targetLink = {
+                guideName: TARGET_GUIDE_PREFIX + hexCode,
+                outerCompName: outerCompName || "",
+                precompLayerName: precompLayer ? precompLayer.name : "",
+                fallbackTip: geoResult.pTip
+            };
+        }
+
         var style = cfg.animStyle || "none";
         if (style === "none") {
+            if (targetLink) {
+                applyDynamicTargetTailPaths(balloonLayer, geoResult, cfg, targetLink);
+            }
             return;
         }
 
@@ -3578,6 +4812,10 @@
             : (rootContents.properties ? rootContents.properties.length : 0);
 
         var gi, grp, gCont, fillG, fillOp, strokeG, strokeOp, strokeW, pathG, pathP;
+
+        if (targetLink && style !== "bloat") {
+            applyDynamicTargetTailPaths(balloonLayer, geoResult, cfg, targetLink);
+        }
 
         // ---------------------------------------------------------------------
         // STYLE 1 ("clementine") & STYLE 4 ("rovi"):
@@ -3688,7 +4926,8 @@
                     cfg,
                     bodyOffsetDeg,
                     hasTailLead,
-                    envFromChildExpr
+                    envFromChildExpr,
+                    targetLink
                 );
             }
             return;
@@ -3724,7 +4963,18 @@
                             }
                         }
                         if (srcShape) {
-                            pathP.expression = buildBloatPathExpression(srcShape, halfTW, cfg, envFromChildExpr, null);
+                            var bloatDynSnip = "";
+                            if (targetLink) {
+                                if (grp.name === "Balloon Body" && (cfg.tailStyle === "triangle" || cfg.tailStyle === "curved_triangle" || cfg.tailStyle === "lightning")) {
+                                    bloatDynSnip = buildDynamicTargetShapeSnippet(geoResult, cfg, targetLink, "body", 0);
+                                } else if (grp.name === "Tail Line" && cfg.tailStyle === "line") {
+                                    bloatDynSnip = buildDynamicTargetShapeSnippet(geoResult, cfg, targetLink, "line", 0);
+                                } else if (grp.name.indexOf("Thought Cloud ") === 0 && cfg.tailStyle === "clouds") {
+                                    var bcIdx = parseInt(grp.name.replace("Thought Cloud ", ""), 10) || 1;
+                                    bloatDynSnip = buildDynamicTargetShapeSnippet(geoResult, cfg, targetLink, "cloud", bcIdx);
+                                }
+                            }
+                            pathP.expression = buildBloatPathExpression(srcShape, halfTW, cfg, envFromChildExpr, null, bloatDynSnip);
                         }
                     }
                 }
@@ -3775,12 +5025,17 @@
                             var mShapeProp = mAtom.property("ADBE Mask Shape") || mAtom.property("Mask Path");
                             if (mShapeProp) {
                                 var tAp = textLayer.property("Transform").property("Anchor Point").value;
+                                var maskDynSnip = "";
+                                if (targetLink && (cfg.tailStyle === "triangle" || cfg.tailStyle === "curved_triangle" || cfg.tailStyle === "lightning")) {
+                                    maskDynSnip = buildDynamicTargetShapeSnippet(geoResult, cfg, targetLink, "body", 0);
+                                }
                                 mShapeProp.expression = buildBloatPathExpression(
                                     geoResult.bodyShape,
                                     halfTW,
                                     cfg,
                                     'effect("Bubble Envelope")(1).value',
-                                    [tAp[0] || 0, tAp[1] || 0]
+                                    [tAp[0] || 0, tAp[1] || 0],
+                                    maskDynSnip
                                 );
                             }
                         }
@@ -3964,6 +5219,7 @@
         }
 
         var comp = ctx.comp;
+        var wantsTargetGuide = (cfg.tailPlacementMode === "target" && cfg.tailStyle && cfg.tailStyle !== "none");
 
         // Case 1: Existing Precomp Selected & Make Precomp is STILL ON -> Fast In-Place Update!
         if (ctx.mode === "precomp" && cfg.makePrecomp) {
@@ -3975,11 +5231,38 @@
 
             var existingEnv = readLayerStateEffect(pLayer) || readLayerStateEffect(innerText) || {};
             var origRec = existingEnv.orig || capturePristineTextState(innerText);
-            var hexCode = existingEnv.precompHex || preferredHex || generateHexId(4);
+            var hexCode = trimStr(pItem.name.replace(/^comic balloon\s+/i, "")) || existingEnv.precompHex || preferredHex || generateHexId(4);
 
             var centered = centerTextAnchorZeroShift(pItem, innerText, origRec);
             var lineSpecsPre = (cfg.geometry === "bubble_lines") ? measureTextLineBoxes(pItem, innerText, centered.bounds) : null;
-            var geo = computeBalloonAndTail(centered.bounds.width, centered.bounds.height, cfg, lineSpecsPre);
+
+            var pTr1   = pLayer.property("Transform");
+            var pPos1  = pTr1.property("Position").value;
+            var pSc1   = pTr1.property("Scale").value;
+            var pRotP1 = pTr1.property("Rotation") || pTr1.property("Z Rotation");
+            var pRot1  = pRotP1 ? (pRotP1.value || 0) : 0;
+
+            var targetLocalPre = null;
+            if (wantsTargetGuide) {
+                var guide1 = findTargetGuideLayer(comp, hexCode);
+                if (!guide1) {
+                    var defCfg1 = cloneObject(cfg);
+                    defCfg1.tailPlacementMode = "perimeter";
+                    var defGeo1 = computeBalloonAndTail(centered.bounds.width, centered.bounds.height, defCfg1, lineSpecsPre, null);
+                    var defWorld1 = balloonLocalToWorldPoint(defGeo1.pTip, pPos1, pSc1, pRot1);
+                    guide1 = ensureTargetGuideLayer(comp, hexCode, defWorld1, pLayer);
+                } else {
+                    ensureTargetGuideLayer(comp, hexCode, [0, 0], pLayer);
+                }
+                if (guide1) {
+                    var gPos1 = guide1.property("Transform").property("Position").value;
+                    targetLocalPre = worldPointToBalloonLocal(gPos1, pPos1, pSc1, pRot1);
+                }
+            } else {
+                removeTargetGuideLayer(comp, hexCode);
+            }
+
+            var geo = computeBalloonAndTail(centered.bounds.width, centered.bounds.height, cfg, lineSpecsPre, targetLocalPre);
 
             var halfW = Math.max(20, Math.ceil(Math.max(Math.abs(geo.bounds.minX), Math.abs(geo.bounds.maxX))));
             var halfH = Math.max(20, Math.ceil(Math.max(Math.abs(geo.bounds.minY), Math.abs(geo.bounds.maxY))));
@@ -3996,6 +5279,7 @@
 
             var rebuiltBalloon = createOrRebuildBalloonLayer(pItem, innerText, ctx.balloonLayer, geo, cfg);
 
+            try { if (pLayer.canSetCollapseTransformation) pLayer.collapseTransformation = true; } catch (eCT1) {}
             var pAnchorProp = pLayer.property("Transform").property("Anchor Point");
             if (pLayer.threeDLayer) {
                 pAnchorProp.setValue([newW / 2, newH / 2, 0]);
@@ -4003,7 +5287,7 @@
                 pAnchorProp.setValue([newW / 2, newH / 2]);
             }
 
-            applyInOutAnimationRig(pItem, innerText, rebuiltBalloon, geo, centered.bounds, cfg, pLayer, comp.name);
+            applyInOutAnimationRig(pItem, innerText, rebuiltBalloon, geo, centered.bounds, cfg, pLayer, comp.name, hexCode);
 
             var envUpdate = { version: 2, precompHex: hexCode, orig: origRec, config: cfg };
             writeLayerStateEffect(innerText, envUpdate);
@@ -4038,13 +5322,48 @@
         var isUpdateRun = Boolean(priorEnv && priorEnv.orig);
         var origState = isUpdateRun ? priorEnv.orig : capturePristineTextState(targetText);
         var activeHex = (priorEnv && priorEnv.precompHex) ? priorEnv.precompHex : (preferredHex || generateHexId(4));
+        var precompName = "";
+        if (cfg.makePrecomp) {
+            precompName = generateUniquePrecompName(activeHex);
+            activeHex = trimStr(precompName.replace(/^comic balloon\s+/i, "")) || activeHex;
+        }
 
         // Center Anchor Point of Text Layer (Zero-Shift)
         var cInfo = centerTextAnchorZeroShift(comp, targetText, origState);
 
+        var preTr = targetText.property("Transform");
+        var outerPos   = preTr.property("Position").value;
+        var outerScale = preTr.property("Scale").value;
+        var outerRotP  = preTr.property("Rotation") || preTr.property("Z Rotation");
+        var outerRot   = outerRotP ? (outerRotP.value || 0) : 0;
+        var outerParent = targetText.parent;
+        var outer3D    = Boolean(targetText.threeDLayer);
+
         // Build Balloon + Tail Geometry & linked child Shape Layer
         var lineSpecsMain = (cfg.geometry === "bubble_lines") ? measureTextLineBoxes(comp, targetText, cInfo.bounds) : null;
-        var geoData = computeBalloonAndTail(cInfo.bounds.width, cInfo.bounds.height, cfg, lineSpecsMain);
+        var targetLocalMain = null;
+        var activeGuideLayer = null;
+
+        if (wantsTargetGuide) {
+            activeGuideLayer = findTargetGuideLayer(comp, activeHex);
+            if (!activeGuideLayer) {
+                var defCfgM = cloneObject(cfg);
+                defCfgM.tailPlacementMode = "perimeter";
+                var defGeoM = computeBalloonAndTail(cInfo.bounds.width, cInfo.bounds.height, defCfgM, lineSpecsMain, null);
+                var defWorldM = balloonLocalToWorldPoint(defGeoM.pTip, outerPos, outerScale, outerRot);
+                activeGuideLayer = ensureTargetGuideLayer(comp, activeHex, defWorldM, targetText);
+            } else {
+                ensureTargetGuideLayer(comp, activeHex, [0, 0], targetText);
+            }
+            if (activeGuideLayer) {
+                var gPosM = activeGuideLayer.property("Transform").property("Position").value;
+                targetLocalMain = worldPointToBalloonLocal(gPosM, outerPos, outerScale, outerRot);
+            }
+        } else {
+            removeTargetGuideLayer(comp, activeHex);
+        }
+
+        var geoData = computeBalloonAndTail(cInfo.bounds.width, cInfo.bounds.height, cfg, lineSpecsMain, targetLocalMain);
         targetBalloon = createOrRebuildBalloonLayer(comp, targetText, targetBalloon, geoData, cfg);
 
         var env = { version: 2, precompHex: activeHex, orig: origState, config: cfg };
@@ -4052,7 +5371,10 @@
 
         // If Make Precomp is OFF, rig timing/animation directly in current comp
         if (!cfg.makePrecomp) {
-            applyInOutAnimationRig(comp, targetText, targetBalloon, geoData, cInfo.bounds, cfg, null, "");
+            applyInOutAnimationRig(comp, targetText, targetBalloon, geoData, cInfo.bounds, cfg, null, "", activeHex);
+            if (activeGuideLayer) {
+                try { activeGuideLayer.moveBefore(targetText); } catch (eGMvT) {}
+            }
             try {
                 var cLen = getCompLayerCount(comp);
                 for (var s = 1; s <= cLen; s++) getCompLayerAt(comp, s).selected = false;
@@ -4063,14 +5385,6 @@
         }
 
         // Case 3: Precompose Text + Child Balloon (+ any Emoji / Highlight children) into "comic balloon <HEX>"
-        var preTr = targetText.property("Transform");
-        var outerPos   = preTr.property("Position").value;
-        var outerScale = preTr.property("Scale").value;
-        var outerRotP  = preTr.property("Rotation") || preTr.property("Z Rotation");
-        var outerRot   = outerRotP ? (outerRotP.value || 0) : 0;
-        var outerParent = targetText.parent;
-        var outer3D    = Boolean(targetText.threeDLayer);
-
         var halfCW = Math.max(20, Math.ceil(Math.max(Math.abs(geoData.bounds.minX), Math.abs(geoData.bounds.maxX))));
         var halfCH = Math.max(20, Math.ceil(Math.max(Math.abs(geoData.bounds.minY), Math.abs(geoData.bounds.maxY))));
         var preW = halfCW * 2;
@@ -4085,8 +5399,7 @@
         indicesToPrecomp.push(targetBalloon.index);
         indicesToPrecomp.sort(function (a, b) { return a - b; });
 
-        var precompName = generateUniquePrecompName(activeHex);
-        var actualHex = precompName.replace(/^comic balloon\s+/i, "");
+        var actualHex = activeHex;
         env.precompHex = actualHex;
 
         var insertSlot = indicesToPrecomp[0];
@@ -4135,8 +5448,12 @@
             }
             writeLayerStateEffect(precompLayer, env);
 
+            if (activeGuideLayer) {
+                try { activeGuideLayer.moveBefore(precompLayer); } catch (eGMvP) {}
+            }
+
             if (innerTxt && innerBln) {
-                applyInOutAnimationRig(precompItem, innerTxt, innerBln, geoData, cInfo.bounds, cfg, precompLayer, comp.name);
+                applyInOutAnimationRig(precompItem, innerTxt, innerBln, geoData, cInfo.bounds, cfg, precompLayer, comp.name, actualHex);
             }
 
             try {
@@ -4155,7 +5472,7 @@
     /**
      * Reverses the entire Comic Balloon process:
      *   - Unpacks precomposition if precomposed
-     *   - Removes the Balloon layer & animation artifacts
+     *   - Removes the Balloon layer, Target Guide Layer & animation artifacts
      *   - Restores original text box, content, and transform properties from Effects
      */
     function executeRemoveAndReverse() {
@@ -4167,14 +5484,17 @@
         var comp = ctx.comp;
         var textLayer = null;
         var env = null;
+        var remHex = "";
 
         if (ctx.mode === "precomp") {
             env = readLayerStateEffect(ctx.precompLayer) || readLayerStateEffect(ctx.textLayer);
+            remHex = trimStr(ctx.precompItem.name.replace(/^comic balloon\s+/i, "")) || ((env && env.precompHex) ? env.precompHex : "");
             var unpacked = unpackPrecompToParentComp(comp, ctx.precompLayer, ctx.precompItem, false);
             textLayer = unpacked.textLayer;
         } else {
             textLayer = ctx.textLayer;
             env = readLayerStateEffect(textLayer);
+            remHex = (env && env.precompHex) ? env.precompHex : "";
             cleanupTextAnimationArtifacts(textLayer, ctx.balloonLayer);
             if (ctx.balloonLayer) {
                 try { ctx.balloonLayer.remove(); } catch (eRB) {}
@@ -4186,6 +5506,8 @@
                 extraB = findChildBalloonForText(comp, textLayer);
             }
         }
+
+        removeTargetGuideLayer(comp, remHex);
 
         if (textLayer) {
             if (env && env.orig) {
@@ -4589,22 +5911,38 @@
         ddGeometry.alignment = ["fill", "center"];
         ddGeometry.selection = 1;
 
-        var ctrlCornerRadius    = createSliderRow(pnlGeom, "Corner Radius:",   28,  0, 150, "px", refreshPreviewCanvas);
-        var ctrlCloudPuffs      = createSliderRow(pnlGeom, "Cloud Puffs:",     12,  6,  30, "",   refreshPreviewCanvas);
-        var ctrlCloudDepth      = createSliderRow(pnlGeom, "Puff Depth:",      42, 10, 120, "%",  refreshPreviewCanvas);
-        var ctrlCloudWidthRand  = createSliderRow(pnlGeom, "Puff Width Rand:",  0,  0, 100, "%",  refreshPreviewCanvas);
-        var ctrlSpikeCount      = createSliderRow(pnlGeom, "Burst Spikes:",    18,  6,  40, "",   refreshPreviewCanvas);
-        var ctrlSpikeDepth      = createSliderRow(pnlGeom, "Spike Depth:",     85, 15, 220, "%",  refreshPreviewCanvas);
-        var ctrlSpikeWidthRand  = createSliderRow(pnlGeom, "Spike Width Rand:", 0,  0, 100, "%",  refreshPreviewCanvas);
-        var ctrlWobblyWaves     = createSliderRow(pnlGeom, "Wobbly Waves:",    14,  4,  36, "",   refreshPreviewCanvas);
-        var ctrlWobblyDepth     = createSliderRow(pnlGeom, "Wave Depth:",      10,  2,  50, "%",  refreshPreviewCanvas);
-        var ctrlWobblyWidthRand = createSliderRow(pnlGeom, "Wave Width Rand:", 65,  0, 100, "%",  refreshPreviewCanvas);
+        var suppressGeomAutoDefaults = false;
+        var lastManualGeomKey = "rounded";
 
+        var ctrlCornerRadius    = createSliderRow(pnlGeom, "Corner Radius:",   28,   0, 150, "px", refreshPreviewCanvas);
+        var ctrlElectricPoint   = createSliderRow(pnlGeom, "Electric Point:",  58,  10, 150, "%",  refreshPreviewCanvas);
+        var ctrlElectricSkew    = createSliderRow(pnlGeom, "Electric Skew:",  -22, -75,  75, "%",  refreshPreviewCanvas);
+        var ctrlCloudPuffs      = createSliderRow(pnlGeom, "Cloud Puffs:",     12,   6,  30, "",   refreshPreviewCanvas);
+        var ctrlCloudDepth      = createSliderRow(pnlGeom, "Puff Depth:",      42,  10, 120, "%",  refreshPreviewCanvas);
+        var ctrlCloudWidthRand  = createSliderRow(pnlGeom, "Puff Width Rand:",  0,   0, 100, "%",  refreshPreviewCanvas);
+        var ctrlSpikeCount      = createSliderRow(pnlGeom, "Burst Spikes:",    18,   6,  40, "",   refreshPreviewCanvas);
+        var ctrlSpikeDepth      = createSliderRow(pnlGeom, "Spike Depth:",     85,  15, 220, "%",  refreshPreviewCanvas);
+        var ctrlSpikeWidthRand  = createSliderRow(pnlGeom, "Spike Width Rand:", 0,   0, 100, "%",  refreshPreviewCanvas);
+
+        ctrlElectricPoint.group.helpTip   = "Controls how far the pointed left & right Electric side chevrons jut outward (% of half-height).";
+        ctrlElectricSkew.group.helpTip    = "Tilts the left & right Electric side tips vertically (0% = symmetric <--->, +/- slants tips).";
         ctrlCloudDepth.group.helpTip      = "Puff depth relative (%) to each individual puff's width.";
         ctrlCloudWidthRand.group.helpTip  = "0% = constant arc-length puff width; >0% = randomizes puff widths while keeping exact puff count.";
         ctrlSpikeDepth.group.helpTip      = "Spike height relative (%) to each individual spike's base width.";
         ctrlSpikeWidthRand.group.helpTip  = "0% = constant arc-length spike width; >0% = randomizes spike widths while keeping exact spike count.";
-        ctrlWobblyDepth.group.helpTip     = "Organic wave amplitude relative (%) to each wave's local perimeter span.";
+
+        var pnlWobbly = tabBalloon.add("panel", undefined, "Wobbly Outline (All Shapes — 0 = Crisp)");
+        pnlWobbly.orientation = "column";
+        pnlWobbly.alignChildren = ["fill", "top"];
+        pnlWobbly.spacing = 5;
+        pnlWobbly.margins = [8, 10, 8, 8];
+
+        var ctrlWobblyWaves     = createSliderRow(pnlWobbly, "Wobbly Waves:",    0,  0,  36, "",  refreshPreviewCanvas);
+        var ctrlWobblyDepth     = createSliderRow(pnlWobbly, "Wave Depth:",      0,  0,  50, "%", refreshPreviewCanvas);
+        var ctrlWobblyWidthRand = createSliderRow(pnlWobbly, "Wave Width Rand:", 65, 0, 100, "%", refreshPreviewCanvas);
+
+        ctrlWobblyWaves.group.helpTip     = "0 = crisp non-wobbly shape; >0 = adds hand-drawn wobbly waves to ANY selected balloon shape.";
+        ctrlWobblyDepth.group.helpTip     = "0% = crisp non-wobbly shape; >0% = wave amplitude relative (%) to each wave's local span.";
         ctrlWobblyWidthRand.group.helpTip = "0% = uniform smooth waves; >0% = organic hand-drawn irregular wave widths & heights.";
 
         var pnlPadding = tabBalloon.add("panel", undefined, "Exterior Padding & Centering");
@@ -4622,22 +5960,42 @@
         function syncBalloonShapeVisibility() {
             var idx = ddGeometry.selection ? ddGeometry.selection.index : 1;
             var key = GEOMETRY_KEYS[idx] || "rounded";
-            ctrlCornerRadius.group.enabled    = (key === "rounded" || key === "wobbly" || key === "bubble_lines");
-            ctrlCloudPuffs.group.enabled      = (key === "cloud");
-            ctrlCloudDepth.group.enabled      = (key === "cloud");
-            ctrlCloudWidthRand.group.enabled  = (key === "cloud");
-            ctrlSpikeCount.group.enabled      = (key === "explosion");
-            ctrlSpikeDepth.group.enabled      = (key === "explosion");
-            ctrlSpikeWidthRand.group.enabled  = (key === "explosion");
-            ctrlWobblyWaves.group.enabled     = (key === "wobbly");
-            ctrlWobblyDepth.group.enabled     = (key === "wobbly");
-            ctrlWobblyWidthRand.group.enabled = (key === "wobbly");
+
+            if (!suppressGeomAutoDefaults && key !== lastManualGeomKey) {
+                if (key === "wobbly" && (ctrlWobblyWaves.getValue() <= 0 || ctrlWobblyDepth.getValue() <= 0)) {
+                    ctrlWobblyWaves.setValue(14, false);
+                    ctrlWobblyDepth.setValue(10, false);
+                }
+                if (key === "electric" && lastManualGeomKey !== "electric") {
+                    ctrlCornerRadius.setValue(0, false);
+                } else if ((key === "rounded" || key === "wobbly") && lastManualGeomKey === "electric" && ctrlCornerRadius.getValue() <= 0) {
+                    ctrlCornerRadius.setValue(28, false);
+                } else if (key === "bubble_lines" && lastManualGeomKey === "electric" && ctrlCornerRadius.getValue() <= 0) {
+                    ctrlCornerRadius.setValue(18, false);
+                }
+            }
+            lastManualGeomKey = key;
+
+            ctrlCornerRadius.group.enabled   = (key === "rounded" || key === "electric" || key === "wobbly" || key === "bubble_lines");
+            ctrlElectricPoint.group.enabled  = (key === "electric");
+            ctrlElectricSkew.group.enabled   = (key === "electric");
+            ctrlCloudPuffs.group.enabled     = (key === "cloud");
+            ctrlCloudDepth.group.enabled     = (key === "cloud");
+            ctrlCloudWidthRand.group.enabled = (key === "cloud");
+            ctrlSpikeCount.group.enabled     = (key === "explosion");
+            ctrlSpikeDepth.group.enabled     = (key === "explosion");
+            ctrlSpikeWidthRand.group.enabled = (key === "explosion");
+
+            // Wobbly Outline controls are ALWAYS enabled so ALL shapes can be made wobbly (or 0 for crisp)
+            ctrlWobblyWaves.group.enabled     = true;
+            ctrlWobblyDepth.group.enabled     = true;
+            ctrlWobblyWidthRand.group.enabled = true;
             refreshPreviewCanvas();
         }
         ddGeometry.onChange = syncBalloonShapeVisibility;
 
         // ---------------------------------------------------------------------
-        // TAB 2: TAIL (Style + Trim-Paths-Style Perimeter Dialog + Target)
+        // TAB 2: TAIL (Style + Placement Mode: Perimeter % OR Draggable Guide)
         // ---------------------------------------------------------------------
         var tabTail = tabs.add("tab", undefined, "Tail");
         tabTail.orientation = "column";
@@ -4645,20 +6003,39 @@
         tabTail.spacing = 6;
         tabTail.margins = 8;
 
-        var pnlTailStyle = tabTail.add("panel", undefined, "Tail Style");
-        pnlTailStyle.orientation = "row";
-        pnlTailStyle.alignChildren = ["left", "center"];
-        pnlTailStyle.spacing = 6;
+        var pnlTailStyle = tabTail.add("panel", undefined, "Tail Style & Placement Method");
+        pnlTailStyle.orientation = "column";
+        pnlTailStyle.alignChildren = ["fill", "top"];
+        pnlTailStyle.spacing = 5;
         pnlTailStyle.margins = [8, 10, 8, 8];
 
-        var lblTailStyle = pnlTailStyle.add("statictext", undefined, "Tail Type:");
+        var grpTailTypeRow = pnlTailStyle.add("group");
+        grpTailTypeRow.orientation = "row";
+        grpTailTypeRow.alignChildren = ["left", "center"];
+        grpTailTypeRow.spacing = 6;
+        var lblTailStyle = grpTailTypeRow.add("statictext", undefined, "Tail Type:");
         lblTailStyle.preferredSize = [95, -1];
-        var ddTailStyle = pnlTailStyle.add("dropdownlist", undefined, TAIL_LABELS);
+        var ddTailStyle = grpTailTypeRow.add("dropdownlist", undefined, TAIL_LABELS);
         ddTailStyle.alignment = ["fill", "center"];
         ddTailStyle.selection = 2;
 
+        var grpTailModeRow = pnlTailStyle.add("group");
+        grpTailModeRow.orientation = "row";
+        grpTailModeRow.alignChildren = ["left", "center"];
+        grpTailModeRow.spacing = 6;
+        var lblTailMode = grpTailModeRow.add("statictext", undefined, "Placement:");
+        lblTailMode.preferredSize = [95, -1];
+        var ddTailPlacement = grpTailModeRow.add("dropdownlist", undefined, TAIL_PLACEMENT_LABELS);
+        ddTailPlacement.alignment = ["fill", "center"];
+        ddTailPlacement.selection = 0;
+        ddTailPlacement.helpTip = "Method 1: Trim-Paths Perimeter (%). Method 2: Draggable AE Guide Layer whose closest point on the perimeter sets the tail origin.";
+
+        var chkTargetSnapTip = pnlTailStyle.add("checkbox", undefined, 'Pin Tail Tip to Draggable Guide ("Tail Target <HEX>")');
+        chkTargetSnapTip.value = true;
+        chkTargetSnapTip.helpTip = "When checked, dragging the Guide Layer moves BOTH the closest-point tail origin on the perimeter AND the tail tip directly to the Guide Layer. Uncheck to aim toward the Guide Layer using fixed Tail Length & Tip Slant.";
+
         // Trim-Paths-Style Perimeter Placement Panel
-        var pnlTrim = tabTail.add("panel", undefined, "Perimeter Placement (Trim Paths Style)");
+        var pnlTrim = tabTail.add("panel", undefined, "Perimeter Placement & Base Width");
         pnlTrim.orientation = "column";
         pnlTrim.alignChildren = ["fill", "top"];
         pnlTrim.spacing = 5;
@@ -4730,12 +6107,30 @@
             var idx = ddTailStyle.selection ? ddTailStyle.selection.index : 0;
             var key = TAIL_KEYS[idx] || "none";
             var hasTail = (key !== "none");
-            pnlTrim.enabled = hasTail;
-            pnlTailTarget.enabled = hasTail;
-            ctrlTailCurve.group.enabled = (key === "curved_triangle");
+
+            var pIdx = ddTailPlacement.selection ? ddTailPlacement.selection.index : 0;
+            var pMode = TAIL_PLACEMENT_KEYS[pIdx] || "perimeter";
+            var isTargetMode = (pMode === "target");
+
+            ddTailPlacement.enabled  = hasTail;
+            chkTargetSnapTip.enabled = (hasTail && isTargetMode);
+
+            pnlTrim.enabled              = hasTail;
+            grpQuickEdges.enabled        = (hasTail && !isTargetMode);
+            ctrlTailPos.group.enabled    = (hasTail && !isTargetMode);
+            ctrlTailOffset.group.enabled = (hasTail && !isTargetMode);
+            ctrlTailWidth.group.enabled  = hasTail;
+
+            pnlTailTarget.enabled         = hasTail;
+            var manualLenEnabled          = hasTail && (!isTargetMode || !chkTargetSnapTip.value);
+            ctrlTailLength.group.enabled  = manualLenEnabled;
+            ctrlTailAngle.group.enabled   = manualLenEnabled;
+            ctrlTailCurve.group.enabled   = (hasTail && key === "curved_triangle");
             refreshPreviewCanvas();
         }
-        ddTailStyle.onChange = syncTailControlsVisibility;
+        ddTailStyle.onChange      = syncTailControlsVisibility;
+        ddTailPlacement.onChange  = syncTailControlsVisibility;
+        chkTargetSnapTip.onClick  = syncTailControlsVisibility;
 
         // ---------------------------------------------------------------------
         // TAB 3: APPEARANCE (Fill, Stroke Style & Thickness, Colors)
@@ -4932,6 +6327,7 @@
         function collectUIConfig() {
             var gIdx = ddGeometry.selection ? ddGeometry.selection.index : 1;
             var tIdx = ddTailStyle.selection ? ddTailStyle.selection.index : 2;
+            var pIdx = ddTailPlacement.selection ? ddTailPlacement.selection.index : 0;
             var sIdx = ddStrokeStyle.selection ? ddStrokeStyle.selection.index : 1;
             var aIdx = ddAnimStyle.selection ? ddAnimStyle.selection.index : 0;
 
@@ -4952,6 +6348,8 @@
                 padX: ctrlPadX.getValue(),
                 padY: ctrlPadY.getValue(),
                 cornerRadius: ctrlCornerRadius.getValue(),
+                electricPoint: Math.round(ctrlElectricPoint.getValue()),
+                electricSkew: Math.round(ctrlElectricSkew.getValue()),
                 cloudPuffs: Math.round(ctrlCloudPuffs.getValue()),
                 cloudDepth: ctrlCloudDepth.getValue(),
                 cloudWidthRand: ctrlCloudWidthRand.getValue(),
@@ -4962,6 +6360,8 @@
                 wobblyDepth: ctrlWobblyDepth.getValue(),
                 wobblyWidthRand: ctrlWobblyWidthRand.getValue(),
                 tailStyle: TAIL_KEYS[tIdx] || "triangle",
+                tailPlacementMode: TAIL_PLACEMENT_KEYS[pIdx] || "perimeter",
+                tailTargetSnapTip: Boolean(chkTargetSnapTip.value),
                 tailPosition: tPos,
                 tailStartWidth: tWidth,
                 tailStart: tStart,
@@ -5001,14 +6401,20 @@
 
         function applyConfigToUI(rawCfg) {
             var c = normalizePresetData(rawCfg);
-            ddGeometry.selection    = indexOfKey(GEOMETRY_KEYS, c.geometry, 1);
-            ddTailStyle.selection   = indexOfKey(TAIL_KEYS, c.tailStyle, 2);
-            ddStrokeStyle.selection = indexOfKey(STROKE_KEYS, c.strokeStyle, 1);
-            ddAnimStyle.selection   = indexOfKey(ANIM_KEYS, c.animStyle, 0);
+            suppressGeomAutoDefaults = true;
+            lastManualGeomKey = c.geometry;
+
+            ddGeometry.selection      = indexOfKey(GEOMETRY_KEYS, c.geometry, 1);
+            ddTailStyle.selection     = indexOfKey(TAIL_KEYS, c.tailStyle, 2);
+            ddTailPlacement.selection = indexOfKey(TAIL_PLACEMENT_KEYS, c.tailPlacementMode, 0);
+            ddStrokeStyle.selection   = indexOfKey(STROKE_KEYS, c.strokeStyle, 1);
+            ddAnimStyle.selection     = indexOfKey(ANIM_KEYS, c.animStyle, 0);
 
             ctrlPadX.setValue(c.padX, false);
             ctrlPadY.setValue(c.padY, false);
             ctrlCornerRadius.setValue(c.cornerRadius, false);
+            ctrlElectricPoint.setValue(c.electricPoint, false);
+            ctrlElectricSkew.setValue(c.electricSkew, false);
             ctrlCloudPuffs.setValue(c.cloudPuffs, false);
             ctrlCloudDepth.setValue(c.cloudDepth, false);
             ctrlCloudWidthRand.setValue(c.cloudWidthRand, false);
@@ -5019,6 +6425,7 @@
             ctrlWobblyDepth.setValue(c.wobblyDepth, false);
             ctrlWobblyWidthRand.setValue(c.wobblyWidthRand, false);
 
+            chkTargetSnapTip.value = Boolean(c.tailTargetSnapTip);
             ctrlTailPos.setValue(c.tailPosition, false);
             ctrlTailWidth.setValue(c.tailStartWidth, false);
             ctrlTailOffset.setValue(c.tailOffset, false);
@@ -5050,6 +6457,8 @@
             chkMakePrecomp.value = Boolean(c.makePrecomp);
 
             syncBalloonShapeVisibility();
+            suppressGeomAutoDefaults = false;
+
             syncTailControlsVisibility();
             syncStrokeControlsVisibility();
             syncInOutControlsVisibility();
@@ -5068,11 +6477,13 @@
                 g.rectPath(0, 0, w, h);
                 g.fillPath(bgBrush);
 
-                var previewSegs = buildBalloonPerimeterSegments(68, 28, {
+                var previewSegs = buildBalloonPerimeterSegments(cfg.geometry === "electric" ? 56 : 68, 26, {
                     geometry: cfg.geometry,
-                    padX: cfg.geometry === "bubble_lines" ? 7 : 10,
+                    padX: cfg.geometry === "bubble_lines" ? 7 : (cfg.geometry === "electric" ? 8 : 10),
                     padY: cfg.geometry === "bubble_lines" ? 5 : 8,
                     cornerRadius: Math.min(cfg.geometry === "bubble_lines" ? 6 : 12, cfg.cornerRadius * 0.4),
+                    electricPoint: cfg.electricPoint,
+                    electricSkew: cfg.electricSkew,
                     cloudPuffs: cfg.cloudPuffs,
                     cloudDepth: cfg.cloudDepth,
                     cloudWidthRand: cfg.cloudWidthRand,
@@ -5146,13 +6557,15 @@
                     el.style.border = "1px solid #334155";
                     el.style.borderRadius = "4px";
                     el.style.overflow = "hidden";
-                    el.style.cursor = "crosshair";
+                    el.style.cursor = (cfg.tailPlacementMode === "target") ? "default" : "crosshair";
 
-                    var segs = buildBalloonPerimeterSegments(68, 28, {
+                    var segs = buildBalloonPerimeterSegments(cfg.geometry === "electric" ? 56 : 68, 26, {
                         geometry: cfg.geometry,
-                        padX: cfg.geometry === "bubble_lines" ? 7 : 10,
+                        padX: cfg.geometry === "bubble_lines" ? 7 : (cfg.geometry === "electric" ? 8 : 10),
                         padY: cfg.geometry === "bubble_lines" ? 5 : 8,
                         cornerRadius: Math.min(cfg.geometry === "bubble_lines" ? 6 : 12, cfg.cornerRadius * 0.4),
+                        electricPoint: cfg.electricPoint,
+                        electricSkew: cfg.electricSkew,
                         cloudPuffs: cfg.cloudPuffs,
                         cloudDepth: cfg.cloudDepth,
                         cloudWidthRand: cfg.cloudWidthRand,
@@ -5213,10 +6626,17 @@
                             pointerLineSvg = '<path d="M ' + mx + ' ' + my + ' Q ' + qx + ' ' + qy + ' ' + tx + ' ' + ty + '" fill="none" stroke="#fbbf24" stroke-width="2" stroke-linecap="round"/>';
                         }
 
+                        var tipGlyphSvg = '<circle cx="' + tx + '" cy="' + ty + '" r="2.8" fill="#fbbf24"/>';
+                        if (cfg.tailPlacementMode === "target") {
+                            tipGlyphSvg =
+                                '<circle cx="' + tx + '" cy="' + ty + '" r="5.5" fill="rgba(34,211,238,0.20)" stroke="#22d3ee" stroke-width="1.4"/>' +
+                                '<circle cx="' + tx + '" cy="' + ty + '" r="2.0" fill="#fbbf24"/>';
+                        }
+
                         hiSvg =
                             '<polyline points="' + arcPts.join(" ") + '" fill="none" stroke="#22d3ee" stroke-width="3.5" stroke-linecap="round"/>' +
                             pointerLineSvg +
-                            '<circle cx="' + tx + '" cy="' + ty + '" r="2.8" fill="#fbbf24"/>';
+                            tipGlyphSvg;
                     }
 
                     el.innerHTML =
@@ -5228,6 +6648,7 @@
                     if (!el._trimDragBound) {
                         el._trimDragBound = true;
                         var updateFromMouse = function (ev) {
+                            if (ddTailPlacement.selection && ddTailPlacement.selection.index === 1) return;
                             var rect = el.getBoundingClientRect();
                             var rw = rect.width || 136;
                             var rh = rect.height || 76;
@@ -5241,6 +6662,7 @@
                         el.onclick = null;
                         previewWidget.onClick = null;
                         el.addEventListener("pointerdown", function (ev) {
+                            if (ddTailPlacement.selection && ddTailPlacement.selection.index === 1) return;
                             ev.preventDefault();
                             updateFromMouse(ev);
                             var onMove = function (me) { updateFromMouse(me); };

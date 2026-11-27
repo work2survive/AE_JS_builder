@@ -196,11 +196,28 @@
                 e.preventDefault();
             });
 
-            // Mouse down for orbit or pan
+            // Mouse down for Guide Layer drag, orbit, or pan
             vp.addEventListener('mousedown', (e) => {
                 if (e.target.closest('.ae-viewport-controls') || e.target.closest('.ae-viewport-header-left')) return;
 
                 if (e.button === 0 && !e.altKey) {
+                    const guideEl = e.target.closest('[data-guide-layer-idx]');
+                    if (guideEl && this.comp && this.comp.layers) {
+                        const gIdx = parseInt(guideEl.dataset.guideLayerIdx, 10);
+                        const gLayer = this.comp.layers[gIdx];
+                        if (gLayer && gLayer.guideLayer) {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            this.draggingGuideLayer = gLayer;
+                            this.camera.isDragging = false;
+                            this.camera.isPanning = false;
+                            this.camera.lastMouseX = e.clientX;
+                            this.camera.lastMouseY = e.clientY;
+                            document.body.style.cursor = 'grabbing';
+                            return;
+                        }
+                    }
+
                     // Left click: Orbit
                     this.camera.isDragging = true;
                     this.camera.isPanning = false;
@@ -219,6 +236,42 @@
             });
 
             window.addEventListener('mousemove', (e) => {
+                if (this.draggingGuideLayer) {
+                    const dx = e.clientX - this.camera.lastMouseX;
+                    const dy = e.clientY - this.camera.lastMouseY;
+                    this.camera.lastMouseX = e.clientX;
+                    this.camera.lastMouseY = e.clientY;
+
+                    let moveX = 0;
+                    let moveY = 0;
+                    if (Math.abs(this.camera.orbitX || 0) < 0.5 && Math.abs(this.camera.orbitY || 0) < 0.5) {
+                        const cRect = document.getElementById('ae-comp-canvas')?.getBoundingClientRect();
+                        const pxScale = (cRect && cRect.width > 1 && this.comp) ? (this.comp.width / cRect.width) : 1.0;
+                        moveX = dx * pxScale;
+                        moveY = dy * pxScale;
+                    } else {
+                        const curZoom = this.camera.zoom || 1.0;
+                        const panSpeed = (this.camera.distance / curZoom) * 0.0012 * 1.5;
+                        const radX = (this.camera.orbitX || 0) * Math.PI / 180;
+                        const radY = (this.camera.orbitY || 0) * Math.PI / 180;
+                        moveX = (dx * Math.cos(radX) + dy * Math.sin(radY) * Math.sin(radX)) * panSpeed;
+                        moveY = (dy * Math.cos(radY)) * panSpeed;
+                    }
+
+                    try {
+                        const posProp = this.draggingGuideLayer.transform?.position || this.draggingGuideLayer.property?.('Transform')?.property?.('Position');
+                        if (posProp && Array.isArray(posProp.value)) {
+                            const cur = posProp.value;
+                            const next = cur.length > 2
+                                ? [Math.round((cur[0] + moveX) * 10) / 10, Math.round((cur[1] + moveY) * 10) / 10, cur[2]]
+                                : [Math.round((cur[0] + moveX) * 10) / 10, Math.round((cur[1] + moveY) * 10) / 10];
+                            posProp.setValue(next);
+                            this.renderLayers(this.comp ? this.comp.time : 0);
+                        }
+                    } catch (eDG) {}
+                    return;
+                }
+
                 if (!this.camera.isDragging && !this.camera.isPanning) return;
 
                 const dx = e.clientX - this.camera.lastMouseX;
@@ -259,6 +312,10 @@
             });
 
             window.addEventListener('mouseup', () => {
+                if (this.draggingGuideLayer) {
+                    this.draggingGuideLayer = null;
+                    document.body.style.cursor = '';
+                }
                 this.camera.isDragging = false;
                 this.camera.isPanning = false;
                 vp.classList.remove('is-orbiting', 'is-panning');
@@ -2091,6 +2148,12 @@
                 }
 
                 // Precomposition or Shape Layer SVG Render
+                if (layer.guideLayer) {
+                    layerEl.dataset.guideLayerIdx = String(i);
+                } else if (layerEl.dataset.guideLayerIdx !== undefined) {
+                    delete layerEl.dataset.guideLayerIdx;
+                }
+
                 if (layer.source && layer.source.layers) {
                     let subTime = time;
                     if (layer.timeRemap && layer.timeRemapEnabled) {
@@ -2105,9 +2168,13 @@
                     layerEl.innerHTML = this.renderCompLayersHtml(layer.source, subTime, isStaticPreview, 0);
                 } else if (layer instanceof ShapeLayer) {
                     const svgContent = this.renderShapeContents(layer.contents, time, layer);
+                    const guideGrabCircle = layer.guideLayer
+                        ? `<circle cx="0" cy="0" r="24" fill="rgba(0,0,0,0.001)" style="pointer-events: all; cursor: grab;"><title>Drag Guide Layer (${layer.name || 'Guide'})</title></circle>`
+                        : '';
                     layerEl.innerHTML = `
                         <svg class="ae-layer-svg" style="overflow: visible;">
                             ${svgContent}
+                            ${guideGrabCircle}
                         </svg>
                     `;
                 } else if (typeof TextLayer !== 'undefined' && layer instanceof TextLayer) {

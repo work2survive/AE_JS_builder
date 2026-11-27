@@ -608,7 +608,9 @@
                     if (!name) return rootComp;
                     const project = app?.project;
                     if (!project) return null;
-                    return project.items.find(item => item.name === name) || null;
+                    if (project.activeItem && project.activeItem.name === name) return project.activeItem;
+                    const matches = project.items.filter(item => item.name === name);
+                    return matches.find(item => item.layers && item.layers.length > 0) || matches[0] || null;
                 };
                 const sourceRectAtTime = (t, includeExtents) => {
                     if (layer && typeof layer.sourceRectAtTime === 'function') {
