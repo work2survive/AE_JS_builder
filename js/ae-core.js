@@ -2881,6 +2881,7 @@
         addNull() {
             const count = this.length + 1;
             const layer = new ShapeLayer('Null ' + count, this.comp);
+            layer.nullLayer = true;
             layer.transform.position.setValue([this.comp.width / 2, this.comp.height / 2, 0]);
             this.unshift(layer);
             this._notify();

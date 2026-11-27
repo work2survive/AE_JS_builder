@@ -205,7 +205,7 @@
                     if (guideEl && this.comp && this.comp.layers) {
                         const gIdx = parseInt(guideEl.dataset.guideLayerIdx, 10);
                         const gLayer = this.comp.layers[gIdx];
-                        if (gLayer && gLayer.guideLayer) {
+                        if (gLayer && (gLayer.guideLayer || gLayer.nullLayer)) {
                             e.preventDefault();
                             e.stopPropagation();
                             this.draggingGuideLayer = gLayer;
@@ -2147,8 +2147,9 @@
                     layerEl.style.clipPath = '';
                 }
 
-                // Precomposition or Shape Layer SVG Render
-                if (layer.guideLayer) {
+                // Precomposition or Shape Layer / Null Layer SVG Render
+                const isInteractiveGizmo = Boolean(layer.guideLayer || layer.nullLayer);
+                if (isInteractiveGizmo) {
                     layerEl.dataset.guideLayerIdx = String(i);
                 } else if (layerEl.dataset.guideLayerIdx !== undefined) {
                     delete layerEl.dataset.guideLayerIdx;
@@ -2168,12 +2169,31 @@
                     layerEl.innerHTML = this.renderCompLayersHtml(layer.source, subTime, isStaticPreview, 0);
                 } else if (layer instanceof ShapeLayer) {
                     const svgContent = this.renderShapeContents(layer.contents, time, layer);
-                    const guideGrabCircle = layer.guideLayer
-                        ? `<circle cx="0" cy="0" r="24" fill="rgba(0,0,0,0.001)" style="pointer-events: all; cursor: grab;"><title>Drag Guide Layer (${layer.name || 'Guide'})</title></circle>`
+                    const nullGizmoSvg = (layer.nullLayer && !svgContent)
+                        ? `
+                            <g style="pointer-events: none;">
+                                <rect x="-18" y="-18" width="36" height="36" fill="rgba(239,68,68,0.08)" stroke="#ef4444" stroke-width="1.5"/>
+                                <rect x="-20" y="-20" width="4" height="4" fill="#ef4444"/>
+                                <rect x="-2" y="-20" width="4" height="4" fill="#ef4444"/>
+                                <rect x="16" y="-20" width="4" height="4" fill="#ef4444"/>
+                                <rect x="-20" y="-2" width="4" height="4" fill="#ef4444"/>
+                                <rect x="16" y="-2" width="4" height="4" fill="#ef4444"/>
+                                <rect x="-20" y="16" width="4" height="4" fill="#ef4444"/>
+                                <rect x="-2" y="16" width="4" height="4" fill="#ef4444"/>
+                                <rect x="16" y="16" width="4" height="4" fill="#ef4444"/>
+                                <line x1="-6" y1="0" x2="6" y2="0" stroke="#fbbf24" stroke-width="1.5"/>
+                                <line x1="0" y1="-6" x2="0" y2="6" stroke="#fbbf24" stroke-width="1.5"/>
+                                <circle cx="0" cy="0" r="2.2" fill="#fbbf24"/>
+                            </g>
+                        `
+                        : '';
+                    const guideGrabCircle = isInteractiveGizmo
+                        ? `<circle cx="0" cy="0" r="24" fill="rgba(0,0,0,0.001)" style="pointer-events: all; cursor: grab;"><title>Drag ${layer.nullLayer ? 'Null Object' : 'Guide Layer'} (${layer.name || 'Target'})</title></circle>`
                         : '';
                     layerEl.innerHTML = `
                         <svg class="ae-layer-svg" style="overflow: visible;">
                             ${svgContent}
+                            ${nullGizmoSvg}
                             ${guideGrabCircle}
                         </svg>
                     `;

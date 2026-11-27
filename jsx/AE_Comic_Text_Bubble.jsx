@@ -287,7 +287,7 @@
     var TAIL_PLACEMENT_KEYS   = ["perimeter", "target"];
     var TAIL_PLACEMENT_LABELS = [
         "1. Trim Paths Perimeter (%)",
-        "2. Target Guide Layer (Closest Pt)"
+        "2. Null Object Target (Closest Pt)"
     ];
 
     var STROKE_KEYS     = ["none", "solid", "variable", "dotted"];
@@ -1061,7 +1061,7 @@
     }
 
     /**
-     * Creates or reuses the draggable AE Guide Layer ("Tail Target <HEX>") in `comp`.
+     * Creates or reuses the draggable AE Null Object ("Tail Target <HEX>") in `comp`.
      * Preserves any existing Position when updating so user placement is never lost.
      */
     function ensureTargetGuideLayer(comp, hexCode, defaultWorldPos, refLayerAbove) {
@@ -1069,118 +1069,53 @@
         var code = hexCode || generateHexId(4);
         var guideName = TARGET_GUIDE_PREFIX + code;
         var guideTag  = TARGET_GUIDE_TAG + ":" + code;
+        var spawnPos  = [
+            Math.round(((defaultWorldPos && defaultWorldPos[0]) || 0) * 10) / 10,
+            Math.round(((defaultWorldPos && defaultWorldPos[1]) || 0) * 10) / 10
+        ];
+
         var existing = findTargetGuideLayer(comp, code);
         if (existing) {
-            try { existing.name = guideName; } catch (eGN) {}
-            try { existing.comment = guideTag; } catch (eGC) {}
-            try { existing.guideLayer = true; } catch (eG1) {}
-            try { existing.enabled = true; } catch (eGE) {}
-            return existing;
+            if (existing.nullLayer || typeof comp.layers.addNull !== "function") {
+                try { existing.name = guideName; } catch (eGN) {}
+                try { existing.comment = guideTag; } catch (eGC) {}
+                try { existing.guideLayer = true; } catch (eG1) {}
+                try { existing.enabled = true; } catch (eGE) {}
+                return existing;
+            }
+            // Migrate legacy shape guide layer to real Null Object at the exact same Position
+            try {
+                var oldP = existing.property("Transform").property("Position").value;
+                if (oldP && oldP.length >= 2) {
+                    spawnPos = [oldP[0], oldP[1]];
+                }
+            } catch (eOldP) {}
+            try { existing.remove(); } catch (eRmOld) {}
         }
 
-        var gLayer = comp.layers.addShape();
+        var gLayer = (typeof comp.layers.addNull === "function")
+            ? comp.layers.addNull()
+            : comp.layers.addShape();
         gLayer.name = guideName;
         try { gLayer.comment = guideTag; } catch (eGC2) {}
         try { gLayer.guideLayer = true; } catch (eG2) {}
-        try { gLayer.label = 9; } catch (eGLb) {}
+        try { gLayer.label = 1; } catch (eGLb) {}
         try { gLayer.threeDLayer = false; } catch (eG3D) {}
+        try { gLayer.enabled = true; } catch (eGE2) {}
 
         var gTr = gLayer.property("Transform");
-        gTr.property("Anchor Point").setValue([0, 0]);
-        gTr.property("Position").setValue([
-            Math.round((defaultWorldPos[0] || 0) * 10) / 10,
-            Math.round((defaultWorldPos[1] || 0) * 10) / 10
-        ]);
-        gTr.property("Scale").setValue([100, 100]);
-
-        var gCont = gLayer.property("Contents") || gLayer.property("ADBE Root Vectors Group");
-        if (gCont) {
-            // 1. Outer Ring + Subtle Clickable Fill
-            var ringGrp = gCont.addProperty("ADBE Vector Group");
-            ringGrp.name = "Target Ring";
-            var ringVec = ringGrp.property("Contents") || ringGrp.property("ADBE Vectors Group");
-            if (ringVec) {
-                var rPathG = ringVec.addProperty("ADBE Vector Shape - Group");
-                var rP = rPathG.property("Path") || rPathG.property("ADBE Vector Shape");
-                if (rP) {
-                    var rC = circleShapeData(0, 0, 15);
-                    var rS = new ShapeClass();
-                    rS.vertices = rC.vertices;
-                    rS.inTangents = rC.inTangents;
-                    rS.outTangents = rC.outTangents;
-                    rS.closed = true;
-                    rP.setValue(rS);
-                }
-                var rFill = ringVec.addProperty("ADBE Vector Graphic - Fill");
-                if (rFill) {
-                    var rfC = rFill.property("Color") || rFill.property("ADBE Vector Fill Color");
-                    var rfO = rFill.property("Opacity") || rFill.property("ADBE Vector Fill Opacity");
-                    if (rfC) rfC.setValue([0.05, 0.85, 1.0, 1]);
-                    if (rfO) rfO.setValue(18);
-                }
-                var rStr = ringVec.addProperty("ADBE Vector Graphic - Stroke");
-                if (rStr) {
-                    var rsC = rStr.property("Color") || rStr.property("ADBE Vector Stroke Color");
-                    var rsW = rStr.property("Stroke Width") || rStr.property("ADBE Vector Stroke Width");
-                    if (rsC) rsC.setValue([0.05, 0.88, 1.0, 1]);
-                    if (rsW) rsW.setValue(2.5);
-                }
+        var apX = 0, apY = 0;
+        var scVal = 100;
+        try {
+            if (gLayer.width && gLayer.height && gLayer.width > 0 && gLayer.height > 0) {
+                apX = gLayer.width * 0.5;
+                apY = gLayer.height * 0.5;
+                if (gLayer.width > 60) scVal = 45;
             }
-
-            // 2. Crosshair Ticks (4 cardinal hairlines)
-            var ticks = [
-                [[-23, 0], [-9, 0]],
-                [[9, 0], [23, 0]],
-                [[0, -23], [0, -9]],
-                [[0, 9], [0, 23]]
-            ];
-            for (var ti = 0; ti < ticks.length; ti++) {
-                var tGrp = gCont.addProperty("ADBE Vector Group");
-                tGrp.name = "Crosshair " + (ti + 1);
-                var tVec = tGrp.property("Contents") || tGrp.property("ADBE Vectors Group");
-                if (!tVec) continue;
-                var tPG = tVec.addProperty("ADBE Vector Shape - Group");
-                var tP = tPG.property("Path") || tPG.property("ADBE Vector Shape");
-                if (tP) {
-                    var tS = new ShapeClass();
-                    tS.vertices = ticks[ti];
-                    tS.inTangents = [[0, 0], [0, 0]];
-                    tS.outTangents = [[0, 0], [0, 0]];
-                    tS.closed = false;
-                    tP.setValue(tS);
-                }
-                var tStr = tVec.addProperty("ADBE Vector Graphic - Stroke");
-                if (tStr) {
-                    var tsC = tStr.property("Color") || tStr.property("ADBE Vector Stroke Color");
-                    var tsW = tStr.property("Stroke Width") || tStr.property("ADBE Vector Stroke Width");
-                    if (tsC) tsC.setValue([0.05, 0.88, 1.0, 1]);
-                    if (tsW) tsW.setValue(2);
-                }
-            }
-
-            // 3. Center Bullseye Dot
-            var dotGrp = gCont.addProperty("ADBE Vector Group");
-            dotGrp.name = "Center Dot";
-            var dotVec = dotGrp.property("Contents") || dotGrp.property("ADBE Vectors Group");
-            if (dotVec) {
-                var dPG = dotVec.addProperty("ADBE Vector Shape - Group");
-                var dP = dPG.property("Path") || dPG.property("ADBE Vector Shape");
-                if (dP) {
-                    var dC = circleShapeData(0, 0, 4);
-                    var dS = new ShapeClass();
-                    dS.vertices = dC.vertices;
-                    dS.inTangents = dC.inTangents;
-                    dS.outTangents = dC.outTangents;
-                    dS.closed = true;
-                    dP.setValue(dS);
-                }
-                var dFill = dotVec.addProperty("ADBE Vector Graphic - Fill");
-                if (dFill) {
-                    var dfC = dFill.property("Color") || dFill.property("ADBE Vector Fill Color");
-                    if (dfC) dfC.setValue([1.0, 0.72, 0.08, 1]);
-                }
-            }
-        }
+        } catch (eNDim) {}
+        gTr.property("Anchor Point").setValue([apX, apY]);
+        gTr.property("Position").setValue([spawnPos[0], spawnPos[1]]);
+        gTr.property("Scale").setValue([scVal, scVal]);
 
         if (refLayerAbove) {
             try { gLayer.moveBefore(refLayerAbove); } catch (eGMv) {}
@@ -3699,8 +3634,10 @@
         }
         var uMid = (uA + span * 0.5) % 1;
 
+        var closestU = uMid;
         if (useTargetMode) {
-            uMid = findClosestPerimeterU(refPerimeterSegs, targetLocalPt);
+            closestU = findClosestPerimeterU(refPerimeterSegs, targetLocalPt);
+            uMid = (((closestU + offFrac) % 1) + 1) % 1;
             span = clampNum(cfg.tailStartWidth, 0.1, 4.0, 2.5) / 100.0;
             uA = ((uMid - span * 0.5) % 1 + 1) % 1;
             uB = (uMid + span * 0.5) % 1;
@@ -3740,19 +3677,17 @@
         var pTip;
 
         if (useTargetMode) {
-            var vxT = targetLocalPt[0] - pMid[0];
-            var vyT = targetLocalPt[1] - pMid[1];
-            var dT  = Math.sqrt(vxT * vxT + vyT * vyT);
-            var dotOut = vxT * nOut[0] + vyT * nOut[1];
-            var dirTX = (dotOut > 2.0 && dT > 4.0) ? (vxT / dT) : nOut[0];
-            var dirTY = (dotOut > 2.0 && dT > 4.0) ? (vyT / dT) : nOut[1];
-
-            if (cfg.tailTargetSnapTip !== false) {
-                tailLen = (dotOut > 2.0) ? Math.max(15.0, dT) : 18.0;
-                pTip = [pMid[0] + dirTX * tailLen, pMid[1] + dirTY * tailLen];
+            var cEvTarget = evaluatePerimeterAtU(refPerimeterSegs, closestU);
+            var vxC = targetLocalPt[0] - cEvTarget.point[0];
+            var vyC = targetLocalPt[1] - cEvTarget.point[1];
+            var dC  = Math.sqrt(vxC * vxC + vyC * vyC);
+            var dotC = vxC * cEvTarget.normal[0] + vyC * cEvTarget.normal[1];
+            if (dotC > 1.0 && dC > 2.0) {
+                pTip = [targetLocalPt[0], targetLocalPt[1]];
+                tailLen = Math.max(4.0, dist2D(pMid, pTip));
             } else {
-                var targAng = Math.atan2(dirTY, dirTX) + ((cfg.tailAngle || 0) * Math.PI / 180.0);
-                pTip = [pMid[0] + tailLen * Math.cos(targAng), pMid[1] + tailLen * Math.sin(targAng)];
+                pTip = [pMid[0] + nOut[0] * 18.0, pMid[1] + nOut[1] * 18.0];
+                tailLen = 18.0;
             }
         } else {
             // Blend outward perimeter normal with radial vector from center for smooth comic direction
@@ -4557,17 +4492,15 @@
                 '} catch (eTG) {}\n';
         }
 
-        var snapTip = (cfg.tailTargetSnapTip !== false) ? "true" : "false";
-        var fixedLen = Math.max(15, Math.round((cfg.tailLength || 85) * 100) / 100);
-        var slantRad = Math.round(((cfg.tailAngle || 0) * Math.PI / 180.0) * 10000) / 10000;
-        var widFrac  = Math.round((clampNum(cfg.tailStartWidth, 0.1, 4.0, 2.5) / 100.0) * 10000) / 10000;
+        var widFrac   = Math.round((clampNum(cfg.tailStartWidth, 0.1, 4.0, 2.5) / 100.0) * 10000) / 10000;
+        var offFrac   = Math.round(((cfg.tailOffset || 0) / 360.0) * 100000) / 100000;
         var curveFrac = Math.round((clampNum(cfg.tailCurve !== undefined ? cfg.tailCurve : 45, -100, 100, 45) / 100.0) * 1000) / 1000;
-        var tStyle   = cfg.tailStyle || "triangle";
+        var tStyle    = cfg.tailStyle || "triangle";
 
         var solverHeader =
             targetCoordSnippet +
             'var S = ' + serializeSegsCompact(segs) + ';\n' +
-            'var P = ' + serializePerimeterSamplesCompact(segs, 96) + ';\n' +
+            'var P = ' + serializePerimeterSamplesCompact(segs, 120) + ';\n' +
             'function evalS(sg, t) {\n' +
             '    var mt = 1.0 - t, ax = sg[0], ay = sg[1], bx = ax + sg[2], by = ay + sg[3], dx = sg[6], dy = sg[7], cx = dx + sg[4], cy = dy + sg[5];\n' +
             '    return [mt*mt*mt*ax + 3*mt*mt*t*bx + 3*mt*t*t*cx + t*t*t*dx, mt*mt*mt*ay + 3*mt*mt*t*by + 3*mt*t*t*cy + t*t*t*dy];\n' +
@@ -4593,29 +4526,30 @@
             '    ddx = P[ki][0] - T[0]; ddy = P[ki][1] - T[1]; dd = ddx*ddx + ddy*ddy;\n' +
             '    if (dd < bestD) { bestD = dd; bestU = P[ki][2]; }\n' +
             '}\n' +
-            'var baseU = bestU, fStep = 1.0 / 640.0;\n' +
-            'for (ki = -6; ki <= 6; ki++) {\n' +
+            'var baseU = bestU, fStep = 1.0 / 960.0;\n' +
+            'for (ki = -8; ki <= 8; ki++) {\n' +
             '    var cU = (((baseU + ki * fStep) % 1) + 1) % 1;\n' +
             '    var cp = evalU(cU).pt;\n' +
             '    ddx = cp[0] - T[0]; ddy = cp[1] - T[1]; dd = ddx*ddx + ddy*ddy;\n' +
             '    if (dd < bestD) { bestD = dd; bestU = cU; }\n' +
             '}\n' +
-            'var mEv = evalU(bestU);\n' +
+            'baseU = bestU; fStep = 1.0 / 5760.0;\n' +
+            'for (ki = -6; ki <= 6; ki++) {\n' +
+            '    var cU2 = (((baseU + ki * fStep) % 1) + 1) % 1;\n' +
+            '    var cp2 = evalU(cU2).pt;\n' +
+            '    ddx = cp2[0] - T[0]; ddy = cp2[1] - T[1]; dd = ddx*ddx + ddy*ddy;\n' +
+            '    if (dd < bestD) { bestD = dd; bestU = cU2; }\n' +
+            '}\n' +
+            'var cEv = evalU(bestU);\n' +
+            'var uOrig = (((bestU + ' + offFrac + ') % 1) + 1) % 1;\n' +
+            'var mEv = evalU(uOrig);\n' +
             'var pMid = mEv.pt, nOut = mEv.n;\n' +
-            'var vxT = T[0] - pMid[0], vyT = T[1] - pMid[1];\n' +
-            'var dT = Math.sqrt(vxT*vxT + vyT*vyT);\n' +
-            'var dotO = vxT * nOut[0] + vyT * nOut[1];\n' +
-            'var dirX = (dotO > 2.0 && dT > 4.0) ? (vxT / dT) : nOut[0];\n' +
-            'var dirY = (dotO > 2.0 && dT > 4.0) ? (vyT / dT) : nOut[1];\n' +
-            'var tLen = ' + fixedLen + ';\n' +
-            'var pTip;\n' +
-            'if (' + snapTip + ') {\n' +
-            '    tLen = (dotO > 2.0) ? Math.max(15.0, dT) : 18.0;\n' +
-            '    pTip = [pMid[0] + dirX * tLen, pMid[1] + dirY * tLen];\n' +
-            '} else {\n' +
-            '    var tAng = Math.atan2(dirY, dirX) + ' + slantRad + ';\n' +
-            '    pTip = [pMid[0] + tLen * Math.cos(tAng), pMid[1] + tLen * Math.sin(tAng)];\n' +
-            '}\n';
+            'var vxC = T[0] - cEv.pt[0], vyC = T[1] - cEv.pt[1];\n' +
+            'var dC = Math.sqrt(vxC*vxC + vyC*vyC);\n' +
+            'var dotC = vxC * cEv.n[0] + vyC * cEv.n[1];\n' +
+            'var pTip = (dotC > 1.0 && dC > 2.0) ? [T[0], T[1]] : [pMid[0] + nOut[0] * 18.0, pMid[1] + nOut[1] * 18.0];\n' +
+            'var dxT = pTip[0] - pMid[0], dyT = pTip[1] - pMid[1];\n' +
+            'var tLen = Math.max(4.0, Math.sqrt(dxT*dxT + dyT*dyT));\n';
 
         if (role === "line") {
             return (
@@ -4697,7 +4631,7 @@
         }
 
         // Tail-First Dynamic Solver for Cloud & Explosion:
-        //   1. Computes tail insert points (uA, uB) on smooth base perimeter S first.
+        //   1. Computes tail insert points (uA, uB) on smooth base perimeter S first (from shortest-distance bestU + Offset).
         //   2. Divides ONLY the remaining space [startU, startU + remSpan] into uncut puffs or spikes.
         if (isTailFirstGeom) {
             var countItems = (geom === "cloud")
@@ -4777,7 +4711,7 @@
                 solverHeader +
                 'var W = [' + wParts.join(",") + '], N = W.length;\n' +
                 'var spW = ' + (isSplicedRole ? ('clamp(' + widFrac + ', 0.001, 0.04)') : '0.0') + ';\n' +
-                'var sU = ' + (isSplicedRole ? '((bestU + spW * 0.5) % 1)' : 'bestU') + ';\n' +
+                'var sU = ' + (isSplicedRole ? '((uOrig + spW * 0.5) % 1)' : 'uOrig') + ';\n' +
                 'var rSpan = 1.0 - spW;\n' +
                 'var sumW = 0, ii, it;\n' +
                 'for (ii = 0; ii < N; ii++) sumW += W[ii];\n' +
@@ -4851,8 +4785,8 @@
             '    return out;\n' +
             '}\n' +
             'var spW = clamp(' + widFrac + ', 0.001, 0.04);\n' +
-            'var uA = ((bestU - spW * 0.5) % 1 + 1) % 1;\n' +
-            'var uB = (bestU + spW * 0.5) % 1;\n' +
+            'var uA = ((uOrig - spW * 0.5) % 1 + 1) % 1;\n' +
+            'var uB = (uOrig + spW * 0.5) % 1;\n' +
             'var ch = (uB < uA) ? subLin(uB, uA) : subLin(uB, 1.0).concat(subLin(0.0, uA));\n' +
             'var V0 = [], I0 = [], O0 = [];\n' +
             'if (ch.length > 0) {\n' +
@@ -6503,11 +6437,7 @@
         var ddTailPlacement = grpTailModeRow.add("dropdownlist", undefined, TAIL_PLACEMENT_LABELS);
         ddTailPlacement.alignment = ["fill", "center"];
         ddTailPlacement.selection = 0;
-        ddTailPlacement.helpTip = "Method 1: Trim-Paths Perimeter (%). Method 2: Draggable AE Guide Layer whose closest point on the perimeter sets the tail origin.";
-
-        var chkTargetSnapTip = pnlTailStyle.add("checkbox", undefined, 'Pin Tail Tip to Draggable Guide ("Tail Target <HEX>")');
-        chkTargetSnapTip.value = true;
-        chkTargetSnapTip.helpTip = "When checked, dragging the Guide Layer moves BOTH the closest-point tail origin on the perimeter AND the tail tip directly to the Guide Layer. Uncheck to aim toward the Guide Layer using fixed Tail Length & Tip Slant.";
+        ddTailPlacement.helpTip = 'Method 1: Trim-Paths Perimeter (%). Method 2: Creates a draggable Null Object ("Tail Target <HEX>") — connects the very tip of the tail to the closest point on the bubble perimeter (with optional Offset).';
 
         // Trim-Paths-Style Perimeter Placement Panel (Left Column: Graphic | Right Column: 3 Sliders)
         var pnlTrim = tabTail.add("panel", undefined, "Perimeter Placement & Base Width");
@@ -6575,25 +6505,22 @@
             var pMode = TAIL_PLACEMENT_KEYS[pIdx] || "perimeter";
             var isTargetMode = (pMode === "target");
 
-            ddTailPlacement.enabled  = hasTail;
-            chkTargetSnapTip.enabled = (hasTail && isTargetMode);
-
+            ddTailPlacement.enabled      = hasTail;
             pnlTrim.enabled              = hasTail;
             previewWidget.enabled        = hasTail;
             ctrlTailPos.group.enabled    = (hasTail && !isTargetMode);
-            ctrlTailOffset.group.enabled = (hasTail && !isTargetMode);
             ctrlTailWidth.group.enabled  = hasTail;
+            // Offset stays enabled in BOTH modes so Null Object mode can also offset the closest-point origin!
+            ctrlTailOffset.group.enabled = hasTail;
 
             pnlTailTarget.enabled         = hasTail;
-            var manualLenEnabled          = hasTail && (!isTargetMode || !chkTargetSnapTip.value);
-            ctrlTailLength.group.enabled  = manualLenEnabled;
-            ctrlTailAngle.group.enabled   = manualLenEnabled;
+            ctrlTailLength.group.enabled  = (hasTail && !isTargetMode);
+            ctrlTailAngle.group.enabled   = (hasTail && !isTargetMode);
             ctrlTailCurve.group.enabled   = (hasTail && key === "curved_triangle");
             refreshPreviewCanvas();
         }
         ddTailStyle.onChange      = syncTailControlsVisibility;
         ddTailPlacement.onChange  = syncTailControlsVisibility;
-        chkTargetSnapTip.onClick  = syncTailControlsVisibility;
 
         // ---------------------------------------------------------------------
         // TAB 3: APPEARANCE (Fill, Stroke Style & Thickness, Colors)
@@ -6832,7 +6759,7 @@
                 wobblyWidthRand: ctrlWobblyWidthRand.getValue(),
                 tailStyle: TAIL_KEYS[tIdx] || "triangle",
                 tailPlacementMode: TAIL_PLACEMENT_KEYS[pIdx] || "perimeter",
-                tailTargetSnapTip: Boolean(chkTargetSnapTip.value),
+                tailTargetSnapTip: true,
                 tailPosition: tPos,
                 tailStartWidth: tWidth,
                 tailStart: tStart,
@@ -6896,7 +6823,6 @@
             ctrlWobblyDepth.setValue(c.wobblyDepth, false);
             ctrlWobblyWidthRand.setValue(c.wobblyWidthRand, false);
 
-            chkTargetSnapTip.value = Boolean(c.tailTargetSnapTip);
             ctrlTailPos.setValue(c.tailPosition, false);
             ctrlTailWidth.setValue(c.tailStartWidth, false);
             ctrlTailOffset.setValue(c.tailOffset, false);
@@ -6957,17 +6883,30 @@
             };
 
             var off = (cfg.tailOffset || 0) / 360.0;
-            var u1 = (((cfg.tailStart / 100.0) + off) % 1 + 1) % 1;
-            var u2 = (((cfg.tailEnd / 100.0) + off) % 1 + 1) % 1;
-            var sp = ((u2 - u1) % 1 + 1) % 1;
-            if (sp > 0.5) { var tmpU = u1; u1 = u2; u2 = tmpU; sp = 1 - sp; }
-            if (sp < 0.005) sp = 0.005;
-            var uMid = (u1 + sp * 0.5) % 1;
-
+            var isTargetMode = (cfg.tailPlacementMode === "target");
             var isTF = (cfg.geometry === "cloud" || cfg.geometry === "explosion");
             var isSpl = (cfg.tailStyle === "triangle" || cfg.tailStyle === "curved_triangle" || cfg.tailStyle === "lightning");
+            var sp = clampNum(cfg.tailStartWidth, 0.1, 4.0, 2.5) / 100.0;
+            if (sp < 0.005) sp = 0.005;
+
+            var fixedTargetLocal = [-22, 31];
+            var u1, u2, uMid;
+
             if (isTF && cfg.tailStyle !== "none") {
                 var pBase = buildCloudOrExplosionBasePerimeter(baseW, baseH, pCfg);
+                if (isTargetMode) {
+                    var cU = findClosestPerimeterU(pBase, fixedTargetLocal);
+                    uMid = (((cU + off) % 1) + 1) % 1;
+                    u1 = ((uMid - sp * 0.5) % 1 + 1) % 1;
+                    u2 = (uMid + sp * 0.5) % 1;
+                } else {
+                    u1 = (((cfg.tailStart / 100.0) + off) % 1 + 1) % 1;
+                    u2 = (((cfg.tailEnd / 100.0) + off) % 1 + 1) % 1;
+                    sp = ((u2 - u1) % 1 + 1) % 1;
+                    if (sp > 0.5) { var tmpU = u1; u1 = u2; u2 = tmpU; sp = 1 - sp; }
+                    if (sp < 0.005) sp = 0.005;
+                    uMid = (u1 + sp * 0.5) % 1;
+                }
                 var pChain = isSpl
                     ? buildCloudOrExplosionSegments(pBase, pCfg, u2, 1.0 - sp)
                     : buildCloudOrExplosionSegments(pBase, pCfg, uMid, 1.0);
@@ -6981,11 +6920,25 @@
                     outlineSegs: pChain,
                     isOpenWithGap: isSpl,
                     arcPts: arcPtsLocal,
-                    midEval: mEvBase
+                    midEval: mEvBase,
+                    targetTipLocal: isTargetMode ? fixedTargetLocal : null
                 };
             }
 
             var fullSegs = buildBalloonPerimeterSegments(baseW, baseH, pCfg);
+            if (isTargetMode) {
+                var cUF = findClosestPerimeterU(fullSegs, fixedTargetLocal);
+                uMid = (((cUF + off) % 1) + 1) % 1;
+                u1 = ((uMid - sp * 0.5) % 1 + 1) % 1;
+                u2 = (uMid + sp * 0.5) % 1;
+            } else {
+                u1 = (((cfg.tailStart / 100.0) + off) % 1 + 1) % 1;
+                u2 = (((cfg.tailEnd / 100.0) + off) % 1 + 1) % 1;
+                sp = ((u2 - u1) % 1 + 1) % 1;
+                if (sp > 0.5) { var tmpU2 = u1; u1 = u2; u2 = tmpU2; sp = 1 - sp; }
+                if (sp < 0.005) sp = 0.005;
+                uMid = (u1 + sp * 0.5) % 1;
+            }
             var arcStd = [];
             var j;
             for (j = 0; j <= 14; j++) {
@@ -6995,7 +6948,8 @@
                 outlineSegs: fullSegs,
                 isOpenWithGap: false,
                 arcPts: arcStd,
-                midEval: evaluatePerimeterAtU(fullSegs, uMid)
+                midEval: evaluatePerimeterAtU(fullSegs, uMid),
+                targetTipLocal: isTargetMode ? fixedTargetLocal : null
             };
         }
 
@@ -7040,8 +6994,13 @@
                     g.strokePath(penHi);
 
                     var mEv = pData.midEval;
-                    var outA = Math.atan2(mEv.normal[1], mEv.normal[0]) + (cfg.tailAngle * Math.PI / 180);
-                    var tipP = [cx + mEv.point[0] + 15 * Math.cos(outA), cy + mEv.point[1] + 15 * Math.sin(outA)];
+                    var tipP;
+                    if (pData.targetTipLocal) {
+                        tipP = [cx + pData.targetTipLocal[0], cy + pData.targetTipLocal[1]];
+                    } else {
+                        var outA = Math.atan2(mEv.normal[1], mEv.normal[0]) + (cfg.tailAngle * Math.PI / 180);
+                        tipP = [cx + mEv.point[0] + 15 * Math.cos(outA), cy + mEv.point[1] + 15 * Math.sin(outA)];
+                    }
                     var penTip = g.newPen(g.PenType.SOLID_COLOR, [1.0, 0.72, 0.15, 1], 2);
                     g.newPath();
                     g.moveTo(cx + mEv.point[0], cy + mEv.point[1]);
@@ -7107,9 +7066,15 @@
                             arcPts.push((cx + pa[0]).toFixed(1) + "," + (cy + pa[1]).toFixed(1));
                         }
                         var mEv = pDataSvg.midEval;
-                        var outA = Math.atan2(mEv.point[1], mEv.point[0]) + (cfg.tailAngle * Math.PI / 180);
-                        var txNum = cx + mEv.point[0] + 15 * Math.cos(outA);
-                        var tyNum = cy + mEv.point[1] + 15 * Math.sin(outA);
+                        var txNum, tyNum;
+                        if (pDataSvg.targetTipLocal) {
+                            txNum = cx + pDataSvg.targetTipLocal[0];
+                            tyNum = cy + pDataSvg.targetTipLocal[1];
+                        } else {
+                            var outA = Math.atan2(mEv.point[1], mEv.point[0]) + (cfg.tailAngle * Math.PI / 180);
+                            txNum = cx + mEv.point[0] + 15 * Math.cos(outA);
+                            tyNum = cy + mEv.point[1] + 15 * Math.sin(outA);
+                        }
                         var mxNum = cx + mEv.point[0];
                         var myNum = cy + mEv.point[1];
                         var tx = txNum.toFixed(1);
@@ -7134,9 +7099,11 @@
 
                         var tipGlyphSvg = '<circle cx="' + tx + '" cy="' + ty + '" r="2.8" fill="#fbbf24"/>';
                         if (cfg.tailPlacementMode === "target") {
+                            var nx0 = (txNum - 4.5).toFixed(1);
+                            var ny0 = (tyNum - 4.5).toFixed(1);
                             tipGlyphSvg =
-                                '<circle cx="' + tx + '" cy="' + ty + '" r="5.5" fill="rgba(34,211,238,0.20)" stroke="#22d3ee" stroke-width="1.4"/>' +
-                                '<circle cx="' + tx + '" cy="' + ty + '" r="2.0" fill="#fbbf24"/>';
+                                '<rect x="' + nx0 + '" y="' + ny0 + '" width="9" height="9" fill="rgba(239,68,68,0.18)" stroke="#ef4444" stroke-width="1.4"/>' +
+                                '<circle cx="' + tx + '" cy="' + ty + '" r="1.8" fill="#fbbf24"/>';
                         }
 
                         hiSvg =
